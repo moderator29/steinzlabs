@@ -106,7 +106,7 @@ export default function PublicResearchPage() {
               <Link
                 key={p.id}
                 href={`/research/${p.id}`}
-                className="group relative bg-white/[0.02] border border-white/[0.06] rounded-2xl overflow-hidden hover:bg-white/[0.04] hover:border-white/[0.12] transition-all"
+                className="group relative nl-glass rounded-2xl overflow-hidden hover:bg-white/[0.04] hover:border-white/[0.12] transition-all"
               >
                 {p.image_url && (
                   <div className="aspect-[16/9] overflow-hidden bg-white/[0.03]">

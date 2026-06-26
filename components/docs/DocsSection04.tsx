@@ -49,7 +49,7 @@ export function DocsSection04() {
         <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
           <MessageSquare className="w-4 h-4 text-[#10B981]" />Example: pulling a token card
         </h3>
-        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl overflow-hidden">
+        <div className="nl-glass rounded-xl overflow-hidden">
           <div className="px-4 py-3 flex items-start gap-3 border-b border-white/[0.04]">
             <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center shrink-0">
               <User className="w-3 h-3 text-slate-400" />
@@ -86,7 +86,7 @@ export function DocsSection04() {
         <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
           <Zap className="w-4 h-4 text-[#F59E0B]" />Example: asking VTX to prepare a swap
         </h3>
-        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl overflow-hidden">
+        <div className="nl-glass rounded-xl overflow-hidden">
           <div className="px-4 py-3 flex items-start gap-3 border-b border-white/[0.04]">
             <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center shrink-0">
               <User className="w-3 h-3 text-slate-400" />
@@ -118,7 +118,7 @@ export function DocsSection04() {
       {/* Slash-command reference */}
       <div id="vtx-usage" className="scroll-mt-20 mb-8">
         <h3 className="text-sm font-semibold text-white mb-3">Slash-command shortcuts</h3>
-        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl divide-y divide-white/[0.04]">
+        <div className="nl-glass rounded-xl divide-y divide-white/[0.04]">
           {SLASH_COMMANDS.map((c) => (
             <div key={c.cmd} className="px-4 py-3 flex items-start gap-3">
               <div className="w-24 sm:w-52 shrink-0">
@@ -138,7 +138,7 @@ export function DocsSection04() {
 
         <div className="mb-4">
           <p className="text-[10px] uppercase tracking-[0.14em] text-[#4D6BFF] font-semibold mb-2">Token Card — price &amp; chart</p>
-          <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl divide-y divide-white/[0.04]">
+          <div className="nl-glass rounded-xl divide-y divide-white/[0.04]">
             {[
               { cmd: 'Show me BTC', desc: 'By ticker — any top-30 symbol works (BTC, ETH, SOL, BNB, XRP, DOGE, PEPE, SHIB, AVAX, MATIC, ARB, SUI, LINK, UNI, AAVE, BONK, WIF, JUP, USDC, USDT).' },
               { cmd: 'Tell me about Ethereum', desc: 'By full name — VTX recognises Bitcoin, Ethereum, Solana, Polygon, Arbitrum, Avalanche, etc.' },
@@ -158,7 +158,7 @@ export function DocsSection04() {
 
         <div className="mb-4">
           <p className="text-[10px] uppercase tracking-[0.14em] text-[#4D6BFF] font-semibold mb-2">Swap Card — inline swap preview</p>
-          <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl divide-y divide-white/[0.04]">
+          <div className="nl-glass rounded-xl divide-y divide-white/[0.04]">
             {[
               { cmd: 'Swap 0.1 ETH for USDC', desc: 'Primary pattern: [swap] [amount] [FROM] [for] [TO].' },
               { cmd: 'Convert 100 USDC to SOL', desc: '"Convert" works the same. Cross-chain pairs route to the right venue (0x on EVM, Jupiter on Solana).' },

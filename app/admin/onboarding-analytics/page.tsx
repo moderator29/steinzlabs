@@ -35,7 +35,7 @@ export default function OnboardingAnalyticsPage() {
             <VariantCard label="Variant B" v={data.variants.b} />
           </div>
 
-          <div className="rounded-2xl bg-white/[0.025] border border-white/[0.06] overflow-hidden">
+          <div className="rounded-2xl nl-glass overflow-hidden">
             <table className="w-full text-[12px]">
               <thead>
                 <tr className="text-start text-slate-400 uppercase text-[10px] bg-white/[0.03]">
@@ -74,7 +74,7 @@ export default function OnboardingAnalyticsPage() {
 
 function VariantCard({ label, v }: { label: string; v: VariantSummary }) {
   return (
-    <div className="rounded-2xl bg-white/[0.025] border border-white/[0.06] p-4">
+    <div className="rounded-2xl nl-glass p-4">
       <div className="text-[11px] uppercase tracking-wide text-slate-400">{label}</div>
       <div className="text-xl font-bold text-white tabular-nums mt-1">{(v.completion_rate * 100).toFixed(1)}%</div>
       <div className="text-[11px] text-slate-400">completion rate</div>

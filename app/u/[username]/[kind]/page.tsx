@@ -103,7 +103,7 @@ function FollowsListContent({ username, kind }: { username: string; kind: 'follo
       {users.length === 0 && done ? (
         <div className="text-sm text-slate-400 italic">No {kind} match.</div>
       ) : (
-        <div className="rounded-xl bg-white/[0.025] border border-white/[0.06] divide-y divide-white/[0.05]">
+        <div className="rounded-xl nl-glass divide-y divide-white/[0.05]">
           {users.map((u) => <UserListRow key={u.id} user={u} />)}
         </div>
       )}

@@ -22,7 +22,7 @@ export function SuggestionPills({ suggestions, onPick }: SuggestionPillsProps) {
         <button
           key={`${s}-${i}`}
           onClick={() => onPick(s)}
-          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/10 hover:border-[#0066FF]/40 hover:bg-[#0066FF]/[0.08] text-[12px] text-slate-200 hover:text-white transition-all"
+          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full nl-glass hover:border-[#0066FF]/40 hover:bg-[#0066FF]/[0.08] text-[12px] text-slate-200 hover:text-white transition-all"
           style={{
             animation: `naka-pill-in 280ms cubic-bezier(0.22,1,0.36,1) backwards`,
             animationDelay: `${i * 50}ms`,

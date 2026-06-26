@@ -662,11 +662,11 @@ export default function AdminPanel() {
 
               {userTotalPages > 1 && (
                 <div className="flex items-center justify-center gap-2">
-                  <button disabled={userPage <= 1} onClick={() => { setUserPage(p => p - 1); fetchUsers(userSearch, userPage - 1); }} className="px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs text-gray-400 hover:text-white disabled:opacity-30 transition-colors">
+                  <button disabled={userPage <= 1} onClick={() => { setUserPage(p => p - 1); fetchUsers(userSearch, userPage - 1); }} className="px-3 py-1.5 rounded-lg nl-glass text-xs text-gray-400 hover:text-white disabled:opacity-30 transition-colors">
                     Previous
                   </button>
                   <span className="text-[11px] text-gray-500">Page {userPage} of {userTotalPages}</span>
-                  <button disabled={userPage >= userTotalPages} onClick={() => { setUserPage(p => p + 1); fetchUsers(userSearch, userPage + 1); }} className="px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs text-gray-400 hover:text-white disabled:opacity-30 transition-colors">
+                  <button disabled={userPage >= userTotalPages} onClick={() => { setUserPage(p => p + 1); fetchUsers(userSearch, userPage + 1); }} className="px-3 py-1.5 rounded-lg nl-glass text-xs text-gray-400 hover:text-white disabled:opacity-30 transition-colors">
                     Next
                   </button>
                 </div>

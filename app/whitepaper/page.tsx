@@ -55,7 +55,7 @@ function FeatureGrid({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 my-6">
       {items.map(({ icon: Icon, color, title, desc }) => (
-        <div key={title} className="flex items-start gap-3 bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
+        <div key={title} className="flex items-start gap-3 nl-glass rounded-xl p-5">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: color + '20' }}>
             <Icon className="w-4 h-4" style={{ color }} />
           </div>
@@ -84,7 +84,7 @@ function StatList({ items }: { items: { label: string; value: string }[] }) {
   return (
     <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-6">
       {items.map((i) => (
-        <div key={i.label} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+        <div key={i.label} className="nl-glass rounded-xl p-4">
           <dt className="text-[11px] uppercase tracking-wide text-gray-500">{i.label}</dt>
           <dd className="text-lg font-bold text-white mt-1">{i.value}</dd>
         </div>
@@ -242,7 +242,7 @@ export default function WhitepaperPage() {
           </div>
 
           {/* Mobile TOC */}
-          <div className="lg:hidden mb-12 bg-white/[0.02] border border-white/[0.06] rounded-2xl p-5">
+          <div className="lg:hidden mb-12 nl-glass rounded-2xl p-5">
             <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Contents</div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
               {TOC.map(t => (
@@ -401,7 +401,7 @@ export default function WhitepaperPage() {
                 { icon: Layers, label: 'Context Feed',desc: 'High-trust events weight higher in the feed. Tokens flagged by GoPlus receive warning treatment or are hidden depending on severity.' },
                 { icon: Eye,    label: 'Bubble Map',  desc: 'Holder graph integrates GoPlus flags — wallets tagged as scammers or blacklisted are coloured and labelled in the graph.' },
               ].map(i => (
-                <div key={i.label} className="flex items-start gap-3 bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+                <div key={i.label} className="flex items-start gap-3 nl-glass rounded-xl p-4">
                   <div className="w-7 h-7 rounded-lg bg-[#10B981]/15 flex items-center justify-center flex-shrink-0">
                     <i.icon className="w-3.5 h-3.5 text-[#10B981]" />
                   </div>
@@ -638,7 +638,7 @@ export default function WhitepaperPage() {
                 { cmd: '/status',          tier: 'Any',   desc: 'Confirm the bot is reachable and your account is linked.' },
                 { cmd: '/unlink',          tier: 'Any',   desc: 'Disconnect your Telegram account from your Naka Labs account.' },
               ].map(r => (
-                <div key={r.cmd} className="flex items-center justify-between bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-3">
+                <div key={r.cmd} className="flex items-center justify-between nl-glass rounded-xl px-4 py-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <code className="text-[12px] bg-white/5 px-2 py-1 rounded font-mono text-[#4D6BFF]">{r.cmd}</code>
                     <div className="text-[13px] text-gray-400 truncate">{r.desc}</div>
@@ -706,7 +706,7 @@ export default function WhitepaperPage() {
                 { title: 'Price', desc: 'Pro is $9/month. The nearest equivalent institutional tools run thousands per seat. We made the bet that breadth of users beats depth of pricing.' },
                 { title: 'No vendor lock-in', desc: 'Every insight surfaces on-chain links. Every trade executes through standard DEX aggregators. You can leave and take everything with you — which is the right way to build a platform.' },
               ].map(v => (
-                <div key={v.title} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-5">
+                <div key={v.title} className="nl-glass rounded-xl p-5">
                   <div className="text-sm font-semibold text-white mb-1">{v.title}</div>
                   <div className="text-[13px] text-gray-400 leading-[1.7]">{v.desc}</div>
                 </div>
@@ -736,7 +736,7 @@ export default function WhitepaperPage() {
                 { title: 'Platform API (public tier)', desc: 'Institutional read-API access for teams building on top of our intelligence pipeline.' },
                 { title: 'AI-generated research reports', desc: 'On-demand deep dives from VTX, with citations, on a token, sector or wallet of your choice.' },
               ].map(i => (
-                <div key={i.title} className="flex items-start gap-3 bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+                <div key={i.title} className="flex items-start gap-3 nl-glass rounded-xl p-4">
                   <Pill color="#F59E0B">Coming soon</Pill>
                   <div className="flex-1">
                     <div className="text-sm font-semibold text-white">{i.title}</div>

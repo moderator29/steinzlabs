@@ -33,7 +33,7 @@ export function DocsSection10() {
         </h3>
         <div className="space-y-3">
           {ALERT_TYPES.map(({ icon: Icon, color, title, desc }) => (
-            <div key={title} className="flex items-start gap-3 bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+            <div key={title} className="flex items-start gap-3 nl-glass rounded-xl p-4">
               <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: color + '20' }}>
                 <Icon className="w-3.5 h-3.5" style={{ color }} />
               </div>
@@ -56,7 +56,7 @@ export function DocsSection10() {
         </p>
         <div className="space-y-2 mb-6">
           {PUSH_STEPS.map(s => (
-            <div key={s.n} className="flex gap-3 p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+            <div key={s.n} className="flex gap-3 p-3 nl-glass rounded-xl">
               <div className="w-6 h-6 rounded-full bg-[#10B981]/15 flex items-center justify-center flex-shrink-0">
                 <span className="text-xs font-bold text-[#10B981]">{s.n}</span>
               </div>
@@ -84,7 +84,7 @@ export function DocsSection10() {
         ))}
       </div>
 
-      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+      <div className="nl-glass rounded-xl p-4">
         <div className="flex items-center gap-2 mb-2">
           <Settings className="w-4 h-4 text-gray-400" />
           <span className="text-sm font-semibold text-white">Notification Settings</span>

@@ -856,7 +856,7 @@ function VtxAiPageInner() {
                   <button
                     key={session.id}
                     onClick={() => loadChatSession(session)}
-                    className="w-full text-start p-2.5 bg-white/[0.02] border border-white/[0.06] rounded-lg hover:border-[#0066FF]/20 transition-all flex items-center gap-2"
+                    className="w-full text-start p-2.5 nl-glass rounded-lg hover:border-[#0066FF]/20 transition-all flex items-center gap-2"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 mb-0.5">
@@ -1084,7 +1084,7 @@ function VtxAiPageInner() {
             {showTools && (
               <div className="grid grid-cols-2 gap-2 mt-2">
                 {TOOLS.slice(4).map((tool) => (
-                  <button key={tool.label} onClick={() => handleSend(tool.query)} className="text-start p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl hover:border-[#0066FF]/30 hover:bg-[#0066FF]/[0.03] transition-all group">
+                  <button key={tool.label} onClick={() => handleSend(tool.query)} className="text-start p-3 nl-glass rounded-xl hover:border-[#0066FF]/30 hover:bg-[#0066FF]/[0.03] transition-all group">
                     <tool.icon className="w-4 h-4 text-gray-500 group-hover:text-[#0066FF] mb-1.5 transition-colors" />
                     <p className="text-xs font-semibold text-gray-300 mb-0.5">{tool.label}</p>
                     <p className="text-[10px] text-gray-600 leading-tight">{tool.desc}</p>
@@ -1106,7 +1106,7 @@ function VtxAiPageInner() {
               <div className={`max-w-[82%] min-w-0 rounded-2xl px-4 py-3 text-xs leading-relaxed relative overflow-hidden ${
                 msg.role === 'user'
                   ? 'bg-[#0066FF]/10 border border-[#0066FF]/15 text-white'
-                  : 'bg-white/[0.02] border border-white/[0.06] text-gray-300'
+                  : 'nl-glass text-gray-300'
               }`}>
                 {msg.role === 'assistant' && (
                   <div className="flex items-center gap-1.5 mb-2">
@@ -1213,7 +1213,7 @@ function VtxAiPageInner() {
               <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-1 me-2 overflow-hidden bg-gradient-to-br from-[#0066FF]/20 to-[#4F46E5]/20 border border-[#0066FF]/15">
                 <SteinzLogo size={18} animated={false} />
               </div>
-              <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl px-5 py-4">
+              <div className="nl-glass rounded-2xl px-5 py-4">
                 <SteinzLogoSpinner size={32} message={settings.webSearch ? 'Querying Sargon Data Archive...' : 'Analyzing via Naka Intelligence...'} />
               </div>
             </div>

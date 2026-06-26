@@ -48,7 +48,7 @@ export function VtxWalletAccessCard() {
   }
 
   return (
-    <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-5">
+    <div className="nl-glass rounded-2xl p-5">
       <div className="flex items-start gap-3 mb-4">
         <div className="w-10 h-10 rounded-xl bg-[#0066FF]/10 border border-[#0066FF]/25 flex items-center justify-center flex-shrink-0">
           <Brain className="w-5 h-5 text-[#4D6BFF]" />

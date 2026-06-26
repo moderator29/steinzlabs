@@ -142,7 +142,7 @@ function TrendDrawer({ card, onClose }: { card: TrendCard; onClose: () => void }
           </div>
 
           {/* Large sparkline */}
-          <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-4 mb-4">
+          <div className="nl-glass rounded-2xl p-4 mb-4">
             <div className="text-[10px] text-gray-500 mb-3 uppercase tracking-wider">7-Day Trend</div>
             <Sparkline points={card.sparkline} color={sparkColor} height={80} />
           </div>

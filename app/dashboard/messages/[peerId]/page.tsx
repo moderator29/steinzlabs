@@ -226,7 +226,7 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
         </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-2 mb-3 rounded-xl bg-white/[0.025] border border-white/[0.06] p-3">
+      <div className="flex-1 overflow-y-auto space-y-2 mb-3 rounded-xl nl-glass p-3">
         {messages.length > 0 && hasMoreOlder && (
           <div className="flex justify-center">
             <button

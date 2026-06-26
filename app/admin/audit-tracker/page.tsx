@@ -37,7 +37,7 @@ export default function AuditTrackerPage() {
       <p className="text-[12px] text-slate-400 mb-5">
         Full gap analysis in <Link href="/docs/industry-standard-audit" className="text-[var(--nl-blue,#0066FF)]">docs/industry-standard-audit.md</Link>. Per-area status here is updated after each audit pass.
       </p>
-      <div className="rounded-2xl bg-white/[0.025] border border-white/[0.06] divide-y divide-white/[0.05]">
+      <div className="rounded-2xl nl-glass divide-y divide-white/[0.05]">
         {AUDIT_AREAS.map((a) => {
           const tone = STATUS_TONE[a.status];
           return (

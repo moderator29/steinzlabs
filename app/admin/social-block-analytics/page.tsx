@@ -38,7 +38,7 @@ export default function BlockAnalyticsPage() {
 
 function Column({ title, Icon, rows, tone }: { title: string; Icon: React.ComponentType<{ className?: string }>; rows: Row[]; tone: 'red' | 'amber' }) {
   return (
-    <section className="rounded-2xl bg-white/[0.025] border border-white/[0.06] p-4">
+    <section className="rounded-2xl nl-glass p-4">
       <div className="flex items-center gap-2 mb-3">
         <Icon className={`w-4 h-4 ${tone === 'red' ? 'text-red-400' : 'text-amber-300'}`} />
         <h2 className="text-sm font-bold text-white">{title}</h2>

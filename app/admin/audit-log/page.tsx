@@ -87,7 +87,7 @@ export default function AdminAuditLogPage() {
         Append-only record of every admin write + sensitive user-money action. Filter by actor, target, action, or time range.
       </p>
 
-      <div className="rounded-2xl bg-white/[0.025] border border-white/[0.06] p-3 mb-4 flex flex-wrap items-center gap-2">
+      <div className="rounded-2xl nl-glass p-3 mb-4 flex flex-wrap items-center gap-2">
         <Filter className="w-3.5 h-3.5 text-slate-400" aria-hidden />
         <input
           value={actor}
@@ -143,7 +143,7 @@ export default function AdminAuditLogPage() {
         </div>
       )}
 
-      <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] overflow-x-auto">
+      <div className="rounded-2xl nl-glass overflow-x-auto">
         <table className="w-full text-[11px]">
           <thead className="text-[10px] uppercase tracking-wider text-slate-400 bg-white/[0.02]">
             <tr>

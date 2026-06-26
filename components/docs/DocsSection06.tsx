@@ -63,7 +63,7 @@ export function DocsSection06() {
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-5">
           {TRUST_FACTORS.map(f => (
-            <div key={f.label} className="flex items-start gap-2 p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+            <div key={f.label} className="flex items-start gap-2 p-3 nl-glass rounded-xl">
               <CheckCircle className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0 mt-0.5" />
               <div>
                 <div className="text-xs font-semibold text-white">{f.label}</div>
@@ -87,7 +87,7 @@ export function DocsSection06() {
         <h3 className="text-sm font-semibold text-white mb-4">Security Tools</h3>
         <div className="space-y-3">
           {SECURITY_TOOLS.map(({ icon: Icon, color, title, desc }) => (
-            <div key={title} className="flex items-start gap-3 bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 hover:border-white/[0.10] transition-colors">
+            <div key={title} className="flex items-start gap-3 nl-glass rounded-xl p-4 hover:border-white/[0.10] transition-colors">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: color + '20' }}>
                 <Icon className="w-4 h-4" style={{ color }} />
               </div>

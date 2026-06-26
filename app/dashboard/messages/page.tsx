@@ -88,7 +88,7 @@ export default function MessagesInboxPage() {
           <Link href="/discover" className="text-[var(--nl-blue,#0066FF)]">Discover</Link>.
         </div>
       ) : (
-        <div className="rounded-xl bg-white/[0.025] border border-white/[0.06] divide-y divide-white/[0.05]">
+        <div className="rounded-xl nl-glass divide-y divide-white/[0.05]">
           {convos.map((c) => {
             const peer = peers[c.peer_id];
             const initial = (peer?.display_name || peer?.username || '?').slice(0, 1).toUpperCase();

@@ -69,14 +69,14 @@ export function RecommendationsStrip() {
   if (users.length === 0) return null;
 
   return (
-    <section className="rounded-2xl bg-white/[0.025] border border-white/[0.06] p-4">
+    <section className="rounded-2xl nl-glass p-4">
       <header className="flex items-center gap-2 mb-3">
         <Sparkles className="w-4 h-4 text-[var(--nl-blue,#0066FF)]" />
         <h2 className="text-sm font-bold text-white tracking-wide">You might like to follow</h2>
       </header>
       <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-1 px-1 snap-x snap-mandatory">
         {users.map((u) => (
-          <div key={u.id} className="snap-start shrink-0 w-44 rounded-xl bg-[#0F1627] border border-white/[0.06] p-3 relative">
+          <div key={u.id} className="snap-start shrink-0 w-44 rounded-xl nl-glass p-3 relative">
             <button
               onClick={() => dismiss(u.id)}
               className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-white/[0.04] hover:bg-white/[0.10] text-slate-400 hover:text-white flex items-center justify-center"

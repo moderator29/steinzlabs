@@ -37,7 +37,7 @@ export function DocsSection07() {
         </p>
 
         {/* How to swap · step-by-step */}
-        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 mb-4">
+        <div className="nl-glass rounded-xl p-4 mb-4">
           <p className="text-[10px] uppercase tracking-[0.14em] text-[#4D6BFF] font-semibold mb-3">How a swap works</p>
           <ol className="space-y-2 text-xs text-gray-300">
             <li className="flex gap-2.5"><span className="w-4 h-4 rounded-full bg-white/[0.06] text-[10px] text-gray-400 flex items-center justify-center font-semibold shrink-0">1</span><span>Open <span className="text-white font-semibold">Dashboard → Swap</span> (or ask VTX <span className="font-mono text-[#4D6BFF]">&quot;swap 100 USDC to SOL&quot;</span>).</span></li>
@@ -63,7 +63,7 @@ export function DocsSection07() {
 
         <div className="space-y-2 mb-5">
           {SWAP_CHAINS.map((c) => (
-            <div key={c.name} className="flex items-start gap-3 p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+            <div key={c.name} className="flex items-start gap-3 p-3 nl-glass rounded-xl">
               <span className="text-xs font-bold text-[#4D6BFF] w-20 flex-shrink-0">{c.name}</span>
               <span className="text-xs text-gray-400">{c.note}</span>
             </div>
@@ -98,19 +98,19 @@ export function DocsSection07() {
           Set a price, walk away. Limit orders fire a buy or sell when the market hits your target. Stop-loss and take-profit keep open positions on autopilot · set the rule once, it executes without you at the keyboard.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3">
+          <div className="nl-glass rounded-xl p-3">
             <div className="text-xs font-semibold text-white mb-0.5">Limit buy / sell</div>
             <div className="text-xs text-gray-500">Executes at your target price or better, expires after the window you set.</div>
           </div>
-          <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3">
+          <div className="nl-glass rounded-xl p-3">
             <div className="text-xs font-semibold text-white mb-0.5">Stop-loss</div>
             <div className="text-xs text-gray-500">Auto-exits a position if it drops past a floor you define.</div>
           </div>
-          <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3">
+          <div className="nl-glass rounded-xl p-3">
             <div className="text-xs font-semibold text-white mb-0.5">Take-profit</div>
             <div className="text-xs text-gray-500">Auto-sells once you hit your target price so you lock the win in.</div>
           </div>
-          <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3">
+          <div className="nl-glass rounded-xl p-3">
             <div className="text-xs font-semibold text-white mb-0.5">Trailing stop</div>
             <div className="text-xs text-gray-500">Follows the price up and only exits on a pullback of the % you choose.</div>
           </div>
@@ -132,7 +132,7 @@ export function DocsSection07() {
             { label: 'Trust Score filter', desc: 'Auto-skip buys on tokens below your safety threshold.' },
             { label: 'Pause anytime', desc: 'Disable a rule without closing the existing positions it opened.' },
           ].map((c) => (
-            <div key={c.label} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3">
+            <div key={c.label} className="nl-glass rounded-xl p-3">
               <div className="text-xs font-semibold text-white mb-0.5">{c.label}</div>
               <div className="text-xs text-gray-500" dangerouslySetInnerHTML={{ __html: c.desc }} />
             </div>
@@ -150,7 +150,7 @@ export function DocsSection07() {
         </p>
         <div className="space-y-2 mb-4">
           {SNIPER_STEPS.map((s) => (
-            <div key={s.n} className="flex gap-3 p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl">
+            <div key={s.n} className="flex gap-3 p-3 nl-glass rounded-xl">
               <div className="w-6 h-6 rounded-full bg-[#EF4444]/15 flex items-center justify-center flex-shrink-0">
                 <span className="text-xs font-bold text-[#EF4444]">{s.n}</span>
               </div>
@@ -165,7 +165,7 @@ export function DocsSection07() {
           <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B] flex-shrink-0 mt-0.5" />
           <p className="text-xs text-gray-400">New-token trading carries extreme risk. Even with safety checks enabled, new tokens can fail. Never allocate more than you are prepared to lose entirely.</p>
         </div>
-        <div className="flex items-start gap-2 p-3 bg-white/[0.02] border border-white/[0.06] rounded-xl mt-2">
+        <div className="flex items-start gap-2 p-3 nl-glass rounded-xl mt-2">
           <Shield className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0 mt-0.5" />
           <p className="text-xs text-gray-400">The Sniper Bot is a <span className="text-white font-semibold">Max tier</span> feature. Free, Mini, and Pro tiers can preview the dashboard but cannot arm a sniper.</p>
         </div>

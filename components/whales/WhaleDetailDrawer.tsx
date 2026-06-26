@@ -297,7 +297,7 @@ function MetricTile({
 }) {
   const color = tone === 'green' ? 'text-emerald-400' : tone === 'red' ? 'text-red-400' : 'text-white';
   return (
-    <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3">
+    <div className="nl-glass rounded-xl p-3">
       <div className="text-[10px] uppercase tracking-wider text-slate-500">{label}</div>
       <div className={`font-mono font-bold mt-1 ${big ? 'text-lg' : 'text-sm'} ${color}`}>{value}</div>
     </div>

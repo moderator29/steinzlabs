@@ -439,7 +439,7 @@ function PriceAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
       </div>
 
       {autoName && (
-        <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs text-gray-400">
+        <div className="nl-glass rounded-lg px-3 py-2 text-xs text-gray-400">
           Alert name: <span className="text-white font-semibold">{autoName}</span>
         </div>
       )}
@@ -542,7 +542,7 @@ function LaunchAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
         <p className="text-[10px] text-gray-600 mt-1">Leave blank to alert on all new tokens</p>
       </div>
 
-      <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs text-gray-400 truncate">
+      <div className="nl-glass rounded-lg px-3 py-2 text-xs text-gray-400 truncate">
         Alert name: <span className="text-white font-semibold">{name}</span>
       </div>
 
@@ -610,7 +610,7 @@ function WalletActivityForm({ onSave }: { onSave: (alert: SmartAlert) => void })
         <span className="text-xs text-gray-300">Alert on <span className="text-white font-semibold">all activity</span> — any new transaction will trigger</span>
       </div>
       {name && (
-        <div className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs text-gray-400">
+        <div className="nl-glass rounded-lg px-3 py-2 text-xs text-gray-400">
           Alert name: <span className="text-white font-semibold">{name}</span>
         </div>
       )}

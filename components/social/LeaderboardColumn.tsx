@@ -85,7 +85,7 @@ export function LeaderboardColumn({ kind, title, description, limit = 10 }: Lead
   }, [kind, limit]);
 
   return (
-    <section className="rounded-2xl bg-white/[0.025] border border-white/[0.06] p-4">
+    <section className="rounded-2xl nl-glass p-4">
       <header className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Trophy className="w-4 h-4 text-[var(--nl-blue,#0066FF)]" />

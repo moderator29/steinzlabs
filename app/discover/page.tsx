@@ -99,7 +99,7 @@ function SearchResults({ q }: { q: string }) {
   if (users === null) return <div className="text-sm text-slate-400">Searching…</div>;
   if (users.length === 0) return <div className="text-sm text-slate-400">No users match &quot;{q}&quot;.</div>;
   return (
-    <div className="rounded-2xl bg-white/[0.025] border border-white/[0.06] p-2 divide-y divide-white/[0.05]">
+    <div className="rounded-2xl nl-glass p-2 divide-y divide-white/[0.05]">
       {users.map((u) => (
         <UserListRow
           key={u.id}

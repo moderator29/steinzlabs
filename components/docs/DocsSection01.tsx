@@ -30,7 +30,7 @@ export function DocsSection01() {
       {/* What you can do */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
         {CAPABILITIES.map(({ icon: Icon, label, desc }) => (
-          <div key={label} className="flex items-start gap-3 bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 hover:border-white/[0.10] transition-colors">
+          <div key={label} className="flex items-start gap-3 nl-glass rounded-xl p-4 hover:border-white/[0.10] transition-colors">
             <div className="w-8 h-8 bg-[#0066FF]/10 rounded-lg flex items-center justify-center flex-shrink-0">
               <Icon className="w-4 h-4 text-[#4D6BFF]" />
             </div>
@@ -49,7 +49,7 @@ export function DocsSection01() {
         </h3>
         <div className="space-y-3">
           {STEPS.map(s => (
-            <div key={s.n} className="flex gap-4 bg-white/[0.02] border border-white/[0.06] rounded-xl p-4">
+            <div key={s.n} className="flex gap-4 nl-glass rounded-xl p-4">
               <div className="w-8 h-8 bg-[#0066FF]/10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
                 <span className="text-xs font-bold text-[#4D6BFF]">{s.n}</span>
               </div>
@@ -63,7 +63,7 @@ export function DocsSection01() {
       </div>
 
       {/* Requirements */}
-      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-4 mb-6">
+      <div className="nl-glass rounded-xl p-4 mb-6">
         <h3 className="text-sm font-semibold text-white mb-3">What You Need</h3>
         <ul className="space-y-2">
           {[

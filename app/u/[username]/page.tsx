@@ -12,12 +12,10 @@ import { TierBadge } from '@/components/ui/TierBadge';
 /**
  * /u/[username] — public profile.
  * Header (avatar + name + tier + verified) → 5 stat containers
- * (Posts, Subscription, Wallet, Followers, Following) → action row
- * (Follow + Message + More) → tabs (Overview / Posts / Following /
- * Followers).
+ * (Subscription, Wallet, Followers, Following) → action row
+ * (Follow + Message + More) → tabs (Overview / Following / Followers).
  *
- * Posts tab is reserved for future on-chain activity feed — empty
- * state today rather than fabricated entries.
+ * Platform users don't post, so there is no Posts tab/stat.
  */
 
 interface ProfileResponse {
@@ -49,7 +47,7 @@ interface ProfileResponse {
   } | null;
 }
 
-type Tab = 'overview' | 'posts' | 'following' | 'followers';
+type Tab = 'overview' | 'following' | 'followers';
 
 export default function PublicProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
@@ -153,8 +151,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
       )}
 
       {/* 5 containers */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
-        <StatCard label="Posts" value="0" hint="On-chain activity" />
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
         <StatCard label="Subscription" value={p.tier ? p.tier.toUpperCase() : 'FREE'} />
         <StatCard label="Wallet" value={p.show_activity ? 'Public' : 'Hidden'} />
         <Link href={`/u/${p.username}/followers`} className="contents">
@@ -172,7 +169,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
       )}
 
       <div className="flex gap-1 p-1 bg-white/[0.04] border border-white/[0.06] rounded-xl mb-4">
-        {(['overview', 'posts', 'following', 'followers'] as Tab[]).map((t) => (
+        {(['overview', 'following', 'followers'] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -187,11 +184,6 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
 
       <div>
         {tab === 'overview' && <OverviewTab profile={p} />}
-        {tab === 'posts' && (
-          <div className="text-sm text-slate-400 p-6 rounded-xl bg-white/[0.025] border border-white/[0.06] text-center">
-            No public posts yet. Posts will surface here once on-chain activity is wired.
-          </div>
-        )}
         {tab === 'following' && <FollowListInline kind="following" userId={p.id} />}
         {tab === 'followers' && <FollowListInline kind="followers" userId={p.id} />}
       </div>
@@ -201,7 +193,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
 
 function StatCard({ label, value, hint, clickable }: { label: string; value: string; hint?: string; clickable?: boolean }) {
   return (
-    <div className={`rounded-xl bg-white/[0.025] border border-white/[0.06] p-3 ${clickable ? 'hover:border-[var(--nl-blue,#0066FF)]/40 cursor-pointer transition-colors' : ''}`}>
+    <div className={`rounded-xl nl-glass p-3 ${clickable ? 'hover:border-[var(--nl-blue,#0066FF)]/40 cursor-pointer transition-colors' : ''}`}>
       <div className="text-[10px] uppercase tracking-wide text-slate-400">{label}</div>
       <div className="text-base font-bold text-white tabular-nums mt-0.5">{value}</div>
       {hint ? <div className="text-[10px] text-slate-500 mt-0.5">{hint}</div> : null}
@@ -211,7 +203,7 @@ function StatCard({ label, value, hint, clickable }: { label: string; value: str
 
 function OverviewTab({ profile }: { profile: ProfileResponse['profile'] }) {
   return (
-    <div className="rounded-xl bg-white/[0.025] border border-white/[0.06] p-4 space-y-3">
+    <div className="rounded-xl nl-glass p-4 space-y-3">
       <div>
         <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-1">Joined</div>
         <div className="text-sm text-slate-200">{new Date(profile.created_at).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</div>
@@ -262,7 +254,7 @@ function FollowListInline({ kind, userId }: { kind: 'followers' | 'following'; u
   if (items === null) return <div className="text-sm text-slate-400">Loading…</div>;
   if (items.length === 0) return <div className="text-sm text-slate-400 italic">No {kind} yet.</div>;
   return (
-    <div className="rounded-xl bg-white/[0.025] border border-white/[0.06] divide-y divide-white/[0.05]">
+    <div className="rounded-xl nl-glass divide-y divide-white/[0.05]">
       {items.map((u) => <UserListRow key={u.id} user={u} />)}
     </div>
   );

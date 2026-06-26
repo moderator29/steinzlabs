@@ -100,7 +100,7 @@ export function SecurityShowcase() {
           {LAYERS.map((l, i) => (
             <div
               key={l.title}
-              className={`group relative bg-white/[0.02] border border-white/[0.06] rounded-2xl p-5 transition-all duration-500 hover:bg-white/[0.04] hover:-translate-y-1 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+              className={`group relative nl-glass rounded-2xl p-5 transition-all duration-500 hover:bg-white/[0.04] hover:-translate-y-1 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
               style={{ transitionDelay: `${i * 70}ms` }}
             >
               <div
