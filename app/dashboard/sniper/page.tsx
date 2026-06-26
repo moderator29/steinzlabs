@@ -645,10 +645,143 @@ function fmtCompact(n: number | undefined | null): string {
   return `$${n.toFixed(0)}`;
 }
 
+// ─── Shadow Guardian — lazy, concurrency-limited per-token security audit ──────
+
+interface TokenAudit {
+  score: number;
+  level: 'SAFE' | 'CAUTION' | 'WARNING' | 'DANGER';
+  honeypot: boolean;
+  buyTax: number;
+  sellTax: number;
+  mintable: boolean;
+  verified: boolean;
+  lpLockedPct: number | null;
+  blocked: boolean;
+  flags: string[];
+}
+
+// Client-side cache + a tiny semaphore so a feed of 24 rows never fires 24
+// scanner requests at once (the upstream provider is rate-limited). Module
+// scope keeps the cache alive across re-renders and tab switches.
+const auditCache = new Map<string, TokenAudit>();
+const auditInflight = new Map<string, Promise<TokenAudit | null>>();
+let auditActive = 0;
+const auditQueue: Array<() => void> = [];
+const AUDIT_MAX_CONCURRENT = 3;
+
+function auditSlot(): Promise<void> {
+  if (auditActive < AUDIT_MAX_CONCURRENT) {
+    auditActive++;
+    return Promise.resolve();
+  }
+  return new Promise<void>((resolve) => auditQueue.push(resolve)).then(() => {
+    auditActive++;
+  });
+}
+function auditRelease() {
+  auditActive--;
+  const next = auditQueue.shift();
+  if (next) next();
+}
+
+async function fetchAudit(chain: string, address: string): Promise<TokenAudit | null> {
+  const key = `${chain}:${address.toLowerCase()}`;
+  const cached = auditCache.get(key);
+  if (cached) return cached;
+  const existing = auditInflight.get(key);
+  if (existing) return existing;
+
+  const p = (async () => {
+    await auditSlot();
+    try {
+      const res = await fetch(`/api/sniper/audit?chain=${encodeURIComponent(chain)}&address=${encodeURIComponent(address)}`);
+      if (!res.ok) return null;
+      const data = (await res.json()) as TokenAudit;
+      auditCache.set(key, data);
+      return data;
+    } catch {
+      return null;
+    } finally {
+      auditRelease();
+      auditInflight.delete(key);
+    }
+  })();
+  auditInflight.set(key, p);
+  return p;
+}
+
+function useTokenAudit(chain: string, address: string): { audit: TokenAudit | null; loading: boolean } {
+  const [audit, setAudit] = useState<TokenAudit | null>(() => auditCache.get(`${chain}:${address.toLowerCase()}`) ?? null);
+  const [loading, setLoading] = useState(!audit);
+  useEffect(() => {
+    let alive = true;
+    const cached = auditCache.get(`${chain}:${address.toLowerCase()}`);
+    if (cached) { setAudit(cached); setLoading(false); return; }
+    setLoading(true);
+    fetchAudit(chain, address).then((a) => {
+      if (!alive) return;
+      setAudit(a);
+      setLoading(false);
+    });
+    return () => { alive = false; };
+  }, [chain, address]);
+  return { audit, loading };
+}
+
+/** Shadow Guardian badge cluster for a feed row. */
+function GuardianBadges({ audit, loading }: { audit: TokenAudit | null; loading: boolean }) {
+  if (loading) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] text-white/30">
+        <Shield className="w-3 h-3 animate-pulse" /> Scanning…
+      </span>
+    );
+  }
+  if (!audit) return null;
+
+  const scoreColor = audit.level === 'SAFE' ? 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30'
+    : audit.level === 'CAUTION' ? 'text-amber-300 bg-amber-500/15 border-amber-500/30'
+    : audit.level === 'WARNING' ? 'text-orange-300 bg-orange-500/15 border-orange-500/30'
+    : 'text-red-300 bg-red-500/15 border-red-500/30';
+
+  const taxHigh = audit.buyTax > 10 || audit.sellTax > 10;
+
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      <span
+        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border ${scoreColor}`}
+        title="Shadow Guardian security score"
+      >
+        <Shield className="w-2.5 h-2.5" />{audit.score}
+      </span>
+      {audit.honeypot && (
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase border text-red-300 bg-red-500/15 border-red-500/40" title="Honeypot — cannot sell">
+          <AlertTriangle className="w-2.5 h-2.5" />Honeypot
+        </span>
+      )}
+      {(audit.buyTax > 0 || audit.sellTax > 0) && (
+        <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-semibold border ${taxHigh ? 'text-red-300 bg-red-500/10 border-red-500/30' : 'text-white/60 bg-white/[0.04] border-white/10'}`} title="Buy / Sell tax">
+          {audit.buyTax}/{audit.sellTax}%
+        </span>
+      )}
+      {audit.lpLockedPct != null && (
+        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-semibold border ${audit.lpLockedPct >= 0.9 ? 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30' : 'text-amber-300 bg-amber-500/10 border-amber-500/30'}`} title="Liquidity locked / burned">
+          <Lock className="w-2.5 h-2.5" />{Math.round(audit.lpLockedPct * 100)}%
+        </span>
+      )}
+      {audit.mintable && (
+        <span className="px-1.5 py-0.5 rounded-md text-[9px] font-semibold border text-amber-300 bg-amber-500/10 border-amber-500/30" title="Token is mintable">Mintable</span>
+      )}
+    </div>
+  );
+}
+
 function TokenRow({ t, onSnipe }: { t: DetectedToken; onSnipe: (t: DetectedToken) => void }) {
+  const { audit, loading: auditLoading } = useTokenAudit(t.chain, t.address);
   const statusColor = t.status === 'safe' ? 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30'
     : t.status === 'risky' ? 'text-amber-300 bg-amber-500/15 border-amber-500/30'
     : 'text-red-300 bg-red-500/15 border-red-500/30';
+  const snipeBlocked = audit?.blocked ?? false;
   return (
     <div className="nl-glass rounded-xl p-3 flex items-center gap-3 hover:-translate-y-px transition">
       {t.logo ? <img src={t.logo} alt="" className="w-10 h-10 rounded-full flex-shrink-0 object-cover" /> : <div className="w-10 h-10 rounded-full bg-white/10 flex-shrink-0 flex items-center justify-center text-xs font-bold text-white/70">{t.symbol.slice(0, 2)}</div>}
@@ -670,9 +803,22 @@ function TokenRow({ t, onSnipe }: { t: DetectedToken; onSnipe: (t: DetectedToken
           {t.source ? <span className="text-white/30 hidden sm:inline">·</span> : null}
           {t.source ? <span className="capitalize text-white/40 hidden sm:inline">{t.source.replace(/_/g, ' ')}</span> : null}
         </div>
+        {/* Shadow Guardian audit badges */}
+        <div className="mt-1.5">
+          <GuardianBadges audit={audit} loading={auditLoading} />
+        </div>
       </div>
-      <button onClick={() => onSnipe(t)} className="shrink-0 px-3 py-1.5 rounded-lg bg-[#0066FF]/15 border border-[#0066FF]/40 text-blue-200 text-xs font-bold hover:bg-[#0066FF]/25 transition">
-        Snipe
+      <button
+        onClick={() => onSnipe(t)}
+        disabled={snipeBlocked}
+        title={snipeBlocked ? 'Blocked by Shadow Guardian — failed security checks' : 'Snipe this token'}
+        className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition border ${
+          snipeBlocked
+            ? 'bg-red-500/10 border-red-500/30 text-red-300/70 cursor-not-allowed'
+            : 'bg-[#0066FF]/15 border-[#0066FF]/40 text-blue-200 hover:bg-[#0066FF]/25'
+        }`}
+      >
+        {snipeBlocked ? 'Blocked' : 'Snipe'}
       </button>
     </div>
   );
