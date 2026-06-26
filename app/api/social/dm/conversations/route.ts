@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
   // already existed, the just-inserted ones for a brand-new conversation.
   const { data, error } = await sb
     .from('dm_conversations')
-    .select('id, user_a_id, user_b_id, conversation_key_a, conversation_key_b, created_at, last_message_at')
+    .select('id, user_a_id, user_b_id, conversation_key_a, conversation_key_b, created_at, last_message_at, request_state, requested_by')
     .eq('user_a_id', pair.user_a_id)
     .eq('user_b_id', pair.user_b_id)
     .single();
@@ -120,6 +120,8 @@ export async function POST(req: NextRequest) {
     sealed_conversation_key: isUserA ? data.conversation_key_a : data.conversation_key_b,
     created_at: data.created_at,
     last_message_at: data.last_message_at,
+    request_state: data.request_state,
+    requested_by: data.requested_by,
   });
 }
 

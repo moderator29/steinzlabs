@@ -1,6 +1,8 @@
 'use client';
 
 import { use, useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Lock, Send, ShieldCheck } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { supabase } from '@/lib/supabase';
@@ -41,8 +43,11 @@ interface UiMessage {
   read_at: string | null;
 }
 
+interface PeerInfo { username: string | null; display_name: string | null; avatar_url: string | null }
+
 export default function DmThreadPage({ params }: { params: Promise<{ peerId: string }> }) {
   const { peerId } = use(params);
+  const router = useRouter();
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [convKey, setConvKey] = useState<Uint8Array | null>(null);
   const [me, setMe] = useState<string | null>(null);
@@ -52,7 +57,38 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
   const [sending, setSending] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [hasMoreOlder, setHasMoreOlder] = useState(true);
+  const [requestState, setRequestState] = useState<string | null>(null);
+  const [requestedBy, setRequestedBy] = useState<string | null>(null);
+  const [peer, setPeer] = useState<PeerInfo | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
+
+  // Peer header info.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const r = await fetch(`/api/social/profile/${encodeURIComponent(peerId)}`).catch(() => null);
+      if (r && r.ok && !cancelled) {
+        const j = await r.json();
+        if (j?.profile) setPeer({ username: j.profile.username, display_name: j.profile.display_name, avatar_url: j.profile.avatar_url });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [peerId]);
+
+  // This is an incoming request the current user can accept/decline when it's
+  // pending AND the *peer* initiated it.
+  const isIncomingRequest = requestState === 'pending' && requestedBy === peerId;
+
+  const respondToRequest = useCallback(async (action: 'accept' | 'decline') => {
+    if (!conversationId) return;
+    await fetch('/api/social/dm/conversations', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversation_id: conversationId, action }),
+    });
+    if (action === 'accept') setRequestState('accepted');
+    else router.push('/dashboard/messages');
+  }, [conversationId, router]);
 
   // Bootstrap
   useEffect(() => {
@@ -79,6 +115,8 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
         const conv = await res.json();
         if (cancelled) return;
         setConversationId(conv.id);
+        setRequestState(conv.request_state ?? 'accepted');
+        setRequestedBy(conv.requested_by ?? null);
         // The server may have returned the EXISTING sealed key (upsert
         // happy path) — unseal that one instead of using the brand-new
         // key we just generated, so history decrypts.
@@ -220,11 +258,35 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
     <div className="min-h-screen flex flex-col p-4 sm:p-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-4">
         <BackButton />
-        <h1 className="text-base font-semibold text-white">Conversation</h1>
+        <Link href={`/u/${peer?.username ?? peerId}`} className="flex items-center gap-2 min-w-0 hover:opacity-90">
+          {peer?.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={peer.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10" />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0066FF)] to-[#7C3AED] flex items-center justify-center text-xs font-bold text-white">
+              {(peer?.display_name || peer?.username || '?').slice(0, 1).toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-white truncate leading-tight">{peer?.display_name || peer?.username || 'Conversation'}</div>
+            {peer?.username && <div className="text-[11px] text-slate-500 truncate leading-tight">@{peer.username}</div>}
+          </div>
+        </Link>
         <span className="ms-auto inline-flex items-center gap-1 text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-full">
           <ShieldCheck className="w-3 h-3" />Encrypted
         </span>
       </div>
+
+      {/* Incoming message request — accept to move it to Primary, or decline. */}
+      {isIncomingRequest && (
+        <div className="mb-3 rounded-xl nl-glass p-3 flex items-center gap-3">
+          <div className="flex-1 min-w-0 text-[12px] text-slate-300">
+            <span className="font-semibold text-white">Message request.</span> Accept to chat, or decline to remove it. Replying also accepts.
+          </div>
+          <button onClick={() => void respondToRequest('decline')} className="px-3 py-1.5 rounded-lg bg-white/[0.06] border border-white/10 text-slate-300 hover:text-white text-[12px] font-semibold">Decline</button>
+          <button onClick={() => void respondToRequest('accept')} className="px-3 py-1.5 rounded-lg bg-[var(--nl-blue,#0066FF)] text-white text-[12px] font-semibold">Accept</button>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto space-y-2 mb-3 rounded-xl nl-glass p-3">
         {messages.length > 0 && hasMoreOlder && (
