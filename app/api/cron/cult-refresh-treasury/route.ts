@@ -30,8 +30,20 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response!;
 
   const startedAt = Date.now();
-  const tokenContract = process.env.NAKA_TOKEN_CONTRACT;
-  const treasuryWallet = process.env.NAKA_TREASURY_WALLET;
+  // Accept the canonical server names first, then fall back to the names the
+  // project already has set, so the treasury fills without duplicating env:
+  //   - token contract: server NAKA_TOKEN_CONTRACT, else the client-side
+  //     NEXT_PUBLIC_NAKA_TOKEN_ADDRESS (same $NAKA contract).
+  //   - treasury wallet: NAKA_TREASURY_WALLET, else TREASURY_WALLET_EVM (the
+  //     EVM treasury — $NAKA is an ERC-20, so the EVM wallet is the relevant
+  //     one), else TREASURY_WALLET_SOL. The handler auto-detects EVM vs Solana
+  //     from the address shape below.
+  const tokenContract =
+    process.env.NAKA_TOKEN_CONTRACT ?? process.env.NEXT_PUBLIC_NAKA_TOKEN_ADDRESS;
+  const treasuryWallet =
+    process.env.NAKA_TREASURY_WALLET ??
+    process.env.TREASURY_WALLET_EVM ??
+    process.env.TREASURY_WALLET_SOL;
 
   if (!tokenContract || !treasuryWallet) {
     const duration = Date.now() - startedAt;
@@ -40,7 +52,7 @@ export async function GET(request: NextRequest) {
       ok: true,
       durationMs: duration,
       skipped: 'env_unset',
-      hint: 'Set both NAKA_TOKEN_CONTRACT and NAKA_TREASURY_WALLET to enable.',
+      hint: 'Set the $NAKA contract (NAKA_TOKEN_CONTRACT or NEXT_PUBLIC_NAKA_TOKEN_ADDRESS) and a treasury wallet (NAKA_TREASURY_WALLET or TREASURY_WALLET_EVM) to enable.',
     });
   }
 
