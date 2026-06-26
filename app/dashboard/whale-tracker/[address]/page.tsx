@@ -8,6 +8,7 @@ import { ExternalLink, CheckCircle2, Loader2, Copy, Download, Repeat2 } from "lu
 import BackButton from "@/components/ui/BackButton";
 import { SecurityBadge } from "@/components/security/SecurityBadge";
 import { WhaleAvatar } from "@/components/whales/WhaleAvatar";
+import { ChainLogo } from "@/components/common/ChainLogo";
 import NewCopyRuleModal from "@/app/dashboard/copy-trading/NewCopyRuleModal";
 import { toast } from "sonner";
 import { useTabListKeys } from "@/hooks/useTabListKeys";
@@ -303,7 +304,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
                 >
                   <Copy size={11} />
                 </button>
-                <span className="uppercase">{w.chain}</span>
+                <span className="inline-flex items-center gap-1 uppercase"><ChainLogo chain={w.chain} size={12} />{w.chain}</span>
                 {w.x_handle && (
                   <a href={`https://x.com/${w.x_handle}`} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline inline-flex items-center gap-1">
                     @{w.x_handle} <ExternalLink size={9} />

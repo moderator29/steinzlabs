@@ -452,7 +452,7 @@ export default function Dashboard() {
       <div className="fixed top-0 w-full z-40/95 backdrop-blur-xl border-b border-white/[0.06] naka-safe-top">
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2.5">
-            <button onClick={() => setMenuOpen(!menuOpen)} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors" aria-label="Open menu">
+            <button onClick={() => setMenuOpen(!menuOpen)} className="-ms-1 p-1 text-white/80 hover:text-white transition-colors" aria-label="Open menu">
               {/* §hamburger-visibility — use lucide Menu/X here. The brand
                   icons paint with a fixed gradient stroke and ignore the
                   text-* colour, so the toggle read as invisible on the

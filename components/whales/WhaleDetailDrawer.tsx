@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import { X, ExternalLink, CheckCircle2, TrendingUp, TrendingDown, Copy, Check, Loader2, Globe, Twitter, Users, Activity, Wallet } from 'lucide-react';
+import { ChainLogo } from '@/components/common/ChainLogo';
 
 interface WhaleRow {
   id: string;
@@ -178,7 +179,7 @@ export default function WhaleDetailDrawer({
               {(w.verified || ark?.verified) && <CheckCircle2 className="w-4 h-4 text-[#0066FF] shrink-0" />}
             </div>
             <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 uppercase">{w.chain}</span>
+              <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 uppercase"><ChainLogo chain={w.chain} size={12} />{w.chain}</span>
               {w.archetype && <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400">{w.archetype}</span>}
               {ark?.entity && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#0066FF]/20 text-[#8FA3FF]">Entity: {ark.entity}</span>}
             </div>

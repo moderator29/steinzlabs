@@ -4,6 +4,7 @@ import { Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { NakaLoader } from "@/components/brand/NakaLoader";
 import { resolveTokenChain } from "@/lib/market/tokenChainResolver";
+import { ChainLogo } from "@/components/common/ChainLogo";
 
 interface SearchResult {
   type: "token" | "wallet" | "entity";
@@ -38,8 +39,8 @@ function ChainBadge({ chain }: { chain: string }) {
     );
   }
   return (
-    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider flex-shrink-0 ${meta.bg} ${meta.text}`}>
-      {meta.label}
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider flex-shrink-0 ${meta.bg} ${meta.text}`}>
+      <ChainLogo chain={chain} size={11} />{meta.label}
     </span>
   );
 }
