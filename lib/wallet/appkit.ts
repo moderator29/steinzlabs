@@ -109,3 +109,17 @@ export function getAppKit() {
 }
 
 export const APPKIT_PROJECT_ID = PROJECT_ID;
+
+// Register the modal at module load ON THE CLIENT ONLY. appkit.ts is imported
+// by the client WalletProviders, so this runs in the browser before React
+// renders the tree — which means createAppKit has already run by the time any
+// `useAppKit()` consumer (swap card, login, EnterNakaCult) renders. Previously
+// init happened in a WalletProviders useEffect, which fires AFTER children
+// render, so a consumer in the first-paint tree could hit Reown's
+// "call createAppKit before using useAppKit" throw on the very first client
+// render. The `typeof window` guard keeps SSR untouched (no window-at-import,
+// no behaviour change on the server); getAppKit() is idempotent so the existing
+// useEffect call remains a harmless safety net.
+if (typeof window !== 'undefined' && HAS_APPKIT) {
+  getAppKit();
+}
