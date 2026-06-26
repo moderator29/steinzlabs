@@ -76,7 +76,10 @@ export const POST = withTierGate('max', async (req: NextRequest) => {
   try {
     const { getSupabaseAdmin } = await import('@/lib/supabaseAdmin');
     const db = getSupabaseAdmin();
-    const { data: setting } = await db.from('platform_settings').select('enabled').eq('key', 'sniper_enabled').single();
+    // The real kill switch is the singleton platform_sniper_state(id=1).
+    // (The old code read platform_settings.key/enabled — columns that do not
+    // exist — so it threw and fail-closed-blocked 100% of snipes.)
+    const { data: setting } = await db.from('platform_sniper_state').select('enabled').eq('id', 1).single();
     if (setting && setting.enabled === false) {
       return NextResponse.json({ blocked: true, reason: 'Sniper bot is currently disabled by admin.', steps });
     }

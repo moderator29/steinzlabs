@@ -28,6 +28,45 @@ const CHAIN_IDS: Record<string, number> = {
   avalanche: 43114,
 };
 
+const RPC_BY_CHAIN: Record<string, string> = {
+  ethereum: "https://eth.llamarpc.com",
+  bsc: "https://bsc-dataseed.binance.org",
+  avalanche: "https://api.avax.network/ext/bc/C/rpc",
+};
+
+const decimalsCache = new Map<string, number>();
+
+/**
+ * On-chain ERC-20 decimals() via a raw eth_call. Cached. Defaults to 18 when
+ * the RPC is unreachable or the token doesn't implement decimals — callers use
+ * this to scale whole-token amounts to base units for swaps and pricing.
+ */
+export async function getEvmTokenDecimals(chain: string, tokenAddress: string): Promise<number> {
+  const key = `${chain}:${tokenAddress.toLowerCase()}`;
+  const cached = decimalsCache.get(key);
+  if (cached != null) return cached;
+  const rpc = RPC_BY_CHAIN[chain];
+  if (!rpc) return 18;
+  try {
+    const res = await fetch(rpc, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0", id: 1, method: "eth_call",
+        params: [{ to: tokenAddress, data: "0x313ce567" }, "latest"], // decimals()
+      }),
+      signal: AbortSignal.timeout(6000),
+    });
+    const json = await res.json();
+    const hex = json?.result;
+    if (typeof hex === "string" && hex.length >= 3) {
+      const d = parseInt(hex, 16);
+      if (Number.isFinite(d) && d >= 0 && d <= 36) { decimalsCache.set(key, d); return d; }
+    }
+  } catch { /* fall through to default */ }
+  return 18;
+}
+
 async function priceUsdSolana(mint: string): Promise<number | null> {
   try {
     const p = await jupiterGetTokenPrice(mint);
@@ -37,17 +76,18 @@ async function priceUsdSolana(mint: string): Promise<number | null> {
   }
 }
 
-async function priceUsdEvm(chain: SniperChain, tokenAddress: string): Promise<number | null> {
+async function priceUsdEvm(chain: SniperChain, tokenAddress: string, decimals?: number): Promise<number | null> {
   const apiKey = process.env.ZX_API_KEY ?? process.env.NEXT_PUBLIC_ZX_API_KEY;
   if (!apiKey) return null;
   const usdc = USDC_BY_CHAIN[chain];
   const chainId = CHAIN_IDS[chain];
   if (!usdc || !chainId) return null;
 
-  // Sell 1 whole token (assume 18 decimals — caller corrects if it knows).
-  // For non-18-dec tokens this still works for spot price as long as the same
-  // amount->USDC ratio holds; we only need price-per-token, not absolute size.
-  const sellAmount = "1000000000000000000"; // 1e18 (assume 18 decimals)
+  // Sell exactly ONE whole token (10**decimals base units) so buyAmount is the
+  // real USD price per token. The old code hardcoded 1e18, which over-reported
+  // price by 1e(18-decimals)x for non-18-decimal tokens and poisoned TP/SL/PnL.
+  const dec = decimals ?? (tokenAddress === "native" ? 18 : await getEvmTokenDecimals(chain, tokenAddress));
+  const sellAmount = (BigInt(10) ** BigInt(dec)).toString();
   const search = new URLSearchParams({
     chainId: String(chainId),
     sellToken: tokenAddress === "native" ? NATIVE_PSEUDO : tokenAddress,
@@ -78,10 +118,11 @@ async function priceUsdEvm(chain: SniperChain, tokenAddress: string): Promise<nu
 export async function getCurrentTokenPriceUsd(
   chain: SniperChain,
   tokenAddress: string,
+  decimals?: number,
 ): Promise<number | null> {
   if (chain === "solana") return priceUsdSolana(tokenAddress);
   if (chain === "ethereum" || chain === "bsc" || chain === "avalanche") {
-    return priceUsdEvm(chain, tokenAddress);
+    return priceUsdEvm(chain, tokenAddress, decimals);
   }
   // TON: skipped — no fast USD price feed wired yet.
   return null;

@@ -3,23 +3,27 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Sentry from '@sentry/nextjs';
-// Naka Labs brand icons — broad swap. Crosshair, Power, SettingsIcon, Target,
-// Zap, Lock stay on lucide (not yet in brand library).
 import {
-  Shield, AlertTriangle, Play, Pause, ExternalLink, CheckCircle, XCircle,
-  Plus, TrendingUp, Trash2, Filter,
+  AlertTriangle, Play, Pause, ExternalLink, Plus, TrendingUp, Trash2,
 } from '@/components/icons/brand';
 import {
-  Crosshair, Loader2, Lock, Power, Settings as SettingsIcon, Zap, Target,
+  Crosshair, Loader2, Lock, Power, Zap, Target, Search, RefreshCw, Radar, Flame, Clock, Bell,
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { ChainLogo } from '@/components/common/ChainLogo';
 import { useNavState } from '@/lib/nav/useNavState';
 import { supabase } from '@/lib/supabase';
 import { useAuth, hasTierAccess } from '@/lib/hooks/useAuth';
-import { PageHeader } from '@/components/common/PageHeader';
 import { CHAIN_CONFIGS, SNIPER_CHAINS, type SniperChain } from '@/lib/sniper/chains';
 import { SelectMenu, type SelectOption } from '@/components/ui/SelectMenu';
 import { NewSniperModal } from './NewSniperModal';
+import { SniperWalletModal } from './SniperWalletModal';
+import { SniperTokenDrawer } from './SniperTokenDrawer';
+import { WalletStatus } from './WalletStatus';
+import { LimitOrdersTab, AlertsTab, useAlertSound } from './OrdersAlerts';
+import {
+  type DetectedToken, fmtUSD, fmtCompact, timeAgo, useTokenAudit, GuardianBadges,
+} from './sniperShared';
 
 interface SniperCriteriaRow {
   id: string;
@@ -55,50 +59,30 @@ interface ExecutionRow {
   status: string;
   tx_hash: string | null;
   pnl_usd: number | null;
+  buy_amount_usd?: number | null;
   executed_at: string;
   execution_time_ms: number | null;
 }
 
-interface DetectedToken {
-  id: string; address: string; symbol: string; name: string; chain: string;
-  liquidity: number; securityScore: number; status: 'safe' | 'risky' | 'blocked' | 'scanning' | 'sniped';
-  detectedAt: number; price?: number; pairAge?: string; logo?: string;
-}
+type Tab = 'discover' | 'positions' | 'limit' | 'alerts' | 'snipers' | 'history';
 
-type Tab = 'snipers' | 'feed' | 'history';
-
-function fmtUSD(n: number | null | undefined): string {
-  if (n == null || !isFinite(n)) return '—';
-  const a = Math.abs(n);
-  const sign = n < 0 ? '-' : n > 0 ? '+' : '';
-  if (a >= 1_000_000) return `${sign}$${(a / 1_000_000).toFixed(2)}M`;
-  if (a >= 1_000) return `${sign}$${(a / 1_000).toFixed(2)}K`;
-  return `${sign}$${a.toFixed(2)}`;
-}
-
-function timeAgo(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const s = Math.floor(ms / 1000);
-  if (s < 60) return `${s}s ago`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
-}
+// Early-entry liquidity presets — catch coins at 5k/10k/15k.
+const LIQ_PRESETS: { label: string; value: number }[] = [
+  { label: 'Any', value: 0 },
+  { label: '≥5K', value: 5000 },
+  { label: '≥10K', value: 10000 },
+  { label: '≥15K', value: 15000 },
+  { label: '≥50K', value: 50000 },
+];
 
 export default function SniperPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  // Sniper Bot is a MAX-tier platform feature. Cult membership is a separate,
-  // decoupled entitlement and does NOT grant platform features, so the gate
-  // here is purely the platform tier.
   const hasSniperAccess = hasTierAccess(user, 'max');
 
-  const [tab, setTab] = useState<Tab>('snipers');
+  const [tab, setTab] = useState<Tab>('discover');
   const [chainFilter, setChainFilter] = useState<SniperChain | 'all'>('all');
 
-  // PDF S3 — preserve tab + chainFilter across sniper → config → back.
   useNavState(
     'sniper',
     () => ({ tab, chainFilter }),
@@ -107,22 +91,31 @@ export default function SniperPage() {
       if (typeof s.chainFilter === 'string') setChainFilter(s.chainFilter as SniperChain | 'all');
     },
   );
+
   const [snipers, setSnipers] = useState<SniperCriteriaRow[]>([]);
   const [executions, setExecutions] = useState<ExecutionRow[]>([]);
   const [feedTokens, setFeedTokens] = useState<DetectedToken[]>([]);
   const [feedLoading, setFeedLoading] = useState(false);
+  const [minLiq, setMinLiq] = useState(0);
+  const [feedSources, setFeedSources] = useState<string[]>([]);
+  const [sourceFilter, setSourceFilter] = useState<string[]>([]);
+  const [feedQuery, setFeedQuery] = useState('');
+  const [ogOnly, setOgOnly] = useState(false);
   const [killSwitchOn, setKillSwitchOn] = useState(false);
   const [killToggling, setKillToggling] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [drawerToken, setDrawerToken] = useState<DetectedToken | null>(null);
+  const [walletRefresh, setWalletRefresh] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [liveConnected, setLiveConnected] = useState(false);
+  const [freshIds, setFreshIds] = useState<Set<string>>(() => new Set());
 
   // ── Data loaders ─────────────────────────────────────────────────────────
   const loadSnipers = useCallback(async () => {
     if (!user?.id) return;
     const { data, error } = await supabase
-      .from('sniper_criteria')
-      .select('*')
-      .eq('user_id', user.id)
+      .from('sniper_criteria').select('*').eq('user_id', user.id)
       .order('updated_at', { ascending: false });
     if (!error && data) setSnipers(data as SniperCriteriaRow[]);
   }, [user?.id]);
@@ -131,10 +124,8 @@ export default function SniperPage() {
     if (!user?.id) return;
     const { data } = await supabase
       .from('sniper_executions')
-      .select('id, token_symbol, token_address, chain, amount_native, amount_sol, status, tx_hash, pnl_usd, executed_at, execution_time_ms')
-      .eq('user_id', user.id)
-      .order('executed_at', { ascending: false })
-      .limit(50);
+      .select('id, token_symbol, token_address, chain, amount_native, amount_sol, status, tx_hash, pnl_usd, buy_amount_usd, executed_at, execution_time_ms')
+      .eq('user_id', user.id).order('executed_at', { ascending: false }).limit(100);
     if (data) setExecutions(data as ExecutionRow[]);
   }, [user?.id]);
 
@@ -142,7 +133,6 @@ export default function SniperPage() {
     try {
       const res = await fetch('/api/sniper/state', { cache: 'no-store' });
       const j = await res.json();
-      // platform_sniper_state.enabled === false means killed.
       setKillSwitchOn(j?.enabled === false);
     } catch { /* keep default */ }
   }, []);
@@ -150,20 +140,20 @@ export default function SniperPage() {
   const loadFeed = useCallback(async () => {
     setFeedLoading(true);
     try {
-      const params = new URLSearchParams({ limit: '20' });
+      const params = new URLSearchParams({ limit: '30' });
       if (chainFilter !== 'all') params.set('chain', chainFilter);
+      if (minLiq > 0) params.set('minLiquidity', String(minLiq));
+      if (sourceFilter.length) params.set('source', sourceFilter.join(','));
       const res = await fetch(`/api/sniper?${params.toString()}`, { cache: 'no-store' });
       const j = await res.json();
       setFeedTokens(j?.tokens ?? []);
+      if (Array.isArray(j?.sources)) setFeedSources(j.sources);
     } catch (err) {
-      // CLAUDE.md: no console.error in production. Sentry capture so
-      // sniper-feed outages are tracked; UI degrades gracefully via
-      // empty feedTokens array.
       Sentry.captureException(err, { tags: { surface: 'sniper/feed' } });
     } finally {
       setFeedLoading(false);
     }
-  }, [chainFilter]);
+  }, [chainFilter, minLiq, sourceFilter]);
 
   // ── Initial + reactive loads ─────────────────────────────────────────────
   useEffect(() => {
@@ -172,22 +162,10 @@ export default function SniperPage() {
   }, [authLoading, user, loadSnipers, loadExecutions, loadKillSwitch]);
 
   useEffect(() => {
-    if (tab === 'feed') loadFeed();
+    if (tab === 'discover') loadFeed();
   }, [tab, chainFilter, loadFeed]);
 
-  // Phase E — Realtime sniper executions. Was a polled-on-mount load
-  // only; user had to refresh to see a new fill. Subscribe to inserts
-  // on sniper_executions for the current user and prepend new rows
-  // with a brief flash effect handled in the row component. Industry
-  // parity with sniping platforms (Photon, BullX, Trojan): execution
-  // feed updates instantly without page action.
-  const [liveConnected, setLiveConnected] = useState(false);
-  // Track which execution rows just landed via realtime so HistoryTab
-  // can flash them. Industry parity with Photon / BullX where new
-  // fills pulse for ~2s. Keep this as a ref-backed Set to avoid
-  // re-renders on every clear; React only re-renders the freshIds
-  // bumps via the version counter.
-  const [freshIds, setFreshIds] = useState<Set<string>>(() => new Set());
+  // Realtime execution fills (Photon/BullX parity — instant, with flash).
   useEffect(() => {
     if (!user?.id || !supabase) return;
     const channel = supabase
@@ -197,43 +175,32 @@ export default function SniperPage() {
         { event: 'INSERT', schema: 'public', table: 'sniper_executions', filter: `user_id=eq.${user.id}` },
         (payload) => {
           const row = payload.new as ExecutionRow;
-          setExecutions((prev) => [row, ...prev].slice(0, 50));
+          setExecutions((prev) => [row, ...prev].slice(0, 100));
           if (row.id) {
-            setFreshIds((prev) => {
-              const next = new Set(prev);
-              next.add(row.id);
-              return next;
-            });
-            // Drop the highlight after 2.4s (matches our `animate-pulse-fill`
-            // CSS, defined inline below). Use window.setTimeout so SSR
-            // doesn't choke on the missing global.
+            setFreshIds((prev) => new Set(prev).add(row.id));
             window.setTimeout(() => {
               setFreshIds((prev) => {
                 if (!prev.has(row.id)) return prev;
-                const next = new Set(prev);
-                next.delete(row.id);
-                return next;
+                const next = new Set(prev); next.delete(row.id); return next;
               });
             }, 2400);
           }
         },
       )
-      .subscribe((status) => {
-        setLiveConnected(status === 'SUBSCRIBED');
-      });
+      .subscribe((status) => setLiveConnected(status === 'SUBSCRIBED'));
     return () => { void supabase.removeChannel(channel); };
   }, [user?.id]);
 
   // ── Actions ──────────────────────────────────────────────────────────────
   const togglePause = async (s: SniperCriteriaRow) => {
     const next = !s.paused;
-    setSnipers(prev => prev.map(x => x.id === s.id ? { ...x, paused: next } : x));
+    setSnipers((prev) => prev.map((x) => (x.id === s.id ? { ...x, paused: next } : x)));
     await supabase.from('sniper_criteria').update({ paused: next }).eq('id', s.id);
   };
 
   const removeSniper = async (s: SniperCriteriaRow) => {
     if (!confirm(`Delete sniper "${s.name}"? This cannot be undone.`)) return;
-    setSnipers(prev => prev.filter(x => x.id !== s.id));
+    setSnipers((prev) => prev.filter((x) => x.id !== s.id));
     await supabase.from('sniper_criteria').delete().eq('id', s.id);
   };
 
@@ -254,204 +221,366 @@ export default function SniperPage() {
   };
 
   const visibleSnipers = useMemo(
-    () => chainFilter === 'all' ? snipers : snipers.filter(s => s.chains_allowed.includes(chainFilter)),
+    () => (chainFilter === 'all' ? snipers : snipers.filter((s) => s.chains_allowed.includes(chainFilter))),
     [snipers, chainFilter],
   );
 
+  const totalPnl = useMemo(() => executions.reduce((s, e) => s + (Number(e.pnl_usd) || 0), 0), [executions]);
+
+  // Realtime alert-trigger sound (Photon/BullX parity).
+  useAlertSound(user?.id);
+
   // ── Render gates ─────────────────────────────────────────────────────────
   if (authLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
-      </div>
-    );
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-400" /></div>;
   }
-
-  if (!user) {
-    router.push('/login');
-    return null;
-  }
-
-  if (!hasSniperAccess) {
-    return (
-      <div className="min-h-screen text-white p-6">
-        <BackButton />
-        <div className="max-w-md mx-auto mt-20 text-center">
-          <Lock className="w-12 h-12 mx-auto mb-4 text-amber-400" />
-          <h1 className="text-2xl font-bold mb-2">Sniper Bot is MAX-tier</h1>
-          <p className="text-white/70 mb-6">Upgrade to MAX to unlock 5-chain sniping with sub-2s execution, anti-MEV routing, multi-wallet support, and TP/SL automation.</p>
-          <button
-            onClick={() => router.push('/dashboard/pricing')}
-            className="nl-button px-6 py-3 rounded-xl font-semibold"
-          >
-            Upgrade to MAX
-          </button>
-        </div>
-      </div>
-    );
-  }
+  if (!user) { router.push('/login'); return null; }
+  if (!hasSniperAccess) return <UpgradeGate onUpgrade={() => router.push('/dashboard/pricing')} />;
 
   // ── Main UI ──────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen text-white">
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto px-4 py-5">
         <BackButton />
 
-        <PageHeader
-          title="Sniper Bot"
-          description="Sub-2s execution · 5 chains · MEV-protected"
-          actions={
-            <>
+        {/* Command bar */}
+        <div className="mt-3 nl-glass rounded-2xl p-4 sm:p-5">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="relative w-11 h-11 rounded-2xl bg-[#0066FF]/15 border border-[#0066FF]/40 flex items-center justify-center shrink-0">
+                <Crosshair className="w-6 h-6 text-blue-300" />
+                <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ${liveConnected ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">Sniper</h1>
+                  <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border border-emerald-500/40 bg-emerald-500/10 text-emerald-300">Non-Custodial</span>
+                </div>
+                <p className="text-[11px] sm:text-xs text-white/50">Sub-2s execution · EVM · MEV-protected · Shadow Guardian gated</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <WalletStatus onConnect={() => setShowWalletModal(true)} refreshKey={walletRefresh} />
               <button
                 onClick={toggleKillSwitch}
                 disabled={killToggling}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 font-semibold text-sm transition ${
+                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border font-bold text-xs transition ${
                   killSwitchOn
                     ? 'bg-red-500/15 border-red-500/50 text-red-300 hover:bg-red-500/25'
-                    : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20'
+                    : 'bg-white/[0.04] border-white/10 text-white/70 hover:text-white hover:border-white/20'
                 }`}
               >
                 {killToggling ? <Loader2 className="w-4 h-4 animate-spin" /> : <Power className="w-4 h-4" />}
-                {killSwitchOn ? 'KILLED — Resume' : 'Kill Switch'}
+                {killSwitchOn ? 'Resume' : 'Kill Switch'}
               </button>
-              <button
-                onClick={() => setShowNewModal(true)}
-                className="nl-button flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                New Sniper
+              <button onClick={() => setShowNewModal(true)} className="nl-btn-neon inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs">
+                <Plus className="w-4 h-4" /> New Sniper
               </button>
-            </>
-          }
-        />
-
-        {killSwitchOn && (
-          <div className="mt-4 flex items-center gap-3 rounded-xl border-2 border-red-500/40 bg-red-500/10 px-4 py-3">
-            <AlertTriangle className="w-5 h-5 text-red-300 flex-shrink-0" />
-            <p className="text-red-200 text-sm font-medium">All snipers are killed server-side. No new executions will fire until you resume.</p>
+            </div>
           </div>
-        )}
 
-        {/* Stats strip */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
-          <StatCard label="Active Snipers" value={snipers.filter(s => s.enabled && !s.paused).length} icon={Target} />
-          <StatCard label="Total Executions" value={executions.length} icon={Zap} />
-          <StatCard
-            label="Total PnL"
-            value={fmtUSD(executions.reduce((sum, e) => sum + (Number(e.pnl_usd) || 0), 0))}
-            icon={TrendingUp}
-          />
-          <StatCard
-            label="Avg Exec Time"
-            value={(() => {
-              const times = executions.map(e => e.execution_time_ms).filter((t): t is number => t != null && t > 0);
-              if (!times.length) return '—';
-              const avg = Math.round(times.reduce((s, t) => s + t, 0) / times.length);
-              return `${avg < 1000 ? avg + 'ms' : (avg / 1000).toFixed(2) + 's'}`;
-            })()}
-            icon={Loader2}
-          />
-        </div>
+          {killSwitchOn && (
+            <div className="mt-4 flex items-center gap-3 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2.5">
+              <AlertTriangle className="w-4 h-4 text-red-300 shrink-0" />
+              <p className="text-red-200 text-xs font-medium">All snipers are killed server-side. No new executions fire until you resume.</p>
+            </div>
+          )}
 
-        {/* Chain filter — single vertical dropdown (real chain logos) */}
-        <div className="mt-6 flex items-center gap-2">
-          <span className="text-xs uppercase tracking-wider text-white/50 font-semibold flex items-center gap-1.5">
-            <Filter className="w-3.5 h-3.5" /> Chain
-          </span>
-          <SelectMenu
-            value={chainFilter}
-            options={[
-              { id: 'all', label: 'All chains' } as SelectOption,
-              ...SNIPER_CHAINS.map((c): SelectOption => ({ id: c, label: CHAIN_CONFIGS[c].name, chain: c })),
-            ]}
-            onChange={(id) => setChainFilter(id as SniperChain | 'all')}
-          />
-        </div>
-
-        {/* Tabs */}
-        <div className="mt-4 flex items-center gap-1 border-b border-white/10">
-          <Tab id="snipers" current={tab} onClick={setTab} count={visibleSnipers.length}>My Snipers</Tab>
-          <Tab id="feed" current={tab} onClick={setTab}>New Token Feed</Tab>
-          <Tab id="history" current={tab} onClick={setTab} count={executions.length}>History</Tab>
-          {/* Realtime status indicator. Industry parity with Photon /
-              BullX / Trojan: a pulsing green dot when the execution
-              feed channel is subscribed; muted gray dot otherwise.
-              Title attribute explains the state on hover. */}
-          <span
-            className="ms-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider"
-            title={liveConnected
-              ? 'Realtime channel subscribed — new fills appear instantly'
-              : 'Realtime channel not connected — refresh to load latest fills'}
-          >
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${liveConnected ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`}
-              aria-hidden="true"
+          {/* Stat strip */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mt-4">
+            <StatCard label="Active Snipers" value={snipers.filter((s) => s.enabled && !s.paused).length} icon={Target} />
+            <StatCard label="Executions" value={executions.length} icon={Zap} />
+            <StatCard label="Total PnL" value={fmtUSD(totalPnl)} icon={TrendingUp} accent={totalPnl >= 0 ? 'pos' : 'neg'} />
+            <StatCard
+              label="Avg Speed"
+              value={(() => {
+                const times = executions.map((e) => e.execution_time_ms).filter((t): t is number => t != null && t > 0);
+                if (!times.length) return '—';
+                const avg = Math.round(times.reduce((s, t) => s + t, 0) / times.length);
+                return avg < 1000 ? `${avg}ms` : `${(avg / 1000).toFixed(2)}s`;
+              })()}
+              icon={Radar}
             />
-            <span className={liveConnected ? 'text-emerald-300' : 'text-slate-400'}>
-              {liveConnected ? 'Live' : 'Offline'}
-            </span>
-          </span>
+          </div>
         </div>
 
-        <div className="mt-5">
+        {/* Sub-nav + chain filter */}
+        <div className="mt-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/10 self-start">
+            <NavPill id="discover" current={tab} onClick={setTab} icon={Radar}>Discover</NavPill>
+            <NavPill id="positions" current={tab} onClick={setTab} icon={TrendingUp}>Positions</NavPill>
+            <NavPill id="limit" current={tab} onClick={setTab} icon={Clock}>Limit</NavPill>
+            <NavPill id="alerts" current={tab} onClick={setTab} icon={Bell}>Alerts</NavPill>
+            <NavPill id="snipers" current={tab} onClick={setTab} icon={Crosshair} count={visibleSnipers.length}>Snipers</NavPill>
+            <NavPill id="history" current={tab} onClick={setTab} icon={Zap}>History</NavPill>
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">Chain</span>
+            <SelectMenu
+              value={chainFilter}
+              options={[
+                { id: 'all', label: 'All chains' } as SelectOption,
+                ...SNIPER_CHAINS.map((c): SelectOption => ({ id: c, label: CHAIN_CONFIGS[c].name, chain: c })),
+              ]}
+              onChange={(id) => setChainFilter(id as SniperChain | 'all')}
+            />
+          </div>
+        </div>
+
+        <div className="mt-4">
+          {tab === 'discover' && (
+            <DiscoverTab
+              tokens={feedTokens} loading={feedLoading} onRefresh={loadFeed} chainFilter={chainFilter}
+              onSnipe={() => setShowNewModal(true)} onOpen={setDrawerToken} minLiq={minLiq} setMinLiq={setMinLiq}
+              sources={feedSources} sourceFilter={sourceFilter} setSourceFilter={setSourceFilter}
+              query={feedQuery} setQuery={setFeedQuery} ogOnly={ogOnly} setOgOnly={setOgOnly}
+            />
+          )}
+          {tab === 'positions' && <PositionsTab executions={executions} />}
+          {tab === 'limit' && <LimitOrdersTab />}
+          {tab === 'alerts' && <AlertsTab />}
           {tab === 'snipers' && (
-            <SnipersTab
-              snipers={visibleSnipers}
-              onPause={togglePause}
-              onDelete={removeSniper}
-              onCreate={() => setShowNewModal(true)}
-            />
+            <SnipersTab snipers={visibleSnipers} onPause={togglePause} onDelete={removeSniper} onCreate={() => setShowNewModal(true)} />
           )}
-          {tab === 'feed' && (
-            <FeedTab tokens={feedTokens} loading={feedLoading} onRefresh={loadFeed} chainFilter={chainFilter} onSnipe={() => setShowNewModal(true)} />
-          )}
-          {tab === 'history' && (
-            <HistoryTab executions={executions} chainFilter={chainFilter} freshIds={freshIds} />
-          )}
+          {tab === 'history' && <HistoryTab executions={executions} chainFilter={chainFilter} freshIds={freshIds} />}
         </div>
       </div>
 
       {showNewModal && (
-        <NewSniperModal
-          onClose={() => setShowNewModal(false)}
-          onSaved={() => { setShowNewModal(false); loadSnipers(); }}
-          userId={user.id}
+        <NewSniperModal onClose={() => setShowNewModal(false)} onSaved={() => { setShowNewModal(false); loadSnipers(); }} userId={user.id} />
+      )}
+      {showWalletModal && (
+        <SniperWalletModal userId={user.id} onClose={() => setShowWalletModal(false)} onConnected={() => setWalletRefresh((n) => n + 1)} />
+      )}
+      {drawerToken && (
+        <SniperTokenDrawer
+          token={drawerToken}
+          onClose={() => setDrawerToken(null)}
+          onSnipe={(t) => { setDrawerToken(null); void t; setShowNewModal(true); }}
         />
       )}
     </div>
   );
 }
 
-// ─── Sub-components ────────────────────────────────────────────────────────
+// ─── Upgrade gate ─────────────────────────────────────────────────────────
 
-function StatCard({ label, value, icon: Icon }: { label: string; value: string | number; icon: React.ComponentType<{ className?: string }> }) {
+function UpgradeGate({ onUpgrade }: { onUpgrade: () => void }) {
   return (
-    <div className="nl-card p-4">
-      <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-white/50 font-semibold mb-1.5">
-        <Icon className="w-3.5 h-3.5" /> {label}
+    <div className="min-h-screen text-white p-6">
+      <BackButton />
+      <div className="max-w-md mx-auto mt-20 text-center nl-glass rounded-2xl p-8">
+        <Lock className="w-12 h-12 mx-auto mb-4 text-amber-400" />
+        <h1 className="text-2xl font-bold mb-2">Sniper is MAX-tier</h1>
+        <p className="text-white/70 mb-6">Upgrade to MAX for non-custodial EVM sniping with sub-2s execution, anti-MEV routing, Shadow Guardian gating, and TP/SL automation.</p>
+        <button onClick={onUpgrade} className="nl-btn-neon px-6 py-3 rounded-xl font-semibold">Upgrade to MAX</button>
       </div>
-      <div className="text-2xl font-bold">{value}</div>
     </div>
   );
 }
 
-function Tab({ id, current, onClick, count, children }: { id: Tab; current: Tab; onClick: (t: Tab) => void; count?: number; children: React.ReactNode }) {
+// ─── Stat card / nav pill ───────────────────────────────────────────────────
+
+function StatCard({ label, value, icon: Icon, accent }: { label: string; value: string | number; icon: React.ComponentType<{ className?: string }>; accent?: 'pos' | 'neg' }) {
+  const valColor = accent === 'pos' ? 'text-emerald-300' : accent === 'neg' ? 'text-red-300' : 'text-white';
+  return (
+    <div className="rounded-xl bg-white/[0.03] border border-white/10 p-3">
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/45 font-semibold mb-1">
+        <Icon className="w-3 h-3" /> {label}
+      </div>
+      <div className={`text-xl font-bold ${valColor}`}>{value}</div>
+    </div>
+  );
+}
+
+function NavPill({ id, current, onClick, count, icon: Icon, children }: { id: Tab; current: Tab; onClick: (t: Tab) => void; count?: number; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
   const active = id === current;
   return (
     <button
       onClick={() => onClick(id)}
-      className={`px-4 py-2.5 text-sm font-semibold relative transition ${active ? 'text-white' : 'text-white/50 hover:text-white/80'}`}
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+        active ? 'bg-[#0066FF]/20 text-blue-200 border border-[#0066FF]/40' : 'text-white/55 hover:text-white border border-transparent'
+      }`}
     >
-      {children}
-      {count != null && (
-        <span className={`ms-2 px-1.5 py-0.5 rounded text-[11px] font-bold ${active ? 'bg-blue-500/30 text-blue-200' : 'bg-white/10 text-white/60'}`}>
-          {count}
-        </span>
+      <Icon className="w-3.5 h-3.5" />
+      <span className="hidden sm:inline">{children}</span>
+      {count != null && count > 0 && (
+        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${active ? 'bg-blue-500/30 text-blue-100' : 'bg-white/10 text-white/60'}`}>{count}</span>
       )}
-      {active && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-400 to-blue-600 rounded-t" />}
     </button>
   );
 }
+
+// ─── Discover (feed) ────────────────────────────────────────────────────────
+
+function DiscoverTab({
+  tokens, loading, onRefresh, chainFilter, onSnipe, onOpen,
+  minLiq, setMinLiq, sources, sourceFilter, setSourceFilter, query, setQuery, ogOnly, setOgOnly,
+}: {
+  tokens: DetectedToken[]; loading: boolean; onRefresh: () => void; chainFilter: SniperChain | 'all';
+  onSnipe: (t: DetectedToken) => void; onOpen: (t: DetectedToken) => void;
+  minLiq: number; setMinLiq: (n: number) => void;
+  sources: string[]; sourceFilter: string[]; setSourceFilter: (s: string[]) => void;
+  query: string; setQuery: (s: string) => void; ogOnly: boolean; setOgOnly: (b: boolean) => void;
+}) {
+  const toggleSource = (s: string) => setSourceFilter(sourceFilter.includes(s) ? sourceFilter.filter((x) => x !== s) : [...sourceFilter, s]);
+  const q = query.trim().toLowerCase();
+  let shown = q
+    ? tokens.filter((t) => t.symbol.toLowerCase().includes(q) || t.name.toLowerCase().includes(q) || t.address.toLowerCase() === q)
+    : tokens;
+  // OG-Token mode: established names only (heuristic — meaningful liquidity + MC).
+  if (ogOnly) shown = shown.filter((t) => t.liquidity >= 50_000 && (t.marketCap ?? 0) >= 250_000);
+
+  return (
+    <div>
+      <div className="nl-glass rounded-xl p-3 mb-3 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          <div className="flex items-center gap-2 flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 min-w-0">
+            <Search className="w-4 h-4 text-white/40 shrink-0" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, symbol or paste token address…" className="flex-1 bg-transparent outline-none text-sm text-white placeholder-white/40 min-w-0" />
+          </div>
+          <button
+            onClick={() => setOgOnly(!ogOnly)}
+            title="OG-Token mode — show only established tokens"
+            className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border transition ${
+              ogOnly ? 'bg-amber-500/15 border-amber-500/45 text-amber-200' : 'bg-white/[0.04] border-white/10 text-white/60 hover:text-white'
+            }`}
+          >
+            <Flame className="w-3.5 h-3.5" /> OG
+          </button>
+          <button onClick={onRefresh} className="shrink-0 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/10 text-xs font-semibold text-white/80 hover:text-white hover:border-white/20">
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
+          </button>
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold me-1">Min Liq</span>
+          {LIQ_PRESETS.map((p) => (
+            <button key={p.label} onClick={() => setMinLiq(p.value)} className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${minLiq === p.value ? 'bg-[#0066FF]/20 border border-[#0066FF]/50 text-blue-200' : 'bg-white/[0.04] border border-white/10 text-white/60 hover:text-white'}`}>{p.label}</button>
+          ))}
+        </div>
+        {sources.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold me-1">Source</span>
+            {sources.map((s) => (
+              <button key={s} onClick={() => toggleSource(s)} className={`px-2.5 py-1 rounded-lg text-[11px] font-medium capitalize transition ${sourceFilter.includes(s) ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-200' : 'bg-white/[0.04] border border-white/10 text-white/60 hover:text-white'}`}>{s.replace(/_/g, ' ')}</button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="text-xs text-white/50 font-medium mb-2">
+        {loading ? 'Scanning new pairs…' : `${shown.length} live ${shown.length === 1 ? 'pair' : 'pairs'}${chainFilter !== 'all' ? ` on ${CHAIN_CONFIGS[chainFilter].name}` : ' across EVM'}`}
+      </div>
+
+      {loading ? (
+        <div className="nl-glass rounded-xl p-12 text-center"><Loader2 className="w-6 h-6 mx-auto animate-spin text-blue-400" /></div>
+      ) : shown.length === 0 ? (
+        <div className="rounded-xl border-2 border-dashed border-white/10 p-12 text-center text-white/50 text-sm">No new pairs match these filters right now.</div>
+      ) : (
+        <div className="grid gap-2">
+          {shown.map((t) => <TokenRow key={t.id} t={t} onSnipe={onSnipe} onOpen={onOpen} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TokenRow({ t, onSnipe, onOpen }: { t: DetectedToken; onSnipe: (t: DetectedToken) => void; onOpen: (t: DetectedToken) => void }) {
+  const { audit, loading: auditLoading } = useTokenAudit(t.chain, t.address);
+  const snipeBlocked = audit?.blocked ?? false;
+  const statusColor = t.status === 'safe' ? 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30'
+    : t.status === 'risky' ? 'text-amber-300 bg-amber-500/15 border-amber-500/30'
+    : 'text-red-300 bg-red-500/15 border-red-500/30';
+  return (
+    <div onClick={() => onOpen(t)} role="button" tabIndex={0} className="nl-glass rounded-xl p-3 flex items-center gap-3 hover:-translate-y-px transition cursor-pointer">
+      {t.logo ? <img src={t.logo} alt="" className="w-10 h-10 rounded-full flex-shrink-0 object-cover" /> : <div className="w-10 h-10 rounded-full bg-white/10 flex-shrink-0 flex items-center justify-center text-xs font-bold text-white/70">{t.symbol.slice(0, 2)}</div>}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="font-bold truncate">{t.symbol}</span>
+          <span className="text-xs text-white/50 truncate hidden sm:inline">{t.name}</span>
+          <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-white/40 shrink-0"><ChainLogo chain={t.chain} size={11} />{t.chain}</span>
+          <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border shrink-0 ${statusColor}`}>{t.status}</span>
+        </div>
+        <div className="flex items-center gap-2 text-[11px] text-white/55 mt-0.5 flex-wrap">
+          <span>Liq {fmtCompact(t.liquidity)}</span>
+          {t.marketCap ? <span className="text-white/30">·</span> : null}
+          {t.marketCap ? <span>MC {fmtCompact(t.marketCap)}</span> : null}
+          {t.volume24h ? <span className="text-white/30">·</span> : null}
+          {t.volume24h ? <span>Vol {fmtCompact(t.volume24h)}</span> : null}
+          <span className="text-white/30">·</span>
+          <span>{t.pairAge ?? 'new'}</span>
+          {t.source ? <span className="text-white/30 hidden sm:inline">·</span> : null}
+          {t.source ? <span className="capitalize text-white/40 hidden sm:inline">{t.source.replace(/_/g, ' ')}</span> : null}
+        </div>
+        <div className="mt-1.5"><GuardianBadges audit={audit} loading={auditLoading} /></div>
+      </div>
+      <button
+        onClick={(e) => { e.stopPropagation(); onSnipe(t); }}
+        disabled={snipeBlocked}
+        title={snipeBlocked ? 'Blocked by Shadow Guardian — failed security checks' : 'Snipe this token'}
+        className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition border ${snipeBlocked ? 'bg-red-500/10 border-red-500/30 text-red-300/70 cursor-not-allowed' : 'bg-[#0066FF]/15 border-[#0066FF]/40 text-blue-200 hover:bg-[#0066FF]/25'}`}
+      >
+        {snipeBlocked ? 'Blocked' : 'Snipe'}
+      </button>
+    </div>
+  );
+}
+
+// ─── Positions (aggregated from real executions) ─────────────────────────────
+
+interface Position { key: string; symbol: string; chain: string | null; trades: number; spent: number; pnl: number; last: string; }
+
+function PositionsTab({ executions }: { executions: ExecutionRow[] }) {
+  const positions = useMemo<Position[]>(() => {
+    const map = new Map<string, Position>();
+    for (const e of executions) {
+      const key = `${e.chain ?? ''}:${e.token_address}`;
+      const spent = Number(e.buy_amount_usd ?? e.amount_native ?? e.amount_sol ?? 0) || 0;
+      const pnl = Number(e.pnl_usd) || 0;
+      const cur = map.get(key);
+      if (cur) {
+        cur.trades += 1; cur.spent += spent; cur.pnl += pnl;
+        if (e.executed_at > cur.last) cur.last = e.executed_at;
+      } else {
+        map.set(key, { key, symbol: e.token_symbol ?? e.token_address.slice(0, 6), chain: e.chain, trades: 1, spent, pnl, last: e.executed_at });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => new Date(b.last).getTime() - new Date(a.last).getTime());
+  }, [executions]);
+
+  if (positions.length === 0) {
+    return (
+      <div className="rounded-xl border-2 border-dashed border-white/10 p-12 text-center">
+        <TrendingUp className="w-10 h-10 mx-auto mb-3 text-white/25" />
+        <h3 className="text-base font-bold mb-1">No positions yet</h3>
+        <p className="text-white/50 text-sm">Positions appear here once your snipers start filling. PnL updates in real time.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="grid gap-2">
+      {positions.map((p) => {
+        const cfg = p.chain ? CHAIN_CONFIGS[p.chain as SniperChain] : null;
+        return (
+          <div key={p.key} className="nl-glass rounded-xl p-3 flex items-center gap-3">
+            {cfg ? <img src={cfg.logo} alt="" className="w-9 h-9 rounded-full shrink-0" /> : <div className="w-9 h-9 rounded-full bg-white/10 shrink-0" />}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2"><span className="font-bold truncate">{p.symbol}</span>{p.chain && <span className="text-[10px] uppercase tracking-wider text-white/40">{p.chain}</span>}</div>
+              <div className="text-[11px] text-white/50">{p.trades} {p.trades === 1 ? 'fill' : 'fills'} · spent {fmtUSD(p.spent)} · {timeAgo(p.last)}</div>
+            </div>
+            <div className={`text-right shrink-0 font-bold ${p.pnl > 0 ? 'text-emerald-300' : p.pnl < 0 ? 'text-red-300' : 'text-white/60'}`}>
+              <div className="text-sm">{fmtUSD(p.pnl)}</div>
+              <div className="text-[10px] font-medium text-white/40">{p.spent > 0 ? `${((p.pnl / p.spent) * 100).toFixed(1)}%` : '—'}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Snipers (config cards) ─────────────────────────────────────────────────
 
 function SnipersTab({ snipers, onPause, onDelete, onCreate }: { snipers: SniperCriteriaRow[]; onPause: (s: SniperCriteriaRow) => void; onDelete: (s: SniperCriteriaRow) => void; onCreate: () => void }) {
   if (snipers.length === 0) {
@@ -459,18 +588,12 @@ function SnipersTab({ snipers, onPause, onDelete, onCreate }: { snipers: SniperC
       <div className="rounded-xl border-2 border-dashed border-white/10 bg-white/[0.02] p-12 text-center">
         <Crosshair className="w-12 h-12 mx-auto mb-3 text-white/30" />
         <h3 className="text-lg font-bold mb-1">No active snipers yet</h3>
-        <p className="text-white/50 text-sm mb-5">Create your first sniper to start auto-executing on new launches, whale moves, or price targets.</p>
-        <button onClick={onCreate} className="nl-button px-5 py-2.5 rounded-xl font-semibold text-sm inline-flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Create Sniper
-        </button>
+        <p className="text-white/50 text-sm mb-5">Create your first sniper to auto-execute on new launches, whale moves, or price targets.</p>
+        <button onClick={onCreate} className="nl-btn-neon px-5 py-2.5 rounded-xl font-semibold text-sm inline-flex items-center gap-2"><Plus className="w-4 h-4" /> Create Sniper</button>
       </div>
     );
   }
-  return (
-    <div className="grid gap-3">
-      {snipers.map(s => <SniperCard key={s.id} s={s} onPause={onPause} onDelete={onDelete} />)}
-    </div>
-  );
+  return <div className="grid gap-3 md:grid-cols-2">{snipers.map((s) => <SniperCard key={s.id} s={s} onPause={onPause} onDelete={onDelete} />)}</div>;
 }
 
 function SniperCard({ s, onPause, onDelete }: { s: SniperCriteriaRow; onPause: (s: SniperCriteriaRow) => void; onDelete: (s: SniperCriteriaRow) => void }) {
@@ -479,23 +602,22 @@ function SniperCard({ s, onPause, onDelete }: { s: SniperCriteriaRow; onPause: (
     : status === 'paused' ? 'text-amber-300 bg-amber-500/15 border-amber-500/30'
     : 'text-white/50 bg-white/5 border-white/10';
   return (
-    <div className="rounded-xl border-2 border-white/10 bg-white/[0.03] p-4 hover:border-white/20 transition group">
+    <div className="nl-glass rounded-xl p-4 hover:-translate-y-px transition group">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2 flex-wrap">
             <h3 className="text-base font-bold truncate">{s.name}</h3>
             <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${statusColor}`}>{status}</span>
             {s.auto_execute && <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border border-blue-500/30 bg-blue-500/15 text-blue-300">Auto</span>}
-            {s.mev_protect && <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border border-purple-500/30 bg-purple-500/15 text-purple-300">MEV-Protect</span>}
+            {s.mev_protect && <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border border-purple-500/30 bg-purple-500/15 text-purple-300">MEV</span>}
           </div>
           <div className="flex items-center gap-1.5 mb-3">
-            {s.chains_allowed.map(c => {
+            {s.chains_allowed.map((c) => {
               const cfg = CHAIN_CONFIGS[c as SniperChain];
-              if (!cfg) return null;
-              return <img key={c} src={cfg.logo} alt={cfg.symbol} title={cfg.name} className="w-5 h-5 rounded-full" />;
+              return cfg ? <img key={c} src={cfg.logo} alt={cfg.symbol} title={cfg.name} className="w-5 h-5 rounded-full" /> : null;
             })}
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          <div className="grid grid-cols-2 gap-3 text-sm">
             <Field label="Per snipe">${s.amount_per_snipe_usd?.toFixed(0) ?? '—'}</Field>
             <Field label="Daily cap">${s.daily_max_spend_usd?.toFixed(0) ?? '—'} · {s.daily_max_snipes ?? '—'} max</Field>
             <Field label="Slippage">{(s.max_slippage_bps / 100).toFixed(1)}%</Field>
@@ -506,9 +628,7 @@ function SniperCard({ s, onPause, onDelete }: { s: SniperCriteriaRow; onPause: (
           <button onClick={() => onPause(s)} title={s.paused ? 'Resume' : 'Pause'} className="p-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] transition">
             {s.paused ? <Play className="w-4 h-4 text-emerald-300" /> : <Pause className="w-4 h-4 text-amber-300" />}
           </button>
-          <button onClick={() => onDelete(s)} title="Delete" className="p-2 rounded-lg bg-white/[0.05] hover:bg-red-500/20 hover:text-red-300 transition">
-            <Trash2 className="w-4 h-4" />
-          </button>
+          <button onClick={() => onDelete(s)} title="Delete" className="p-2 rounded-lg bg-white/[0.05] hover:bg-red-500/20 hover:text-red-300 transition"><Trash2 className="w-4 h-4" /></button>
         </div>
       </div>
     </div>
@@ -524,116 +644,55 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function FeedTab({ tokens, loading, onRefresh, chainFilter, onSnipe }: { tokens: DetectedToken[]; loading: boolean; onRefresh: () => void; chainFilter: SniperChain | 'all'; onSnipe: (t: DetectedToken) => void }) {
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <div className="text-sm text-white/60 font-medium">
-          {loading ? 'Scanning…' : `${tokens.length} new pairs detected${chainFilter !== 'all' ? ` on ${CHAIN_CONFIGS[chainFilter].name}` : ''}`}
-        </div>
-        <button onClick={onRefresh} className="text-xs font-semibold text-blue-300 hover:text-blue-200">↻ Refresh</button>
-      </div>
-      {loading ? (
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-12 text-center"><Loader2 className="w-6 h-6 mx-auto animate-spin text-blue-400" /></div>
-      ) : tokens.length === 0 ? (
-        <div className="rounded-xl border-2 border-dashed border-white/10 p-12 text-center text-white/50 text-sm">No new pairs match the filter right now.</div>
-      ) : (
-        <div className="grid gap-2">
-          {tokens.map(t => <TokenRow key={t.id} t={t} onSnipe={onSnipe} />)}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function TokenRow({ t, onSnipe }: { t: DetectedToken; onSnipe: (t: DetectedToken) => void }) {
-  const statusColor = t.status === 'safe' ? 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30'
-    : t.status === 'risky' ? 'text-amber-300 bg-amber-500/15 border-amber-500/30'
-    : 'text-red-300 bg-red-500/15 border-red-500/30';
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 flex items-center gap-3 hover:border-white/20 transition">
-      {t.logo ? <img src={t.logo} alt="" className="w-10 h-10 rounded-full flex-shrink-0" /> : <div className="w-10 h-10 rounded-full bg-white/10 flex-shrink-0" />}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-bold truncate">{t.symbol}</span>
-          <span className="text-xs text-white/50 truncate">{t.name}</span>
-          <span className="text-[10px] uppercase tracking-wider text-white/40">{t.chain}</span>
-        </div>
-        <div className="text-xs text-white/60 mt-0.5">
-          Liq ${(t.liquidity / 1000).toFixed(1)}K · {t.pairAge ?? 'new'} · Score {t.securityScore}
-        </div>
-      </div>
-      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${statusColor}`}>{t.status}</span>
-      <button onClick={() => onSnipe(t)} className="px-3 py-1.5 rounded-lg bg-blue-500/20 border border-blue-400/40 text-blue-200 text-xs font-bold hover:bg-blue-500/30 transition">
-        Snipe
-      </button>
-    </div>
-  );
-}
+// ─── History ────────────────────────────────────────────────────────────────
 
 function HistoryTab({ executions, chainFilter, freshIds }: { executions: ExecutionRow[]; chainFilter: SniperChain | 'all'; freshIds: Set<string> }) {
-  const visible = chainFilter === 'all' ? executions : executions.filter(e => e.chain === chainFilter);
+  const visible = chainFilter === 'all' ? executions : executions.filter((e) => e.chain === chainFilter);
   if (visible.length === 0) {
     return <div className="rounded-xl border-2 border-dashed border-white/10 p-12 text-center text-white/50 text-sm">No executions yet on this chain.</div>;
   }
   return (
-    <div className="rounded-xl border border-white/10 overflow-hidden">
-      {/* Inline keyframes for the pulse-on-fill effect. Defined here
-          (instead of tailwind.config) so the animation is co-located
-          with the only consumer; cheap to extract later if reused. */}
-      <style jsx>{`
-        @keyframes naka-pulse-fill {
-          0%   { background-color: rgba(16, 185, 129, 0.18); box-shadow: inset 3px 0 0 rgba(16, 185, 129, 0.9); }
-          60%  { background-color: rgba(16, 185, 129, 0.08); box-shadow: inset 3px 0 0 rgba(16, 185, 129, 0.6); }
-          100% { background-color: transparent;              box-shadow: inset 3px 0 0 transparent; }
-        }
-        .naka-fresh-row { animation: naka-pulse-fill 2.4s ease-out 1; }
-      `}</style>
-      <table className="w-full text-sm">
-        <thead className="bg-white/[0.03]">
-          <tr className="text-start text-xs uppercase tracking-wider text-white/50">
-            <th className="px-4 py-3 font-semibold">Token</th>
-            <th className="px-4 py-3 font-semibold">Chain</th>
-            <th className="px-4 py-3 font-semibold">Amount</th>
-            <th className="px-4 py-3 font-semibold">Status</th>
-            <th className="px-4 py-3 font-semibold">PnL</th>
-            <th className="px-4 py-3 font-semibold">Speed</th>
-            <th className="px-4 py-3 font-semibold">When</th>
-            <th className="px-4 py-3 font-semibold">Tx</th>
-          </tr>
-        </thead>
-        <tbody>
-          {visible.map(e => {
-            const cfg = e.chain ? CHAIN_CONFIGS[e.chain as SniperChain] : null;
-            const pnl = e.pnl_usd != null ? Number(e.pnl_usd) : null;
-            const isFresh = freshIds.has(e.id);
-            return (
-              <tr key={e.id} className={`border-t border-white/5 hover:bg-white/[0.02] ${isFresh ? 'naka-fresh-row' : ''}`}>
-                <td className="px-4 py-3 font-medium">{e.token_symbol ?? '—'}</td>
-                <td className="px-4 py-3">{cfg ? <span className="inline-flex items-center gap-1.5"><img src={cfg.logo} alt="" className="w-4 h-4 rounded-full" /> {cfg.symbol}</span> : (e.chain ?? '—')}</td>
-                <td className="px-4 py-3 text-white/80">{e.amount_native ?? e.amount_sol ?? '—'}</td>
-                <td className="px-4 py-3">
-                  <span className={`text-xs font-bold uppercase tracking-wider ${e.status === 'confirmed' ? 'text-emerald-300' : e.status === 'failed' ? 'text-red-300' : 'text-amber-300'}`}>
-                    {e.status}
-                  </span>
-                </td>
-                <td className={`px-4 py-3 font-bold ${pnl != null && pnl > 0 ? 'text-emerald-300' : pnl != null && pnl < 0 ? 'text-red-300' : 'text-white/60'}`}>
-                  {pnl != null ? fmtUSD(pnl) : '—'}
-                </td>
-                <td className="px-4 py-3 text-white/60 text-xs">{e.execution_time_ms ? `${e.execution_time_ms}ms` : '—'}</td>
-                <td className="px-4 py-3 text-white/60 text-xs">{timeAgo(e.executed_at)}</td>
-                <td className="px-4 py-3">
-                  {e.tx_hash && cfg ? (
-                    <a href={`${cfg.explorerTxBase}${e.tx_hash}`} target="_blank" rel="noopener noreferrer" className="text-blue-300 hover:text-blue-200 inline-flex items-center gap-1 text-xs font-medium">
-                      View <ExternalLink className="w-3 h-3" />
-                    </a>
-                  ) : '—'}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="nl-glass rounded-xl overflow-hidden">
+      <style>{`@keyframes nakaFresh{0%{background:rgba(0,102,255,.22)}100%{background:transparent}}.naka-fresh-row{animation:nakaFresh 2.4s ease-out}`}</style>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-[10px] uppercase tracking-wider text-white/40 bg-white/[0.03]">
+              <th className="px-4 py-3 font-semibold">Token</th>
+              <th className="px-4 py-3 font-semibold">Chain</th>
+              <th className="px-4 py-3 font-semibold">Amount</th>
+              <th className="px-4 py-3 font-semibold">Status</th>
+              <th className="px-4 py-3 font-semibold">PnL</th>
+              <th className="px-4 py-3 font-semibold">Speed</th>
+              <th className="px-4 py-3 font-semibold">When</th>
+              <th className="px-4 py-3 font-semibold">Tx</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((e) => {
+              const cfg = e.chain ? CHAIN_CONFIGS[e.chain as SniperChain] : null;
+              const pnl = e.pnl_usd != null ? Number(e.pnl_usd) : null;
+              const isFresh = freshIds.has(e.id);
+              return (
+                <tr key={e.id} className={`border-t border-white/5 hover:bg-white/[0.02] ${isFresh ? 'naka-fresh-row' : ''}`}>
+                  <td className="px-4 py-3 font-medium">{e.token_symbol ?? '—'}</td>
+                  <td className="px-4 py-3">{cfg ? <span className="inline-flex items-center gap-1.5"><img src={cfg.logo} alt="" className="w-4 h-4 rounded-full" /> {cfg.symbol}</span> : (e.chain ?? '—')}</td>
+                  <td className="px-4 py-3 text-white/80">{e.buy_amount_usd != null ? fmtUSD(Number(e.buy_amount_usd)) : (e.amount_native ?? e.amount_sol ?? '—')}</td>
+                  <td className="px-4 py-3"><span className={`text-xs font-bold uppercase tracking-wider ${e.status === 'confirmed' ? 'text-emerald-300' : e.status === 'failed' ? 'text-red-300' : 'text-amber-300'}`}>{e.status}</span></td>
+                  <td className={`px-4 py-3 font-bold ${pnl != null && pnl > 0 ? 'text-emerald-300' : pnl != null && pnl < 0 ? 'text-red-300' : 'text-white/60'}`}>{pnl != null ? fmtUSD(pnl) : '—'}</td>
+                  <td className="px-4 py-3 text-white/60 text-xs">{e.execution_time_ms ? `${e.execution_time_ms}ms` : '—'}</td>
+                  <td className="px-4 py-3 text-white/60 text-xs">{timeAgo(e.executed_at)}</td>
+                  <td className="px-4 py-3">
+                    {e.tx_hash && cfg ? (
+                      <a href={`${cfg.explorerTxBase}${e.tx_hash}`} target="_blank" rel="noopener noreferrer" className="text-blue-300 hover:text-blue-200 inline-flex items-center gap-1 text-xs font-medium">View <ExternalLink className="w-3 h-3" /></a>
+                    ) : '—'}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

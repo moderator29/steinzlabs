@@ -17,10 +17,10 @@ type Row = {
   token_symbol: string;
   price: number;
   direction: 'above' | 'below';
-  notify_email: boolean;
   triggered: boolean;
   triggered_at: string | null;
   created_at: string;
+  chain?: string | null;
 };
 
 function toApi(r: Row) {
@@ -31,7 +31,7 @@ function toApi(r: Row) {
     token_symbol: r.token_symbol,
     target_price: r.price,
     direction: r.direction,
-    notify_email: r.notify_email,
+    chain: r.chain ?? null,
     is_triggered: r.triggered,
     triggered_at: r.triggered_at ?? undefined,
     created_at: r.created_at,
@@ -84,7 +84,9 @@ export async function POST(req: NextRequest) {
         token_symbol: alert.token_symbol,
         price: alert.target_price,
         direction: alert.direction,
-        notify_email: alert.notify_email,
+        // Persist chain for EVM-address alerts so the monitor can resolve a
+        // live price by chain+contract (memecoins aren't in the CG cache).
+        chain: (alert as { chain?: string | null }).chain ?? null,
         triggered: false,
       })
       .select()

@@ -39,6 +39,8 @@ export interface SniperToken {
   marketCap?: number;
   pairAge?: string;
   logo?: string;
+  source?: string;
+  volume24h?: number;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -81,13 +83,24 @@ export async function GET(request: NextRequest) {
   const gate = await checkTierServer('max');
   if (!gate.allowed) return NextResponse.json({ error: 'upgrade_required', requiredTier: gate.requiredTier, currentTier: gate.currentTier, expired: gate.expired }, { status: 403 });
   const { searchParams } = new URL(request.url);
-  const limit = Math.min(parseInt(searchParams.get('limit') ?? '20'), 30);
+  const limit = Math.min(parseInt(searchParams.get('limit') ?? '24'), 40);
   const chainFilter = searchParams.get('chain') || undefined;
   const minLiquidity = parseFloat(searchParams.get('minLiquidity') ?? '3000');
+  const maxLiquidity = searchParams.get('maxLiquidity') ? parseFloat(searchParams.get('maxLiquidity')!) : undefined;
+  // Comma-separated DEX/source filter (e.g. "uniswap_v3,aerodrome").
+  const sources = (searchParams.get('source') || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  const q = (searchParams.get('q') || '').trim().toLowerCase();
 
   try {
     // Real freshly-created EVM pools (GeckoTerminal). EVM-only for now.
-    const pairs = await getNewEvmPairs(minLiquidity, chainFilter === 'all' ? undefined : chainFilter);
+    let pairs = await getNewEvmPairs(minLiquidity, chainFilter === 'all' ? undefined : chainFilter);
+    if (maxLiquidity !== undefined) pairs = pairs.filter(p => (p.liquidity?.usd ?? 0) <= maxLiquidity);
+    if (sources.length) pairs = pairs.filter(p => sources.some(s => p.dexId.toLowerCase().includes(s)));
+    if (q) pairs = pairs.filter(p =>
+      p.baseToken.symbol.toLowerCase().includes(q) ||
+      p.baseToken.name.toLowerCase().includes(q) ||
+      p.baseToken.address.toLowerCase() === q,
+    );
 
     const tokens: SniperToken[] = pairs.slice(0, limit).map(pair => {
       const score = scoreFromPair(pair);
@@ -107,10 +120,14 @@ export async function GET(request: NextRequest) {
         marketCap: pair.fdv,
         logo: pair.info?.imageUrl ?? undefined,
         pairAge: pairAgeLabel(pair.pairCreatedAt),
+        source: pair.dexId,
+        volume24h: pair.volume?.h24,
       };
     });
 
-    return NextResponse.json({ tokens });
+    // Distinct sources present (for the UI source filter chips).
+    const availableSources = Array.from(new Set(pairs.map(p => p.dexId))).slice(0, 12);
+    return NextResponse.json({ tokens, sources: availableSources });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Failed to fetch tokens';
     return NextResponse.json({ error: msg, tokens: [] }, { status: 500 });
