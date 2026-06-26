@@ -60,7 +60,20 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
   const [requestState, setRequestState] = useState<string | null>(null);
   const [requestedBy, setRequestedBy] = useState<string | null>(null);
   const [peer, setPeer] = useState<PeerInfo | null>(null);
+  const [peerTyping, setPeerTyping] = useState(false);
   const endRef = useRef<HTMLDivElement | null>(null);
+  const lastTypingSentRef = useRef(0);
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Mark all received messages in this conversation as read.
+  const markRead = useCallback(async () => {
+    if (!conversationId) return;
+    await fetch('/api/social/dm/messages', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversation_id: conversationId, action: 'read_all' }),
+    }).catch(() => {});
+  }, [conversationId]);
 
   // Peer header info.
   useEffect(() => {
@@ -232,6 +245,44 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
   // Auto-scroll on new message
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages.length]);
 
+  // Mark the thread read on open and whenever new messages arrive while it's
+  // the visible thread, so unread badges clear.
+  useEffect(() => {
+    if (!conversationId) return;
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+    void markRead();
+  }, [conversationId, messages.length, markRead]);
+
+  // Typing indicator over an ephemeral broadcast channel (no DB writes).
+  const typingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  useEffect(() => {
+    if (!conversationId) return;
+    const ch = supabase.channel(`dm-typing:${conversationId}`, { config: { broadcast: { self: false } } });
+    ch.on('broadcast', { event: 'typing' }, (msg) => {
+      const p = msg.payload as { user_id?: string };
+      if (p?.user_id && p.user_id === peerId) {
+        setPeerTyping(true);
+        if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+        typingTimerRef.current = setTimeout(() => setPeerTyping(false), 3500);
+      }
+    }).subscribe();
+    typingChannelRef.current = ch;
+    return () => {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+      void supabase.removeChannel(ch);
+      typingChannelRef.current = null;
+    };
+  }, [conversationId, peerId]);
+
+  // Throttle typing broadcasts to ~1 every 2s.
+  const notifyTyping = useCallback(() => {
+    if (!me || !typingChannelRef.current) return;
+    const now = Date.now();
+    if (now - lastTypingSentRef.current < 2000) return;
+    lastTypingSentRef.current = now;
+    typingChannelRef.current.send({ type: 'broadcast', event: 'typing', payload: { user_id: me } });
+  }, [me]);
+
   const send = async () => {
     if (!conversationId || !convKey || !draft.trim()) return;
     setSending(true);
@@ -324,6 +375,18 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
             );
           })
         )}
+        {peerTyping && (
+          <div className="flex justify-start">
+            <div className="nl-glass rounded-2xl px-3 py-2 text-[11px] text-slate-300 inline-flex items-center gap-1.5">
+              <span className="inline-flex gap-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '120ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '240ms' }} />
+              </span>
+              {peer?.display_name || peer?.username || 'User'} is typing…
+            </div>
+          </div>
+        )}
         <div ref={endRef} />
       </div>
 
@@ -333,7 +396,7 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
       >
         <input
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => { setDraft(e.target.value); notifyTyping(); }}
           placeholder={convKey ? 'Encrypted message…' : 'Setting up encryption…'}
           disabled={!convKey || sending}
           maxLength={4096}

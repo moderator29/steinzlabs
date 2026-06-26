@@ -15,6 +15,7 @@ interface Conversation {
   archived: boolean;
   request_state?: 'pending' | 'accepted' | 'declined';
   is_request?: boolean;
+  unread?: number;
 }
 
 interface PeerInfo {
@@ -116,11 +117,18 @@ export default function MessagesInboxPage() {
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0066FF)] to-[#7C3AED] flex items-center justify-center text-sm font-bold text-white">{initial}</div>
         )}
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold text-white truncate">{peer?.display_name || peer?.username || 'Unknown user'}</div>
+          <div className={`text-sm truncate ${c.unread ? 'font-bold text-white' : 'font-semibold text-white'}`}>{peer?.display_name || peer?.username || 'Unknown user'}</div>
           <div className="text-[11px] text-slate-500">@{peer?.username ?? '—'}</div>
         </div>
-        <div className="text-[11px] text-slate-500 tabular-nums">
-          {c.last_message_at ? new Date(c.last_message_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'New'}
+        <div className="flex flex-col items-end gap-1">
+          <div className="text-[11px] text-slate-500 tabular-nums">
+            {c.last_message_at ? new Date(c.last_message_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'New'}
+          </div>
+          {!!c.unread && (
+            <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--nl-blue,#0066FF)] text-white text-[10px] font-bold flex items-center justify-center">
+              {c.unread > 99 ? '99+' : c.unread}
+            </span>
+          )}
         </div>
       </Link>
     );

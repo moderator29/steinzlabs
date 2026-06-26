@@ -27,6 +27,23 @@ export async function GET(req: NextRequest) {
     .order('last_message_at', { ascending: false, nullsFirst: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // Per-conversation unread counts: received messages (not mine) still unread.
+  const convoIds = (data ?? []).map((r) => r.id);
+  const unreadByConvo: Record<string, number> = {};
+  if (convoIds.length) {
+    const { data: unreadRows } = await sb
+      .from('dm_messages')
+      .select('conversation_id')
+      .in('conversation_id', convoIds)
+      .neq('sender_id', user.id)
+      .is('read_at', null)
+      .is('deleted_at', null);
+    for (const r of unreadRows ?? []) {
+      const cid = (r as { conversation_id: string }).conversation_id;
+      unreadByConvo[cid] = (unreadByConvo[cid] ?? 0) + 1;
+    }
+  }
+
   const shaped = (data ?? []).map((row) => {
     const isUserA = row.user_a_id === user.id;
     const peerId = isUserA ? row.user_b_id : row.user_a_id;
@@ -44,9 +61,12 @@ export async function GET(req: NextRequest) {
       created_at: row.created_at,
       request_state: row.request_state,
       is_request: isRequest,
+      unread: unreadByConvo[row.id] ?? 0,
     };
   });
-  return NextResponse.json({ conversations: shaped });
+  // Total unread across accepted (non-request) conversations — drives the nav badge.
+  const totalUnread = shaped.filter((c) => !c.is_request).reduce((s, c) => s + c.unread, 0);
+  return NextResponse.json({ conversations: shaped, total_unread: totalUnread });
 }
 
 const PostBody = z.object({

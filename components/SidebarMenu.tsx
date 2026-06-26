@@ -125,6 +125,24 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
     return () => { cancelled = true; };
   }, []);
 
+  // Live unread-DM count for the Messages nav badge. Polled (cheap) + refreshed
+  // on window focus so it clears after the user reads a thread.
+  const [unreadDms, setUnreadDms] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    const fetchUnread = () => {
+      fetch('/api/social/dm/conversations', { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (!cancelled && d) setUnreadDms(d.total_unread ?? 0); })
+        .catch(() => {});
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30_000);
+    const onFocus = () => fetchUnread();
+    window.addEventListener('focus', onFocus);
+    return () => { cancelled = true; clearInterval(interval); window.removeEventListener('focus', onFocus); };
+  }, []);
+
   const handleNavigation = (path: string) => {
     router.push(path);
     onClose();
@@ -179,7 +197,7 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
                     key={item.path}
                     icon={item.icon}
                     label={item.label}
-                    badge={item.badge}
+                    badge={item.path === '/dashboard/messages' && unreadDms > 0 ? (unreadDms > 99 ? '99+' : String(unreadDms)) : item.badge}
                     isActive={pathname === item.path}
                     onClick={() => handleNavigation(item.path)}
                     onHover={() => router.prefetch(item.path)}

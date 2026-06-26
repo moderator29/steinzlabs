@@ -127,7 +127,11 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ message: data });
 }
 
-const PatchBody = z.object({ message_id: z.string().uuid(), action: z.enum(['read', 'delete']) });
+const PatchBody = z.object({
+  message_id: z.string().uuid().optional(),
+  conversation_id: z.string().uuid().optional(),
+  action: z.enum(['read', 'delete', 'read_all']),
+});
 
 export async function PATCH(req: NextRequest) {
   const user = await getAuthenticatedUser(req);
@@ -136,6 +140,28 @@ export async function PATCH(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
 
   const sb = getSupabaseAdmin();
+
+  // Bulk: mark every received message in a conversation as read (on thread open).
+  if (parsed.data.action === 'read_all') {
+    if (!parsed.data.conversation_id) return NextResponse.json({ error: 'conversation_id required' }, { status: 400 });
+    const { data: c } = await sb
+      .from('dm_conversations')
+      .select('user_a_id, user_b_id')
+      .eq('id', parsed.data.conversation_id)
+      .maybeSingle();
+    if (!c || (c.user_a_id !== user.id && c.user_b_id !== user.id)) {
+      return NextResponse.json({ error: 'Not a participant' }, { status: 403 });
+    }
+    await sb
+      .from('dm_messages')
+      .update({ read_at: new Date().toISOString() })
+      .eq('conversation_id', parsed.data.conversation_id)
+      .neq('sender_id', user.id)
+      .is('read_at', null);
+    return NextResponse.json({ ok: true });
+  }
+
+  if (!parsed.data.message_id) return NextResponse.json({ error: 'message_id required' }, { status: 400 });
   const { data: msg } = await sb
     .from('dm_messages')
     .select('id, conversation_id, sender_id')
