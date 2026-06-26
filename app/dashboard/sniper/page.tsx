@@ -609,7 +609,13 @@ function PositionsTab({ executions }: { executions: ExecutionRow[] }) {
 
 // ─── Snipers (config cards) ─────────────────────────────────────────────────
 
+type SniperStatusFilter = 'all' | 'active' | 'paused' | 'disabled';
+function sniperStatusOf(s: SniperCriteriaRow): 'active' | 'paused' | 'disabled' {
+  return !s.enabled ? 'disabled' : s.paused ? 'paused' : 'active';
+}
+
 function SnipersTab({ snipers, onPause, onDelete, onCreate }: { snipers: SniperCriteriaRow[]; onPause: (s: SniperCriteriaRow) => void; onDelete: (s: SniperCriteriaRow) => void; onCreate: () => void }) {
+  const [status, setStatus] = useState<SniperStatusFilter>('all');
   if (snipers.length === 0) {
     return (
       <div className="rounded-xl border-2 border-dashed border-white/10 bg-white/[0.02] p-12 text-center">
@@ -620,7 +626,36 @@ function SnipersTab({ snipers, onPause, onDelete, onCreate }: { snipers: SniperC
       </div>
     );
   }
-  return <div className="grid gap-3 md:grid-cols-2">{snipers.map((s) => <SniperCard key={s.id} s={s} onPause={onPause} onDelete={onDelete} />)}</div>;
+  const counts = {
+    all: snipers.length,
+    active: snipers.filter((s) => sniperStatusOf(s) === 'active').length,
+    paused: snipers.filter((s) => sniperStatusOf(s) === 'paused').length,
+    disabled: snipers.filter((s) => sniperStatusOf(s) === 'disabled').length,
+  };
+  const shown = status === 'all' ? snipers : snipers.filter((s) => sniperStatusOf(s) === status);
+  const FILTERS: { id: SniperStatusFilter; label: string }[] = [
+    { id: 'all', label: 'All' }, { id: 'active', label: 'Active' }, { id: 'paused', label: 'Paused' }, { id: 'disabled', label: 'Disabled' },
+  ];
+  return (
+    <div>
+      <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/10 mb-3">
+        {FILTERS.map((f) => (
+          <button
+            key={f.id}
+            onClick={() => setStatus(f.id)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${status === f.id ? 'bg-[#0066FF]/20 text-blue-200 border border-[#0066FF]/40' : 'text-white/55 hover:text-white border border-transparent'}`}
+          >
+            {f.label} <span className={`ms-1 px-1.5 py-0.5 rounded text-[10px] ${status === f.id ? 'bg-blue-500/30 text-blue-100' : 'bg-white/10 text-white/55'}`}>{counts[f.id]}</span>
+          </button>
+        ))}
+      </div>
+      {shown.length === 0 ? (
+        <div className="rounded-xl border-2 border-dashed border-white/10 p-10 text-center text-white/50 text-sm">No {status} snipers.</div>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2">{shown.map((s) => <SniperCard key={s.id} s={s} onPause={onPause} onDelete={onDelete} />)}</div>
+      )}
+    </div>
+  );
 }
 
 function SniperCard({ s, onPause, onDelete }: { s: SniperCriteriaRow; onPause: (s: SniperCriteriaRow) => void; onDelete: (s: SniperCriteriaRow) => void }) {

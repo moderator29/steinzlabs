@@ -106,7 +106,7 @@ export function SniperTokenDrawer({ token, onClose, onSnipe }: { token: Detected
       const res = await fetch('/api/market/alerts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token_id: token.address, token_symbol: token.symbol, target_price: target, direction: alertDir, notify_email: false }),
+        body: JSON.stringify({ token_id: token.address, token_symbol: token.symbol, target_price: target, direction: alertDir, chain: token.chain }),
       });
       if (!res.ok) throw new Error('failed');
       setAlertState('saved');
@@ -189,6 +189,18 @@ export function SniperTokenDrawer({ token, onClose, onSnipe }: { token: Detected
               </div>
               <input type="number" value={alertPrice} onChange={(e) => setAlertPrice(e.target.value)} placeholder={price ? String(price) : 'Target price $'} className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-[#0066FF]/50 min-w-0" />
             </div>
+            {/* Quick targets relative to the current price (MeVX-style). */}
+            {price != null && price > 0 && (
+              <div className="flex items-center gap-1.5 mb-2">
+                {[25, 50, 100, 200].map((pct) => (
+                  <button
+                    key={pct}
+                    onClick={() => { setAlertDir('above'); setAlertPrice((price * (1 + pct / 100)).toPrecision(4)); }}
+                    className="px-2 py-1 rounded-md text-[11px] font-semibold bg-white/[0.05] border border-white/10 text-white/70 hover:text-white hover:border-[#0066FF]/40"
+                  >+{pct}%</button>
+                ))}
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <button onClick={saveAlert} disabled={alertState === 'saving'} className="nl-btn-neon flex-1 py-2 rounded-lg font-bold text-xs disabled:opacity-50">
                 {alertState === 'saving' ? 'Saving…' : alertState === 'saved' ? 'Saved ✓' : alertState === 'error' ? 'Try again' : 'Save Alert'}

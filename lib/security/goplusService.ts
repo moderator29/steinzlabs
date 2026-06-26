@@ -227,6 +227,14 @@ function parseTokenSecurity(t: any): TokenSecurityResult {
   else if (creatorIsTopHolder && creatorHoldingPct > 0.02) score -= 10;
   score = Math.max(0, Math.min(100, score));
 
+  // §audit false-SAFE guard. GoPlus omits the dynamic sell-simulation fields
+  // (is_honeypot, buy/sell tax, cannot_sell_all) for brand-new tokens with no
+  // tradable pool yet — exactly the feed's population. Treating "absent" as
+  // "passed" let unanalyzed tokens surface SAFE (the dangerous direction).
+  // When the honeypot sim hasn't run, cap the rating at CAUTION and never SAFE.
+  const honeypotUnknown = t.is_honeypot === undefined || t.is_honeypot === null || t.is_honeypot === '';
+  if (honeypotUnknown && score >= 70) score = 69; // force at most CAUTION
+
   let safetyLevel: TokenSecurityResult['safetyLevel'] = 'SAFE';
   let safetyColor = '#10B981';
   if (score < 30) { safetyLevel = 'DANGER'; safetyColor = '#EF4444'; }
@@ -235,7 +243,7 @@ function parseTokenSecurity(t: any): TokenSecurityResult {
 
   const checks: { label: string; status: 'pass' | 'fail' | 'warn' }[] = [
     { label: 'Contract Verified', status: t.is_open_source === '1' ? 'pass' : 'fail' },
-    { label: 'No Honeypot', status: t.is_honeypot === '1' ? 'fail' : 'pass' },
+    { label: honeypotUnknown ? 'Honeypot (dynamic checks unavailable)' : 'No Honeypot', status: t.is_honeypot === '1' ? 'fail' : honeypotUnknown ? 'warn' : 'pass' },
     { label: 'Ownership Renounced', status: t.owner_address === '' || t.owner_address === '0x0000000000000000000000000000000000000000' ? 'pass' : t.can_take_back_ownership === '1' ? 'fail' : 'warn' },
     { label: 'No Mint Function', status: t.is_mintable === '1' ? 'fail' : 'pass' },
     { label: 'No Proxy', status: t.is_proxy === '1' ? 'warn' : 'pass' },
