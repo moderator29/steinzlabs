@@ -17,7 +17,7 @@
 import { NextRequest } from "next/server";
 import { verifyCron, cronResponse, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { getCurrentTokenPriceUsd } from "@/lib/sniper/priceFeed";
+import { getCurrentTokenPriceUsd, getEvmTokenDecimals } from "@/lib/sniper/priceFeed";
 import { usdcForChain } from "@/lib/trading/usdc";
 import { evaluatePosition } from "@/lib/sniper/autosell";
 import type { SniperChain } from "@/lib/sniper/chains";
@@ -147,9 +147,14 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
+    // Resolve real on-chain decimals once — needed for both correct pricing
+    // and base-unit sell sizing (the sell amount_in must be wei, not whole
+    // tokens, or the swap sells ~nothing yet marks the position realized).
+    const decimals = await getEvmTokenDecimals(pos.chain as string, pos.token_address);
     const currentPriceUsd = await getCurrentTokenPriceUsd(
       pos.chain as SniperChain,
       pos.token_address,
+      decimals,
     );
     if (currentPriceUsd == null || !pos.entry_price_usd) {
       summary.push({ id: pos.id, action: "skip", reason: "no live price" });
@@ -222,12 +227,15 @@ export async function GET(request: NextRequest) {
         from_token_symbol: pos.token_symbol,
         to_token_address: usdcAddress,
         to_token_symbol: "USDC",
-        amount_in: String(pos.tokens_received),
+        // tokens_received is a WHOLE-token count; the aggregator expects base
+        // units. Scale by 10**decimals (BigInt to avoid float drift on big mc).
+        amount_in: (BigInt(Math.round((pos.tokens_received ?? 0) * 1e6)) * (BigInt(10) ** BigInt(decimals)) / BigInt(1e6)).toString(),
         slippage_bps: c.max_slippage_bps ?? 200,
         source_reason: "sniper_autosell",
         source_order_id: pos.id,
         source_order_table: "sniper_executions",
         status: "pending",
+        route_data: {},
         expires_at: expiresAt,
       })
       .select("id")

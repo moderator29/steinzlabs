@@ -21,6 +21,7 @@
 import { NextRequest } from 'next/server';
 import { verifyCron, cronResponse, logCronExecution } from '../_shared';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { usdcForChain } from '@/lib/trading/usdc';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -82,7 +83,7 @@ export async function GET(request: NextRequest) {
   const { data: criteriaRows } = await supabase
     .from('sniper_criteria')
     .select(
-      'id, amount_per_snipe_usd, max_slippage_bps, wallet_addresses, enabled, paused, user_id',
+      'id, amount_per_snipe_usd, max_slippage_bps, wallet_addresses, wallet_source, enabled, paused, user_id',
     )
     .in('id', criteriaIds);
   const criteriaMap = new Map((criteriaRows ?? []).map((c) => [c.id, c]));
@@ -96,6 +97,7 @@ export async function GET(request: NextRequest) {
           amount_per_snipe_usd: number | null;
           max_slippage_bps: number | null;
           wallet_addresses: string[] | null;
+          wallet_source: string | null;
           enabled: boolean | null;
           paused: boolean | null;
           user_id: string;
@@ -115,31 +117,72 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
+    // Fund snipes from USDC on the matched chain. The literal 'USDC' string is
+    // not an address and breaks the aggregator/GoPlus downstream.
+    const usdcAddress = usdcForChain(m.matched_chain);
+    if (!usdcAddress) {
+      processed.push({ matchId: m.id, status: 'skipped', reason: `no USDC address for chain ${m.matched_chain}` });
+      continue;
+    }
+
     if (dryRun) {
       processed.push({ matchId: m.id, status: 'queued', reason: 'dry-run' });
       continue;
     }
 
-    // Insert into pending_trades. The separate /api/cron/pending-trades-
-    // cleanup + per-trade prep/execute routes pick it up from here.
+    // 1) Create the OPEN position up-front (status 'pending'). The autosell
+    //    engine reads confirmed positions; confirm() promotes this row to
+    //    'confirmed' with the real entry price + tokens once the buy is signed.
+    const { data: execRow, error: execErr } = await supabase
+      .from('sniper_executions')
+      .insert({
+        user_id: criteria.user_id,
+        criteria_id: criteria.id,
+        token_address: m.matched_token_address,
+        chain: m.matched_chain,
+        wallet_address: walletAddress,
+        buy_amount_usd: criteria.amount_per_snipe_usd,
+        slippage_bps: criteria.max_slippage_bps ?? 200,
+        status: 'pending',
+      })
+      .select('id')
+      .single();
+    if (execErr || !execRow) {
+      processed.push({ matchId: m.id, status: 'error', reason: execErr?.message ?? 'execution insert failed' });
+      continue;
+    }
+
+    // 2) Queue the buy on pending_trades with the VERIFIED live schema
+    //    (from_token_address/to_token_address/amount_in base units/route_data/
+    //    source_order_table). USDC is 6-decimal, so base units = usd * 1e6.
+    const amountInBaseUnits = String(Math.round(criteria.amount_per_snipe_usd * 1e6));
+    const walletSource = (criteria.wallet_source === 'metamask' || criteria.wallet_source === 'phantom' || criteria.wallet_source === 'builtin')
+      ? criteria.wallet_source : 'metamask';
+    const expiresAt = new Date(Date.now() + 30 * 60_000).toISOString();
     const { data: pending, error: insErr } = await supabase
       .from('pending_trades')
       .insert({
         user_id: criteria.user_id,
-        wallet_address: walletAddress,
         chain: m.matched_chain,
-        token_in: 'USDC',  // sniper always funds from USDC; tokenResolver upgrades to address
-        token_out: m.matched_token_address,
-        amount_in_usd: criteria.amount_per_snipe_usd,
-        slippage_bps: criteria.max_slippage_bps ?? 100,
-        source: 'sniper',
-        source_id: m.id,
-        status: 'queued',
+        wallet_source: walletSource,
+        from_token_address: usdcAddress,
+        from_token_symbol: 'USDC',
+        to_token_address: m.matched_token_address,
+        amount_in: amountInBaseUnits,
+        slippage_bps: criteria.max_slippage_bps ?? 200,
+        source_reason: 'sniper_buy',
+        source_order_id: execRow.id,
+        source_order_table: 'sniper_executions',
+        status: 'pending',
+        route_data: {},
+        expires_at: expiresAt,
       })
       .select('id')
       .single();
 
     if (insErr || !pending) {
+      // Roll back the orphaned position so it doesn't sit forever as 'pending'.
+      await supabase.from('sniper_executions').delete().eq('id', execRow.id);
       processed.push({ matchId: m.id, status: 'error', reason: insErr?.message ?? 'insert failed' });
       continue;
     }

@@ -180,18 +180,35 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           .eq("id", pending.source_order_id);
         break;
       case "sniper_executions": {
-        // sniper-autosell queued the sell. Mark the position realized so the
-        // autosell cron doesn't redispatch it next tick. realized_at is the
-        // canonical signal; sell_tx_hash carries the client-reported hash for
-        // audit. Authoritative settled price arrives via receipt-reconciliation.
-        await admin
-          .from("sniper_executions")
-          .update({
-            realized_at: nowIso,
-            sell_tx_hash: body.txHash,
-            sell_pending_trade_id: null,
-          })
-          .eq("id", pending.source_order_id);
+        if (pending.source_reason === "sniper_buy") {
+          // BUY confirm — promote the open position to 'confirmed' with the real
+          // entry price + tokens received so the autosell engine (TP/SL/trailing)
+          // and PnL can act on it. peak_price seeds the trailing-stop tracker.
+          const tokensReceived = body.clientReportedAmountOut ? Number(body.clientReportedAmountOut) : null;
+          const entryPrice = body.clientReportedPrice ?? null;
+          await admin
+            .from("sniper_executions")
+            .update({
+              status: "confirmed",
+              tx_hash: body.txHash,
+              executed_at: nowIso,
+              ...(tokensReceived != null ? { tokens_received: tokensReceived } : {}),
+              ...(entryPrice != null ? { entry_price_usd: entryPrice, peak_price_usd: entryPrice } : {}),
+            })
+            .eq("id", pending.source_order_id);
+        } else {
+          // SELL confirm — mark the position realized so the autosell cron
+          // doesn't redispatch it. Authoritative settled price + PnL arrive via
+          // the receipt-reconciliation cron.
+          await admin
+            .from("sniper_executions")
+            .update({
+              realized_at: nowIso,
+              sell_tx_hash: body.txHash,
+              sell_pending_trade_id: null,
+            })
+            .eq("id", pending.source_order_id);
+        }
         break;
       }
     }
