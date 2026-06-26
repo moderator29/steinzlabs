@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { getChainMeta } from '@/lib/chains/chainMeta';
+import { getChainMeta, normalizeChainId } from '@/lib/chains/chainMeta';
 
 interface ChainLogoProps {
   /** canonical chain id (ethereum, solana, base, …) */
@@ -17,7 +17,7 @@ interface ChainLogoProps {
  */
 export function ChainLogo({ chain, size = 18, className = '' }: ChainLogoProps) {
   const [errored, setErrored] = useState(false);
-  const meta = getChainMeta(chain);
+  const meta = getChainMeta(normalizeChainId(chain));
 
   if (!meta || errored) {
     return (

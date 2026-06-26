@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { SecurityBadge } from "@/components/security/SecurityBadge";
+import { ChainLogo } from "@/components/common/ChainLogo";
 import { CheckCircle2, ExternalLink } from "lucide-react";
 
 export interface WhaleSummary {
@@ -49,7 +50,7 @@ export function WhaleCard({ whale }: { whale: WhaleSummary }) {
           </div>
           <div className="flex items-center gap-1.5">
             <code className="text-[10px] text-slate-500 font-mono">{shortAddr(whale.address)}</code>
-            <span className="text-[9px] uppercase text-slate-600">{whale.chain}</span>
+            <span className="inline-flex items-center gap-1 text-[9px] uppercase text-slate-500"><ChainLogo chain={whale.chain} size={11} />{whale.chain}</span>
           </div>
         </div>
         <SecurityBadge score={whale.whale_score} size="sm" compact />

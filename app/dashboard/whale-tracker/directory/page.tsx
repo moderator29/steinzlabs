@@ -26,6 +26,7 @@ import WhaleDetailDrawer from '@/components/whales/WhaleDetailDrawer';
 import FollowWhaleModal from '@/components/whales/FollowWhaleModal';
 import { SelectMenu, type SelectOption } from '@/components/ui/SelectMenu';
 import { getChainMeta } from '@/lib/chains/chainMeta';
+import { ChainLogo } from '@/components/common/ChainLogo';
 
 interface WhaleRow {
   id: string;
@@ -458,7 +459,7 @@ function WhaleCard({ row, onOpen, onFollow }: { row: WhaleRow; onOpen: () => voi
             {row.verified && <CheckCircle2 className="w-3.5 h-3.5 text-[#0066FF] shrink-0" />}
           </div>
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-            <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${c.bg} ${c.fg}`}>{row.chain.toUpperCase()}</span>
+            <span className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-semibold ${c.bg} ${c.fg}`}><ChainLogo chain={row.chain} size={11} />{row.chain.toUpperCase()}</span>
             {row.archetype && <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 truncate max-w-[140px]">{row.archetype}</span>}
           </div>
           <div className="text-[10px] text-slate-500 font-mono mt-1.5 truncate">{short(row.address)}</div>

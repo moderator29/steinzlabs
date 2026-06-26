@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { BackButton } from "@/components/ui/BackButton";
+import { ChainLogo } from "@/components/common/ChainLogo";
 import { NakaLoader } from "@/components/brand/NakaLoader";
 import { WhaleAvatar } from "@/components/whales/WhaleAvatar";
 import { useNavState } from "@/lib/nav/useNavState";
@@ -622,8 +623,8 @@ function FeedCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap text-xs">
             <span className="text-slate-500">{timeAgo(row.timestamp)}</span>
-            <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 uppercase text-[10px]">
-              {row.chain}
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 uppercase text-[10px]">
+              <ChainLogo chain={row.chain} size={12} />{row.chain}
             </span>
             <span className={`inline-flex items-center gap-1 ${actionColor} font-semibold uppercase text-[10px]`}>
               <ActionIcon size={10} /> {action}
