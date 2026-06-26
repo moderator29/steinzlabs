@@ -518,17 +518,77 @@ export default function ProfileTab() {
   // user_metadata: it rides inside the session cookie, and a single image blew
   // the cookie past Vercel's edge header limit, 494-ing every request. See
   // migration 2026_06_22_avatars_bucket_and_metadata_strip.sql.
+  // Downscale + compress in the browser before upload — the standard way to keep
+  // profile media small and fast (a phone photo is 5-10MB; an avatar needs only
+  // a few hundred KB). The longest side is clamped to maxDim and the result is
+  // re-encoded as WebP (JPEG fallback) at ~0.85 quality. Decoding honours EXIF
+  // orientation so portrait phone photos don't save sideways. Animated GIFs pass
+  // through untouched (a canvas would flatten them); any failure falls back to
+  // the original file so an upload never hard-fails here.
+  const downscaleImage = async (
+    file: File,
+    maxDim: number,
+  ): Promise<{ blob: Blob; ext: string; contentType: string }> => {
+    const ext0 = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
+    const passthrough = { blob: file as Blob, ext: ext0, contentType: file.type || 'image/png' };
+    if (typeof document === 'undefined' || file.type === 'image/gif') return passthrough;
+
+    // createImageBitmap({ imageOrientation: 'from-image' }) decodes with EXIF
+    // rotation applied; fall back to an <img> element where it isn't supported.
+    let source: ImageBitmap | HTMLImageElement | null = null;
+    let objectUrl = '';
+    try {
+      if (typeof createImageBitmap === 'function') {
+        try {
+          source = await createImageBitmap(file, { imageOrientation: 'from-image' });
+        } catch {
+          source = null;
+        }
+      }
+      if (!source) {
+        objectUrl = URL.createObjectURL(file);
+        source = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const i = new Image();
+          i.onload = () => resolve(i);
+          i.onerror = () => reject(new Error('decode failed'));
+          i.src = objectUrl;
+        });
+      }
+      const scale = Math.min(1, maxDim / Math.max(source.width, source.height));
+      const w = Math.max(1, Math.round(source.width * scale));
+      const h = Math.max(1, Math.round(source.height * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return passthrough;
+      ctx.drawImage(source, 0, 0, w, h);
+      const encode = (type: string) => new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, 0.85));
+      const webp = await encode('image/webp');
+      if (webp) return { blob: webp, ext: 'webp', contentType: 'image/webp' };
+      const jpeg = await encode('image/jpeg');
+      if (jpeg) return { blob: jpeg, ext: 'jpg', contentType: 'image/jpeg' };
+      return passthrough;
+    } catch {
+      return passthrough;
+    } finally {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      if (source && 'close' in source && typeof source.close === 'function') source.close();
+    }
+  };
+
   const uploadProfileImage = async (file: File, kind: 'avatar' | 'cover') => {
     if (!supabase || !user?.id) { setEditError('Sign in to upload an image'); return; }
     const setLocal = kind === 'avatar' ? setAvatarUrl : setCoverUrl;
     const metaKey = kind === 'avatar' ? 'avatar_url' : 'cover_url';
     const lsKey = kind === 'avatar' ? 'steinz_avatar_url' : 'steinz_cover_url';
-    const ext = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
+    // Avatars render small (≤512px is plenty); covers are wide banners (≤1280px).
+    const { blob, ext, contentType } = await downscaleImage(file, kind === 'avatar' ? 512 : 1280);
     const path = `${user.id}/${kind}.${ext}`;
     try {
       const { error: upErr } = await supabase.storage
         .from('avatars')
-        .upload(path, file, { upsert: true, contentType: file.type, cacheControl: '3600' });
+        .upload(path, blob, { upsert: true, contentType, cacheControl: '3600' });
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path);
       // Cache-bust so a re-upload to the same path shows immediately.
@@ -546,17 +606,19 @@ export default function ProfileTab() {
     }
   };
 
+  // Source cap is generous (phone photos are large) because we downscale +
+  // compress client-side before upload; the stored file ends up a few hundred KB.
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { setEditError('Image must be under 2MB'); return; }
+    if (file.size > 15 * 1024 * 1024) { setEditError('Image must be under 15MB'); return; }
     void uploadProfileImage(file, 'avatar');
   };
 
   const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 4 * 1024 * 1024) { setEditError('Cover image must be under 4MB'); return; }
+    if (file.size > 15 * 1024 * 1024) { setEditError('Cover image must be under 15MB'); return; }
     void uploadProfileImage(file, 'cover');
   };
 
