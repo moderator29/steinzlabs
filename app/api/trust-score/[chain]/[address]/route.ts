@@ -10,20 +10,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { bandFor, calculateTrustScore } from "@/lib/trust/calculate";
+import { isEvmChain, isEvmAddress, isSolanaAddress, normalizeAddress } from "@/lib/utils/addressNormalize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
-// EVM addresses are case-insensitive; Solana base58 IS case-sensitive.
-// Lowercasing a Solana mint produces a different valid-looking address that
-// won't resolve on-chain — so normalize only for EVM.
-const EVM_CHAINS = new Set([
-  "ethereum", "bsc", "base", "arbitrum", "optimism", "polygon", "avalanche",
-]);
-function normalizeAddress(chain: string, address: string): string {
-  return EVM_CHAINS.has(chain.toLowerCase()) ? address.toLowerCase() : address;
+// A trust score is only meaningful for a real on-chain token. Free-text symbols
+// ("USDC", "pepe") never resolve on GoPlus/DexScreener, so every layer degrades
+// to neutral and the route would persist a plausible-looking constant ~41
+// "Caution" score against a ticker — a fabricated number on a trading surface.
+// Reject anything that isn't a well-formed address for the given chain.
+function isValidTokenAddress(chain: string, address: string): boolean {
+  if (isEvmChain(chain)) return isEvmAddress(address);
+  if (chain.toLowerCase() === "solana") return isSolanaAddress(address);
+  // Unknown chain: accept only if the input is shaped like a real address.
+  return isEvmAddress(address) || isSolanaAddress(address);
 }
 
 interface CtxParams {
@@ -34,6 +37,12 @@ export async function GET(req: NextRequest, ctx: CtxParams) {
   const { chain, address } = await ctx.params;
   if (!chain || !address) {
     return NextResponse.json({ error: "chain and address required" }, { status: 400 });
+  }
+  if (!isValidTokenAddress(chain, address)) {
+    return NextResponse.json(
+      { error: "address must be a valid on-chain token address, not a symbol" },
+      { status: 400 },
+    );
   }
   const force = req.nextUrl.searchParams.get("refresh") === "1";
   // ?refresh=1 forces a recompute that calls GoPlus + DexScreener — gate
@@ -47,7 +56,7 @@ export async function GET(req: NextRequest, ctx: CtxParams) {
     }
   }
   const admin = getSupabaseAdmin();
-  const addrNormalized = normalizeAddress(chain, address);
+  const addrNormalized = normalizeAddress(address, chain);
 
   if (!force) {
     const { data: cached } = await admin
