@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCultAccess } from '@/lib/cult/access';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { grantAchievement } from '@/lib/cult/achievements';
 import { resolveNakaVoteWeight } from '@/lib/cult/entitlements';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -128,6 +129,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       voter_count: agg?.length ?? 0,
     })
     .eq('id', proposalId);
+
+  // Earn "Voice of the Cult" for casting a Conclave vote (idempotent).
+  await grantAchievement(access.userId, 'conclave_voter');
 
   return NextResponse.json({ ok: true, totals });
 }
