@@ -303,7 +303,8 @@ export default function WalletCompareePage() {
         {a.data && b.data && (
           <div className="whale-glass-card p-4 sm:p-5">
             <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500 mb-3">Side-by-side</div>
-            <table className="w-full text-start">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[420px] text-start">
               <thead>
                 <tr className="border-b border-white/[0.06]">
                   <th className="py-2 text-[10px] uppercase tracking-wide text-slate-500"></th>
@@ -320,6 +321,7 @@ export default function WalletCompareePage() {
                 <StatRow label="Last active" a={a.data.lastActive ?? '—'} b={b.data.lastActive ?? '—'} />
               </tbody>
             </table>
+            </div>
 
             <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.05] p-3">
