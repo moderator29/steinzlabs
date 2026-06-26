@@ -41,17 +41,3 @@ export function SanctumHubClient() {
     </section>
   );
 }
-
-function SubChamberPlaceholder({ title, tagline, eta }: { title: string; tagline: string; eta: string }) {
-  return (
-    <article className="sanctum-subchamber" aria-label={`${title} — ${eta}`}>
-      <header className="flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-[0.18em] text-[#00C8FF]">Sub-chamber</span>
-        <span className="text-[10px] uppercase tracking-[0.18em] text-[#FFD86B]">{eta}</span>
-      </header>
-      <h3 className="sanctum-subchamber__title">{title}</h3>
-      <p className="sanctum-subchamber__tagline">{tagline}</p>
-      <div className="sanctum-subchamber__seam" aria-hidden="true" />
-    </article>
-  );
-}
