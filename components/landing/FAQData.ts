@@ -3,7 +3,7 @@ export interface FAQ { q: string; a: string; }
 export const FAQS: FAQ[] = [
   {
     q: 'What is Naka Labs?',
-    a: 'Naka Labs is an institutional-grade crypto intelligence platform. We combine on-chain data, AI analysis, and real-time market intelligence to give traders and researchers the same tools that professional trading firms use — but accessible to everyone. Analyze tokens, track whale wallets, detect rugs, and execute trades across 12+ blockchains from one dashboard.',
+    a: 'Naka Labs is an institutional-grade crypto intelligence platform. We combine on-chain data, AI analysis, and real-time market intelligence to give traders and researchers the same tools that professional trading firms use — but accessible to everyone. Analyze tokens, track whale wallets, detect rugs, and execute trades across 8 blockchains from one dashboard.',
   },
   {
     q: 'How does the VTX Intelligence Engine work?',
@@ -23,7 +23,7 @@ export const FAQS: FAQ[] = [
   },
   {
     q: 'How does Naka Labs make money?',
-    a: 'Naka Labs charges a 0.15% platform fee on swaps executed through our swap engine. This is lower than most DEX aggregators. There are no monthly subscription fees, no data fees, and no hidden charges. All fee amounts are shown transparently before you confirm any transaction.',
+    a: 'Naka Labs charges a 0.5% platform fee on swaps executed through our swap engine. There are no monthly subscription fees, no data fees, and no hidden charges. All fee amounts are shown transparently before you confirm any transaction.',
   },
   {
     q: 'What makes Naka Labs different from other crypto platforms?',
@@ -31,7 +31,7 @@ export const FAQS: FAQ[] = [
   },
   {
     q: 'What blockchains does Naka Labs support?',
-    a: 'Naka Labs supports 12+ chains including Ethereum, Solana, BNB Chain, Base, Arbitrum, Optimism, Polygon, and Avalanche. The swap engine covers Solana via Jupiter/Raydium, and EVM chains via Uniswap v3/v4, 0x Protocol, and Alchemy routing. New chains are added regularly.',
+    a: 'Naka Labs supports 8 chains: Ethereum, Solana, BNB Chain, Base, Arbitrum, Optimism, Polygon, and Avalanche. The swap engine covers Solana via Jupiter/Raydium, and EVM chains via Uniswap v3/v4, 0x Protocol, and Alchemy routing. New chains are added regularly.',
   },
   {
     q: 'How does the Bubble Map work?',

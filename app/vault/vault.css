@@ -54,12 +54,45 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   padding: 18px 24px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(10px);
   background: rgba(2, 5, 14, 0.55);
 }
 .vault-main { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+
+/* ─── In-vault chamber nav (chamber switcher) ───────────────────────────── */
+.vault-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.vault-nav::-webkit-scrollbar { display: none; }
+.vault-nav__link {
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #B4C0E0;
+  white-space: nowrap;
+  transition: color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+.vault-nav__link:hover { color: #F0F4FF; background: rgba(255, 255, 255, 0.05); }
+.vault-nav__link--active {
+  color: #FFFFFF;
+  background: rgba(0, 153, 255, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(0, 153, 255, 0.4);
+}
+@media (max-width: 720px) {
+  /* Stack the identity pill above a full-width, horizontally-scrolling rail so
+     the header never overflows on phones/tablets. */
+  .vault-header { flex-direction: column; align-items: stretch; gap: 12px; padding: 14px 16px; }
+  .vault-nav { width: 100%; }
+}
 
 /* ─── Identity strip ────────────────────────────────────────────────────── */
 .vault-identity {

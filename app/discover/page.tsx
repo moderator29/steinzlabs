@@ -8,6 +8,7 @@ import { RecommendationsStrip } from '@/components/social/RecommendationsStrip';
 import { SearchBox } from '@/components/social/SearchBox';
 import { UserListRow } from '@/components/social/UserListRow';
 import BackButton from '@/components/ui/BackButton';
+import { GlassCard } from '@/components/ui/GlassCard';
 import { useFeatureUsageLog } from '@/lib/hooks/useFeatureUsageLog';
 
 /**
@@ -99,7 +100,7 @@ function SearchResults({ q }: { q: string }) {
   if (users === null) return <div className="text-sm text-slate-400">Searching…</div>;
   if (users.length === 0) return <div className="text-sm text-slate-400">No users match &quot;{q}&quot;.</div>;
   return (
-    <div className="rounded-2xl nl-glass p-2 divide-y divide-white/[0.05]">
+    <GlassCard className="p-2 divide-y divide-white/[0.05]">
       {users.map((u) => (
         <UserListRow
           key={u.id}
@@ -118,7 +119,7 @@ function SearchResults({ q }: { q: string }) {
           }}
         />
       ))}
-    </div>
+    </GlassCard>
   );
 }
 

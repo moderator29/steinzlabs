@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Trophy, Eye } from 'lucide-react';
+import { GlassCard } from '@/components/ui/GlassCard';
 
 /**
  * LeaderboardColumn — top-10 list rendered as a card. Auto-refreshes
@@ -85,7 +86,7 @@ export function LeaderboardColumn({ kind, title, description, limit = 10 }: Lead
   }, [kind, limit]);
 
   return (
-    <section className="rounded-2xl nl-glass p-4">
+    <GlassCard className="p-4">
       <header className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Trophy className="w-4 h-4 text-[var(--nl-blue,#0066FF)]" />
@@ -149,6 +150,6 @@ export function LeaderboardColumn({ kind, title, description, limit = 10 }: Lead
           ))}
         </ol>
       )}
-    </section>
+    </GlassCard>
   );
 }

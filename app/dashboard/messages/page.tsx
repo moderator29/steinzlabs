@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { MessageCircle, Lock } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { GlassCard } from '@/components/ui/GlassCard';
 
 interface Conversation {
   id: string;
@@ -88,7 +89,7 @@ export default function MessagesInboxPage() {
           <Link href="/discover" className="text-[var(--nl-blue,#0066FF)]">Discover</Link>.
         </div>
       ) : (
-        <div className="rounded-xl nl-glass divide-y divide-white/[0.05]">
+        <GlassCard className="divide-y divide-white/[0.05]">
           {convos.map((c) => {
             const peer = peers[c.peer_id];
             const initial = (peer?.display_name || peer?.username || '?').slice(0, 1).toUpperCase();
@@ -116,7 +117,7 @@ export default function MessagesInboxPage() {
               </Link>
             );
           })}
-        </div>
+        </GlassCard>
       )}
     </div>
   );
