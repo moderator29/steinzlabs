@@ -32,16 +32,25 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<{ id: 
 
     const cookies = request.cookies;
 
-    // 2. Legacy signed cookie
+    // 2. Legacy `steinz_session` cookie.
+    // SECURITY: this token MUST be verified cryptographically, not trusted by
+    // decoding its payload. The previous implementation did
+    // `JSON.parse(atob(cookie.split('.')[1]))` and trusted `sub`/`exp` with NO
+    // signature check — so a forged, unsigned JWT
+    // (`x.<base64url({"sub":"<victim>","exp":<future>})>.x`) authenticated as
+    // ANY user on every route that uses this helper. We now verify the token
+    // through Supabase exactly like the Bearer path; a forged/expired token is
+    // rejected and we fall through to the canonical SSR cookie path below.
     const sessionCookie = cookies.get('steinz_session')?.value;
     if (sessionCookie) {
       try {
-        const decoded = JSON.parse(atob(sessionCookie.split('.')[1]));
-        if (decoded.sub && decoded.exp > Date.now() / 1000) {
-          return { id: decoded.sub, email: decoded.email || '' };
+        const supabase = getSupabaseAdmin();
+        const { data: { user }, error } = await supabase.auth.getUser(sessionCookie);
+        if (!error && user) {
+          return { id: user.id, email: user.email || '' };
         }
       } catch {
-        // Malformed cookie — ignore
+        // Not a valid Supabase token — fall through.
       }
     }
 
