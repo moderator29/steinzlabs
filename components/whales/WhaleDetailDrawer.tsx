@@ -241,10 +241,7 @@ export default function WhaleDetailDrawer({
 
         {/* Actions */}
         <div className="px-5 pb-4 flex gap-2">
-          <button
-            onClick={onFollow}
-            className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#7C3AED] font-semibold text-sm hover:opacity-95"
-          >
+          <button onClick={onFollow} className="nl-btn-neon flex-1 !py-2.5 !text-sm">
             Follow / Copy Trade
           </button>
         </div>

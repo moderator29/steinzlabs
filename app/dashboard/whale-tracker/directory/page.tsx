@@ -247,18 +247,10 @@ export default function WhaleDirectoryPage() {
             <p className="text-[10px] text-slate-500">On-chain whale intelligence</p>
           </div>
           <div className="ms-auto flex items-center gap-2">
-            <Link
-              href="/dashboard/whale-tracker"
-              className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300"
-            >
+            <Link href="/dashboard/whale-tracker" className="nl-btn-neon !px-3 !py-1.5 !text-[11px]">
               Live Feed
             </Link>
-            {/* Bug §2.12: was full-width "Submit Whale" with gradient — now a
-                small, dark neon-blue pill that just says "Submit". */}
-            <Link
-              href="/dashboard/whale-tracker/submit"
-              className="text-[11px] px-2.5 py-1 rounded-md bg-[#0066FF] hover:bg-[#0052CC] text-white font-semibold shadow-[0_0_8px_rgba(0,102,255,0.4)]"
-            >
+            <Link href="/dashboard/whale-tracker/submit" className="nl-btn-neon !px-3 !py-1.5 !text-[11px]">
               Submit
             </Link>
           </div>
@@ -436,7 +428,7 @@ export default function WhaleDirectoryPage() {
 
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-white/[0.02] border border-white/10 rounded-xl p-3">
+    <div className="nl-glass rounded-xl p-3">
       <div className="text-[10px] uppercase tracking-wider text-slate-500">{label}</div>
       <div className="text-base font-bold font-mono mt-0.5">{value}</div>
     </div>
@@ -450,7 +442,7 @@ function WhaleCard({ row, onOpen, onFollow }: { row: WhaleRow; onOpen: () => voi
   const pnlPositive = pnl >= 0;
 
   return (
-    <div className="group bg-white/[0.03] hover:bg-white/[0.05] border border-white/10 hover:border-white/20 rounded-xl p-5 transition-all cursor-pointer" onClick={onOpen}>
+    <div className="group nl-glass nl-glass--interactive rounded-xl p-5 cursor-pointer" onClick={onOpen}>
       <div className="flex items-start gap-3">
         <WhaleAvatar label={row.label} address={row.address} size={40} />
         <div className="flex-1 min-w-0">
@@ -483,21 +475,27 @@ function WhaleCard({ row, onOpen, onFollow }: { row: WhaleRow; onOpen: () => voi
         <Metric label="Win rate" value={row.win_rate ? `${Math.round(Number(row.win_rate))}%` : '—'} />
       </div>
 
-      <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-white/5">
-        <div className="flex items-center gap-1 text-[10px] text-slate-500 min-w-0">
+      {/* Footer — followers / Follow / View each in its own contained chip,
+          fixed heights so the Follow button never overlaps View. */}
+      <div className="flex items-center gap-2 mt-4 pt-3 border-t border-white/5">
+        <div className="inline-flex items-center gap-1 h-7 px-2 rounded-md bg-white/[0.04] border border-white/10 text-[10px] text-slate-400 min-w-0">
           <Users className="w-3 h-3 shrink-0" />
-          <span className="truncate">{row.follower_count || 0} followers</span>
+          <span className="truncate tabular-nums">{(row.follower_count || 0).toLocaleString()}</span>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="ms-auto flex items-center gap-2 shrink-0">
           <button
             onClick={(e) => { e.stopPropagation(); onFollow(); }}
-            className="px-2 py-0.5 rounded-md bg-[#0066FF]/15 hover:bg-[#0066FF]/25 text-[#8FA3FF] text-[10px] font-semibold"
+            className="inline-flex items-center justify-center h-7 px-3 rounded-md bg-[#0066FF]/15 hover:bg-[#0066FF]/25 border border-[#0066FF]/35 text-[#8FA3FF] text-[11px] font-semibold transition-colors"
           >
             Follow
           </button>
-          <span className="text-[10px] text-slate-500 group-hover:text-white flex items-center gap-0.5">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onOpen(); }}
+            className="inline-flex items-center justify-center gap-0.5 h-7 px-2.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-[11px] text-slate-300 group-hover:text-white transition-colors"
+          >
             View <ChevronRight className="w-3 h-3" />
-          </span>
+          </button>
         </div>
       </div>
     </div>

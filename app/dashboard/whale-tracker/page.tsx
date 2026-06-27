@@ -323,18 +323,13 @@ export default function WhaleTrackerPage() {
             </span>
           </div>
           <div className="ms-auto flex items-center gap-2">
-            {/* Phase 6: surface the new Directory view. */}
-            <Link
-              href="/dashboard/whale-tracker/directory"
-              className="text-xs px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors font-semibold text-slate-200"
-            >
+            {/* Directory + Submit — matched, compact neon-blue stride pills,
+                same scale as the PRO chip. "Submit" (not "Submit whale"). */}
+            <Link href="/dashboard/whale-tracker/directory" className="nl-btn-neon !px-3 !py-1.5 !text-[11px]">
               Directory
             </Link>
-            <Link
-              href="/dashboard/whale-tracker/submit"
-              className="text-xs px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition-colors font-semibold"
-            >
-              Submit whale
+            <Link href="/dashboard/whale-tracker/submit" className="nl-btn-neon !px-3 !py-1.5 !text-[11px]">
+              Submit
             </Link>
           </div>
         </div>
@@ -412,45 +407,43 @@ export default function WhaleTrackerPage() {
             <option value="transfer">Transfer</option>
           </select>
         </div>
-        {/* Audit B5 / P1 #25 — Smart Money / CEX / Bot label-pill filter
-            row. Multi-select; each toggle adds/removes from labelFilter
-            and the feed re-fetches with ?labels=…. */}
-        <div className="max-w-7xl mx-auto px-4 pb-3 flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] uppercase tracking-wider text-slate-500 me-1">Labels</span>
-          {(['smart_money', 'cex', 'mm', 'bot', 'insider', 'bridge'] as WhaleLabel[]).map((lbl) => {
-            const active = labelFilter.includes(lbl);
-            const meta = LABEL_META[lbl];
-            return (
-              <button
-                key={lbl}
-                onClick={() => setLabelFilter((prev) => active ? prev.filter((l) => l !== lbl) : [...prev, lbl])}
-                className={`px-2 py-1 rounded-full text-[10px] font-semibold border transition-colors ${
-                  active
-                    ? 'text-white'
-                    : 'text-slate-400 bg-slate-900/40 border-slate-800 hover:text-white'
-                }`}
-                style={active ? { backgroundColor: `${meta.color}20`, borderColor: `${meta.color}55`, color: meta.color } : undefined}
-                title={meta.tooltip}
-                aria-pressed={active}
-              >
-                {meta.short}
-              </button>
-            );
-          })}
-          {labelFilter.length > 0 && (
-            <button
-              onClick={() => setLabelFilter([])}
-              className="px-2 py-1 rounded-full text-[10px] font-semibold text-slate-500 hover:text-slate-300"
-            >
-              Clear
-            </button>
-          )}
-        </div>
       </div>
 
       {/* Body grid */}
       <div className="max-w-7xl mx-auto px-4 py-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div>
+          {/* Smart Money / CEX / Bot label filter — relocated out of the
+              header into the feed column. Small rectangular containers
+              (rounded-md, no glass) per brand direction. */}
+          <div className="flex flex-wrap items-center gap-1.5 mb-3">
+            <span className="text-[10px] uppercase tracking-wider text-slate-500 me-1">Labels</span>
+            {(['smart_money', 'cex', 'mm', 'bot', 'insider', 'bridge'] as WhaleLabel[]).map((lbl) => {
+              const active = labelFilter.includes(lbl);
+              const meta = LABEL_META[lbl];
+              return (
+                <button
+                  key={lbl}
+                  onClick={() => setLabelFilter((prev) => active ? prev.filter((l) => l !== lbl) : [...prev, lbl])}
+                  className={`px-2 py-1 rounded-md text-[10px] font-semibold border transition-colors ${
+                    active ? 'text-white' : 'text-slate-400 bg-slate-900/40 border-slate-800 hover:text-white'
+                  }`}
+                  style={active ? { backgroundColor: `${meta.color}20`, borderColor: `${meta.color}55`, color: meta.color } : undefined}
+                  title={meta.tooltip}
+                  aria-pressed={active}
+                >
+                  {meta.short}
+                </button>
+              );
+            })}
+            {labelFilter.length > 0 && (
+              <button
+                onClick={() => setLabelFilter([])}
+                className="px-2 py-1 rounded-md text-[10px] font-semibold text-slate-500 hover:text-slate-300"
+              >
+                Clear
+              </button>
+            )}
+          </div>
           <div className="flex items-center justify-between mb-3">
             <div className="text-[11px] uppercase tracking-wider text-slate-500">
               Live whale feed · {feedTotal.toLocaleString()} matches
@@ -715,7 +708,7 @@ function WatchlistPanel({
   onOpen: (address: string, chain: string) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-800/50 bg-slate-950/80 backdrop-blur-xl p-4">
+    <div className="nl-glass rounded-2xl p-4">
       <div className="flex items-center justify-between mb-3">
         <div>
           <h3 className="text-sm font-bold text-white">My Whales</h3>
@@ -809,7 +802,7 @@ function TopTodayPanel({
   onToggleWatch: (addr: string, chain: string) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-800/50 bg-slate-950/80 backdrop-blur-xl p-4">
+    <div className="nl-glass rounded-2xl p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-bold text-white">Top Whales Today</h3>
         <span className="text-[10px] text-slate-500 uppercase">24h volume</span>
@@ -959,7 +952,7 @@ function PnlLeaderboardPanel({
   }, []);
 
   return (
-    <div className="rounded-2xl border border-slate-800/50 bg-slate-950/80 backdrop-blur-xl p-4">
+    <div className="nl-glass rounded-2xl p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-bold text-white">PnL Leaderboard</h3>
         <span className="text-[10px] text-slate-500 uppercase">30d realized</span>
@@ -1078,7 +1071,7 @@ function AddWhaleModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl">
+      <div className="w-full max-w-md nl-glass rounded-2xl shadow-2xl">
         <div className="flex items-center justify-between p-4 border-b border-slate-800">
           <h2 className="text-sm font-bold text-white">Add whale to My Whales</h2>
           <button
