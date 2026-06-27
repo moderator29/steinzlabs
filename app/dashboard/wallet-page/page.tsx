@@ -12,7 +12,7 @@ import {
 } from '@/components/icons/brand';
 import {
   ArrowLeft, RotateCcw, Key, Globe, Layers, ArrowUpRight, ArrowDownLeft,
-  Repeat, DollarSign, QrCode, ShoppingCart, Zap, Loader2,
+  Repeat, DollarSign, QrCode, ShoppingCart, Zap, Loader2, BarChart3,
 } from 'lucide-react';
 import Link from 'next/link';
 import BackButton from '@/components/ui/BackButton';
@@ -241,7 +241,7 @@ export default function WalletPage() {
   useFeatureUsageLog('wallet');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token' | 'add-network' | 'wallet-settings' | 'customize' | 'approvals'>('main');
+  const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token' | 'add-network' | 'wallet-settings' | 'customize' | 'approvals' | 'analytics'>('main');
   // Per-user hidden tokens (Manage/Customize). Token key = chain:contract|symbol.
   const [hiddenTokens, setHiddenTokens] = useState<Set<string>>(new Set());
   // Fiat Buy on-ramp (Transak) — "coming soon" until the provider is live.
@@ -958,6 +958,10 @@ export default function WalletPage() {
     <ApprovalsView onBack={() => setView('main')} wallet={activeWallet} chain={activeChain} />
   );
 
+  if (view === 'analytics' && activeWallet) return (
+    <PortfolioAnalyticsView onBack={() => setView('main')} wallet={activeWallet} />
+  );
+
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-28">
       {buyComingSoon && (
@@ -1398,6 +1402,13 @@ export default function WalletPage() {
             {/* ── ADVANCED ─────────────────────────────────── */}
             <div className="mb-6">
               <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Advanced</h2>
+              <button
+                onClick={() => setView('analytics')}
+                className="w-full mb-2 py-3 nl-glass rounded-xl text-xs font-semibold hover:-translate-y-px flex items-center justify-center gap-1.5 transition-all"
+                style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}
+              >
+                <BarChart3 className="w-3.5 h-3.5 text-blue-400" /> Portfolio Analytics
+              </button>
               <div className="flex gap-2">
                 <button
                   onClick={() => setView('create')}
@@ -2328,6 +2339,163 @@ function ApprovalsView({ onBack, wallet, chain }: { onBack: () => void; wallet: 
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── PORTFOLIO ANALYTICS ───────────────────────────────────────────────────
+// Real cross-chain allocation view. Fetches /api/wallet-intelligence for every
+// live chain for the active address and aggregates by network and by asset.
+// No fabricated numbers — chains that return nothing simply contribute $0.
+function PortfolioAnalyticsView({ onBack, wallet }: { onBack: () => void; wallet: StoredWallet }) {
+  const [chainData, setChainData] = useState<Record<string, WalletData | null> | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setError(null);
+      setChainData(null);
+      try {
+        const entries = await Promise.all(
+          LIVE_CHAINS.map(async (cid) => {
+            try {
+              const res = await fetch(`/api/wallet-intelligence?address=${wallet.address}&chain=${cid}`, {
+                signal: AbortSignal.timeout(20_000),
+                cache: 'no-store',
+              });
+              return [cid, res.ok ? ((await res.json()) as WalletData) : null] as const;
+            } catch {
+              return [cid, null] as const;
+            }
+          }),
+        );
+        if (cancelled) return;
+        setChainData(Object.fromEntries(entries));
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load analytics');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [wallet.address]);
+
+  // Aggregate per-chain + per-asset from the real intelligence payloads.
+  const { perChain, perAsset, total, assetCount } = useMemo(() => {
+    const chains: { id: string; name: string; color: string; usd: number }[] = [];
+    const assetMap = new Map<string, { symbol: string; name: string; usd: number; logo?: string }>();
+    let totalUsd = 0;
+    let assets = 0;
+    for (const cid of LIVE_CHAINS) {
+      const d = chainData?.[cid];
+      if (!d) continue;
+      const chainUsd = parseFloat(d.totalBalanceUsd || '0');
+      const info = SUPPORTED_CHAINS.find((c) => c.id === cid);
+      if (chainUsd > 0) chains.push({ id: cid, name: info?.name ?? cid, color: info?.color ?? '#0066FF', usd: chainUsd });
+      totalUsd += chainUsd;
+      for (const h of d.holdings || []) {
+        const v = parseFloat(h.valueUsd || '0');
+        if (v <= 0) continue;
+        assets += 1;
+        const key = `${h.symbol}`.toUpperCase();
+        const prev = assetMap.get(key);
+        if (prev) prev.usd += v;
+        else assetMap.set(key, { symbol: h.symbol, name: h.name, usd: v, logo: h.logo });
+      }
+    }
+    chains.sort((a, b) => b.usd - a.usd);
+    const assetList = Array.from(assetMap.values()).sort((a, b) => b.usd - a.usd);
+    return { perChain: chains, perAsset: assetList, total: totalUsd, assetCount: assets };
+  }, [chainData]);
+
+  const fmt = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const pct = (n: number) => (total > 0 ? (n / total) * 100 : 0);
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-white pb-28">
+      <div className="max-w-md mx-auto px-4 pt-6">
+        <div className="flex items-center gap-3 mb-6">
+          <button onClick={onBack} aria-label="Back" className="p-2 -ms-2 hover:bg-white/5 rounded-xl transition-colors">
+            <ArrowLeft className="w-5 h-5 text-slate-400" />
+          </button>
+          <div>
+            <h1 className="text-lg font-bold">Portfolio Analytics</h1>
+            <p className="text-[11px] text-slate-500">{shortAddr(wallet.address)} · all networks</p>
+          </div>
+        </div>
+
+        {error && (
+          <div className="rounded-xl border border-red-500/40 bg-red-500/5 px-3 py-2.5 text-xs text-red-200 mb-4">{error}</div>
+        )}
+
+        {chainData === null ? (
+          <div className="py-12 text-center text-sm text-slate-400">Aggregating across networks…</div>
+        ) : total === 0 ? (
+          <div className="py-12 text-center">
+            <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-white/5 flex items-center justify-center">
+              <BarChart3 className="w-6 h-6 text-slate-400" />
+            </div>
+            <p className="text-sm text-white font-medium">No balances to analyze</p>
+            <p className="text-xs text-slate-500 mt-1">Fund this wallet to see your allocation breakdown.</p>
+          </div>
+        ) : (
+          <>
+            {/* Headline stats */}
+            <div className="grid grid-cols-3 gap-2 mb-5">
+              {[
+                { label: 'Total value', value: fmt(total) },
+                { label: 'Networks', value: String(perChain.length) },
+                { label: 'Assets', value: String(assetCount) },
+              ].map((s) => (
+                <div key={s.label} className="nl-glass rounded-xl p-3 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.18)' }}>
+                  <p className="text-sm font-bold text-white truncate">{s.value}</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">{s.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Allocation by network */}
+            <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">By network</h2>
+            <div className="space-y-2.5 mb-6">
+              {perChain.map((c) => (
+                <div key={c.id}>
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="font-medium text-white">{c.name}</span>
+                    <span className="text-slate-400">{fmt(c.usd)} · {pct(c.usd).toFixed(1)}%</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${Math.max(pct(c.usd), 1.5)}%`, background: c.color }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Top assets */}
+            <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Top assets</h2>
+            <div className="space-y-2">
+              {perAsset.slice(0, 12).map((a) => (
+                <div key={a.symbol} className="nl-glass rounded-xl p-3 flex items-center gap-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.12)' }}>
+                  {a.logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={a.logo} alt="" className="w-8 h-8 rounded-full shrink-0" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center shrink-0 text-[10px] font-bold text-slate-300">{a.symbol.slice(0, 3)}</div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{a.symbol}</p>
+                    <div className="h-1.5 mt-1 rounded-full bg-slate-800 overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${Math.max(pct(a.usd), 1.5)}%`, background: 'linear-gradient(90deg,#1E90FF,#0066FF)' }} />
+                    </div>
+                  </div>
+                  <div className="text-end shrink-0">
+                    <p className="text-xs font-mono text-white">{fmt(a.usd)}</p>
+                    <p className="text-[10px] text-slate-500">{pct(a.usd).toFixed(1)}%</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
