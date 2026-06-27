@@ -128,11 +128,11 @@ export function WalletTokenRow({
               ? <>ETH <span className="text-slate-400 font-semibold">· {chainLabel}</span></>
               : symbol}
           </span>
-          {chainLabel && !(symbol === 'ETH' && chainLabel !== 'Ethereum') && (
-            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-slate-800/80 text-slate-400 leading-none border border-slate-700/50">
-              {chainLabel}
-            </span>
-          )}
+        </div>
+        {/* Sub-line: token name + chain (muted suffix) — cleaner than a boxed
+            chain pill. Price + 24h change sit beneath. */}
+        <div className="text-[11px] text-slate-500 truncate leading-tight">
+          {name}{chainLabel && !(symbol === 'ETH' && chainLabel !== 'Ethereum') ? <span className="text-slate-600"> · {chainLabel}</span> : null}
         </div>
         <div className="flex items-center gap-1.5 mt-0.5">
           <span className="text-[12px] text-slate-400 font-mono">{formatPrice(price)}</span>
