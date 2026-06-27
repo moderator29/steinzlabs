@@ -332,7 +332,7 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
 
           {/* TP / SL */}
           <Section title="Take Profit / Stop Loss" expanded={showAdvanced} onToggle={() => setShowAdvanced(v => !v)}>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Field label="Take Profit (%)">
                 <input type="number" value={tp} onChange={e => setTp(e.target.value === '' ? '' : Number(e.target.value))} placeholder="200" className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white placeholder:text-white/40 focus:border-blue-400 focus:outline-none transition" />
               </Field>

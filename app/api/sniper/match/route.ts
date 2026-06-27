@@ -15,7 +15,6 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { matchSniperEvent } from "@/lib/sniper/matcher";
 import type { SniperChain } from "@/lib/sniper/chains";
 
@@ -32,7 +31,6 @@ function authorized(req: NextRequest): boolean {
 }
 
 interface ReplayBody {
-  detected_token_id?: string;
   /** Inline event — bypasses the detected_tokens table. */
   chain?: SniperChain;
   trigger?: "whale_buy" | "new_token_launch";
@@ -55,33 +53,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  if (body.detected_token_id) {
-    const { data, error } = await getSupabaseAdmin()
-      .from("sniper_detected_tokens")
-      .select("chain, token_address, token_symbol, from_address, amount_usd, tx_hash")
-      .eq("id", body.detected_token_id)
-      .single();
-    if (error || !data) {
-      return NextResponse.json({ error: "Detected token not found" }, { status: 404 });
-    }
-    const trigger: "whale_buy" | "new_token_launch" = data.from_address
-      ? "whale_buy"
-      : "new_token_launch";
-    const outcome = await matchSniperEvent({
-      chain: data.chain as SniperChain,
-      trigger,
-      tokenAddress: data.token_address,
-      tokenSymbol: data.token_symbol,
-      txHash: data.tx_hash,
-      whaleAddress: trigger === "whale_buy" ? data.from_address : null,
-      whaleValueUsd: trigger === "whale_buy" ? data.amount_usd : null,
-    });
-    return NextResponse.json({ ok: true, source: "detected_token", outcome });
-  }
+  // (Removed: the detected_token_id replay branch queried sniper_detected_tokens,
+  // a table that does not exist in the live DB, so it always 404'd. Matches are
+  // driven by the inline-event payload below.)
 
   if (!body.chain || !body.trigger || !body.tokenAddress) {
     return NextResponse.json(
-      { error: "Provide detected_token_id OR { chain, trigger, tokenAddress }" },
+      { error: "Provide { chain, trigger, tokenAddress }" },
       { status: 400 },
     );
   }
