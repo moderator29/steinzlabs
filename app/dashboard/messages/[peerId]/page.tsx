@@ -3,26 +3,24 @@
 import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Lock, Send, ShieldCheck } from 'lucide-react';
-import BackButton from '@/components/ui/BackButton';
+import { ArrowLeft, Lock, LockOpen, Send, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import {
   decryptMessage,
   encryptMessage,
-  generateConversationKey,
   openConversationKey,
-  sealConversationKey,
 } from '@/lib/social/encryption';
-import { ensureKeyVault, fetchPeerPublicKey } from '@/lib/social/keyVault';
+import { ensureKeyVault } from '@/lib/social/keyVault';
 import { sanitizeMessageBody } from '@/lib/social/sanitizeMessageBody';
 
 /**
- * /dashboard/messages/[peerId] — encrypted DM thread.
+ * /dashboard/messages/[peerId] — DM thread (X-style full page).
  *
- * Bootstraps: lazy-init the caller's libsodium key vault → fetch peer
- * public key → upsert dm_conversations with two sealed copies of a
- * fresh symmetric key → fetch + decrypt history → subscribe to
- * Supabase Realtime for live deliveries.
+ * Encryption is best-effort, never blocking: if both sides have a published
+ * key we run E2E (libsodium); if the peer hasn't enabled keys we fall back to
+ * PLAINTEXT so the conversation still works exactly like X (messages are sent
+ * with an empty `iv` sentinel and read verbatim). The header shows which mode
+ * is active.
  */
 
 interface ServerMessage {
@@ -43,13 +41,15 @@ interface UiMessage {
   read_at: string | null;
 }
 
-interface PeerInfo { username: string | null; display_name: string | null; avatar_url: string | null }
+interface PeerInfo { username: string | null; display_name: string | null; avatar_url: string | null; created_at?: string | null }
 
 export default function DmThreadPage({ params }: { params: Promise<{ peerId: string }> }) {
   const { peerId } = use(params);
   const router = useRouter();
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [convKey, setConvKey] = useState<Uint8Array | null>(null);
+  // Plaintext mode — set when the conversation opened without E2E keys.
+  const [plaintext, setPlaintext] = useState(false);
   const [me, setMe] = useState<string | null>(null);
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -64,6 +64,9 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
   const endRef = useRef<HTMLDivElement | null>(null);
   const lastTypingSentRef = useRef(0);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Conversation is usable once we have a real E2E key OR we're in plaintext mode.
+  const ready = !!convKey || plaintext;
 
   // Mark all received messages in this conversation as read.
   const markRead = useCallback(async () => {
@@ -82,7 +85,7 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
       const r = await fetch(`/api/social/profile/${encodeURIComponent(peerId)}`).catch(() => null);
       if (r && r.ok && !cancelled) {
         const j = await r.json();
-        if (j?.profile) setPeer({ username: j.profile.username, display_name: j.profile.display_name, avatar_url: j.profile.avatar_url });
+        if (j?.profile) setPeer({ username: j.profile.username, display_name: j.profile.display_name, avatar_url: j.profile.avatar_url, created_at: j.profile.created_at });
       }
     })();
     return () => { cancelled = true; };
@@ -103,77 +106,92 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
     else router.push('/dashboard/messages');
   }, [conversationId, router]);
 
-  // Bootstrap
+  // Bootstrap — PLAINTEXT-FIRST for instant open (no libsodium WASM / peer-key
+  // round-trip on the hot path, which was the ~10s stall). We open the
+  // conversation immediately; if it turns out to be an EXISTING encrypted
+  // thread, we unseal its key in the background so history decrypts.
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { if (!cancelled) setError('Sign in to message'); return; }
+      if (cancelled) return;
+      setMe(user.id);
+
+      let conv: { id: string; request_state?: string; requested_by?: string | null; sealed_conversation_key?: string } | null = null;
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { setError('Sign in to message'); return; }
-        if (cancelled) return;
-        setMe(user.id);
-
-        const myKeys = await ensureKeyVault();
-        const peerPublic = await fetchPeerPublicKey(peerId);
-        const newKey = await generateConversationKey();
-        const sealedSelf = await sealConversationKey(newKey, myKeys.publicKey);
-        const sealedPeer = await sealConversationKey(newKey, peerPublic);
-
         const res = await fetch('/api/social/dm/conversations', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ peer_id: peerId, sealed_key_self: sealedSelf, sealed_key_peer: sealedPeer }),
+          body: JSON.stringify({ peer_id: peerId }),
         });
-        if (!res.ok) { const j = await res.json().catch(() => null); setError(j?.error ?? 'Could not open conversation'); return; }
-        const conv = await res.json();
-        if (cancelled) return;
-        setConversationId(conv.id);
-        setRequestState(conv.request_state ?? 'accepted');
-        setRequestedBy(conv.requested_by ?? null);
-        // The server may have returned the EXISTING sealed key (upsert
-        // happy path) — unseal that one instead of using the brand-new
-        // key we just generated, so history decrypts.
-        const sealed = conv.sealed_conversation_key as string;
-        const opened = await openConversationKey(sealed, myKeys.publicKey, myKeys.privateKey);
-        setConvKey(opened);
+        if (!res.ok) { const j = await res.json().catch(() => null); if (!cancelled) setError(j?.error ?? 'Could not open conversation'); return; }
+        conv = await res.json();
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Could not open conversation');
+        return;
+      }
+      if (cancelled || !conv) return;
+      setConversationId(conv.id);
+      setRequestState(conv.request_state ?? 'accepted');
+      setRequestedBy(conv.requested_by ?? null);
+
+      const sealed = conv.sealed_conversation_key;
+      if (sealed && sealed !== 'plain') {
+        // Existing encrypted thread — unseal in the background. If the vault
+        // can't open it, degrade to plaintext rather than blocking.
+        try {
+          const myKeys = await ensureKeyVault();
+          const opened = await openConversationKey(sealed, myKeys.publicKey, myKeys.privateKey);
+          if (!cancelled) setConvKey(opened);
+        } catch {
+          if (!cancelled) setPlaintext(true);
+        }
+      } else {
+        setPlaintext(true);
       }
     })();
     return () => { cancelled = true; };
   }, [peerId]);
 
-  const decryptBatch = useCallback(async (rows: ServerMessage[], key: Uint8Array): Promise<UiMessage[]> => {
-    const out: UiMessage[] = [];
-    for (const m of rows) {
-      try {
-        const body = await decryptMessage({ encrypted_content: m.encrypted_content, iv: m.iv }, key);
-        out.push({ id: m.id, sender_id: m.sender_id, body, created_at: m.created_at, read_at: m.read_at });
-      } catch {
-        out.push({ id: m.id, sender_id: m.sender_id, body: '[unable to decrypt]', created_at: m.created_at, read_at: m.read_at });
-      }
+  // Decode a stored row → plaintext body. Empty iv ⇒ plaintext (read verbatim);
+  // otherwise decrypt with the conversation key.
+  const decodeRow = useCallback(async (m: ServerMessage, key: Uint8Array | null): Promise<string> => {
+    if (!m.iv) return m.encrypted_content;
+    if (!key) return '[encrypted message]';
+    try {
+      return await decryptMessage({ encrypted_content: m.encrypted_content, iv: m.iv }, key);
+    } catch {
+      return '[unable to decrypt]';
     }
-    return out;
   }, []);
 
-  // Initial history fetch + decrypt (newest 100)
+  const decodeBatch = useCallback(async (rows: ServerMessage[], key: Uint8Array | null): Promise<UiMessage[]> => {
+    const out: UiMessage[] = [];
+    for (const m of rows) {
+      out.push({ id: m.id, sender_id: m.sender_id, body: await decodeRow(m, key), created_at: m.created_at, read_at: m.read_at });
+    }
+    return out;
+  }, [decodeRow]);
+
+  // Initial history fetch + decode (newest 100)
   const loadHistory = useCallback(async () => {
-    if (!conversationId || !convKey) return;
+    if (!conversationId || !ready) return;
     const res = await fetch(`/api/social/dm/messages?conversation_id=${conversationId}&limit=100`);
     if (!res.ok) return;
     const json = await res.json();
     const rows = (json.messages ?? []) as ServerMessage[];
-    const decrypted = await decryptBatch(rows, convKey);
-    decrypted.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-    setMessages(decrypted);
+    const decoded = await decodeBatch(rows, convKey);
+    decoded.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    setMessages(decoded);
     setHasMoreOlder(rows.length >= 100);
-  }, [conversationId, convKey, decryptBatch]);
+  }, [conversationId, ready, convKey, decodeBatch]);
 
   useEffect(() => { void loadHistory(); }, [loadHistory]);
 
-  // DM7: paginate older messages by cursor (?before=<oldest.created_at>)
+  // Paginate older messages by cursor (?before=<oldest.created_at>)
   const loadOlder = useCallback(async () => {
-    if (!conversationId || !convKey || loadingOlder || messages.length === 0) return;
+    if (!conversationId || !ready || loadingOlder || messages.length === 0) return;
     setLoadingOlder(true);
     try {
       const oldest = messages[0].created_at;
@@ -182,7 +200,7 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
       const json = await res.json();
       const rows = (json.messages ?? []) as ServerMessage[];
       if (rows.length === 0) { setHasMoreOlder(false); return; }
-      const older = await decryptBatch(rows, convKey);
+      const older = await decodeBatch(rows, convKey);
       setMessages((prev) => {
         const seen = new Set(prev.map((p) => p.id));
         const merged = [...older.filter((o) => !seen.has(o.id)), ...prev];
@@ -193,26 +211,20 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
     } finally {
       setLoadingOlder(false);
     }
-  }, [conversationId, convKey, loadingOlder, messages, decryptBatch]);
+  }, [conversationId, ready, convKey, loadingOlder, messages, decodeBatch]);
 
-  // Supabase Realtime subscription for live deliveries. DM4: resubscribe
-  // on tab visibility change so backgrounded tabs reconnect cleanly when
-  // the user returns instead of silently missing deliveries.
+  // Supabase Realtime subscription for live deliveries. Resubscribe on tab
+  // visibility change so backgrounded tabs reconnect cleanly.
   useEffect(() => {
-    if (!conversationId || !convKey) return;
+    if (!conversationId || !ready) return;
+    const handleInsert = async (payload: { new: ServerMessage }) => {
+      const m = payload.new;
+      const body = await decodeRow(m, convKey);
+      setMessages((prev) => prev.some((p) => p.id === m.id) ? prev : [...prev, { id: m.id, sender_id: m.sender_id, body, created_at: m.created_at, read_at: m.read_at }]);
+    };
     let channel = supabase
       .channel(`dm:${conversationId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'dm_messages', filter: `conversation_id=eq.${conversationId}` },
-        async (payload) => {
-          const m = payload.new as ServerMessage;
-          try {
-            const body = await decryptMessage({ encrypted_content: m.encrypted_content, iv: m.iv }, convKey);
-            setMessages((prev) => prev.some((p) => p.id === m.id) ? prev : [...prev, { id: m.id, sender_id: m.sender_id, body, created_at: m.created_at, read_at: m.read_at }]);
-          } catch { /* decrypt failed — ignore one row */ }
-        },
-      )
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dm_messages', filter: `conversation_id=eq.${conversationId}` }, handleInsert)
       .subscribe();
 
     const onVisibility = () => {
@@ -220,19 +232,8 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
       void supabase.removeChannel(channel);
       channel = supabase
         .channel(`dm:${conversationId}:${Date.now()}`)
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'dm_messages', filter: `conversation_id=eq.${conversationId}` },
-          async (payload) => {
-            const m = payload.new as ServerMessage;
-            try {
-              const body = await decryptMessage({ encrypted_content: m.encrypted_content, iv: m.iv }, convKey);
-              setMessages((prev) => prev.some((p) => p.id === m.id) ? prev : [...prev, { id: m.id, sender_id: m.sender_id, body, created_at: m.created_at, read_at: m.read_at }]);
-            } catch { /* decrypt failed */ }
-          },
-        )
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dm_messages', filter: `conversation_id=eq.${conversationId}` }, handleInsert)
         .subscribe();
-      // Resync any messages that arrived while the tab was hidden.
       void loadHistory();
     };
     document.addEventListener('visibilitychange', onVisibility);
@@ -240,13 +241,12 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
       document.removeEventListener('visibilitychange', onVisibility);
       void supabase.removeChannel(channel);
     };
-  }, [conversationId, convKey, loadHistory]);
+  }, [conversationId, ready, convKey, decodeRow, loadHistory]);
 
   // Auto-scroll on new message
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages.length]);
 
-  // Mark the thread read on open and whenever new messages arrive while it's
-  // the visible thread, so unread badges clear.
+  // Mark the thread read on open and whenever new messages arrive while visible.
   useEffect(() => {
     if (!conversationId) return;
     if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
@@ -284,14 +284,18 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
   }, [me]);
 
   const send = async () => {
-    if (!conversationId || !convKey || !draft.trim()) return;
+    if (!conversationId || !ready || !draft.trim()) return;
+    const body = draft.trim();
     setSending(true);
     try {
-      const enc = await encryptMessage(draft.trim(), convKey);
+      // Encrypt when we have a key; otherwise send plaintext with an empty iv.
+      const payload = convKey
+        ? { conversation_id: conversationId, ...(await encryptMessage(body, convKey)) }
+        : { conversation_id: conversationId, encrypted_content: body, iv: '' };
       const res = await fetch('/api/social/dm/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversation_id: conversationId, encrypted_content: enc.encrypted_content, iv: enc.iv }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const j = await res.json().catch(() => null);
@@ -299,17 +303,33 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
         return;
       }
       setDraft('');
-      // Realtime will deliver our own row; nothing to do here.
+      // Optimistic append (realtime will dedupe by id).
+      const saved = await res.json().catch(() => null);
+      if (saved?.message?.id) {
+        setMessages((prev) => prev.some((p) => p.id === saved.message.id) ? prev : [...prev, {
+          id: saved.message.id, sender_id: me ?? '', body, created_at: saved.message.created_at ?? new Date().toISOString(), read_at: null,
+        }]);
+      }
     } finally {
       setSending(false);
     }
   };
 
+  const peerName = peer?.display_name || peer?.username || 'Conversation';
+  const peerHref = `/u/${peer?.username ?? peerId}`;
+
   return (
-    <div className="min-h-screen flex flex-col p-4 sm:p-6 max-w-2xl mx-auto">
-      <div className="flex items-center gap-3 mb-4">
-        <BackButton />
-        <Link href={`/u/${peer?.username ?? peerId}`} className="flex items-center gap-2 min-w-0 hover:opacity-90">
+    <div className="flex flex-col h-[100dvh] max-w-2xl mx-auto">
+      {/* Header — compact back, peer (links to profile), encryption badge. */}
+      <div className="flex items-center gap-2 px-3 sm:px-4 py-2.5 shrink-0 border-b border-[#0066FF]/20" style={{ boxShadow: '0 1px 0 rgba(0,102,255,.12)' }}>
+        <button
+          onClick={() => router.push('/dashboard/messages')}
+          aria-label="Back to messages"
+          className="w-7 h-7 shrink-0 inline-flex items-center justify-center rounded-full text-slate-300 hover:text-white hover:bg-white/[0.06] transition"
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </button>
+        <Link href={peerHref} className="flex items-center gap-2 min-w-0 hover:opacity-90">
           {peer?.avatar_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={peer.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10" />
@@ -319,18 +339,21 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
             </div>
           )}
           <div className="min-w-0">
-            <div className="text-sm font-semibold text-white truncate leading-tight">{peer?.display_name || peer?.username || 'Conversation'}</div>
-            {peer?.username && <div className="text-[11px] text-slate-500 truncate leading-tight">@{peer.username}</div>}
+            <div className="text-sm font-semibold text-white truncate leading-tight">{peerName}</div>
+            <div className="inline-flex items-center gap-1 text-[10px] leading-tight" title={plaintext ? 'Not end-to-end encrypted' : 'End-to-end encrypted'}>
+              {plaintext
+                ? <span className="text-slate-500 inline-flex items-center gap-1"><LockOpen className="w-2.5 h-2.5" />Unencrypted</span>
+                : convKey
+                  ? <span className="text-emerald-300/90 inline-flex items-center gap-1"><ShieldCheck className="w-2.5 h-2.5" />Encrypted</span>
+                  : <span className="text-slate-500">{peer?.username ? `@${peer.username}` : ''}</span>}
+            </div>
           </div>
         </Link>
-        <span className="ms-auto inline-flex items-center gap-1 text-[10px] text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-full">
-          <ShieldCheck className="w-3 h-3" />Encrypted
-        </span>
       </div>
 
-      {/* Incoming message request — accept to move it to Primary, or decline. */}
+      {/* Incoming request banner */}
       {isIncomingRequest && (
-        <div className="mb-3 rounded-xl nl-glass p-3 flex items-center gap-3">
+        <div className="mx-3 mt-3 rounded-xl nl-glass p-3 flex items-center gap-3 shrink-0">
           <div className="flex-1 min-w-0 text-[12px] text-slate-300">
             <span className="font-semibold text-white">Message request.</span> Accept to chat, or decline to remove it. Replying also accepts.
           </div>
@@ -339,7 +362,8 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto space-y-2 mb-3 rounded-xl nl-glass p-3">
+      {/* Scrollable conversation */}
+      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 space-y-2">
         {messages.length > 0 && hasMoreOlder && (
           <div className="flex justify-center">
             <button
@@ -353,23 +377,49 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
           </div>
         )}
         {error ? (
-          <div className="text-sm text-red-400">{error}</div>
+          <div className="text-sm text-red-400 px-1">{error}</div>
         ) : messages.length === 0 ? (
-          <div className="text-sm text-slate-400 italic flex items-center gap-2">
-            <Lock className="w-3.5 h-3.5" />Say hello — messages in this thread never touch the server unencrypted.
+          // Empty state — peer profile + View Profile (X-style).
+          <div className="flex flex-col items-center justify-center text-center py-10 gap-3">
+            <Link href={peerHref}>
+              {peer?.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={peer.avatar_url} alt="" className="w-20 h-20 rounded-full object-cover border border-white/10" />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0066FF)] to-[#7C3AED] flex items-center justify-center text-2xl font-bold text-white">
+                  {(peer?.display_name || peer?.username || '?').slice(0, 1).toUpperCase()}
+                </div>
+              )}
+            </Link>
+            <div>
+              <div className="text-base font-bold text-white">{peerName}</div>
+              {peer?.username && <div className="text-[12px] text-slate-500">@{peer.username}</div>}
+            </div>
+            <Link
+              href={peerHref}
+              className="nl-glass px-6 py-2.5 rounded-xl text-[13px] font-bold text-white hover:-translate-y-px transition"
+              style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.5), 0 0 16px rgba(0,102,255,.22)' }}
+            >
+              View Profile
+            </Link>
+            <p className="text-[11px] text-slate-500 max-w-xs inline-flex items-center gap-1.5 mt-1">
+              {plaintext ? <LockOpen className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+              {plaintext ? 'Messages are not end-to-end encrypted.' : 'Messages in this thread are end-to-end encrypted.'}
+            </p>
           </div>
         ) : (
           messages.map((m) => {
             const mine = m.sender_id === me;
             return (
               <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[78%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
-                  mine
-                    ? 'bg-[var(--nl-blue,#0066FF)]/15 border border-[var(--nl-blue,#0066FF)]/25 text-white'
-                    : 'nl-glass text-slate-100'
-                }`}>
-                  <div className="whitespace-pre-wrap">{sanitizeMessageBody(m.body)}</div>
-                  <div className="text-[9px] text-slate-400 mt-1">{new Date(m.created_at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</div>
+                <div className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
+                  mine ? 'text-white rounded-br-md' : 'nl-glass text-slate-100 rounded-bl-md'
+                }`}
+                style={mine
+                  ? { background: 'linear-gradient(135deg, #1E90FF 0%, #0066FF 60%, #2D5BFF 100%)', boxShadow: '0 0 14px rgba(0,102,255,.35), inset 0 1px 0 rgba(255,255,255,.22)' }
+                  : { boxShadow: '0 0 0 1px rgba(0,102,255,.18)' }}>
+                  <div className="whitespace-pre-wrap break-words">{sanitizeMessageBody(m.body)}</div>
+                  <div className={`text-[9px] mt-1 ${mine ? 'text-white/70' : 'text-slate-400'}`}>{new Date(m.created_at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}{mine && m.read_at ? ' · Read' : ''}</div>
                 </div>
               </div>
             );
@@ -377,38 +427,39 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
         )}
         {peerTyping && (
           <div className="flex justify-start">
-            <div className="nl-glass rounded-2xl px-3 py-2 text-[11px] text-slate-300 inline-flex items-center gap-1.5">
+            <div className="nl-glass rounded-2xl rounded-bl-md px-3 py-2 text-[11px] text-slate-300 inline-flex items-center gap-1.5" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.18)' }}>
               <span className="inline-flex gap-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0ms' }} />
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '120ms' }} />
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '240ms' }} />
               </span>
-              {peer?.display_name || peer?.username || 'User'} is typing…
+              typing…
             </div>
           </div>
         )}
         <div ref={endRef} />
       </div>
 
+      {/* Composer — pinned at the bottom, always usable once ready. */}
       <form
         onSubmit={(e) => { e.preventDefault(); void send(); }}
-        className="flex items-center gap-2"
+        className="flex items-center gap-2 px-3 sm:px-4 py-3 shrink-0 border-t border-[#0066FF]/20"
       >
         <input
           value={draft}
           onChange={(e) => { setDraft(e.target.value); notifyTyping(); }}
-          placeholder={convKey ? 'Encrypted message…' : 'Setting up encryption…'}
-          disabled={!convKey || sending}
+          placeholder={ready ? 'Message…' : 'Opening conversation…'}
+          disabled={!ready || sending}
           maxLength={4096}
-          className="flex-1 bg-white/[0.04] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-500 disabled:opacity-50"
+          className="flex-1 bg-white/[0.05] border border-white/10 rounded-full px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[var(--nl-blue,#0066FF)]/50 disabled:opacity-50"
           aria-label="Type your message"
         />
         <button
           type="submit"
-          disabled={!convKey || sending || !draft.trim()}
+          disabled={!ready || sending || !draft.trim()}
           aria-label="Send message"
           style={{ background: 'linear-gradient(135deg, #1E90FF 0%, #0066FF 55%, #2D5BFF 100%)', boxShadow: '0 0 18px rgba(0,102,255,.55), inset 0 1px 0 rgba(255,255,255,.25)' }}
-          className="px-4 py-2.5 rounded-xl text-white font-bold disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center transition hover:brightness-110"
+          className="w-10 h-10 shrink-0 rounded-full text-white font-bold disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center transition hover:brightness-110"
         >
           <Send className="w-4 h-4" />
         </button>

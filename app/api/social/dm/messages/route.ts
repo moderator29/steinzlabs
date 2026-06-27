@@ -61,8 +61,10 @@ export async function GET(req: NextRequest) {
 
 const PostBody = z.object({
   conversation_id: z.string().uuid(),
+  // For plaintext (X-style) DMs this carries the raw body and `iv` is empty.
+  // For E2E DMs it's ciphertext with a real iv. Server stores both verbatim.
   encrypted_content: z.string().min(1).max(8192),
-  iv: z.string().min(8).max(128),
+  iv: z.string().max(128),
   message_type: z.enum(['text', 'image', 'system']).optional(),
 });
 

@@ -360,7 +360,8 @@ export default function MarketDashboard() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <input type="text" value={search} onChange={e=>setSearch(e.target.value)}
             placeholder="Search by name or CA..."
-            className="w-full ps-9 pe-10 py-2.5 bg-[#111827] border border-white/[0.06] rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors" />
+            className="w-full ps-9 pe-10 py-2.5 nl-glass rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none transition-colors"
+            style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }} />
           {searching && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0066FF] animate-spin" />}
           {search && !searching && (
             <button onClick={()=>{setSearch('');setSearchResults([]);}}
@@ -383,10 +384,13 @@ export default function MarketDashboard() {
       </div>
 
       {tab === 'prices' && search.length < 2 && (
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-3 scrollbar-hide" style={{scrollbarWidth:'none'}}>
+        <div className="flex gap-1.5 overflow-x-auto pb-2 mb-3 scrollbar-hide" style={{scrollbarWidth:'none'}}>
           {CATEGORIES.map(cat=>(
             <button key={cat.id} onClick={()=>setCategory(cat.id)}
-              className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${category===cat.id?'bg-[#0066FF] text-white shadow-[0_0_10px_rgba(0,102,255,0.35)]':'bg-[#111827] text-gray-400 hover:text-white border border-white/[0.06]'}`}>
+              className={`flex-shrink-0 px-3 py-1 rounded-lg text-[11px] font-semibold transition-all ${category===cat.id?'text-white nl-glass':'bg-white/[0.03] text-gray-400 hover:text-white border border-[#0066FF]/15'}`}
+              style={category===cat.id
+                ? { background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 14px rgba(0,102,255,.5), inset 0 1px 0 rgba(255,255,255,.2)' }
+                : { boxShadow: '0 0 0 1px rgba(0,102,255,.15)' }}>
               {cat.label}
             </button>
           ))}
