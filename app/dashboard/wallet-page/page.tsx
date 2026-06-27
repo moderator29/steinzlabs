@@ -12,7 +12,7 @@ import {
 } from '@/components/icons/brand';
 import {
   ArrowLeft, RotateCcw, Key, Globe, Layers, ArrowUpRight, ArrowDownLeft,
-  Repeat, DollarSign, QrCode, ShoppingCart, Zap,
+  Repeat, DollarSign, QrCode, ShoppingCart, Zap, Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 import BackButton from '@/components/ui/BackButton';
@@ -1694,17 +1694,34 @@ function isValidAddressForChain(addr: string, chainId: string): boolean {
   return /^0x[a-fA-F0-9]{40}$/.test(addr);
 }
 
+// Native-asset CoinGecko id per chain — for the ≈USD amount preview.
+const NATIVE_CG_ID: Record<string, string> = {
+  ethereum: 'ethereum', base: 'ethereum', arbitrum: 'ethereum', optimism: 'ethereum',
+  polygon: 'matic-network', avalanche: 'avalanche-2', bnb: 'binancecoin', fantom: 'fantom',
+};
+
+function shortAddr(a: string): string {
+  return a && a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a;
+}
+
+// Multi-step Send flow (Phantom/Trust pattern, Naka glass-blue style):
+//   form → confirm → password → processing → sent (with block-explorer link).
+// Hard-validates amount ≤ balance (incl. gas) before letting the user advance.
 function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: StoredWallet; chain: ChainInfo }) {
+  type Step = 'form' | 'confirm' | 'password' | 'processing' | 'sent';
+  const [step, setStep] = useState<Step>('form');
   const [to, setTo] = useState('');
   const [amount, setAmount] = useState('');
   const [password, setPassword] = useState('');
-  const [status, setStatus] = useState<'input' | 'estimating' | 'sending' | 'success' | 'error'>('input');
-  const [txHash, setTxHash] = useState('');
   const [error, setError] = useState('');
+  const [pwError, setPwError] = useState('');
   const [nativeBalance, setNativeBalance] = useState<string>('0');
+  const [nativeUsd, setNativeUsd] = useState<number | null>(null);
   const [gasEstimateEth, setGasEstimateEth] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState('');
+  const [txNonce, setTxNonce] = useState<number | null>(null);
 
-  // FIX 5A.1 / Phase 4: load native balance so the MAX button is meaningful and gas can be deducted.
+  // Native balance — powers MAX + the >balance guard.
   useEffect(() => {
     if (chain.id === 'solana' || chain.id === 'bitcoin') return;
     const rpc = CHAIN_RPC[chain.id];
@@ -1715,11 +1732,28 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
         const provider = new ethers.JsonRpcProvider(rpc);
         const bal = await provider.getBalance(wallet.address);
         setNativeBalance(ethers.formatEther(bal));
-      } catch {
-        /* ignore */
-      }
+      } catch { /* ignore */ }
     })();
   }, [chain.id, wallet.address]);
+
+  // Native USD price for the ≈$ preview.
+  useEffect(() => {
+    const id = NATIVE_CG_ID[chain.id];
+    if (!id) return;
+    let cancelled = false;
+    fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelled && d?.[id]?.usd) setNativeUsd(d[id].usd); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [chain.id]);
+
+  const amtNum = parseFloat(amount) || 0;
+  const balNum = parseFloat(nativeBalance) || 0;
+  const overBalance = amtNum > balNum;
+  const validAddr = !!to && isValidAddressForChain(to, chain.id);
+  const usdValue = nativeUsd != null && amtNum > 0 ? amtNum * nativeUsd : null;
+  const canProceed = validAddr && amtNum > 0 && !overBalance;
 
   const setMax = async () => {
     try {
@@ -1733,114 +1767,183 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
       const bal = ethers.parseEther(nativeBalance || '0');
       const max = bal > reserved ? bal - reserved : BigInt(0);
       setAmount(ethers.formatEther(max));
-    } catch {
-      setAmount(nativeBalance);
-    }
+    } catch { setAmount(nativeBalance); }
+  };
+
+  // Estimate gas, then advance to the confirm step.
+  const goConfirm = async () => {
+    if (!canProceed) return;
+    setError('');
+    try {
+      const ethers = await import('ethers');
+      const rpc = CHAIN_RPC[chain.id];
+      if (rpc) {
+        const provider = new ethers.JsonRpcProvider(rpc);
+        const feeData = await provider.getFeeData();
+        const gasPrice = feeData.gasPrice || feeData.maxFeePerGas || BigInt(0);
+        setGasEstimateEth(ethers.formatEther(gasPrice * BigInt(21000)));
+      }
+    } catch { /* fee preview is best-effort */ }
+    setStep('confirm');
   };
 
   const handleSend = async () => {
-    if (!to || !amount || !password) return;
-    if (!isValidAddressForChain(to, chain.id)) {
-      setError(`Recipient isn't a valid ${chain.name} address.`); setStatus('error'); return;
-    }
-    setStatus('sending'); setError('');
+    if (!password) { setPwError('Enter your wallet password.'); return; }
+    setPwError(''); setStep('processing');
     try {
       if (chain.id === 'solana') {
-        setError('Solana send requires the private key to be stored as a base58 keypair. This build supports EVM sends only; Solana send ships next.');
-        setStatus('error');
-        return;
+        setError('Solana send ships next — this build supports EVM sends only.');
+        setStep('confirm'); return;
       }
       const rpc = CHAIN_RPC[chain.id];
-      if (!rpc) { setError(`${chain.name} send not supported yet.`); setStatus('error'); return; }
+      if (!rpc) { setError(`${chain.name} send not supported yet.`); setStep('confirm'); return; }
       const ethers = await import('ethers');
       const decryptedKey = await decryptPrivateKey(wallet.encryptedKey, password);
       const provider = new ethers.JsonRpcProvider(rpc);
       const signer = new ethers.Wallet(decryptedKey, provider);
-
-      // Gas estimate prior to sending — surfaces clear errors instead of generic "Transaction failed".
       const value = ethers.parseEther(amount);
-      const feeData = await provider.getFeeData();
-      const gasLimit = BigInt(21000);
-      const gasPrice = feeData.gasPrice || feeData.maxFeePerGas || BigInt(0);
-      setGasEstimateEth(ethers.formatEther(gasPrice * gasLimit));
-
-      const tx = await signer.sendTransaction({ to, value, gasLimit });
-      setTxHash(tx.hash); setStatus('success');
+      const tx = await signer.sendTransaction({ to, value, gasLimit: BigInt(21000) });
+      setTxHash(tx.hash);
+      setTxNonce(tx.nonce);
+      setStep('sent');
     } catch (e: any) {
       const msg = (e?.shortMessage || e?.message || 'Transaction failed') as string;
-      if (/decrypt|password|bad key/i.test(msg)) setError('Wrong wallet password.');
-      else if (/insufficient/i.test(msg)) setError('Insufficient balance for amount + gas.');
+      if (/decrypt|password|bad key/i.test(msg)) { setPwError('Wrong wallet password.'); setStep('password'); return; }
+      if (/insufficient/i.test(msg)) setError('Insufficient balance for amount + gas.');
       else setError(msg.slice(0, 200));
-      setStatus('error');
+      setStep('confirm');
     }
   };
+
+  const Card = ({ children }: { children: React.ReactNode }) => (
+    <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}>{children}</div>
+  );
+  const fieldCls = 'w-full nl-glass rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none';
+  const fieldStyle = { boxShadow: '0 0 0 1px rgba(0,102,255,.22)' } as const;
+  const primaryStyle = { background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 18px rgba(0,102,255,.5), inset 0 1px 0 rgba(255,255,255,.2)' } as const;
 
   return (
     <div className="min-h-screen text-white pb-24">
       <div className="px-4 pt-6 max-w-lg mx-auto">
-        <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-xs mb-6 hover:text-white">
-          <ArrowLeft className="w-4 h-4" /> Back
+        <button
+          onClick={() => (step === 'form' || step === 'sent' ? onBack() : setStep(step === 'password' ? 'confirm' : 'form'))}
+          className="flex items-center gap-2 text-gray-400 text-xs mb-6 hover:text-white"
+        >
+          <ArrowLeft className="w-4 h-4" /> {step === 'form' || step === 'sent' ? 'Back' : 'Back'}
         </button>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${chain.color}15`, border: `1px solid ${chain.color}25` }}>
-            <ArrowUpRight className="w-5 h-5" style={{ color: chain.color }} />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF 60%,#1233AE)', boxShadow: '0 0 14px rgba(0,102,255,.5)' }}>
+            <ArrowUpRight className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-heading font-bold">Send {chain.symbol}</h1>
+            <h1 className="text-xl font-heading font-bold">
+              {step === 'confirm' ? 'Confirm send' : step === 'sent' ? `${chain.symbol} Sent` : `Send ${chain.symbol}`}
+            </h1>
             <p className="text-gray-400 text-xs">on {chain.name}</p>
           </div>
         </div>
 
-        {status === 'success' ? (
-          <div className="text-center py-8">
-            <div className="w-20 h-20 bg-[#10B981]/10 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-[#10B981]/20">
-              <Check className="w-10 h-10 text-[#10B981]" />
-            </div>
-            <h2 className="text-xl font-bold mb-2">Transaction Sent!</h2>
-            <p className="text-gray-400 text-sm mb-4">{amount} {chain.symbol} sent successfully</p>
-            <a href={`${chain.explorerUrl}/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="text-[#0066FF] text-xs underline flex items-center justify-center gap-1">
-              View on {chain.explorerName} <ExternalLink className="w-3 h-3" />
-            </a>
-            <button onClick={onBack} className="w-full mt-6 py-3 bg-[#111827] border border-white/10 rounded-xl text-sm font-semibold">Done</button>
-          </div>
-        ) : (
+        {/* STEP 1 — recipient + amount */}
+        {step === 'form' && (
           <div className="space-y-4">
             <div>
-              <label className="text-xs text-gray-400 mb-1.5 block font-medium">Recipient Address</label>
-              <input
-                value={to}
-                onChange={e => setTo(e.target.value)}
-                className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0066FF]/50"
-                placeholder={chain.id === 'solana' ? 'Solana address...' : '0x...'}
-              />
-              {/* FIX 5A.1 / Phase 4: inline address-validity feedback. */}
-              {to && !isValidAddressForChain(to, chain.id) && (
-                <p className="text-[11px] text-[#F59E0B] mt-1.5">Not a valid {chain.name} address format.</p>
-              )}
+              <label className="text-xs text-gray-400 mb-1.5 block font-medium">Address or Domain Name</label>
+              <input value={to} onChange={e => setTo(e.target.value)} className={`${fieldCls} font-mono`} style={fieldStyle} placeholder={chain.id === 'solana' ? 'Solana address…' : '0x…'} />
+              {to && !validAddr && <p className="text-[11px] text-[#F59E0B] mt-1.5">Not a valid {chain.name} address.</p>}
             </div>
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs text-gray-400 font-medium">Amount ({chain.symbol})</label>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-slate-500">Balance: {parseFloat(nativeBalance || '0').toFixed(6)}</span>
-                  {/* FIX 5A.1 / Phase 4: MAX button — was missing. Reserves gas for EVM chains. */}
+                  <span className="text-[10px] text-slate-500">Balance: {balNum.toFixed(6)}</span>
                   <button type="button" onClick={setMax} className="text-[10px] font-bold text-[#0066FF] hover:text-[#3B4EFF]">MAX</button>
                 </div>
               </div>
-              <input type="number" value={amount} onChange={e => setAmount(e.target.value)} step="0.001" className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0066FF]/50" placeholder="0.01" />
-              {gasEstimateEth && (
-                <p className="text-[10px] text-slate-500 mt-1.5">Est. gas: {parseFloat(gasEstimateEth).toFixed(6)} {chain.symbol}</p>
-              )}
+              <input type="number" value={amount} onChange={e => setAmount(e.target.value)} step="0.001" className={`${fieldCls} font-mono`} style={fieldStyle} placeholder="0.01" />
+              <div className="flex items-center justify-between mt-1.5">
+                <span className="text-[11px] text-slate-500">{usdValue != null ? `≈ $${usdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : ''}</span>
+                {overBalance && <span className="text-[11px] font-semibold text-[#EF4444]">Amount exceeds your balance</span>}
+              </div>
             </div>
+            <button onClick={goConfirm} disabled={!canProceed} style={canProceed ? primaryStyle : undefined} className="w-full py-3.5 rounded-2xl font-bold text-sm disabled:opacity-40 disabled:bg-white/[0.05]">
+              Next
+            </button>
+          </div>
+        )}
+
+        {/* STEP 2 — confirm */}
+        {step === 'confirm' && (
+          <div className="space-y-3">
+            <Card>
+              <div className="text-2xl font-bold">{usdValue != null ? `$${usdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : `${amount} ${chain.symbol}`}</div>
+              <div className="text-sm text-slate-400 font-mono">{amount} {chain.symbol}</div>
+            </Card>
+            <Card>
+              <div className="space-y-2.5 text-sm">
+                <div className="flex justify-between"><span className="text-slate-400">From</span><span className="font-mono">{shortAddr(wallet.address)}</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">To</span><span className="font-mono">{shortAddr(to)}</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Network</span><span>{chain.name}</span></div>
+                {gasEstimateEth && <div className="flex justify-between"><span className="text-slate-400">Network fee</span><span className="font-mono">{parseFloat(gasEstimateEth).toFixed(6)} {chain.symbol}</span></div>}
+              </div>
+            </Card>
+            {error && <p className="text-xs text-[#EF4444] bg-[#EF4444]/5 p-3 rounded-xl border border-[#EF4444]/10">{error}</p>}
+            <button onClick={() => setStep('password')} style={primaryStyle} className="w-full py-3.5 rounded-2xl font-bold text-sm">Continue</button>
+          </div>
+        )}
+
+        {/* STEP 3 — password */}
+        {step === 'password' && (
+          <div className="space-y-4">
+            <Card>
+              <div className="text-sm text-slate-300">Sending <span className="font-semibold text-white">{amount} {chain.symbol}</span> to <span className="font-mono">{shortAddr(to)}</span></div>
+            </Card>
             <div>
               <label className="text-xs text-gray-400 mb-1.5 block font-medium">Wallet Password</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0066FF]/50" placeholder="Enter your wallet password" />
+              <input type="password" value={password} onChange={e => { setPassword(e.target.value); setPwError(''); }} className={fieldCls} style={fieldStyle} placeholder="Enter your wallet password" />
+              {pwError && <p className="text-[11px] font-semibold text-[#EF4444] mt-1.5">{pwError}</p>}
             </div>
-            {error && <p className="text-xs text-[#EF4444] bg-[#EF4444]/5 p-3 rounded-xl border border-[#EF4444]/10">{error}</p>}
-            <button onClick={handleSend} disabled={status === 'sending' || !to || !amount || !password} className="w-full py-3.5 bg-gradient-to-r from-[#0066FF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
-              {status === 'sending' ? 'Sending...' : 'Send Transaction'}
+            <button onClick={handleSend} disabled={!password} style={password ? primaryStyle : undefined} className="w-full py-3.5 rounded-2xl font-bold text-sm disabled:opacity-40 disabled:bg-white/[0.05]">
+              Confirm &amp; Send
             </button>
+          </div>
+        )}
+
+        {/* STEP 4 — processing */}
+        {step === 'processing' && (
+          <div className="text-center py-14">
+            <Loader2 className="w-12 h-12 text-[#0066FF] animate-spin mx-auto mb-4" />
+            <h2 className="text-lg font-bold mb-1">Processing transaction…</h2>
+            <p className="text-slate-400 text-sm">Broadcasting to {chain.name}. Don&apos;t close this screen.</p>
+          </div>
+        )}
+
+        {/* STEP 5 — sent / status */}
+        {step === 'sent' && (
+          <div className="space-y-3">
+            <div className="text-center py-2">
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-3" style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF 60%,#1233AE)', boxShadow: '0 0 18px rgba(0,102,255,.5)' }}>
+                <ArrowUpRight className="w-8 h-8 text-white" />
+              </div>
+              <div className="text-2xl font-bold">-{amount} {chain.symbol}</div>
+              {usdValue != null && <div className="text-sm text-slate-400">${usdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>}
+            </div>
+            <Card>
+              <div className="space-y-2.5 text-sm">
+                <div className="flex justify-between"><span className="text-slate-400">Status</span><span className="font-semibold text-[#F59E0B]">Pending</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Recipient</span><span className="font-mono">{shortAddr(to)}</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Network</span><span>{chain.name}</span></div>
+                {gasEstimateEth && <div className="flex justify-between"><span className="text-slate-400">Network fee</span><span className="font-mono">{parseFloat(gasEstimateEth).toFixed(6)} {chain.symbol}</span></div>}
+                <div className="flex justify-between"><span className="text-slate-400">Confirmations</span><span>--</span></div>
+                {txNonce != null && <div className="flex justify-between"><span className="text-slate-400">Nonce</span><span>{txNonce}</span></div>}
+              </div>
+            </Card>
+            {txHash && (
+              <a href={`${chain.explorerUrl}/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="nl-glass flex items-center justify-center gap-1.5 py-3 rounded-2xl text-[#8FA3FF] text-sm font-semibold" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.3)' }}>
+                View on block explorer <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
+            <button onClick={onBack} className="w-full py-3.5 rounded-2xl font-bold text-sm nl-glass" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}>Done</button>
           </div>
         )}
       </div>
