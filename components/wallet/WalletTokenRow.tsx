@@ -55,6 +55,9 @@ export function WalletTokenRow({
   symbol, name, balance, valueUsd, contractAddress, logoUrl, chainLabel, coinGeckoId, hideBalance, onClick,
 }: Props) {
   const [changePct, setChangePct] = useState<number | null>(null);
+  // Real market price from the sparkline's latest point — so the row shows a
+  // live price even on a zero-balance wallet (where value/qty is 0 → '—').
+  const [marketPrice, setMarketPrice] = useState<number | null>(null);
 
   useEffect(() => {
     // Prefer contract-backed DexScreener sparkline when we have a contract
@@ -67,8 +70,11 @@ export function WalletTokenRow({
         : null;
     if (!url) return;
     const cacheKey = url;
+    const lastPoint = (d: SparkData) => (d.points.length ? d.points[d.points.length - 1] : null);
     if (sparkCache.has(cacheKey)) {
-      setChangePct(sparkCache.get(cacheKey)?.changePct ?? null);
+      const cached = sparkCache.get(cacheKey)!;
+      setChangePct(cached.changePct ?? null);
+      setMarketPrice(lastPoint(cached));
       return;
     }
     let cancelled = false;
@@ -78,6 +84,7 @@ export function WalletTokenRow({
         if (cancelled || !d || !Array.isArray(d.points)) return;
         sparkCache.set(cacheKey, d);
         setChangePct(d.changePct);
+        setMarketPrice(lastPoint(d));
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -85,7 +92,9 @@ export function WalletTokenRow({
 
   const qty = parseFloat(balance) || 0;
   const val = parseFloat(valueUsd || '0') || 0;
-  const price = qty > 0 && val > 0 ? val / qty : 0;
+  // Prefer the authoritative value/qty price (stable for held tokens); fall
+  // back to the live market price so an empty wallet still shows a real price.
+  const price = qty > 0 && val > 0 ? val / qty : (marketPrice ?? 0);
   const changeColor = changePct == null ? 'text-slate-500' : changePct >= 0 ? 'text-emerald-400' : 'text-red-400';
   const changeSign = changePct == null ? '' : changePct >= 0 ? '+' : '';
 

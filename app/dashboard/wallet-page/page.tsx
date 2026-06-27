@@ -353,7 +353,6 @@ export default function WalletPage() {
     // still remove them via the Add Token view if they choose to.
     const DEFAULT_TOKENS = [
       'ethereum:0x6967b9a8c0b14849CFE8f9E5732B401433fD2898', // Naka Go
-      'polygon:0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19',  // Pleasure Coin
     ];
     const stored = localStorage.getItem('steinz_custom_tokens');
     const parsed: string[] = stored ? JSON.parse(stored) : [];
@@ -1052,15 +1051,16 @@ export default function WalletPage() {
                   key={btn.label}
                   onClick={btn.action}
                   disabled={!btn.enabled}
-                  className={`flex flex-col items-center justify-center gap-2 rounded-xl border min-h-[80px] p-3 transition-all duration-200 ${
+                  style={btn.enabled ? { boxShadow: '0 0 0 1px rgba(0,102,255,.45), 0 0 16px rgba(0,102,255,.2)' } : undefined}
+                  className={`nl-glass flex flex-col items-center justify-center gap-2 rounded-2xl min-h-[80px] p-3 transition-all duration-200 ${
                     btn.enabled
-                      ? 'bg-slate-900/80 border-slate-800 hover:bg-slate-800 hover:-translate-y-0.5 hover:border-blue-500/30 hover:shadow-[0_8px_30px_rgba(59,130,246,0.12)] active:scale-95'
-                      : 'bg-slate-900/40 border-slate-800/40 opacity-40 cursor-not-allowed'
+                      ? 'hover:-translate-y-0.5 active:scale-95'
+                      : 'opacity-40 cursor-not-allowed'
                   }`}
                 >
                   <div style={{ color: btn.enabled ? btn.color : '#64748b' }}>{btn.icon}</div>
-                  <span className="text-xs font-medium text-slate-300">{btn.label}</span>
-                  {!btn.enabled && <span className="text-[8px] text-slate-600 -mt-1">Soon</span>}
+                  <span className="text-xs font-semibold text-white">{btn.label}</span>
+                  {!btn.enabled && <span className="text-[8px] text-slate-500 -mt-1">Soon</span>}
                 </button>
               ))}
             </div>
@@ -1071,10 +1071,13 @@ export default function WalletPage() {
                 <button
                   key={p.id}
                   onClick={() => { setChainFilter(p.id); if (p.id !== 'all') { const c = SUPPORTED_CHAINS.find(c => c.id === p.id); if (c) setActiveChain(c); } }}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-all ${
+                  style={chainFilter === p.id
+                    ? { background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 14px rgba(0,102,255,.5), inset 0 1px 0 rgba(255,255,255,.2)' }
+                    : { boxShadow: '0 0 0 1px rgba(0,102,255,.15)' }}
+                  className={`px-3 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all ${
                     chainFilter === p.id
-                      ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
-                      : 'bg-slate-900/50 text-slate-400 border-slate-800/60 hover:bg-slate-800 hover:text-slate-300'
+                      ? 'text-white nl-glass'
+                      : 'bg-white/[0.03] text-slate-400 hover:text-white'
                   }`}
                 >
                   {p.label}

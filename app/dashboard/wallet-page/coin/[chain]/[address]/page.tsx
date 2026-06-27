@@ -130,18 +130,6 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
         </button>
       </div>
 
-      {/* Gas + stakers row — stakers pill only for ETH (real stakers count
-          is public: ETH2 has ~1M validators but the "45K stakers" line
-          from the Trust Wallet reference is their own DEX integration
-          and doesn't apply to generic tokens). Hide on non-ETH. */}
-      {symbol.toUpperCase() === 'ETH' && (
-        <div className="flex items-center justify-center gap-2 px-4 mb-2">
-          <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#A78BFA] bg-[#A78BFA]/15 px-2.5 py-1 rounded-full">
-            <span>👥</span> ETH staking active
-          </div>
-        </div>
-      )}
-
       {/* Price */}
       <div className="text-center py-6">
         <div className="text-3xl font-bold tabular-nums">{loading ? '—' : formatPrice(price)}</div>
