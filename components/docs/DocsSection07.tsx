@@ -10,10 +10,21 @@ const SWAP_CHAINS = [
 ];
 
 const SNIPER_STEPS = [
-  { n: '1', title: 'Discovery',   desc: 'The bot watches for new token launches the moment liquidity is added on any supported chain.' },
-  { n: '2', title: 'Safety scan', desc: 'Runs a 5-layer pre-flight check before buying: honeypot simulation, tax check, liquidity lock, ownership status, holder distribution.' },
-  { n: '3', title: 'Execution',   desc: 'If the launch passes all filters, the configured buy fires with your preset slippage and max spend.' },
-  { n: '4', title: 'Monitoring',  desc: 'Tracks the open position and triggers auto-sell at your take-profit or stop-loss threshold.' },
+  { n: '1', title: 'Discovery',   desc: 'Watches freshly-created liquidity pools across every supported EVM chain (GeckoTerminal new-pools) plus trending launches, the moment they appear.' },
+  { n: '2', title: 'Shadow Guardian scan', desc: 'Each candidate is run through a multi-layer GoPlus security gate: honeypot simulation, buy/sell tax, liquidity lock, ownership/mint authority, and holder concentration. Failing tokens are routed to a separate Blocked tab.' },
+  { n: '3', title: 'You sign',    desc: 'When a launch matches your criteria the trade is prepared and you approve it with your own wallet (EIP-712). Non-custodial — keys and funds never leave your wallet.' },
+  { n: '4', title: 'Auto-manage', desc: 'Open positions are tracked live and auto-sold at your take-profit, stop-loss, or trailing-stop threshold, with PnL recorded.' },
+];
+
+// Full sniper capability surface.
+const SNIPER_FEATURES = [
+  { title: 'Live new-token feed', desc: 'Fresh pools across Ethereum, Base, Arbitrum, Optimism, BSC, Polygon and Avalanche, with real logos, contract copy, and source chips.' },
+  { title: 'Discover + Blocked tabs', desc: 'Clean launches in Discover; honeypots / high-tax / rug-risk tokens isolated in Blocked (Shadow Guardian) so you see why they failed.' },
+  { title: 'Token detail drawer', desc: 'Per-token security audit, related wallets, similar tokens, socials, and one-click manual Buy/Sell routed through the 0x aggregator.' },
+  { title: 'Criteria builder', desc: 'Arm snipers on new-token launch, whale-buy, or price-target triggers with min-liquidity, max-tax, slippage, and per-snipe spend.' },
+  { title: 'Auto-sell engine', desc: 'Take-profit, stop-loss and trailing-stop exits monitored by cron and executed at base-unit precision.' },
+  { title: 'Alerts', desc: 'Market-cap, price, migration and +% alerts with sound, delivered in real time.' },
+  { title: 'Positions, PnL & history', desc: 'Open/realized positions, chain-aware USD PnL, full execution history and stats — plus a one-tap kill switch that pauses every sniper.' },
 ];
 
 export function DocsSection07() {
@@ -146,7 +157,7 @@ export function DocsSection07() {
           <Crosshair className="w-4 h-4 text-[#EF4444]" />Sniper Bot
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-4">
-          Detect new launches the instant liquidity is added and buy with a 5-layer safety protocol in front. Every launch is scanned · nothing is bought blindly.
+          An <span className="text-white font-semibold">EVM-only, non-custodial</span> sniper: detect new launches the instant liquidity is added, gate every one through Shadow Guardian, and buy with your own wallet — nothing is bought blindly and we never hold your keys or funds.
         </p>
         <div className="space-y-2 mb-4">
           {SNIPER_STEPS.map((s) => (
@@ -158,6 +169,27 @@ export function DocsSection07() {
                 <div className="text-xs font-semibold text-white">{s.title}</div>
                 <div className="text-xs text-gray-500 mt-0.5">{s.desc}</div>
               </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Non-custodial system */}
+        <div className="nl-glass rounded-xl p-4 mb-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.22)' }}>
+          <div className="flex items-center gap-2 mb-2">
+            <Shield className="w-4 h-4 text-[#0066FF]" />
+            <span className="text-sm font-semibold text-white">Non-Custodial by Design</span>
+          </div>
+          <p className="text-xs text-gray-400 leading-relaxed">
+            The sniper authorizes trades with an <span className="text-white font-semibold">EIP-712 session key</span> signed by your own wallet — Naka Labs never takes custody of your keys or funds, and every buy is one you approve. Supported across all major EVM chains (Ethereum, Base, Arbitrum, Optimism, BSC, Polygon, Avalanche). Solana is not yet supported by the sniper.
+          </p>
+        </div>
+
+        {/* Full capability grid */}
+        <div className="grid sm:grid-cols-2 gap-2 mb-4">
+          {SNIPER_FEATURES.map((f) => (
+            <div key={f.title} className="nl-glass rounded-xl p-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.15)' }}>
+              <div className="text-xs font-semibold text-white">{f.title}</div>
+              <div className="text-xs text-gray-500 mt-0.5 leading-relaxed">{f.desc}</div>
             </div>
           ))}
         </div>

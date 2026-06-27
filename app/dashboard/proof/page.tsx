@@ -128,6 +128,83 @@ function buildProofSwapData(event: ProofEvent): SwapCardData | null {
   };
 }
 
+// Shadow Guardian — inline liquidity-lock + holder + safety read for the
+// token, fetched from the public /api/context-feed/security endpoint. Renders
+// only when we have a real token contract; degrades silently if unavailable.
+interface SecurityData {
+  score: number; level: string; honeypot: boolean; buyTax: number; sellTax: number;
+  mintable: boolean; verified: boolean; holderCount: number | null; topHolderPct: number | null; lpLockedPct: number | null;
+}
+function SecurityPanel({ event }: { event: ProofEvent }) {
+  const tokenAddress = event.tokenAddress;
+  const chain = (event.chain || 'ethereum').toLowerCase();
+  const [data, setData] = useState<SecurityData | null>(null);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (!tokenAddress) { setDone(true); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/context-feed/security?chain=${encodeURIComponent(chain)}&address=${encodeURIComponent(tokenAddress)}`);
+        if (res.ok) { const j = await res.json(); if (!cancelled) setData(j); }
+      } catch { /* silent */ } finally { if (!cancelled) setDone(true); }
+    })();
+    return () => { cancelled = true; };
+  }, [tokenAddress, chain]);
+
+  if (!tokenAddress || (done && !data)) return null;
+
+  const levelColor = (l?: string) => l === 'SAFE' ? '#10B981' : l === 'DANGER' ? '#EF4444' : '#F59E0B';
+  const lpPct = data?.lpLockedPct != null ? Math.round(data.lpLockedPct * 100) : null;
+
+  return (
+    <div className="nl-glass rounded-xl p-4 border border-white/10" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.18)' }}>
+      <div className="flex items-center gap-2 mb-3">
+        <Shield className="w-4 h-4 text-[#0066FF]" />
+        <h3 className="font-bold text-sm">Shadow Guardian</h3>
+        {data && (
+          <span className="ms-auto text-[10px] font-bold uppercase px-2 py-0.5 rounded-full" style={{ color: levelColor(data.level), backgroundColor: `${levelColor(data.level)}1A`, border: `1px solid ${levelColor(data.level)}40` }}>
+            {data.level}
+          </span>
+        )}
+      </div>
+      {!data ? (
+        <p className="text-[11px] text-gray-500">Scanning token safety…</p>
+      ) : (
+        <div className="grid grid-cols-2 gap-2 text-[11px]">
+          <div className="bg-white/[0.03] rounded-lg px-2.5 py-2">
+            <div className="text-[9px] text-gray-500 uppercase mb-0.5">Liquidity Locked</div>
+            <div className="font-semibold" style={{ color: lpPct != null ? (lpPct >= 80 ? '#10B981' : lpPct >= 30 ? '#F59E0B' : '#EF4444') : '#94A3B8' }}>
+              {lpPct != null ? `${lpPct}%` : 'Unknown'}
+            </div>
+          </div>
+          <div className="bg-white/[0.03] rounded-lg px-2.5 py-2">
+            <div className="text-[9px] text-gray-500 uppercase mb-0.5">Holders</div>
+            <div className="font-semibold text-white">{data.holderCount != null ? data.holderCount.toLocaleString() : '—'}</div>
+          </div>
+          <div className="bg-white/[0.03] rounded-lg px-2.5 py-2">
+            <div className="text-[9px] text-gray-500 uppercase mb-0.5">Top Holder</div>
+            <div className="font-semibold" style={{ color: data.topHolderPct != null && data.topHolderPct > 20 ? '#EF4444' : '#fff' }}>
+              {data.topHolderPct != null ? `${data.topHolderPct}%` : '—'}
+            </div>
+          </div>
+          <div className="bg-white/[0.03] rounded-lg px-2.5 py-2">
+            <div className="text-[9px] text-gray-500 uppercase mb-0.5">Buy / Sell Tax</div>
+            <div className="font-semibold text-white">{data.buyTax}% / {data.sellTax}%</div>
+          </div>
+          <div className="col-span-2 flex flex-wrap gap-1.5 mt-0.5">
+            {data.honeypot && <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-[#EF4444]/15 text-[#EF4444] border border-[#EF4444]/25">HONEYPOT</span>}
+            {data.mintable && <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/25">MINTABLE</span>}
+            {data.verified && <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/25">VERIFIED CONTRACT</span>}
+          </div>
+        </div>
+      )}
+      <p className="text-[9px] text-gray-500 mt-2">Live safety scan · liquidity-lock + holder concentration · not a guarantee — DYOR.</p>
+    </div>
+  );
+}
+
 function BubbleVisualization({ event }: { event: ProofEvent }) {
   const tokenAddress = event.tokenAddress;
   const chain = event.chain || 'ethereum';
@@ -489,6 +566,8 @@ export default function ViewProofPage() {
             </div>
           </div>
         )}
+
+        <SecurityPanel event={event} />
 
         <BubbleVisualization event={event} />
 

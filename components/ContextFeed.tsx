@@ -6,6 +6,7 @@ import { useContextFeed, useArchivedFeed, ChainFilter } from '@/lib/hooks/useCon
 import { SolanaIcon, EthereumIcon, BscIcon, PolygonIcon, AvalancheIcon, AllChainsIcon } from './ChainIcons';
 import DuneFeedCards from './context-feed/DuneFeedCards';
 import { MarketPulseCard } from './context-feed/MarketPulseCard';
+import { FeedAlertsButton } from './context-feed/FeedAlertsButton';
 import { SelectMenu, SelectOption } from '@/components/ui/SelectMenu';
 // FIX 5A.1 / Phase 7: Base / Arbitrum / Optimism added. No bespoke icon — the Ethereum icon
 // with a colored dot is readable enough as a lightweight placeholder until dedicated icons land.
@@ -584,6 +585,7 @@ export default function ContextFeed() {
           prefix="Type"
           accentClass="text-[#8FA3FF]"
         />
+        <div className="ms-auto"><FeedAlertsButton /></div>
       </div>
 
       <div className="flex items-center justify-between">

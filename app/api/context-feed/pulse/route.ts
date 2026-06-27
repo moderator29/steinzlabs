@@ -1,6 +1,7 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const runtime = 'nodejs';
 
@@ -10,9 +11,10 @@ export const runtime = 'nodejs';
  *
  * Returns an AI "Market Pulse" — a tight 2–3 sentence read on what the feed is
  * showing right now (what's hot, where the volume is, the overall tone). Uses
- * the platform's existing Anthropic key. Result is cached in-memory for 5 min
- * so we summarise the market at most ~12×/hour regardless of how many clients
- * mount the card. Real data only — if there are no events we say so.
+ * the platform's existing Anthropic key. The result is persisted in the
+ * `market_pulse` singleton table and only regenerated every ~8h (≈3×/day) —
+ * this is a HARD cap across all serverless instances so it can't run up the
+ * Anthropic bill. Real data only — if there are no events we say so.
  */
 
 interface PulseEvent {
@@ -24,8 +26,11 @@ interface PulseEvent {
   sentiment?: string;
 }
 
-const CACHE_TTL = 5 * 60 * 1000;
-let cache: { pulse: string; tone: string; ts: number } | null = null;
+// Regenerate at most every 8h (~3×/day) — keeps Anthropic spend tiny.
+const CACHE_TTL = 8 * 60 * 60 * 1000;
+// Tiny in-memory guard so a burst of clients on one warm lambda doesn't all
+// race to the DB/Anthropic in the same tick.
+let memo: { pulse: string; tone: string; ts: number } | null = null;
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? '' });
 
@@ -41,9 +46,23 @@ export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: 'unavailable' }, { status: 503 });
   }
-  if (cache && Date.now() - cache.ts < CACHE_TTL) {
-    return NextResponse.json({ pulse: cache.pulse, tone: cache.tone, cached: true });
+  if (memo && Date.now() - memo.ts < CACHE_TTL) {
+    return NextResponse.json({ pulse: memo.pulse, tone: memo.tone, cached: true });
   }
+
+  // DB cache — the durable cap across all serverless instances.
+  const admin = getSupabaseAdmin();
+  try {
+    const { data: row } = await admin
+      .from('market_pulse')
+      .select('pulse, tone, updated_at')
+      .eq('id', 1)
+      .maybeSingle();
+    if (row?.pulse && row.updated_at && Date.now() - new Date(row.updated_at).getTime() < CACHE_TTL) {
+      memo = { pulse: row.pulse, tone: row.tone ?? 'mixed', ts: Date.now() };
+      return NextResponse.json({ pulse: row.pulse, tone: row.tone ?? 'mixed', cached: true });
+    }
+  } catch { /* fall through to (re)generate */ }
 
   let events: PulseEvent[] = [];
   try {
@@ -84,7 +103,9 @@ export async function POST(req: NextRequest) {
     const m = text.match(/TONE:\s*(bullish|bearish|mixed)/i);
     const tone = (m?.[1] ?? 'mixed').toLowerCase();
     const pulse = text.replace(/TONE:\s*(bullish|bearish|mixed)/i, '').trim();
-    cache = { pulse, tone, ts: Date.now() };
+    memo = { pulse, tone, ts: Date.now() };
+    // Persist the durable cap (best-effort).
+    await admin.from('market_pulse').upsert({ id: 1, pulse, tone, updated_at: new Date().toISOString() }, { onConflict: 'id' });
     return NextResponse.json({ pulse, tone });
   } catch {
     return NextResponse.json({ error: 'pulse_failed' }, { status: 502 });
