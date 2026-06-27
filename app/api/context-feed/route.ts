@@ -618,14 +618,14 @@ async function fetchPumpFunTokens(): Promise<WhaleEvent[]> {
     );
     if (!res.ok) return [];
     const data = await res.json();
-    // Only surface pump.fun coins with genuinely good 24h volume — the feed
-    // shouldn't be a wall of dead sub-$25k launches.
-    const PUMP_VOL_FLOOR = 25_000;
+    // Only surface a FEW pump.fun coins with strong 24h volume — pump.fun must
+    // not flood the feed (ETH + other chains lead). High floor, small cap.
+    const PUMP_VOL_FLOOR = 50_000;
     const pairs = (data.pairs || [])
       .filter((p: any) => p.chainId === 'solana' && (p.dexId === 'pump' || p.dexId === 'raydium'))
       .filter((p: any) => (parseFloat(p.volume?.h24 || 0)) >= PUMP_VOL_FLOOR)
       .sort((a: any, b: any) => (parseFloat(b.volume?.h24 || 0)) - (parseFloat(a.volume?.h24 || 0)))
-      .slice(0, 12);
+      .slice(0, 5);
 
     return pairs.map((pair: any) => {
       const mcap = pair.fdv || pair.marketCap || 0;
