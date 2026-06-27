@@ -390,66 +390,41 @@ export default function ContextFeed() {
   const baseEvents = activeChain === 'bookmarks'
     ? currentEvents.filter(e => bookmarks.has(e.id))
     : currentEvents;
+  // Classification aligned with the server taxonomy (lib/contextFeed/filter.ts).
+  // NEWS = informational "what's happening" events (whale moves, transfers,
+  // network activity, big-cap swings, rug alerts). COINS = tradable discovery
+  // (trending / launches / listings / gainers). These are the ONLY two buckets
+  // the "All" mix blends — the specific pills are already filtered server-side,
+  // so the client must NOT re-filter them (that double-filter is what shrank
+  // Volume to ~3 rows and leaked coins into News).
+  const NEWS_TYPES = ['whale_transfer', 'token_transfer', 'whale_accumulation', 'whale_sell', 'large_transfer', 'network_activity', 'rug_alert', 'smart_money'];
   const isNewsEvent = (e: any) => {
-    const t = (e.type || '').toLowerCase();
-    const title = (e.title || '').toLowerCase();
-    const summary = (e.summary || '').toLowerCase();
-    // "News" = blockchain transaction events and whale activity — these are
-    // the on-chain news stories (whale buys/sells, cross-chain transfers).
-    return (
-      t.includes('whale') || t.includes('transfer') || t.includes('tx') || t.includes('buy') || t.includes('sell') ||
-      t.includes('news') || t.includes('update') || t.includes('info') ||
-      title.includes('whale') || summary.includes('whale') ||
-      (typeof e.valueUsd === 'number' && e.valueUsd >= 50000)
-    );
+    const t = (e.type || '').toLowerCase().replace(/-/g, '_');
+    return NEWS_TYPES.some(n => t.includes(n));
   };
-  const isCoinEvent = (e: any) => {
-    const t = (e.type || '').toLowerCase();
-    const title = (e.title || '').toLowerCase();
-    return (
-      t.includes('launch') || t.includes('listing') || t.includes('trending') ||
-      t.includes('new') || t.includes('volume') || t.includes('surge') || t.includes('pump') ||
-      title.includes('surging') || title.includes('launch') || title.includes('new') ||
-      !!e.tokenSymbol
-    );
-  };
+  const isCoinEvent = (e: any) => !isNewsEvent(e) && (!!e.tokenSymbol || !!e.tokenAddress);
 
-  // All filter: 80/20 news-to-coin blend, Ethereum-weighted. Cap to ≥150 events
-  // when supply allows so the feed never feels sparse on login.
+  // "All" feed: COINS-first (the user wants a coin digest, not a news wall),
+  // with a minority of news mixed in. ~75% coins / 25% news, capped to the
+  // live supply. No artificial Ethereum weighting — all chains rank equally.
   const shapeAllMix = (evts: any[]): any[] => {
+    const coins = evts.filter(isCoinEvent);
     const news = evts.filter(isNewsEvent);
-    const coins = evts.filter(e => !isNewsEvent(e) && isCoinEvent(e));
-    const rest = evts.filter(e => !isNewsEvent(e) && !isCoinEvent(e));
-    const ethFirst = <T extends { chain?: string }>(list: T[]) =>
-      [...list].sort((a, b) => {
-        const aEth = a.chain === 'ethereum' ? 0 : 1;
-        const bEth = b.chain === 'ethereum' ? 0 : 1;
-        return aEth - bEth;
-      });
-    const target = Math.max(150, evts.length);
-    const newsTarget = Math.floor(target * 0.8);
-    const coinTarget = target - newsTarget;
+    const rest = evts.filter(e => !isCoinEvent(e) && !isNewsEvent(e));
+    const total = evts.length;
+    const newsTarget = Math.floor(total * 0.25);
     return [
-      ...ethFirst(news).slice(0, newsTarget),
-      ...ethFirst(coins).slice(0, coinTarget),
+      ...coins,
+      ...news.slice(0, newsTarget),
       ...rest,
+      ...news.slice(newsTarget),
     ];
   };
 
-  const displayEvents = activeFilter === 'all'
-    ? shapeAllMix(baseEvents)
-    : activeFilter === 'news'
-      ? baseEvents.filter(isNewsEvent)
-      : activeFilter === 'coins'
-        ? baseEvents.filter(isCoinEvent)
-        : baseEvents.filter(e => {
-            const t = (e.type || '').toLowerCase();
-            const title = (e.title || '').toLowerCase();
-            if (activeFilter === 'new_coins') return t.includes('launch') || t.includes('new') || t.includes('listing') || title.includes('new') || title.includes('launch');
-            if (activeFilter === 'volume') return t.includes('volume') || t.includes('trade') || title.includes('volume') || title.includes('whale');
-            if (activeFilter === 'trending') return t.includes('trending') || t.includes('bullish') || e.sentiment === 'BULLISH' || e.sentiment === 'HYPE';
-            return true;
-          });
+  // The specific pills (news/coins/new_coins/volume/trending) are resolved by
+  // the server via the shared matcher, so we display exactly what it returns.
+  // Only "All" gets the coins-first client-side shaping.
+  const displayEvents = activeFilter === 'all' ? shapeAllMix(baseEvents) : baseEvents;
 
   const fetchEngagement = useCallback(async (eventId: string) => {
     if (engagement[eventId]) return engagement[eventId];

@@ -86,19 +86,39 @@ type ProofEvent = z.infer<typeof ProofEventSchema>;
 // to a sensible quote per chain. SwapCard fetches the real quote +
 // balance once it mounts, so these initial numbers are placeholders
 // the card overwrites within ~200ms.
+// Native pay-token for each chain — Buy should default to paying in the
+// chain's gas/native asset (ETH on eth/L2s, BNB on BSC, SOL on Solana, …),
+// not USDC, so the swap is one the user can do immediately from a fresh
+// wallet. Mirrors the CHAINS table on /dashboard/swap.
+function nativeTokenForChain(chain: string): string {
+  switch (chain) {
+    case 'solana': return 'SOL';
+    case 'bsc': return 'BNB';
+    case 'polygon': return 'MATIC';
+    case 'avalanche': return 'AVAX';
+    case 'ethereum':
+    case 'base':
+    case 'arbitrum':
+    case 'optimism':
+    default: return 'ETH';
+  }
+}
+
 function buildProofSwapData(event: ProofEvent): SwapCardData | null {
   // Deep-dive fix — the card needs at least a destination identity. Without
-  // tokenSymbol AND pairAddress AND tokenName the card mounts with 'TOKEN'
-  // as the receive ticker, which is a fake state the user should never see.
-  // Return null instead and let the caller hide the Buy block.
-  if (!event.tokenSymbol && !event.pairAddress && !event.tokenName) return null;
+  // tokenSymbol AND a resolvable address AND tokenName the card mounts with
+  // 'TOKEN' as the receive ticker, which is a fake state the user should
+  // never see. Return null instead and let the caller hide the Buy block.
+  if (!event.tokenSymbol && !event.tokenAddress && !event.pairAddress && !event.tokenName) return null;
   const chain = (event.chain || 'ethereum').toLowerCase();
-  const fromToken = chain === 'solana' ? 'SOL' : 'USDC';
+  const fromToken = nativeTokenForChain(chain);
   const toToken = (event.tokenSymbol || event.tokenName || '').trim();
   return {
     fromToken,
     toToken: toToken || 'TOKEN', // last-resort label — never null
-    toTokenAddress: event.pairAddress,
+    // The REAL token contract (not the LP pair) so the card resolves the
+    // exact asset + logo. Pair address is only a fallback for legacy events.
+    toTokenAddress: event.tokenAddress || event.pairAddress,
     fromAmount: '0',
     toAmount: '0',
     rate: '—',
@@ -539,8 +559,13 @@ export default function ViewProofPage() {
               <button
                 onClick={() => {
                   const params = new URLSearchParams();
-                  if (event.tokenSymbol) params.set('symbol', event.tokenSymbol);
                   if (event.chain) params.set('chain', event.chain);
+                  // Pay-side defaults to the chain's native token; buy-side is
+                  // the real contract so the swap resolves the exact coin + logo
+                  // (falls back to symbol when no address is known).
+                  params.set('sellToken', 'NATIVE');
+                  if (event.tokenAddress) params.set('buyToken', event.tokenAddress);
+                  else if (event.tokenSymbol) params.set('symbol', event.tokenSymbol);
                   router.push(`/dashboard/swap?${params.toString()}`);
                 }}
                 className="flex items-center justify-center gap-1.5 px-5 py-3 border border-white/10 rounded-xl text-xs font-semibold hover:bg-white/5 transition-colors"
