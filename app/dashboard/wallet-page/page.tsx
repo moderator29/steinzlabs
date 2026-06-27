@@ -244,6 +244,8 @@ export default function WalletPage() {
   const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token' | 'add-network' | 'wallet-settings' | 'customize'>('main');
   // Per-user hidden tokens (Manage/Customize). Token key = chain:contract|symbol.
   const [hiddenTokens, setHiddenTokens] = useState<Set<string>>(new Set());
+  // Fiat Buy on-ramp (Transak) — "coming soon" until the provider is live.
+  const [buyComingSoon, setBuyComingSoon] = useState(false);
   const [wallets, setWallets] = useState<StoredWallet[]>([]);
   // Bug §5.1 — without this flag the empty-state "Create Wallet" CTA renders
   // on first paint for ~500ms even when localStorage has wallets, because the
@@ -932,6 +934,18 @@ export default function WalletPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-28">
+      {buyComingSoon && (
+        <div className="fixed inset-0 z-[70] bg-black/70 flex items-end sm:items-center justify-center p-4" onClick={() => setBuyComingSoon(false)}>
+          <div className="w-full max-w-sm nl-glass rounded-2xl p-6 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 26px rgba(0,102,255,.25)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="w-14 h-14 mx-auto mb-3 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF 60%,#1233AE)', boxShadow: '0 0 18px rgba(0,102,255,.5)' }}>
+              <ShoppingCart className="w-7 h-7 text-white" />
+            </div>
+            <h3 className="text-lg font-bold text-white mb-1">Buy with card — Coming soon</h3>
+            <p className="text-sm text-slate-400 mb-5">Fiat on-ramp is launching shortly. You&apos;ll be able to buy crypto with a card or bank transfer, delivered straight to your wallet.</p>
+            <button onClick={() => setBuyComingSoon(false)} className="w-full py-3 rounded-xl font-bold text-white text-sm" style={{ background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 18px rgba(0,102,255,.5)' }}>Got it</button>
+          </div>
+        </div>
+      )}
       {/* Ambient glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-blue-600/[0.04] rounded-full blur-[120px]" />
@@ -1082,7 +1096,7 @@ export default function WalletPage() {
                 { label: 'Send', icon: <ArrowUpRight className="w-6 h-6" />, color: 'var(--nl-blue)', action: () => setView('send'), enabled: EVM_LIVE_CHAINS.includes(activeChain.id) || activeChain.id === 'solana' },
                 { label: 'Receive', icon: <ArrowDownLeft className="w-6 h-6" />, color: 'var(--nl-success)', action: () => setView('receive'), enabled: true },
                 { label: 'Swap', icon: <Repeat className="w-6 h-6" />, color: '#8B5CF6', action: () => router.push('/dashboard/swap?from=wallet'), enabled: true },
-                { label: 'Buy', icon: <ShoppingCart className="w-6 h-6" />, color: 'var(--nl-warning)', action: () => { /* coming soon */ }, enabled: false },
+                { label: 'Buy', icon: <ShoppingCart className="w-6 h-6" />, color: 'var(--nl-warning)', action: () => setBuyComingSoon(true), enabled: true },
               ].map(btn => (
                 <button
                   key={btn.label}
