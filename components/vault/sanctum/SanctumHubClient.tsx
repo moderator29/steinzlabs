@@ -4,6 +4,7 @@ import { LibraryPlayer } from './LibraryPlayer';
 import { ForgePanel } from './ForgePanel';
 import { MantlePanel } from './MantlePanel';
 import { AnnalsPanel } from './AnnalsPanel';
+import { VaultBackLink } from '@/components/vault/VaultBackLink';
 
 /**
  * Sanctum hub · the chamber's landing surface.
@@ -15,6 +16,7 @@ import { AnnalsPanel } from './AnnalsPanel';
 export function SanctumHubClient() {
   return (
     <section className="sanctum-chamber mx-auto max-w-5xl px-5 pb-16">
+      <VaultBackLink className="mt-6 mb-2" />
       <header className="sanctum-chamber__header">
         <p className="text-[11px] uppercase tracking-[0.24em] text-[#FFD86B] mb-2">The Soul Chamber</p>
         <h1 className="cinematic-heading text-3xl">The Sanctum</h1>

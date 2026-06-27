@@ -4,6 +4,7 @@ import { DailySeal } from './DailySeal';
 import { VtxSagePanel } from './VtxSagePanel';
 import { WhisperNetworkPanel } from './WhisperNetworkPanel';
 import { EchoChamberPanel } from './EchoChamberPanel';
+import { VaultBackLink } from '@/components/vault/VaultBackLink';
 
 /**
  * Oracle hub · the chamber's landing surface.
@@ -17,6 +18,7 @@ import { EchoChamberPanel } from './EchoChamberPanel';
 export function OracleHubClient() {
   return (
     <section className="oracle-chamber mx-auto max-w-5xl px-5 pb-16">
+      <VaultBackLink className="mt-6 mb-2" />
       <header className="oracle-chamber__header">
         <p className="text-[11px] uppercase tracking-[0.24em] text-[#00C8FF] mb-2">The Sight Chamber</p>
         <h1 className="cinematic-heading text-3xl">The Oracle</h1>
