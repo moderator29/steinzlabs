@@ -2252,6 +2252,11 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
     level: string;
     reasons: string[];
   }>(null);
+  // On-chain token metadata auto-fetch (Trust "Import crypto" parity): when a
+  // valid contract is entered, resolve real name/symbol/decimals + logo so the
+  // user sees exactly what they're importing before confirming.
+  const [meta, setMeta] = useState<null | { symbol: string; name: string; decimals: number; logo: string | null }>(null);
+  const [metaLoading, setMetaLoading] = useState(false);
 
   // Audit B4 / P1 #11 — paste affordance. Long contract addresses are
   // notoriously typo-prone; clipboard.readText (with permission) is the
@@ -2296,6 +2301,25 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
       setScanning(false);
     }
   };
+
+  // Auto-resolve token metadata on-chain when the address looks valid.
+  useEffect(() => {
+    const trimmed = address.trim();
+    const valid = isEvmChain(chain) ? /^0x[a-fA-F0-9]{40}$/.test(trimmed) : (chain === 'solana' && isSolanaAddress(trimmed));
+    if (!valid) { setMeta(null); return; }
+    let cancelled = false;
+    setMetaLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/swap/token-meta?chain=${encodeURIComponent(chain)}&address=${encodeURIComponent(trimmed)}`);
+        if (!res.ok) { if (!cancelled) setMeta(null); return; }
+        const d = await res.json();
+        if (!cancelled && typeof d.decimals === 'number') setMeta({ symbol: d.symbol, name: d.name, decimals: d.decimals, logo: d.logo ?? null });
+      } catch { if (!cancelled) setMeta(null); }
+      finally { if (!cancelled) setMetaLoading(false); }
+    }, 350);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [address, chain]);
 
   const handleAdd = async () => {
     // Chain-aware validation: EVM contracts are 0x + 40 hex, Solana is base58.
@@ -2381,6 +2405,22 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
               </button>
             </div>
           </div>
+          {/* Auto-resolved on-chain metadata (read-only) — Trust Import parity. */}
+          {metaLoading && <p className="text-[11px] text-slate-500">Resolving token on-chain…</p>}
+          {meta && (
+            <div className="nl-glass rounded-xl p-3 space-y-2" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}>
+              <div className="flex items-center gap-2.5">
+                {meta.logo
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={meta.logo} alt="" className="w-8 h-8 rounded-full" />
+                  : <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-[10px] font-bold">{meta.symbol.slice(0, 3)}</div>}
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-white truncate">{meta.name}</div>
+                  <div className="text-[11px] text-slate-400">{meta.symbol} · {meta.decimals} decimals</div>
+                </div>
+              </div>
+            </div>
+          )}
           {error && <p className="text-xs text-[#EF4444]">{error}</p>}
           {scanVerdict && (
             <div className={`rounded-xl border p-3 text-xs space-y-1 ${verdictClass}`}>
