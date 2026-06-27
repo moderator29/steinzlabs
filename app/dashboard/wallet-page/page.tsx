@@ -19,6 +19,7 @@ import BackButton from '@/components/ui/BackButton';
 import SteinzLogo from '@/components/SteinzLogo';
 import { notifyWalletCreated, notifyWalletImported, notifySeedBackupReminder } from '@/lib/notifications';
 import { WalletTokenRow } from '@/components/wallet/WalletTokenRow';
+import { WatchlistTab } from '@/components/wallet/WatchlistTab';
 import { NftTab } from '@/components/wallet/NftTab';
 // Audit B4 — shared AES-GCM crypto, lifted from this file so the new
 // UnlockWalletModal can verify a typed password without duplicating
@@ -265,7 +266,7 @@ export default function WalletPage() {
   const [activeChain, setActiveChain] = useState<ChainInfo>(SOLANA_CHAIN);
   const [multiChainBalances, setMultiChainBalances] = useState<Record<string, WalletData | null>>({});
   const [multiChainLoading, setMultiChainLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'crypto' | 'nfts' | 'activity'>('crypto');
+  const [activeTab, setActiveTab] = useState<'crypto' | 'watchlist' | 'nfts' | 'activity'>('crypto');
   const [hideBalance, setHideBalance] = useState(false);
   const [hideSmallBalances, setHideSmallBalances] = useState(false);
   const [tokenSort, setTokenSort] = useState<'value' | 'name' | 'balance'>('value');
@@ -1163,6 +1164,7 @@ export default function WalletPage() {
             <div className="flex items-center gap-1 mb-3 rounded-xl nl-glass/50 p-1" role="tablist" aria-label="Wallet content">
               {([
                 { id: 'crypto' as const, label: 'Holdings' },
+                { id: 'watchlist' as const, label: 'Watchlist' },
                 { id: 'nfts' as const, label: 'NFTs' },
                 { id: 'activity' as const, label: 'Activity' },
               ]).map((t) => (
@@ -1182,6 +1184,12 @@ export default function WalletPage() {
                 </button>
               ))}
             </div>
+
+            {activeTab === 'watchlist' && (
+              <div role="tabpanel" id="wallet-panel-watchlist" aria-labelledby="wallet-tab-watchlist" className="mb-6">
+                <WatchlistTab />
+              </div>
+            )}
 
             {activeTab === 'nfts' && activeWallet && (
               <div
