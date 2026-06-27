@@ -1328,7 +1328,7 @@ export default function SwapPage() {
           />
           {showSettings && <div className="h-3" />}
 
-          <div className="nl-glass rounded-2xl overflow-hidden shadow-2xl shadow-black/20">
+          <div className="nl-glass rounded-2xl overflow-hidden shadow-2xl shadow-black/20" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 26px rgba(0,102,255,.18), 0 18px 50px rgba(0,0,0,.45)' }}>
             <div className="p-4 sm:p-5">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs text-gray-500 font-medium">You pay</span>
