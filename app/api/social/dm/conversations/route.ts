@@ -81,10 +81,15 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ conversations: shaped, total_unread: totalUnread });
 }
 
+// Sealed keys are OPTIONAL: when the peer hasn't published an encryption key
+// (or either side can't set up the vault) the conversation opens in PLAINTEXT
+// mode (X-style) instead of being blocked. In that case we store the 'plain'
+// sentinel in the key columns and messages are sent with an empty iv.
+const PLAIN_SENTINEL = 'plain';
 const PostBody = z.object({
   peer_id: z.string().uuid(),
-  sealed_key_self: z.string().min(32).max(512),
-  sealed_key_peer: z.string().min(32).max(512),
+  sealed_key_self: z.string().min(32).max(512).optional(),
+  sealed_key_peer: z.string().min(32).max(512).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -98,6 +103,10 @@ export async function POST(req: NextRequest) {
 
   const pair = canonicalizePair(user.id, parsed.data.peer_id);
   const isUserA = pair.user_a_id === user.id;
+  // Plaintext when either sealed key is missing — fall back to the sentinel so
+  // the NOT NULL key columns are satisfied and the thread still opens.
+  const keySelf = parsed.data.sealed_key_self ?? PLAIN_SENTINEL;
+  const keyPeer = parsed.data.sealed_key_peer ?? PLAIN_SENTINEL;
   const sb = getSupabaseAdmin();
 
   // Decide whether this conversation goes straight to the peer's inbox or
@@ -126,8 +135,8 @@ export async function POST(req: NextRequest) {
       {
         user_a_id: pair.user_a_id,
         user_b_id: pair.user_b_id,
-        conversation_key_a: isUserA ? parsed.data.sealed_key_self : parsed.data.sealed_key_peer,
-        conversation_key_b: isUserA ? parsed.data.sealed_key_peer : parsed.data.sealed_key_self,
+        conversation_key_a: isUserA ? keySelf : keyPeer,
+        conversation_key_b: isUserA ? keyPeer : keySelf,
         request_state: requestState,
         requested_by: requestState === 'pending' ? user.id : null,
       },
