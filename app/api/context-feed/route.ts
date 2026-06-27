@@ -14,7 +14,7 @@ import {
 import { getTokenSecurity } from '@/lib/services/goplus';
 import { getNewEvmPairs } from '@/lib/services/geckoterminal';
 import { getTrendingByVolume as birdeyeTrendingByVolume } from '@/lib/services/birdeye';
-import { normalizeAddress } from '@/lib/utils/addressNormalize';
+import { normalizeAddress, isSolanaAddress } from '@/lib/utils/addressNormalize';
 import { getTrendingTokens as lcTrendingTokens, getSocialVelocity as lcSocialVelocity } from '@/lib/services/lunarcrush';
 
 async function buildPersonalContext(request: Request): Promise<PersonalContext | undefined> {
@@ -472,8 +472,12 @@ async function getKnownWhales(): Promise<Map<string, KnownWhale>> {
 function applySmartMoneyLabels(events: WhaleEvent[], whales: Map<string, KnownWhale>): WhaleEvent[] {
   if (whales.size === 0) return events;
   for (const e of events) {
-    const fromKey = e.from ? normalizeAddress(e.from, 'ethereum') : '';
-    const toKey = e.to ? normalizeAddress(e.to, 'ethereum') : '';
+    // Detect chain from address shape so case-sensitive Solana base58 keys
+    // match the per-chain keys getKnownWhales builds (hardcoding 'ethereum'
+    // lowercased Solana addresses and they could never match — 120 Solana
+    // whales, 27% of the table, were invisible to smart-money labeling).
+    const fromKey = e.from ? normalizeAddress(e.from, isSolanaAddress(e.from) ? 'solana' : 'ethereum') : '';
+    const toKey = e.to ? normalizeAddress(e.to, isSolanaAddress(e.to) ? 'solana' : 'ethereum') : '';
     const hit = (fromKey && whales.get(fromKey)) || (toKey && whales.get(toKey));
     if (!hit) continue;
     const isBuy = !!(toKey && whales.get(toKey));

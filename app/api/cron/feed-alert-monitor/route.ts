@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyCron, logCronExecution } from '../_shared';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -93,8 +94,12 @@ export async function GET(req: NextRequest) {
     // Best match: highest 24h volume.
     matches.sort((x, y) => (y.tokenVolume24h ?? 0) - (x.tokenVolume24h ?? 0));
     const top = matches[0];
-    const tokenKey = (top.tokenAddress || top.tokenSymbol || '').toLowerCase();
-    if (!tokenKey || tokenKey === (a.last_token ?? '').toLowerCase()) continue; // already notified
+    // Chain-aware dedupe key (CLAUDE.md): lowercasing collapsed two distinct
+    // case-sensitive Solana mints into one key (false dedupe → missed alerts).
+    const tokenKey = top.tokenAddress
+      ? normalizeAddress(top.tokenAddress, top.chain ?? undefined)
+      : (top.tokenSymbol || '').toUpperCase();
+    if (!tokenKey || tokenKey === (a.last_token ?? '')) continue; // already notified
 
     const sym = top.tokenSymbol ? `$${top.tokenSymbol}` : 'A token';
     const chainTxt = top.chain ? ` on ${top.chain}` : '';

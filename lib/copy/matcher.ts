@@ -171,7 +171,7 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
     if (
       rule.tokens_blacklist &&
       event.token_address &&
-      rule.tokens_blacklist.map((t) => t.toLowerCase()).includes(event.token_address.toLowerCase())
+      rule.tokens_blacklist.map((t) => normalizeAddress(t, event.chain)).includes(normalizeAddress(event.token_address, event.chain))
     ) {
       out.blocked++;
       continue;

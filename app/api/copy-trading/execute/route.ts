@@ -9,6 +9,7 @@ import { sizeCopySell } from "@/lib/trading/copyTradeSell";
 import { checkTierServer } from "@/lib/subscriptions/serverTierCheck";
 import { logAdminAction } from "@/lib/admin/auditLog";
 import { guardRoute } from "@/lib/api/guardRoute";
+import { normalizeAddress } from "@/lib/utils/addressNormalize";
 
 export const runtime = "nodejs";
 
@@ -136,7 +137,7 @@ export async function POST(request: NextRequest) {
       await recordBlocked("blocked_rule", "exceeds_per_trade_cap");
       return NextResponse.json({ error: "Exceeds per-trade cap" }, { status: 403 });
     }
-    if (Array.isArray(rule.tokens_blacklist) && rule.tokens_blacklist.includes(body.token_address.toLowerCase())) {
+    if (Array.isArray(rule.tokens_blacklist) && rule.tokens_blacklist.map((t: string) => normalizeAddress(t, body.chain)).includes(normalizeAddress(body.token_address, body.chain))) {
       await recordBlocked("blocked_rule", "token_blacklisted");
       return NextResponse.json({ error: "Token is blacklisted" }, { status: 403 });
     }

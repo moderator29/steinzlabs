@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { executeTrade } from "@/lib/trading/relayer";
 import { sizeCopySell } from "@/lib/trading/copyTradeSell";
 import { mapWithConcurrency } from "@/lib/utils/concurrency";
+import { normalizeAddress } from "@/lib/utils/addressNormalize";
 
 // Fan-out concurrency: each match issues GoPlus + multi-aggregator quote +
 // pending_trades insert + notification. 10 is the empirical sweet spot — high
@@ -177,7 +178,7 @@ export async function GET(request: NextRequest) {
       if (rule.chains_allowed && rule.chains_allowed.length > 0 && !rule.chains_allowed.includes(act.chain)) {
         ruleBlocked++; continue;
       }
-      if (rule.tokens_blacklist && rule.tokens_blacklist.map((t) => t.toLowerCase()).includes(act.token_address.toLowerCase())) {
+      if (rule.tokens_blacklist && rule.tokens_blacklist.map((t) => normalizeAddress(t, act.chain)).includes(normalizeAddress(act.token_address, act.chain))) {
         ruleBlocked++; continue;
       }
 
