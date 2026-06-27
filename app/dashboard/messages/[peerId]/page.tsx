@@ -406,9 +406,11 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
         <button
           type="submit"
           disabled={!convKey || sending || !draft.trim()}
-          className="px-4 py-2.5 rounded-xl bg-[var(--nl-blue,#0066FF)] hover:bg-[var(--nl-blue-strong,#0052CC)] text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+          aria-label="Send message"
+          style={{ background: 'linear-gradient(135deg, #1E90FF 0%, #0066FF 55%, #2D5BFF 100%)', boxShadow: '0 0 18px rgba(0,102,255,.55), inset 0 1px 0 rgba(255,255,255,.25)' }}
+          className="px-4 py-2.5 rounded-xl text-white font-bold disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center transition hover:brightness-110"
         >
-          <Send className="w-3.5 h-3.5" />Send
+          <Send className="w-4 h-4" />
         </button>
       </form>
     </div>

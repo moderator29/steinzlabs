@@ -51,7 +51,7 @@ export function SearchBox({ autoFocus = false, onResultClick }: { autoFocus?: bo
 
   return (
     <div className="relative">
-      <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 focus-within:border-[var(--nl-blue,#0066FF)]/60">
+      <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-black/30 border border-white/[0.06] transition focus-within:border-[#0066FF]/50" style={{ WebkitTapHighlightColor: 'transparent' }}>
         <Search className="w-4 h-4 text-slate-400" />
         <input
           autoFocus={autoFocus}
@@ -60,9 +60,10 @@ export function SearchBox({ autoFocus = false, onResultClick }: { autoFocus?: bo
           onKeyDown={(e) => { if (e.key === 'Enter' && q.trim()) router.push(`/discover?q=${encodeURIComponent(q.trim())}`); }}
           placeholder="Search users by username, name, badge…"
           // §search-zoom — iOS Safari auto-zooms any focused input whose
-          // font-size is < 16px. text-sm (14px) caused the view to jump/zoom
-          // on focus; text-base (16px) keeps the page stable, no zoom.
-          className="flex-1 bg-transparent outline-none text-base text-white placeholder:text-slate-500"
+          // font-size is < 16px; text-base (16px) keeps the page stable.
+          // outline-none + no ring removes the bright white focus outline.
+          className="flex-1 bg-transparent outline-none focus:outline-none focus:ring-0 border-0 text-base text-white placeholder:text-slate-500"
+          style={{ outline: 'none', boxShadow: 'none' }}
           aria-label="Search users"
         />
         {q && (
