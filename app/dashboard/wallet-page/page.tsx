@@ -1757,6 +1757,8 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
   const [gasEstimateEth, setGasEstimateEth] = useState<string | null>(null);
   const [txHash, setTxHash] = useState('');
   const [txNonce, setTxNonce] = useState<number | null>(null);
+  const [ensAddr, setEnsAddr] = useState<string | null>(null);
+  const [ensLoading, setEnsLoading] = useState(false);
 
   // Native balance — powers MAX + the >balance guard.
   useEffect(() => {
@@ -1785,10 +1787,30 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
     return () => { cancelled = true; };
   }, [chain.id]);
 
+  // ENS resolution (.eth) — resolve to a 0x address on mainnet before send so
+  // users can send to a domain and never fat-finger a hex address.
+  const isEns = /\.eth$/i.test(to.trim());
+  useEffect(() => {
+    if (!isEns) { setEnsAddr(null); return; }
+    let cancelled = false;
+    setEnsLoading(true); setEnsAddr(null);
+    const t = setTimeout(async () => {
+      try {
+        const ethers = await import('ethers');
+        const provider = new ethers.JsonRpcProvider(CHAIN_RPC.ethereum);
+        const resolved = await provider.resolveName(to.trim());
+        if (!cancelled) setEnsAddr(resolved && /^0x[a-fA-F0-9]{40}$/.test(resolved) ? resolved : null);
+      } catch { if (!cancelled) setEnsAddr(null); }
+      finally { if (!cancelled) setEnsLoading(false); }
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [to, isEns]);
+
+  const recipient = (ensAddr || to).trim();
   const amtNum = parseFloat(amount) || 0;
   const balNum = parseFloat(nativeBalance) || 0;
   const overBalance = amtNum > balNum;
-  const validAddr = !!to && isValidAddressForChain(to, chain.id);
+  const validAddr = isEns ? !!ensAddr : (!!to && isValidAddressForChain(to, chain.id));
   const usdValue = nativeUsd != null && amtNum > 0 ? amtNum * nativeUsd : null;
   const canProceed = validAddr && amtNum > 0 && !overBalance;
 
@@ -1839,7 +1861,7 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
       const provider = new ethers.JsonRpcProvider(rpc);
       const signer = new ethers.Wallet(decryptedKey, provider);
       const value = ethers.parseEther(amount);
-      const tx = await signer.sendTransaction({ to, value, gasLimit: BigInt(21000) });
+      const tx = await signer.sendTransaction({ to: recipient, value, gasLimit: BigInt(21000) });
       setTxHash(tx.hash);
       setTxNonce(tx.nonce);
       setStep('sent');
@@ -1886,8 +1908,11 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
           <div className="space-y-4">
             <div>
               <label className="text-xs text-gray-400 mb-1.5 block font-medium">Address or Domain Name</label>
-              <input value={to} onChange={e => setTo(e.target.value)} className={`${fieldCls} font-mono`} style={fieldStyle} placeholder={chain.id === 'solana' ? 'Solana address…' : '0x…'} />
-              {to && !validAddr && <p className="text-[11px] text-[#F59E0B] mt-1.5">Not a valid {chain.name} address.</p>}
+              <input value={to} onChange={e => setTo(e.target.value)} className={`${fieldCls} font-mono`} style={fieldStyle} placeholder={chain.id === 'solana' ? 'Solana address…' : '0x… or name.eth'} />
+              {isEns && ensLoading && <p className="text-[11px] text-slate-500 mt-1.5">Resolving {to.trim()}…</p>}
+              {isEns && !ensLoading && ensAddr && <p className="text-[11px] text-emerald-400 mt-1.5 font-mono">→ {shortAddr(ensAddr)}</p>}
+              {isEns && !ensLoading && !ensAddr && <p className="text-[11px] text-[#F59E0B] mt-1.5">Couldn&apos;t resolve that name.</p>}
+              {!isEns && to && !validAddr && <p className="text-[11px] text-[#F59E0B] mt-1.5">Not a valid {chain.name} address.</p>}
             </div>
             <div>
               <div className="flex items-center justify-between mb-1.5">
@@ -1919,7 +1944,7 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
             <Card>
               <div className="space-y-2.5 text-sm">
                 <div className="flex justify-between"><span className="text-slate-400">From</span><span className="font-mono">{shortAddr(wallet.address)}</span></div>
-                <div className="flex justify-between"><span className="text-slate-400">To</span><span className="font-mono">{shortAddr(to)}</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">To</span><span className="font-mono">{shortAddr(recipient)}</span></div>
                 <div className="flex justify-between"><span className="text-slate-400">Network</span><span>{chain.name}</span></div>
                 {gasEstimateEth && <div className="flex justify-between"><span className="text-slate-400">Network fee</span><span className="font-mono">{parseFloat(gasEstimateEth).toFixed(6)} {chain.symbol}</span></div>}
               </div>
@@ -1933,7 +1958,7 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
         {step === 'password' && (
           <div className="space-y-4">
             <Card>
-              <div className="text-sm text-slate-300">Sending <span className="font-semibold text-white">{amount} {chain.symbol}</span> to <span className="font-mono">{shortAddr(to)}</span></div>
+              <div className="text-sm text-slate-300">Sending <span className="font-semibold text-white">{amount} {chain.symbol}</span> to <span className="font-mono">{shortAddr(recipient)}</span></div>
             </Card>
             <div>
               <label className="text-xs text-gray-400 mb-1.5 block font-medium">Wallet Password</label>
@@ -1968,7 +1993,7 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
             <Card>
               <div className="space-y-2.5 text-sm">
                 <div className="flex justify-between"><span className="text-slate-400">Status</span><span className="font-semibold text-[#F59E0B]">Pending</span></div>
-                <div className="flex justify-between"><span className="text-slate-400">Recipient</span><span className="font-mono">{shortAddr(to)}</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Recipient</span><span className="font-mono">{shortAddr(recipient)}</span></div>
                 <div className="flex justify-between"><span className="text-slate-400">Network</span><span>{chain.name}</span></div>
                 {gasEstimateEth && <div className="flex justify-between"><span className="text-slate-400">Network fee</span><span className="font-mono">{parseFloat(gasEstimateEth).toFixed(6)} {chain.symbol}</span></div>}
                 <div className="flex justify-between"><span className="text-slate-400">Confirmations</span><span>--</span></div>
