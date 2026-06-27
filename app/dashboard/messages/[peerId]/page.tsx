@@ -51,6 +51,11 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
   // Plaintext mode — set when the conversation opened without E2E keys.
   const [plaintext, setPlaintext] = useState(false);
   const [me, setMe] = useState<string | null>(null);
+  // #43: whether *I* have blocked the peer. The send API shadow-accepts a
+  // blocked peer's message (they don't learn they're blocked), so the row
+  // still inserts and Realtime would otherwise deliver it to me. A ref (not
+  // state) so the realtime handler reads the latest value without resubscribing.
+  const blockedPeerRef = useRef(false);
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -213,12 +218,32 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
     }
   }, [conversationId, ready, convKey, loadingOlder, messages, decodeBatch]);
 
+  // #43: load whether I've blocked the peer so the realtime handler can drop
+  // their shadow-blocked messages from my live thread.
+  useEffect(() => {
+    if (!me) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('social_blocks')
+        .select('blocked_id')
+        .eq('blocker_id', me)
+        .eq('blocked_id', peerId)
+        .maybeSingle();
+      if (!cancelled) blockedPeerRef.current = !!data;
+    })();
+    return () => { cancelled = true; };
+  }, [me, peerId]);
+
   // Supabase Realtime subscription for live deliveries. Resubscribe on tab
   // visibility change so backgrounded tabs reconnect cleanly.
   useEffect(() => {
     if (!conversationId || !ready) return;
     const handleInsert = async (payload: { new: ServerMessage }) => {
       const m = payload.new;
+      // #43: drop live messages from a peer I've blocked (shadow block) instead
+      // of leaking them into my open thread.
+      if (blockedPeerRef.current && m.sender_id === peerId) return;
       const body = await decodeRow(m, convKey);
       setMessages((prev) => prev.some((p) => p.id === m.id) ? prev : [...prev, { id: m.id, sender_id: m.sender_id, body, created_at: m.created_at, read_at: m.read_at }]);
     };
