@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import { verifyCron, logCronExecution, getFollowedWhaleAddresses, ilikeAnyFilter } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { fetchWithRetry } from "@/lib/api/fetchWithRetry";
+import { priceActivityUsd } from "@/lib/whales/priceActivity";
 
 export const maxDuration = 60;
 export const runtime = "nodejs";
@@ -89,16 +90,31 @@ export async function GET(request: NextRequest) {
         const value = typeof t.value === "number" ? t.value : null;
         const ts = t.metadata?.blockTimestamp ?? new Date().toISOString();
         const action = t.from.toLowerCase() === whale.address.toLowerCase() ? "transfer_out" : "transfer_in";
+        const tokenAddress = t.rawContract?.address ?? null;
+        // Price at insert time so the feed (which filters value_usd >= minUsd)
+        // sees the row immediately instead of waiting on the backfill cron.
+        // priceActivityUsd caches per-token for 60s, so a poll run makes ~one
+        // network call per distinct token, not per transfer. Unpriceable tokens
+        // stay null and get retried by whale-activity-price. Never fabricated.
+        let valueUsd: number | null = null;
+        try {
+          valueUsd = await priceActivityUsd({
+            chain: whale.chain,
+            token_address: tokenAddress,
+            token_symbol: t.asset,
+            amount: value,
+          });
+        } catch { /* leave null — price cron retries */ }
         const { error } = await supabase.from("whale_activity").upsert(
           {
             whale_address: whale.address,
             chain: whale.chain,
             tx_hash: t.hash,
             action,
-            token_address: t.rawContract?.address ?? null,
+            token_address: tokenAddress,
             token_symbol: t.asset,
             amount: value,
-            value_usd: null,
+            value_usd: valueUsd,
             counterparty: t.from.toLowerCase() === whale.address.toLowerCase() ? t.to : t.from,
             counterparty_label: null,
             block_number: parseInt(t.blockNum, 16),
