@@ -19,6 +19,8 @@ export interface FilterableEvent {
   tokenMarketCap?: number;
   tokenVolume24h?: number;
   tokenSymbol?: string;
+  chain?: string;
+  platform?: string;
   from?: string;
   to?: string;
   timestamp: string;
@@ -60,6 +62,20 @@ const SENTIMENT_WEIGHT: Record<string, number> = {
   critical: 25,
 };
 
+// Ethereum is the platform's primary chain — it should dominate the feed, with
+// the other chains mixed in (not a pump.fun / Solana flood). These additive
+// weights bias ranking by chain without excluding anything.
+const CHAIN_WEIGHT: Record<string, number> = {
+  ethereum: 35,
+  base: 18,
+  arbitrum: 15,
+  optimism: 13,
+  bsc: 12,
+  polygon: 10,
+  avalanche: 10,
+  solana: 6,
+};
+
 export function scoreEvent(event: FilterableEvent, personal?: PersonalContext): number {
   const typeBase = TYPE_WEIGHT[event.type] ?? 40;
   // Producers emit sentiment in UPPERCASE ("BULLISH"), but the weight keys
@@ -70,6 +86,10 @@ export function scoreEvent(event: FilterableEvent, personal?: PersonalContext): 
   const usdLog = event.valueUsd > 0 ? Math.log10(event.valueUsd) * 6 : 0;
   const recencyMs = Date.now() - new Date(event.timestamp).getTime();
   const recencyAdj = Math.max(0, 20 - recencyMs / 60_000); // 0–20, decays ~20 min
+
+  // Chain bias (ETH-first) + a penalty for pump.fun so it can't flood the feed.
+  const chainAdj = CHAIN_WEIGHT[(event.chain ?? '').toLowerCase()] ?? 4;
+  const pumpPenalty = (event.platform ?? '').toLowerCase().includes('pump') ? -45 : 0;
 
   let personalBoost = 0;
   if (personal) {
@@ -84,7 +104,7 @@ export function scoreEvent(event: FilterableEvent, personal?: PersonalContext): 
     }
   }
 
-  return typeBase + sentimentAdj + trust + usdLog + recencyAdj + personalBoost;
+  return typeBase + sentimentAdj + trust + usdLog + recencyAdj + chainAdj + pumpPenalty + personalBoost;
 }
 
 // ─── Shared event-type pill matcher ────────────────────────────────────────

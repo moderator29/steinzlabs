@@ -5,6 +5,7 @@ import { Eye, Heart, Share2, ExternalLink, Copy, X, Check, Bookmark, Archive, Sl
 import { useContextFeed, useArchivedFeed, ChainFilter } from '@/lib/hooks/useContextFeed';
 import { SolanaIcon, EthereumIcon, BscIcon, PolygonIcon, AvalancheIcon, AllChainsIcon } from './ChainIcons';
 import DuneFeedCards from './context-feed/DuneFeedCards';
+import { MarketPulseCard } from './context-feed/MarketPulseCard';
 import { SelectMenu, SelectOption } from '@/components/ui/SelectMenu';
 // FIX 5A.1 / Phase 7: Base / Arbitrum / Optimism added. No bespoke icon — the Ethereum icon
 // with a colored dot is readable enough as a lightweight placeholder until dedicated icons land.
@@ -404,12 +405,23 @@ export default function ContextFeed() {
   };
   const isCoinEvent = (e: any) => !isNewsEvent(e) && (!!e.tokenSymbol || !!e.tokenAddress);
 
-  // "All" feed: COINS-first (the user wants a coin digest, not a news wall),
-  // with a minority of news mixed in. ~75% coins / 25% news, capped to the
-  // live supply. No artificial Ethereum weighting — all chains rank equally.
+  // "All" feed: COINS-first (a coin digest, not a news wall) AND Ethereum-first
+  // (ETH is the primary chain — it should dominate, with the other chains mixed
+  // in). pump.fun is already demoted server-side. ~75% coins / 25% news.
+  const CHAIN_RANK: Record<string, number> = {
+    ethereum: 0, base: 1, arbitrum: 2, optimism: 3, bsc: 4, polygon: 5, avalanche: 6, solana: 7,
+  };
+  const chainFirst = <T extends { chain?: string; platform?: string }>(list: T[]): T[] =>
+    [...list].sort((a, b) => {
+      // Push pump.fun to the very back so it never floods the top.
+      const ap = (a.platform || '').toLowerCase().includes('pump') ? 1 : 0;
+      const bp = (b.platform || '').toLowerCase().includes('pump') ? 1 : 0;
+      if (ap !== bp) return ap - bp;
+      return (CHAIN_RANK[(a.chain || '').toLowerCase()] ?? 9) - (CHAIN_RANK[(b.chain || '').toLowerCase()] ?? 9);
+    });
   const shapeAllMix = (evts: any[]): any[] => {
-    const coins = evts.filter(isCoinEvent);
-    const news = evts.filter(isNewsEvent);
+    const coins = chainFirst(evts.filter(isCoinEvent));
+    const news = chainFirst(evts.filter(isNewsEvent));
     const rest = evts.filter(e => !isCoinEvent(e) && !isNewsEvent(e));
     const total = evts.length;
     const newsTarget = Math.floor(total * 0.25);
@@ -549,6 +561,9 @@ export default function ContextFeed() {
           smart_money_rotation, mev_sandwich, stablecoin_pulse,
           cex_drain). Renders above the chain-tab feed. Auto-hides
           when no Dune materialized data is present. */}
+      {/* AI Market Pulse — a live read on what the feed is showing. Only on
+          the unfiltered live feed (not archive / specific pills). */}
+      {!isArchive && activeFilter === 'all' && <MarketPulseCard events={events} />}
       <DuneFeedCards limit={8} />
       {/* Chain + type filters are vertical dropdowns (same pattern as the
           swap / whale-tracker pickers) — they only reveal options on click,

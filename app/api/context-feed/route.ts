@@ -13,6 +13,8 @@ import {
 } from '@/lib/services/coingecko';
 import { getTokenSecurity } from '@/lib/services/goplus';
 import { getNewEvmPairs } from '@/lib/services/geckoterminal';
+import { getTrendingByVolume as birdeyeTrendingByVolume } from '@/lib/services/birdeye';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 import { getTrendingTokens as lcTrendingTokens, getSocialVelocity as lcSocialVelocity } from '@/lib/services/lunarcrush';
 
 async function buildPersonalContext(request: Request): Promise<PersonalContext | undefined> {
@@ -435,6 +437,57 @@ async function fetchCoingeckoEvents(): Promise<WhaleEvent[]> {
   return out;
 }
 
+// ─── Smart-money labels (free — our own curated whales table) ───────────────
+// Replaces the (now-defunct) Arkham labeling. We load the platform's known,
+// labeled whale wallets and use them to upgrade matching on-chain transfers
+// into high-signal "smart money" events (Nansen/Arkham-style), with the real
+// label + archetype. Cached 10 min so the feed scan is cheap.
+interface KnownWhale { label: string; archetype: string | null; logoUrl: string | null }
+const whaleCache: { map: Map<string, KnownWhale> | null; ts: number } = { map: null, ts: 0 };
+const WHALE_TTL = 10 * 60 * 1000;
+
+async function getKnownWhales(): Promise<Map<string, KnownWhale>> {
+  if (whaleCache.map && Date.now() - whaleCache.ts < WHALE_TTL) return whaleCache.map;
+  const map = new Map<string, KnownWhale>();
+  try {
+    const admin = getSupabaseAdmin();
+    const { data } = await admin
+      .from('whales')
+      .select('address, label, archetype, chain, logo_url')
+      .eq('is_active', true)
+      .limit(1000);
+    for (const w of (data ?? []) as Array<{ address: string; label: string | null; archetype: string | null; chain: string | null; logo_url: string | null }>) {
+      if (!w.address) continue;
+      const key = normalizeAddress(w.address, (w.chain as never) ?? undefined);
+      map.set(key, { label: w.label ?? 'Smart money', archetype: w.archetype, logoUrl: w.logo_url });
+    }
+  } catch { /* leave map empty — feed degrades to plain transfers */ }
+  whaleCache.map = map;
+  whaleCache.ts = Date.now();
+  return map;
+}
+
+// Upgrade any transfer whose counterparty is a known labeled whale into a
+// high-signal smart_money event. Mutates in place and returns the list.
+function applySmartMoneyLabels(events: WhaleEvent[], whales: Map<string, KnownWhale>): WhaleEvent[] {
+  if (whales.size === 0) return events;
+  for (const e of events) {
+    const fromKey = e.from ? normalizeAddress(e.from, 'ethereum') : '';
+    const toKey = e.to ? normalizeAddress(e.to, 'ethereum') : '';
+    const hit = (fromKey && whales.get(fromKey)) || (toKey && whales.get(toKey));
+    if (!hit) continue;
+    const isBuy = !!(toKey && whales.get(toKey));
+    e.type = isBuy ? 'smart_money_buy' : 'whale_sell';
+    e.platform = 'Smart Money';
+    e.trustScore = Math.max(e.trustScore, 90);
+    const verb = isBuy ? 'accumulating' : 'distributing';
+    e.title = `${hit.label}${hit.archetype ? ` (${hit.archetype})` : ''} ${verb} ${e.tokenSymbol || 'tokens'}`;
+    e.summary = `Smart-money wallet ${hit.label} ${verb} ${e.tokenSymbol || 'tokens'}. ${e.summary}`;
+    if (hit.logoUrl && !e.tokenIcon) e.tokenIcon = hit.logoUrl;
+  }
+  return events;
+}
+
 async function fetchAlchemyTransfers(): Promise<WhaleEvent[]> {
   if (!ALCHEMY_KEY) return [];
   try {
@@ -565,14 +618,14 @@ async function fetchPumpFunTokens(): Promise<WhaleEvent[]> {
     );
     if (!res.ok) return [];
     const data = await res.json();
-    // Only surface pump.fun coins with genuinely good 24h volume — the feed
-    // shouldn't be a wall of dead sub-$25k launches.
-    const PUMP_VOL_FLOOR = 25_000;
+    // Only surface a FEW pump.fun coins with strong 24h volume — pump.fun must
+    // not flood the feed (ETH + other chains lead). High floor, small cap.
+    const PUMP_VOL_FLOOR = 50_000;
     const pairs = (data.pairs || [])
       .filter((p: any) => p.chainId === 'solana' && (p.dexId === 'pump' || p.dexId === 'raydium'))
       .filter((p: any) => (parseFloat(p.volume?.h24 || 0)) >= PUMP_VOL_FLOOR)
       .sort((a: any, b: any) => (parseFloat(b.volume?.h24 || 0)) - (parseFloat(a.volume?.h24 || 0)))
-      .slice(0, 12);
+      .slice(0, 5);
 
     return pairs.map((pair: any) => {
       const mcap = pair.fdv || pair.marketCap || 0;
@@ -618,6 +671,48 @@ async function fetchPumpFunTokens(): Promise<WhaleEvent[]> {
 // supported EVM chains. This is the real "new coins" source — DexScreener
 // boosts/profiles are curated, not freshly-launched. Mapped to `new_listing`
 // so they populate the New Coins pill on every chain, not just Solana/pump.fun.
+// Birdeye — high-quality Solana trending-by-volume (better than DexScreener
+// keyword search for SOL). Maps into the same WhaleEvent shape with a real
+// token address so View Proof + buy work.
+async function fetchBirdeyeSolana(): Promise<WhaleEvent[]> {
+  try {
+    const tokens = await birdeyeTrendingByVolume(20, 'solana');
+    const out: WhaleEvent[] = [];
+    for (const t of tokens) {
+      if (!t.address || (t.volume24hUSD ?? 0) < 25_000) continue;
+      const change = t.priceChange24hPercent ?? 0;
+      out.push({
+        id: `birdeye-solana-${t.symbol}-${t.address.toLowerCase()}`,
+        type: 'trending',
+        sentiment: change > 10 ? 'BULLISH' : change < -15 ? 'BEARISH' : 'HYPE',
+        title: `${t.name || t.symbol} trending on Solana — vol ${fmtUsd(t.volume24hUSD)}`,
+        summary: `$${t.symbol} on Solana · Vol ${fmtUsd(t.volume24hUSD)}${t.liquidity ? ` · Liq ${fmtUsd(t.liquidity)}` : ''}${t.marketCap ? ` · MCap ${fmtUsd(t.marketCap)}` : ''}${change ? ` · ${change > 0 ? '+' : ''}${change.toFixed(1)}% 24h` : ''}`,
+        from: 'Birdeye', to: t.address.slice(0, 12),
+        value: 0,
+        valueUsd: t.marketCap || t.volume24hUSD || 0,
+        chain: 'solana',
+        trustScore: Math.min(90, 45 + (t.liquidity && t.liquidity > 50000 ? 15 : 0) + (t.volume24hUSD > 100000 ? 15 : 0) + (t.holder && t.holder > 1000 ? 10 : 0)),
+        txHash: t.address,
+        blockNumber: 0,
+        timestamp: recentTimestamp(),
+        tokenName: t.name || t.symbol,
+        tokenSymbol: t.symbol,
+        tokenPrice: fmtPrice(t.price ?? 0),
+        tokenVolume24h: t.volume24hUSD,
+        tokenLiquidity: t.liquidity,
+        tokenMarketCap: t.marketCap,
+        tokenPriceChange24h: change,
+        tokenAddress: t.address,
+        tokenIcon: t.logoURI || '',
+        platform: 'Birdeye',
+      });
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
 async function fetchGeckoTerminalNewPairs(chain?: string): Promise<WhaleEvent[]> {
   try {
     const pairs = await getNewEvmPairs(3000, chain);
@@ -1199,7 +1294,7 @@ export async function GET(request: Request) {
       // FIX 5A.1 / Phase 7: added base/arbitrum/optimism branches — user-reported "only Solana /
       // pump.fun trash" was largely driven by these L2s having zero coverage.
       const SRC_TIMEOUT = 5000;
-      const [alchemyEvents, solanaNetEvents, pumpEvents, dexTrending, ethDex, solDex, bscDex, polygonDex, avalancheDex, baseDex, arbDex, opDex, cgEvents, rugAlerts, socialVel, gtNew] = await Promise.all([
+      const [alchemyEvents, solanaNetEvents, pumpEvents, dexTrending, ethDex, solDex, bscDex, polygonDex, avalancheDex, baseDex, arbDex, opDex, cgEvents, rugAlerts, socialVel, gtNew, birdeyeSol] = await Promise.all([
         withSrcTimeout(fetchAlchemyTransfers(), SRC_TIMEOUT, 'alchemy'),
         withSrcTimeout(fetchSolanaNetworkActivity(), SRC_TIMEOUT, 'alchemy-solana'),
         withSrcTimeout(fetchPumpFunTokens(), SRC_TIMEOUT, 'pumpfun'),
@@ -1220,13 +1315,20 @@ export async function GET(request: Request) {
         withSrcTimeout(fetchSocialVelocity(), 7000, 'lunarcrush-social'),
         // Genuine fresh pools across all EVM chains — the real "new coins".
         withSrcTimeout(fetchGeckoTerminalNewPairs(), 7000, 'geckoterminal-new'),
+        // High-quality Solana trending (Birdeye).
+        withSrcTimeout(fetchBirdeyeSolana(), 6000, 'birdeye-solana'),
       ]);
+
+      // Upgrade transfers from/to our known labeled whales into smart-money
+      // events (free Arkham/Nansen-style labeling from our own whales table).
+      applySmartMoneyLabels(alchemyEvents, await getKnownWhales());
 
       // Order matters: rug alerts + smart-money first (highest type weight),
       // then trending. The score function in /lib/contextFeed/filter.ts
       // re-ranks by type/trust/USD, so this is just the de-dupe input order.
-      events = [...rugAlerts, ...cgEvents, ...socialVel, ...gtNew, ...dexTrending, ...ethDex, ...solDex, ...bscDex, ...polygonDex, ...avalancheDex, ...baseDex, ...arbDex, ...opDex, ...pumpEvents, ...alchemyEvents, ...solanaNetEvents];
+      events = [...rugAlerts, ...cgEvents, ...socialVel, ...gtNew, ...birdeyeSol, ...dexTrending, ...ethDex, ...solDex, ...bscDex, ...polygonDex, ...avalancheDex, ...baseDex, ...arbDex, ...opDex, ...pumpEvents, ...alchemyEvents, ...solanaNetEvents];
       if (gtNew.length > 0) sources.push('geckoterminal');
+      if (birdeyeSol.length > 0) sources.push('birdeye');
       if (rugAlerts.length > 0) sources.push('goplus');
       if (socialVel.length > 0) sources.push('lunarcrush');
       if (cgEvents.length > 0) sources.push('coingecko');
@@ -1268,13 +1370,15 @@ export async function GET(request: Request) {
       if (dex.length > 0) sources.push('dexscreener');
       if (gtNew.length > 0) sources.push('geckoterminal');
     } else if (chain === 'solana') {
-      const [solanaNetEvents, pumpEvents, solDex] = await Promise.all([
+      const [solanaNetEvents, pumpEvents, solDex, birdeyeSol] = await Promise.all([
         withSrcTimeout(fetchSolanaNetworkActivity(), 5000, 'alchemy-solana'),
         withSrcTimeout(fetchPumpFunTokens(), 5000, 'pumpfun'),
         withSrcTimeout(fetchSolanaDexEvents(), 5000, 'dex-solana'),
+        withSrcTimeout(fetchBirdeyeSolana(), 6000, 'birdeye-solana'),
       ]);
 
-      events = [...solDex, ...pumpEvents, ...solanaNetEvents];
+      events = [...birdeyeSol, ...solDex, ...pumpEvents, ...solanaNetEvents];
+      if (birdeyeSol.length > 0) sources.push('birdeye');
       if (solanaNetEvents.length > 0) sources.push('alchemy-solana');
       if (pumpEvents.length > 0) sources.push('pumpfun');
       if (solDex.length > 0) sources.push('dexscreener');
@@ -1286,6 +1390,7 @@ export async function GET(request: Request) {
         withSrcTimeout(fetchGeckoTerminalNewPairs('ethereum'), 7000, 'geckoterminal-new'),
       ]);
 
+      applySmartMoneyLabels(alchemyEvents, await getKnownWhales());
       events = [...gtNew, ...ethDex, ...alchemyEvents];
       if (alchemyEvents.length > 0) sources.push('alchemy');
       if (ethDex.length > 0) sources.push('dexscreener');
