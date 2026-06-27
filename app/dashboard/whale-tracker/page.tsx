@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useFeatureUsageLog } from "@/lib/hooks/useFeatureUsageLog";
-import { LABEL_META, type WhaleLabel } from "@/lib/whales/labels";
+import { LABEL_META, canonicalAction, type WhaleLabel } from "@/lib/whales/labels";
 // Naka Labs brand icons — swap what's in the library, lucide-fallback
 // for icons not yet available (BellOff, ArrowUpRight, ArrowDownLeft,
 // ArrowLeftRight, Telescope) — they remain visually consistent with the
@@ -26,6 +26,8 @@ import { BackButton } from "@/components/ui/BackButton";
 import { ChainLogo } from "@/components/common/ChainLogo";
 import { NakaLoader } from "@/components/brand/NakaLoader";
 import { WhaleAvatar } from "@/components/whales/WhaleAvatar";
+import TierGateOverlay from "@/components/tier/TierGateOverlay";
+import { useAuth, hasTierAccess } from "@/lib/hooks/useAuth";
 import { useNavState } from "@/lib/nav/useNavState";
 
 type Action = "buy" | "sell" | "transfer" | null;
@@ -47,6 +49,10 @@ interface FeedRow {
   // Resolved WhaleLabel (cex/smart_money/insider/...) bridged from the
   // whales.entity_type vocabulary, so the colored label pill renders.
   whale_label: WhaleLabel;
+  // Transfer direction from the raw action ('in' received / 'out' sent); null
+  // for real buy/sell rows. Lets the card show Received/Sent instead of a flat
+  // "transfer" now that the poll ingests both sides.
+  direction?: "in" | "out" | null;
   // §whale-tracker-grade — surfaced from whales table so feed cards
   // can render Accumulator / Distributor / Sniper / High-win-rate
   // badges without an extra round-trip.
@@ -108,6 +114,15 @@ function timeAgo(iso: string): string {
 export default function WhaleTrackerPage() {
   useFeatureUsageLog('whale_tracker');
   const router = useRouter();
+  // Tier split: VIEWING the feed/top-today needs `mini`; FOLLOWING (watchlist,
+  // alerts) needs `pro`. Resolve both client-side so we render an honest gate
+  // instead of leaving watch/add controls live that 403 silently for mini
+  // users (the audit's "dead controls" bug). Server-side withTierGate stays
+  // authoritative — this is UX, not the security boundary.
+  const { user, loading: authLoading } = useAuth();
+  const canView = hasTierAccess(user, 'mini');
+  const canFollow = hasTierAccess(user, 'pro');
+  const goUpgrade = useCallback(() => router.push('/dashboard/pricing'), [router]);
   const [selectedChains, setSelectedChains] = useState<string[]>(["all"]);
   const [size, setSize] = useState<Size>("100k");
   const [timeRange, setTimeRange] = useState<TimeRange>("24h");
@@ -206,13 +221,17 @@ export default function WhaleTrackerPage() {
   }, []);
 
   useEffect(() => {
+    if (authLoading || !canView) return;
     void loadFeed();
-  }, [loadFeed]);
+  }, [loadFeed, authLoading, canView]);
 
   useEffect(() => {
-    void loadWatchlist();
+    if (authLoading || !canView) return;
+    // Watchlist is pro-gated; only fetch it when the user can actually follow,
+    // otherwise it 403s and the panel shows an upgrade CTA instead.
+    if (canFollow) void loadWatchlist();
     void loadTopToday();
-  }, [loadWatchlist, loadTopToday]);
+  }, [loadWatchlist, loadTopToday, authLoading, canView, canFollow]);
 
   // Audit B5 / P0 #6 — realtime first, polling as safety net.
   // Supabase Realtime emits whale_activity INSERTs sub-second; we count
@@ -222,7 +241,7 @@ export default function WhaleTrackerPage() {
   // events (Realtime occasionally drops on reconnect) and keeps the
   // value_usd freshness honest after enrichment crons run.
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase || authLoading || !canView) return;
     const channel = supabase
       .channel('whale-tracker-live')
       .on('postgres_changes',
@@ -232,7 +251,10 @@ export default function WhaleTrackerPage() {
             const f = filtersRef.current;
             const minUsd = ({ '10k': 10_000, '50k': 50_000, '100k': 100_000, '500k': 500_000, '1m': 1_000_000 } as Record<string, number>)[f.size] ?? 100_000;
             if ((row.value_usd ?? 0) < minUsd) return;
-            if (f.actionFilter && row.action !== f.actionFilter) return;
+            // row.action is the RAW db action (transfer_in/out/buy/sell); the
+            // filter is canonical (buy|sell|transfer) — normalize before compare
+            // so the indicator doesn't drop every transfer.
+            if (f.actionFilter && canonicalAction(row.action) !== f.actionFilter) return;
             if (f.selectedChains.length > 0 && !f.selectedChains.includes('all') && row.chain && !f.selectedChains.includes(row.chain)) return;
             if (f.tokenSearch && row.token_symbol && !row.token_symbol.toLowerCase().includes(f.tokenSearch.toLowerCase())) return;
             // Label filter not applied here — we don't have entity_type
@@ -243,14 +265,15 @@ export default function WhaleTrackerPage() {
           })
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
-  }, []);
+  }, [authLoading, canView]);
 
   // Polling safety net — drops to 30s now that realtime is the
   // primary path. Pre-fix this was the only freshness mechanism at 15s.
   useEffect(() => {
+    if (authLoading || !canView) return;
     const t = setInterval(() => void loadFeed(), 30_000);
     return () => clearInterval(t);
-  }, [loadFeed]);
+  }, [loadFeed, authLoading, canView]);
 
   const toggleChain = (id: string) => {
     setSelectedChains((prev) => {
@@ -271,6 +294,12 @@ export default function WhaleTrackerPage() {
     );
 
   const toggleWatch = async (address: string, chain: string) => {
+    // Following is pro-gated. Send mini/free users to pricing instead of
+    // firing a request that 403s with no feedback.
+    if (!canFollow) {
+      goUpgrade();
+      return;
+    }
     const watched = isWatched(address, chain);
     if (watched) {
       await fetch(
@@ -286,6 +315,55 @@ export default function WhaleTrackerPage() {
     }
     await loadWatchlist();
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <NakaLoader />
+      </div>
+    );
+  }
+
+  // Below `mini`: honest paywall instead of a feed that 403s behind live
+  // controls. Blurred static preview + upgrade card (shared TierGateOverlay).
+  if (!canView) {
+    return (
+      <div className="min-h-screen text-white pb-20">
+        <div className="sticky top-0 z-30 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/50">
+          <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+            <BackButton href="/dashboard" />
+            <h1 className="text-lg md:text-xl font-bold">Whale Tracker</h1>
+            <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-[#0066FF]/15 text-[#6F7EFF] border border-[#0066FF]/30">
+              PRO
+            </span>
+          </div>
+        </div>
+        <TierGateOverlay
+          featureName="Whale Tracker"
+          requiredTier="mini"
+          bulletPoints={[
+            "Live whale flow across Ethereum, Solana, Base, Arbitrum & BSC",
+            "Smart-money, CEX, market-maker & insider labels on every move",
+            "Top whales today, PnL leaderboard & behavioral archetypes",
+            "Follow whales and get real-time move alerts (Pro)",
+          ]}
+        >
+          <div className="max-w-7xl mx-auto px-4 py-6 space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="nl-glass rounded-xl p-4 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-white/[0.06]" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 rounded bg-white/[0.06] w-1/3" />
+                  <div className="h-2.5 rounded bg-white/[0.04] w-2/3" />
+                </div>
+                <div className="h-3 rounded bg-white/[0.06] w-16" />
+              </div>
+            ))}
+          </div>
+        </TierGateOverlay>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen text-white pb-20">
@@ -529,7 +607,9 @@ export default function WhaleTrackerPage() {
         <div className="space-y-4">
           <WatchlistPanel
             items={watchlist}
-            onAddClick={() => setShowAdd(true)}
+            canFollow={canFollow}
+            onUpgrade={goUpgrade}
+            onAddClick={() => (canFollow ? setShowAdd(true) : goUpgrade())}
             onRemove={async (addr, chain) => {
               await fetch(
                 `/api/whale-tracker/watchlist?whale_address=${addr}&chain=${chain}`,
@@ -603,11 +683,19 @@ function FeedCard({
   onOpenToken: () => void;
 }) {
   const action = row.action.toLowerCase();
-  const borderColor =
-    action === "buy" ? "border-l-emerald-500" : action === "sell" ? "border-l-rose-500" : "border-l-slate-600";
-  const ActionIcon = action === "buy" ? ArrowDownLeft : action === "sell" ? ArrowUpRight : ArrowLeftRight;
-  const actionColor =
-    action === "buy" ? "text-emerald-400" : action === "sell" ? "text-rose-400" : "text-slate-400";
+  // For transfers, surface direction (Received / Sent) so the feed is honest
+  // about two-sided flow instead of a flat "transfer".
+  const isReceive = action === "buy" || row.direction === "in";
+  const isSend = action === "sell" || row.direction === "out";
+  const actionLabel =
+    action === "buy" ? "buy"
+      : action === "sell" ? "sell"
+      : row.direction === "in" ? "received"
+      : row.direction === "out" ? "sent"
+      : "transfer";
+  const borderColor = isReceive ? "border-l-emerald-500" : isSend ? "border-l-rose-500" : "border-l-slate-600";
+  const ActionIcon = isReceive ? ArrowDownLeft : isSend ? ArrowUpRight : ArrowLeftRight;
+  const actionColor = isReceive ? "text-emerald-400" : isSend ? "text-rose-400" : "text-slate-400";
 
   return (
     <motion.div
@@ -627,7 +715,7 @@ function FeedCard({
               <ChainLogo chain={row.chain} size={12} />{row.chain}
             </span>
             <span className={`inline-flex items-center gap-1 ${actionColor} font-semibold uppercase text-[10px]`}>
-              <ActionIcon size={10} /> {action}
+              <ActionIcon size={10} /> {actionLabel}
             </span>
             <span className="ms-auto font-mono font-bold text-white tabular-nums">
               {fmtUsd(Number(row.value_usd ?? 0))}
@@ -661,7 +749,11 @@ function FeedCard({
           </div>
           {row.token_symbol && (
             <div className="mt-1 text-xs text-slate-400">
-              {action === "buy" ? "Bought" : action === "sell" ? "Sold" : "Transferred"}{" "}
+              {action === "buy" ? "Bought"
+                : action === "sell" ? "Sold"
+                : row.direction === "in" ? "Received"
+                : row.direction === "out" ? "Sent"
+                : "Transferred"}{" "}
               <span className="font-semibold text-white">{row.token_symbol}</span>
             </div>
           )}
@@ -703,12 +795,16 @@ function FeedCard({
 
 function WatchlistPanel({
   items,
+  canFollow,
+  onUpgrade,
   onAddClick,
   onRemove,
   onToggleAlert,
   onOpen,
 }: {
   items: WatchlistItem[];
+  canFollow: boolean;
+  onUpgrade: () => void;
   onAddClick: () => void;
   onRemove: (address: string, chain: string) => void;
   onToggleAlert: (item: WatchlistItem) => void;
@@ -719,7 +815,9 @@ function WatchlistPanel({
       <div className="flex items-center justify-between mb-3">
         <div>
           <h3 className="text-sm font-bold text-white">My Whales</h3>
-          <p className="text-[11px] text-slate-500">Following {items.length} {items.length === 1 ? 'whale' : 'whales'}</p>
+          <p className="text-[11px] text-slate-500">
+            {canFollow ? `Following ${items.length} ${items.length === 1 ? 'whale' : 'whales'}` : 'Follow whales with Pro'}
+          </p>
         </div>
         <button
           type="button"
@@ -729,7 +827,19 @@ function WatchlistPanel({
           <Plus size={12} /> Add
         </button>
       </div>
-      {items.length === 0 ? (
+      {!canFollow ? (
+        <div className="py-6 text-center">
+          <Telescope size={24} className="mx-auto text-slate-600 mb-2" />
+          <p className="text-xs text-slate-400">Following whales & move alerts are a Pro feature.</p>
+          <button
+            type="button"
+            onClick={onUpgrade}
+            className="mt-2 text-xs text-[#6F7EFF] hover:text-white transition-colors font-semibold"
+          >
+            Upgrade to Pro →
+          </button>
+        </div>
+      ) : items.length === 0 ? (
         <div className="py-6 text-center">
           <Telescope size={24} className="mx-auto text-slate-600 mb-2" />
           <p className="text-xs text-slate-400">Track whales to get notified</p>
