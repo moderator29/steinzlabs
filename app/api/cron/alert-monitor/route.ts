@@ -26,6 +26,7 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { cacheGet } from '@/lib/cache/redis';
 import { evaluateExpression } from '@/lib/alerts/evaluateComposite';
 import { fanOutNotification } from '@/lib/notifications/channels';
+import { getDexPrice } from '@/lib/services/dexscreener';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -40,7 +41,10 @@ interface PriceAlertRow {
   token_symbol: string | null;
   direction: 'above' | 'below' | string;
   price: number;
+  chain: string | null;
 }
+
+const isEvmAddress = (v: string) => /^0x[a-fA-F0-9]{40}$/.test(v);
 
 interface CachedPrice {
   id: string;
@@ -51,6 +55,16 @@ interface CachedPrice {
 }
 
 async function priceFor(tokenId: string | null, symbol: string | null): Promise<number | null> {
+  // Sniper memecoin alerts store token_id = EVM contract address (not a
+  // CoinGecko id), so they're never in the CG/symbol cache. Resolve those by
+  // contract via DexScreener so address-keyed alerts can actually fire.
+  if (tokenId && isEvmAddress(tokenId)) {
+    try {
+      const p = await getDexPrice(tokenId);
+      if (typeof p === 'number' && p > 0) return p;
+    } catch { /* fall through */ }
+    return null;
+  }
   if (tokenId) {
     const v = await cacheGet<CachedPrice>(`price:cg:${tokenId}`);
     if (v && typeof v.price === 'number') return v.price;
@@ -71,7 +85,7 @@ export async function GET(request: NextRequest) {
 
   const { data: rows, error: fetchErr } = await admin
     .from('price_alerts')
-    .select('id,user_id,token_id,token_symbol,direction,price')
+    .select('id,user_id,token_id,token_symbol,direction,price,chain')
     .eq('triggered', false)
     .limit(1000);
 

@@ -93,7 +93,11 @@ export async function GET(request: NextRequest) {
 
   try {
     // Real freshly-created EVM pools (GeckoTerminal). EVM-only for now.
-    let pairs = await getNewEvmPairs(minLiquidity, chainFilter === 'all' ? undefined : chainFilter);
+    const allPairs = await getNewEvmPairs(minLiquidity, chainFilter === 'all' ? undefined : chainFilter);
+    // Source chips come from the UNFILTERED set so picking a source doesn't
+    // collapse the chip list down to just that one source.
+    const availableSources = Array.from(new Set(allPairs.map(p => p.dexId))).slice(0, 12);
+    let pairs = allPairs;
     if (maxLiquidity !== undefined) pairs = pairs.filter(p => (p.liquidity?.usd ?? 0) <= maxLiquidity);
     if (sources.length) pairs = pairs.filter(p => sources.some(s => p.dexId.toLowerCase().includes(s)));
     if (q) pairs = pairs.filter(p =>
@@ -117,7 +121,7 @@ export async function GET(request: NextRequest) {
         detectedAt: pair.pairCreatedAt ?? Date.now(),
         status: statusFromScore(score),
         price: pair.priceUsd ? parseFloat(pair.priceUsd) : undefined,
-        marketCap: pair.fdv,
+        marketCap: pair.marketCap ?? pair.fdv,
         logo: pair.info?.imageUrl ?? undefined,
         pairAge: pairAgeLabel(pair.pairCreatedAt),
         source: pair.dexId,
@@ -125,8 +129,6 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Distinct sources present (for the UI source filter chips).
-    const availableSources = Array.from(new Set(pairs.map(p => p.dexId))).slice(0, 12);
     return NextResponse.json({ tokens, sources: availableSources });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Failed to fetch tokens';

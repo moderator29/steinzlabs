@@ -4,6 +4,10 @@ import { verifyCron, cronResponse, cronHasWork } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getDexPrice } from "@/lib/services/dexscreener";
 import { executeTrade } from "@/lib/trading/relayer";
+import { usdcForChain } from "@/lib/trading/usdc";
+import { getEvmTokenDecimals } from "@/lib/sniper/priceFeed";
+
+const isEvmAddress = (v: string) => /^0x[a-fA-F0-9]{40}$/.test(v);
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -97,15 +101,24 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
+    // Resolve a real contract for the from-token (older create paths stored the
+    // literal "USDC" symbol, which aggregators reject) and scale the
+    // human from_amount to base units (aggregators expect wei, not "100").
+    const fromAddr = isEvmAddress(order.from_token_address)
+      ? order.from_token_address
+      : (usdcForChain(order.chain) ?? order.from_token_address);
+    const fromDecimals = await getEvmTokenDecimals(order.chain, fromAddr);
+    const amountInBase = (BigInt(Math.round(Number(order.from_amount) * 1e6)) * (BigInt(10) ** BigInt(fromDecimals)) / BigInt(1e6)).toString();
+
     const result = await executeTrade({
       userId: order.user_id,
       chain: order.chain,
       walletSource: order.wallet_source,
-      fromTokenAddress: order.from_token_address,
+      fromTokenAddress: fromAddr,
       fromTokenSymbol: order.from_token_symbol,
       toTokenAddress: order.to_token_address,
       toTokenSymbol: order.to_token_symbol,
-      amountIn: String(order.from_amount),
+      amountIn: amountInBase,
       slippageBps: order.slippage_bps ?? 100,
       reason: "limit_order",
       sourceOrderId: order.id,

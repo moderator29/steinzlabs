@@ -60,11 +60,18 @@ interface ExecutionRow {
   tx_hash: string | null;
   pnl_usd: number | null;
   buy_amount_usd?: number | null;
+  entry_price_usd?: number | null;
+  tokens_received?: number | null;
+  realized_at?: string | null;
   executed_at: string;
   execution_time_ms: number | null;
 }
 
 type Tab = 'discover' | 'positions' | 'limit' | 'alerts' | 'snipers' | 'history';
+
+// EVM-only: Solana/TON return an empty GeckoTerminal feed, so they must not
+// appear as selectable chains (they were dead filter options).
+const EVM_CHAINS = SNIPER_CHAINS.filter((c) => c !== 'solana' && c !== 'ton');
 
 // Early-entry liquidity presets — catch coins at 5k/10k/15k.
 const LIQ_PRESETS: { label: string; value: number }[] = [
@@ -124,16 +131,18 @@ export default function SniperPage() {
     if (!user?.id) return;
     const { data } = await supabase
       .from('sniper_executions')
-      .select('id, token_symbol, token_address, chain, amount_native, amount_sol, status, tx_hash, pnl_usd, buy_amount_usd, executed_at, execution_time_ms')
+      .select('id, token_symbol, token_address, chain, amount_native, amount_sol, status, tx_hash, pnl_usd, buy_amount_usd, entry_price_usd, tokens_received, realized_at, executed_at, execution_time_ms')
       .eq('user_id', user.id).order('executed_at', { ascending: false }).limit(100);
     if (data) setExecutions(data as ExecutionRow[]);
   }, [user?.id]);
 
   const loadKillSwitch = useCallback(async () => {
     try {
-      const res = await fetch('/api/sniper/state', { cache: 'no-store' });
+      // Per-user kill state (same source the toggle writes), so it round-trips
+      // across reloads instead of reflecting the unrelated admin platform state.
+      const res = await fetch('/api/sniper/kill-switch', { cache: 'no-store' });
       const j = await res.json();
-      setKillSwitchOn(j?.enabled === false);
+      setKillSwitchOn(j?.killed === true);
     } catch { /* keep default */ }
   }, []);
 
@@ -142,8 +151,15 @@ export default function SniperPage() {
     try {
       const params = new URLSearchParams({ limit: '30' });
       if (chainFilter !== 'all') params.set('chain', chainFilter);
-      if (minLiq > 0) params.set('minLiquidity', String(minLiq));
+      // Always send minLiquidity — '0' means "no floor". Omitting it let the
+      // server apply a hidden $3000 default, so the "Any" preset silently
+      // filtered out sub-$3k pairs.
+      params.set('minLiquidity', String(minLiq));
       if (sourceFilter.length) params.set('source', sourceFilter.join(','));
+      // Forward an address-shaped query so pasting a contract resolves it
+      // server-side instead of filtering only the newest-30 client rows.
+      const qTrim = feedQuery.trim();
+      if (/^0x[a-fA-F0-9]{40}$/.test(qTrim)) params.set('q', qTrim);
       const res = await fetch(`/api/sniper?${params.toString()}`, { cache: 'no-store' });
       const j = await res.json();
       setFeedTokens(j?.tokens ?? []);
@@ -153,7 +169,7 @@ export default function SniperPage() {
     } finally {
       setFeedLoading(false);
     }
-  }, [chainFilter, minLiq, sourceFilter]);
+  }, [chainFilter, minLiq, sourceFilter, feedQuery]);
 
   // ── Initial + reactive loads ─────────────────────────────────────────────
   useEffect(() => {
@@ -162,8 +178,12 @@ export default function SniperPage() {
   }, [authLoading, user, loadSnipers, loadExecutions, loadKillSwitch]);
 
   useEffect(() => {
-    if (tab === 'discover') loadFeed();
-  }, [tab, chainFilter, loadFeed]);
+    if (tab !== 'discover') return;
+    // Debounce so typing in the search box (which feeds loadFeed) doesn't fire
+    // a request per keystroke; address paste still resolves within 350ms.
+    const t = window.setTimeout(() => loadFeed(), 350);
+    return () => window.clearTimeout(t);
+  }, [tab, loadFeed]);
 
   // Realtime execution fills (Photon/BullX parity — instant, with flash).
   useEffect(() => {
@@ -172,19 +192,24 @@ export default function SniperPage() {
       .channel(`sniper-executions-${user.id}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'sniper_executions', filter: `user_id=eq.${user.id}` },
+        // '*' so PnL backfill / realized_at / peak-price UPDATEs reach the UI,
+        // not just new fills (INSERT). Merge updates by id; prepend inserts.
+        { event: '*', schema: 'public', table: 'sniper_executions', filter: `user_id=eq.${user.id}` },
         (payload) => {
           const row = payload.new as ExecutionRow;
-          setExecutions((prev) => [row, ...prev].slice(0, 100));
-          if (row.id) {
-            setFreshIds((prev) => new Set(prev).add(row.id));
-            window.setTimeout(() => {
-              setFreshIds((prev) => {
-                if (!prev.has(row.id)) return prev;
-                const next = new Set(prev); next.delete(row.id); return next;
-              });
-            }, 2400);
+          if (!row?.id) return;
+          if (payload.eventType === 'UPDATE') {
+            setExecutions((prev) => prev.map((e) => (e.id === row.id ? { ...e, ...row } : e)));
+            return;
           }
+          setExecutions((prev) => (prev.some((e) => e.id === row.id) ? prev : [row, ...prev].slice(0, 100)));
+          setFreshIds((prev) => new Set(prev).add(row.id));
+          window.setTimeout(() => {
+            setFreshIds((prev) => {
+              if (!prev.has(row.id)) return prev;
+              const next = new Set(prev); next.delete(row.id); return next;
+            });
+          }, 2400);
         },
       )
       .subscribe((status) => setLiveConnected(status === 'SUBSCRIBED'));
@@ -214,7 +239,12 @@ export default function SniperPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: !next, reason: next ? 'User killed all snipers' : null }),
       });
-      if (res.ok) setKillSwitchOn(next);
+      if (res.ok) {
+        setKillSwitchOn(next);
+        // Refresh the snipers list so the cards + Active stat reflect the new
+        // paused state instead of contradicting the killed banner.
+        await loadSnipers();
+      }
     } finally {
       setKillToggling(false);
     }
@@ -320,8 +350,8 @@ export default function SniperPage() {
             <SelectMenu
               value={chainFilter}
               options={[
-                { id: 'all', label: 'All chains' } as SelectOption,
-                ...SNIPER_CHAINS.map((c): SelectOption => ({ id: c, label: CHAIN_CONFIGS[c].name, chain: c })),
+                { id: 'all', label: 'All EVM chains' } as SelectOption,
+                ...EVM_CHAINS.map((c): SelectOption => ({ id: c, label: CHAIN_CONFIGS[c].name, chain: c })),
               ]}
               onChange={(id) => setChainFilter(id as SniperChain | 'all')}
             />
@@ -529,60 +559,78 @@ function TokenRow({ t, onSnipe, onOpen }: { t: DetectedToken; onSnipe: (t: Detec
 
 // ─── Positions (aggregated from real executions) ─────────────────────────────
 
-interface Position { key: string; symbol: string; chain: string | null; trades: number; spent: number; pnl: number; last: string; }
-
 function PositionsTab({ executions }: { executions: ExecutionRow[] }) {
-  const positions = useMemo<Position[]>(() => {
-    const map = new Map<string, Position>();
-    for (const e of executions) {
-      const key = `${e.chain ?? ''}:${e.token_address}`;
-      const spent = Number(e.buy_amount_usd ?? e.amount_native ?? e.amount_sol ?? 0) || 0;
-      const pnl = Number(e.pnl_usd) || 0;
-      const cur = map.get(key);
-      if (cur) {
-        cur.trades += 1; cur.spent += spent; cur.pnl += pnl;
-        if (e.executed_at > cur.last) cur.last = e.executed_at;
-      } else {
-        map.set(key, { key, symbol: e.token_symbol ?? e.token_address.slice(0, 6), chain: e.chain, trades: 1, spent, pnl, last: e.executed_at });
-      }
-    }
-    return Array.from(map.values()).sort((a, b) => new Date(b.last).getTime() - new Date(a.last).getTime());
-  }, [executions]);
+  // Only confirmed buys are real positions. Open = not yet realized; Realized =
+  // sold (carries pnl_usd from the sell-confirm / receipt-reconciliation).
+  const confirmed = executions.filter((e) => e.status === 'confirmed' || e.status === 'sniped' || e.realized_at);
+  const open = confirmed.filter((e) => !e.realized_at).sort((a, b) => new Date(b.executed_at).getTime() - new Date(a.executed_at).getTime());
+  const realized = confirmed.filter((e) => !!e.realized_at).sort((a, b) => new Date(b.realized_at!).getTime() - new Date(a.realized_at!).getTime());
 
-  if (positions.length === 0) {
+  if (open.length === 0 && realized.length === 0) {
     return (
       <div className="rounded-xl border-2 border-dashed border-white/10 p-12 text-center">
         <TrendingUp className="w-10 h-10 mx-auto mb-3 text-white/25" />
         <h3 className="text-base font-bold mb-1">No positions yet</h3>
-        <p className="text-white/50 text-sm">Positions appear here once your snipers start filling. PnL updates in real time.</p>
+        <p className="text-white/50 text-sm">Positions appear here once your snipers fill. Open positions show your entry; realized PnL updates after exits.</p>
       </div>
     );
   }
   return (
-    <div className="grid gap-2">
-      {positions.map((p) => {
-        const cfg = p.chain ? CHAIN_CONFIGS[p.chain as SniperChain] : null;
-        return (
-          <div key={p.key} className="nl-glass rounded-xl p-3 flex items-center gap-3">
-            {cfg ? <img src={cfg.logo} alt="" className="w-9 h-9 rounded-full shrink-0" /> : <div className="w-9 h-9 rounded-full bg-white/10 shrink-0" />}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2"><span className="font-bold truncate">{p.symbol}</span>{p.chain && <span className="text-[10px] uppercase tracking-wider text-white/40">{p.chain}</span>}</div>
-              <div className="text-[11px] text-white/50">{p.trades} {p.trades === 1 ? 'fill' : 'fills'} · spent {fmtUSD(p.spent)} · {timeAgo(p.last)}</div>
-            </div>
-            <div className={`text-right shrink-0 font-bold ${p.pnl > 0 ? 'text-emerald-300' : p.pnl < 0 ? 'text-red-300' : 'text-white/60'}`}>
-              <div className="text-sm">{fmtUSD(p.pnl)}</div>
-              <div className="text-[10px] font-medium text-white/40">{p.spent > 0 ? `${((p.pnl / p.spent) * 100).toFixed(1)}%` : '—'}</div>
-            </div>
-          </div>
-        );
-      })}
+    <div className="space-y-4">
+      {open.length > 0 && (
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-2">Open · {open.length}</div>
+          <div className="grid gap-2">{open.map((e) => <PositionRow key={e.id} e={e} />)}</div>
+        </div>
+      )}
+      {realized.length > 0 && (
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-2">Realized · {realized.length}</div>
+          <div className="grid gap-2">{realized.map((e) => <PositionRow key={e.id} e={e} realized />)}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PositionRow({ e, realized }: { e: ExecutionRow; realized?: boolean }) {
+  const cfg = e.chain ? CHAIN_CONFIGS[e.chain as SniperChain] : null;
+  const spent = Number(e.buy_amount_usd ?? 0) || 0;
+  const pnl = e.pnl_usd != null ? Number(e.pnl_usd) : null;
+  return (
+    <div className="nl-glass rounded-xl p-3 flex items-center gap-3">
+      {cfg ? <img src={cfg.logo} alt="" className="w-9 h-9 rounded-full shrink-0" /> : <div className="w-9 h-9 rounded-full bg-white/10 shrink-0 flex items-center justify-center text-[10px] font-bold text-white/60">{(e.token_symbol ?? '?').slice(0, 2)}</div>}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="font-bold truncate">{e.token_symbol ?? e.token_address.slice(0, 6)}</span>
+          {e.chain && <span className="text-[10px] uppercase tracking-wider text-white/40">{e.chain}</span>}
+          {!realized && <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase border border-emerald-500/30 bg-emerald-500/15 text-emerald-300">Open</span>}
+        </div>
+        <div className="text-[11px] text-white/50">
+          {spent > 0 ? `Spent ${fmtUSD(spent)}` : ''}{e.entry_price_usd ? ` · entry $${Number(e.entry_price_usd).toPrecision(3)}` : ''} · {timeAgo(realized ? (e.realized_at ?? e.executed_at) : e.executed_at)}
+        </div>
+      </div>
+      {realized ? (
+        <div className={`text-right shrink-0 font-bold ${pnl != null && pnl > 0 ? 'text-emerald-300' : pnl != null && pnl < 0 ? 'text-red-300' : 'text-white/60'}`}>
+          <div className="text-sm">{pnl != null ? fmtUSD(pnl) : '—'}</div>
+          <div className="text-[10px] font-medium text-white/40">{pnl != null && spent > 0 ? `${((pnl / spent) * 100).toFixed(1)}%` : 'settling…'}</div>
+        </div>
+      ) : (
+        <span className="shrink-0 text-[10px] text-white/40">held</span>
+      )}
     </div>
   );
 }
 
 // ─── Snipers (config cards) ─────────────────────────────────────────────────
 
+type SniperStatusFilter = 'all' | 'active' | 'paused' | 'disabled';
+function sniperStatusOf(s: SniperCriteriaRow): 'active' | 'paused' | 'disabled' {
+  return !s.enabled ? 'disabled' : s.paused ? 'paused' : 'active';
+}
+
 function SnipersTab({ snipers, onPause, onDelete, onCreate }: { snipers: SniperCriteriaRow[]; onPause: (s: SniperCriteriaRow) => void; onDelete: (s: SniperCriteriaRow) => void; onCreate: () => void }) {
+  const [status, setStatus] = useState<SniperStatusFilter>('all');
   if (snipers.length === 0) {
     return (
       <div className="rounded-xl border-2 border-dashed border-white/10 bg-white/[0.02] p-12 text-center">
@@ -593,7 +641,36 @@ function SnipersTab({ snipers, onPause, onDelete, onCreate }: { snipers: SniperC
       </div>
     );
   }
-  return <div className="grid gap-3 md:grid-cols-2">{snipers.map((s) => <SniperCard key={s.id} s={s} onPause={onPause} onDelete={onDelete} />)}</div>;
+  const counts = {
+    all: snipers.length,
+    active: snipers.filter((s) => sniperStatusOf(s) === 'active').length,
+    paused: snipers.filter((s) => sniperStatusOf(s) === 'paused').length,
+    disabled: snipers.filter((s) => sniperStatusOf(s) === 'disabled').length,
+  };
+  const shown = status === 'all' ? snipers : snipers.filter((s) => sniperStatusOf(s) === status);
+  const FILTERS: { id: SniperStatusFilter; label: string }[] = [
+    { id: 'all', label: 'All' }, { id: 'active', label: 'Active' }, { id: 'paused', label: 'Paused' }, { id: 'disabled', label: 'Disabled' },
+  ];
+  return (
+    <div>
+      <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/10 mb-3">
+        {FILTERS.map((f) => (
+          <button
+            key={f.id}
+            onClick={() => setStatus(f.id)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${status === f.id ? 'bg-[#0066FF]/20 text-blue-200 border border-[#0066FF]/40' : 'text-white/55 hover:text-white border border-transparent'}`}
+          >
+            {f.label} <span className={`ms-1 px-1.5 py-0.5 rounded text-[10px] ${status === f.id ? 'bg-blue-500/30 text-blue-100' : 'bg-white/10 text-white/55'}`}>{counts[f.id]}</span>
+          </button>
+        ))}
+      </div>
+      {shown.length === 0 ? (
+        <div className="rounded-xl border-2 border-dashed border-white/10 p-10 text-center text-white/50 text-sm">No {status} snipers.</div>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2">{shown.map((s) => <SniperCard key={s.id} s={s} onPause={onPause} onDelete={onDelete} />)}</div>
+      )}
+    </div>
+  );
 }
 
 function SniperCard({ s, onPause, onDelete }: { s: SniperCriteriaRow; onPause: (s: SniperCriteriaRow) => void; onDelete: (s: SniperCriteriaRow) => void }) {
