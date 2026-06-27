@@ -22,6 +22,7 @@ import { WalletTokenRow } from '@/components/wallet/WalletTokenRow';
 import { WatchlistTab } from '@/components/wallet/WatchlistTab';
 import { ScanQrModal } from '@/components/wallet/ScanQrModal';
 import { NftTab } from '@/components/wallet/NftTab';
+import { BiometricUnlockRow } from '@/components/wallet/BiometricUnlockRow';
 // Audit B4 — shared AES-GCM crypto, lifted from this file so the new
 // UnlockWalletModal can verify a typed password without duplicating
 // the Web Crypto plumbing. Original inline definitions removed below.
@@ -1470,6 +1471,7 @@ export default function WalletPage() {
                       {EVM_LIVE_CHAINS.includes(activeChain.id) ? 'Review' : 'EVM only'}
                     </button>
                   </div>
+                  {activeWallet && <BiometricUnlockRow encryptedKey={activeWallet.encryptedKey} />}
                   {/* "View on Solscan/Explorer" button removed per product
                       direction — users stay inside Naka; explorer links live
                       on individual activity rows if needed. */}
