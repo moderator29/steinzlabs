@@ -108,6 +108,9 @@ const VOLUME_PILLS = [
   { id: 1000000, label: '>$1M' },
 ];
 
+// Custodial entity types where realized PnL / win-rate don't apply.
+const CUSTODIAL_ENTITIES = new Set(['exchange', 'cex', 'bridge']);
+
 function fmtUsd(v: string | number | null): string {
   if (v === null || v === undefined) return '—';
   const n = typeof v === 'number' ? v : parseFloat(v);
@@ -464,16 +467,26 @@ function WhaleCard({ row, onOpen, onFollow }: { row: WhaleRow; onOpen: () => voi
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mt-4">
-        <Metric label="Portfolio" value={fmtUsd(row.portfolio_value_usd)} />
-        <Metric
-          label="PnL 30d"
-          value={fmtUsd(row.pnl_30d_usd)}
-          Icon={pnl !== 0 ? (pnlPositive ? TrendingUp : TrendingDown) : undefined}
-          tone={pnl > 0 ? 'green' : pnl < 0 ? 'red' : 'neutral'}
-        />
-        <Metric label="Win rate" value={row.win_rate ? `${Math.round(Number(row.win_rate))}%` : '—'} />
-      </div>
+      {CUSTODIAL_ENTITIES.has((row.entity_type || '').toLowerCase()) ? (
+        // Exchange / bridge / CEX wallets are custodial flow accounts — realized
+        // PnL and win-rate are meaningless for them, so show holdings + an honest
+        // note instead of a row of "—".
+        <div className="mt-4">
+          <Metric label="Holdings" value={fmtUsd(row.portfolio_value_usd)} />
+          <p className="text-[9px] text-slate-500 mt-1.5">Custodial wallet — PnL / win-rate not applicable</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-2 mt-4">
+          <Metric label="Portfolio" value={fmtUsd(row.portfolio_value_usd)} />
+          <Metric
+            label="PnL 30d"
+            value={fmtUsd(row.pnl_30d_usd)}
+            Icon={pnl !== 0 ? (pnlPositive ? TrendingUp : TrendingDown) : undefined}
+            tone={pnl > 0 ? 'green' : pnl < 0 ? 'red' : 'neutral'}
+          />
+          <Metric label="Win rate" value={row.win_rate ? `${Math.round(Number(row.win_rate))}%` : '—'} />
+        </div>
+      )}
 
       {/* Footer — followers / Follow / View each in its own contained chip,
           fixed heights so the Follow button never overlaps View. */}

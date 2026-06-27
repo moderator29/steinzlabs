@@ -201,17 +201,33 @@ export default function WhaleDetailDrawer({
           </a>
         </div>
 
-        {/* Metrics */}
-        <div className="px-5 py-4 grid grid-cols-2 gap-2">
-          <MetricTile label="Whale Score" value={w.whale_score ? `${w.whale_score}/100` : '—'} big />
-          <MetricTile label="Portfolio" value={fmtUsd(w.portfolio_value_usd)} big />
-          <MetricTile label="PnL 30d" value={fmtUsd(w.pnl_30d_usd)} tone={Number(w.pnl_30d_usd || 0) >= 0 ? 'green' : 'red'} />
-          <MetricTile label="Win Rate" value={w.win_rate ? `${Math.round(Number(w.win_rate))}%` : '—'} />
-          <MetricTile label="Trades 30d" value={w.trade_count_30d ? w.trade_count_30d.toLocaleString() : '—'} />
-          <MetricTile label="Followers" value={(detail?.followerCount ?? w.follower_count ?? 0).toLocaleString()} />
-          <MetricTile label="Last active" value={timeAgo(w.last_active_at)} />
-          <MetricTile label="First seen" value={w.first_seen_at ? timeAgo(w.first_seen_at).replace('ago', 'old') : '—'} />
-        </div>
+        {/* Metrics — for custodial entities (exchanges/bridges) PnL, win-rate
+            and trade count are meaningless, so we omit them rather than show
+            "—" and surface the flow-wallet nature instead. */}
+        {(() => {
+          const custodial = ['exchange', 'cex', 'bridge'].includes((w.entity_type || '').toLowerCase());
+          return (
+            <div className="px-5 py-4 grid grid-cols-2 gap-2">
+              <MetricTile label="Whale Score" value={w.whale_score ? `${w.whale_score}/100` : '—'} big />
+              <MetricTile label="Holdings" value={fmtUsd(w.portfolio_value_usd)} big />
+              {!custodial && (
+                <>
+                  <MetricTile label="PnL 30d" value={fmtUsd(w.pnl_30d_usd)} tone={Number(w.pnl_30d_usd || 0) >= 0 ? 'green' : 'red'} />
+                  <MetricTile label="Win Rate" value={w.win_rate ? `${Math.round(Number(w.win_rate))}%` : '—'} />
+                  <MetricTile label="Trades 30d" value={w.trade_count_30d ? w.trade_count_30d.toLocaleString() : '—'} />
+                </>
+              )}
+              <MetricTile label="Followers" value={(detail?.followerCount ?? w.follower_count ?? 0).toLocaleString()} />
+              <MetricTile label="Last active" value={timeAgo(w.last_active_at)} />
+              <MetricTile label="First seen" value={w.first_seen_at ? timeAgo(w.first_seen_at).replace('ago', 'old') : '—'} />
+              {custodial && (
+                <div className="col-span-2 text-[10px] text-slate-500 px-1">
+                  Custodial / flow wallet — realized PnL and win-rate are not applicable.
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Social / Arkham links */}
         {(w.x_handle || ark?.twitter || w.website || ark?.website) && (
