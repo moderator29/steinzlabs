@@ -42,18 +42,25 @@ export const HAS_APPKIT = PROJECT_ID.length > 0;
 export const APPKIT_EVM_NETWORKS = [mainnet, bsc, base, arbitrum, optimism, polygon, avalanche] as const;
 export const APPKIT_NETWORKS = [...APPKIT_EVM_NETWORKS, solana] as const;
 
-// Stable metadata URL — DO NOT read window.location at module init.
-// Doing so caused an SSR/CSR mismatch (server emitted nakalabs.xyz,
-// client emitted whatever origin it was on, including preview URLs).
-// Wallets show a "URL mismatch" warning when the metadata URL differs
-// from the actual page origin, but a stable canonical URL is the
-// correct choice for production deploys.
-const metadata = {
-  name: 'Naka Labs',
-  description: 'Top-1% on-chain trading terminal',
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://nakalabs.xyz',
-  icons: ['https://nakalabs.xyz/logo.png'],
-};
+// WalletConnect Verify rejects (or wallets silently fail to complete the
+// handshake) when metadata.url does not match the ACTUAL serving origin. The
+// previous hardcoded canonical broke connect on www., preview, and any origin
+// other than the literal env value. Since getAppKit() only ever runs in the
+// browser (guarded below), resolve the real origin at call time and fall back
+// to the canonical on the server. buildMetadata() is invoked inside getAppKit so
+// the origin is read after hydration, never at module init (no SSR/CSR mismatch).
+function buildMetadata() {
+  const origin =
+    typeof window !== 'undefined' && window.location?.origin
+      ? window.location.origin
+      : (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://nakalabs.xyz');
+  return {
+    name: 'Naka Labs',
+    description: 'Top-1% on-chain trading terminal',
+    url: origin,
+    icons: [`${origin.replace(/\/$/, '')}/logo.png`],
+  };
+}
 
 // Build the wagmi adapter only when we have a real PROJECT_ID.
 // Constructing WagmiAdapter with an empty projectId triggers a
@@ -86,7 +93,7 @@ export function getAppKit() {
     adapters: [wagmiAdapter, solanaAdapter],
     networks: [...APPKIT_NETWORKS],
     projectId: PROJECT_ID,
-    metadata,
+    metadata: buildMetadata(),
     features: {
       // We use Supabase Auth for sign-in; don't double-prompt with
       // AppKit's email/social options on the wallet modal.
