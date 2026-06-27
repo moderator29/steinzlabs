@@ -241,7 +241,7 @@ export default function WalletPage() {
   useFeatureUsageLog('wallet');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token' | 'add-network' | 'wallet-settings' | 'customize'>('main');
+  const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token' | 'add-network' | 'wallet-settings' | 'customize' | 'approvals'>('main');
   // Per-user hidden tokens (Manage/Customize). Token key = chain:contract|symbol.
   const [hiddenTokens, setHiddenTokens] = useState<Set<string>>(new Set());
   // Fiat Buy on-ramp (Transak) — "coming soon" until the provider is live.
@@ -954,6 +954,10 @@ export default function WalletPage() {
     />
   );
 
+  if (view === 'approvals' && activeWallet) return (
+    <ApprovalsView onBack={() => setView('main')} wallet={activeWallet} chain={activeChain} />
+  );
+
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-28">
       {buyComingSoon && (
@@ -1365,6 +1369,24 @@ export default function WalletPage() {
                       </div>
                     </div>
                     <span className="text-xs text-slate-500 px-3 py-1.5 border border-slate-800 rounded-lg">Soon</span>
+                  </div>
+                  <div className="flex items-center justify-between p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                        <Shield className="w-4 h-4 text-blue-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-white font-medium">Token approvals</p>
+                        <p className="text-xs text-slate-500">Review &amp; revoke spending permissions</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setView('approvals')}
+                      disabled={!EVM_LIVE_CHAINS.includes(activeChain.id)}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-xs font-semibold text-white transition-colors"
+                    >
+                      {EVM_LIVE_CHAINS.includes(activeChain.id) ? 'Review' : 'EVM only'}
+                    </button>
                   </div>
                   {/* "View on Solscan/Explorer" button removed per product
                       direction — users stay inside Naka; explorer links live
@@ -2127,6 +2149,185 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── TOKEN APPROVALS MANAGER ───────────────────────────────────────────────
+// revoke.cash-style: lists real on-chain ERC-20 spending allowances the wallet
+// has granted and lets the user revoke them by signing approve(spender, 0) with
+// their own key (same password → decrypt → ethers.Wallet flow as Send). EVM-only.
+interface ApprovalRow {
+  tokenAddress: string;
+  spender: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+  logo: string | null;
+  allowanceRaw: string;
+  allowanceDisplay: string;
+  unlimited: boolean;
+  revokeCalldata: string;
+}
+
+function ApprovalsView({ onBack, wallet, chain }: { onBack: () => void; wallet: StoredWallet; chain: ChainInfo }) {
+  const [rows, setRows] = useState<ApprovalRow[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  // Per-approval revoke state, keyed by `${tokenAddress}:${spender}`.
+  const [revoking, setRevoking] = useState<string | null>(null);
+  const [revoked, setRevoked] = useState<Set<string>>(new Set());
+  const [pwModal, setPwModal] = useState<ApprovalRow | null>(null);
+  const [password, setPassword] = useState('');
+  const [pwError, setPwError] = useState('');
+
+  const rowKey = (r: ApprovalRow) => `${r.tokenAddress}:${r.spender}`;
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setError(null);
+      setRows(null);
+      try {
+        const res = await fetch(
+          `/api/wallet/approvals?wallet=${encodeURIComponent(wallet.address)}&chain=${chain.id}`,
+          { cache: 'no-store', signal: AbortSignal.timeout(30_000) },
+        );
+        const json = await res.json();
+        if (cancelled) return;
+        if (!res.ok) { setError(json?.error || 'Failed to load approvals'); setRows([]); return; }
+        setRows(json.approvals ?? []);
+      } catch (e) {
+        if (!cancelled) { setError(e instanceof Error ? e.message : 'Failed to load approvals'); setRows([]); }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [wallet.address, chain.id]);
+
+  const doRevoke = async () => {
+    const target = pwModal;
+    if (!target) return;
+    if (!password) { setPwError('Enter your wallet password.'); return; }
+    setPwError('');
+    setRevoking(rowKey(target));
+    setPwModal(null);
+    try {
+      const rpc = CHAIN_RPC[chain.id];
+      if (!rpc) throw new Error(`${chain.name} not supported`);
+      const ethers = await import('ethers');
+      const decryptedKey = await decryptPrivateKey(wallet.encryptedKey, password);
+      const provider = new ethers.JsonRpcProvider(rpc);
+      const signer = new ethers.Wallet(decryptedKey, provider);
+      // approve(spender, 0) — calldata built server-side, sent to the token.
+      const tx = await signer.sendTransaction({ to: target.tokenAddress, data: target.revokeCalldata });
+      await tx.wait(1);
+      setRevoked((prev) => new Set(prev).add(rowKey(target)));
+    } catch (e) {
+      const msg = (e instanceof Error ? (e as { shortMessage?: string }).shortMessage || e.message : 'Revoke failed') as string;
+      if (/decrypt|password|bad key/i.test(msg)) setPwError('Wrong wallet password.');
+      setError(/decrypt|password|bad key/i.test(msg) ? null : msg.slice(0, 160));
+    } finally {
+      setRevoking(null);
+      setPassword('');
+    }
+  };
+
+  const visible = (rows ?? []).filter((r) => !revoked.has(rowKey(r)));
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-white pb-28">
+      <div className="max-w-md mx-auto px-4 pt-6">
+        <div className="flex items-center gap-3 mb-6">
+          <button onClick={onBack} aria-label="Back" className="p-2 -ms-2 hover:bg-white/5 rounded-xl transition-colors">
+            <ArrowLeft className="w-5 h-5 text-slate-400" />
+          </button>
+          <div>
+            <h1 className="text-lg font-bold">Token Approvals</h1>
+            <p className="text-[11px] text-slate-500">{chain.name} · {shortAddr(wallet.address)}</p>
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+          These contracts can spend your tokens. Revoke any you don&apos;t recognize or no
+          longer use — especially <span className="text-amber-400 font-semibold">Unlimited</span> grants.
+        </p>
+
+        {rows === null && (
+          <div className="py-12 text-center text-sm text-slate-400">Scanning on-chain approvals…</div>
+        )}
+        {error && (
+          <div className="rounded-xl border border-red-500/40 bg-red-500/5 px-3 py-2.5 text-xs text-red-200 mb-4">{error}</div>
+        )}
+        {rows !== null && visible.length === 0 && !error && (
+          <div className="py-12 text-center">
+            <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+              <Shield className="w-6 h-6 text-emerald-400" />
+            </div>
+            <p className="text-sm text-white font-medium">No open approvals</p>
+            <p className="text-xs text-slate-500 mt-1">This wallet has no active token spending permissions on {chain.name}.</p>
+          </div>
+        )}
+
+        <div className="space-y-2.5">
+          {visible.map((r) => {
+            const k = rowKey(r);
+            return (
+              <div key={k} className="nl-glass rounded-2xl p-3.5" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.18)' }}>
+                <div className="flex items-center gap-3">
+                  {r.logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={r.logo} alt="" className="w-9 h-9 rounded-full shrink-0" />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center shrink-0 text-[11px] font-bold text-slate-300">
+                      {r.symbol.slice(0, 3)}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{r.symbol} <span className="text-slate-500 font-normal">· {r.name}</span></p>
+                    <p className="text-[11px] text-slate-500 truncate">Spender {shortAddr(r.spender)}</p>
+                  </div>
+                  <button
+                    onClick={() => { setPwModal(r); setPassword(''); setPwError(''); }}
+                    disabled={revoking === k}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-red-300 bg-red-500/15 border border-red-500/30 hover:bg-red-500/25 disabled:opacity-50 transition-colors shrink-0"
+                  >
+                    {revoking === k ? 'Revoking…' : 'Revoke'}
+                  </button>
+                </div>
+                <div className="mt-2.5 flex items-center gap-2">
+                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-semibold ${r.unlimited ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30' : 'bg-slate-800 text-slate-400'}`}>
+                    Allowance: {r.allowanceDisplay}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Password confirm modal — revoke signs with the wallet's own key. */}
+      {pwModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => setPwModal(null)} />
+          <div className="relative w-full max-w-[340px] mx-4 nl-glass/50 rounded-2xl p-5 shadow-2xl" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.3)' }}>
+            <h3 className="text-sm font-bold mb-1 text-white">Revoke {pwModal.symbol} approval</h3>
+            <p className="text-xs text-slate-400 mb-4">Sends an on-chain transaction (network fee applies). Enter your wallet password to sign.</p>
+            <input
+              type="password"
+              value={password}
+              autoFocus
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void doRevoke(); }}
+              placeholder="Wallet password"
+              className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0066FF]/50 mb-2"
+            />
+            {pwError && <p className="text-xs text-red-400 mb-2">{pwError}</p>}
+            <div className="flex gap-2 mt-2">
+              <button onClick={() => setPwModal(null)} className="flex-1 py-2.5 bg-slate-800 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-700 transition-colors">Cancel</button>
+              <button onClick={() => void doRevoke()} className="flex-1 py-2.5 bg-red-500/20 text-red-300 rounded-xl text-xs font-semibold hover:bg-red-500/30 transition-colors border border-red-500/20">Revoke</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
