@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 // Naka Labs brand icons — Pause, Play, Plus, Shield, Trash2 swapped.
 // Loader2 + Power stay on lucide (no brand equivalent yet).
@@ -65,6 +66,57 @@ export default function CopyTradingPage() {
   const [tab, setTab] = useState<"rules" | "trades">("rules");
   const [showNewRule, setShowNewRule] = useState(false);
 
+  // #9/#10 — one-click confirm from an alerts-only Telegram deep-link. The
+  // matcher links here with action/whale/token/symbol/chain/tx/amount; when
+  // those params are present we surface a confirm card that POSTs the existing
+  // /api/copy-trading/execute route (tier gate + security + atomic cap inside).
+  const sp = useSearchParams();
+  const router = useRouter();
+  const deepLink = sp.get("tx") && sp.get("whale") && sp.get("token") && sp.get("chain") && sp.get("action")
+    ? {
+        action: sp.get("action") as "buy" | "sell",
+        whale: sp.get("whale")!,
+        token: sp.get("token")!,
+        symbol: sp.get("symbol") || null,
+        chain: sp.get("chain")!,
+        tx: sp.get("tx")!,
+        amount: parseFloat(sp.get("amount") || "0") || 0,
+      }
+    : null;
+  const [copying, setCopying] = useState(false);
+
+  async function confirmCopy() {
+    if (!deepLink) return;
+    setCopying(true);
+    try {
+      const res = await fetch("/api/copy-trading/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Idempotency-Key": deepLink.tx },
+        body: JSON.stringify({
+          source_whale: deepLink.whale,
+          source_tx_hash: deepLink.tx,
+          chain: deepLink.chain,
+          token_address: deepLink.token,
+          token_symbol: deepLink.symbol,
+          action: deepLink.action,
+          amount_usd: deepLink.action === "buy" ? deepLink.amount : 0,
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) {
+        toast.success("Copy trade submitted — confirm it in your wallet.");
+        router.replace("/dashboard/copy-trading");
+        load();
+      } else {
+        toast.error(body?.error === "No active copy rule"
+          ? "Set up a copy rule for this whale first."
+          : body?.error || "Copy failed");
+      }
+    } finally {
+      setCopying(false);
+    }
+  }
+
   // PDF S3 — preserve tab (rules / trades) across copy-trading →
   // rule detail → back.
   useNavState(
@@ -127,6 +179,32 @@ export default function CopyTradingPage() {
   return (
     <div className="min-h-screen text-white pb-20">
       <div className="max-w-5xl mx-auto px-4 py-6">
+        {deepLink && (
+          <div className="nl-glass rounded-2xl p-4 mb-6 flex items-center justify-between gap-4 flex-wrap">
+            <div className="min-w-0">
+              <div className="text-sm font-bold text-white">
+                Copy this {deepLink.action === "buy" ? "buy" : "sell"} of{" "}
+                <span className="text-[#6F7EFF]">{deepLink.symbol ? `$${deepLink.symbol}` : "token"}</span>?
+              </div>
+              <div className="text-[11px] text-slate-400 mt-0.5 font-mono truncate">
+                {deepLink.whale.slice(0, 6)}…{deepLink.whale.slice(-4)} · {deepLink.chain}
+                {deepLink.action === "buy" && deepLink.amount > 0 ? ` · ~$${deepLink.amount.toLocaleString()}` : ""}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => router.replace("/dashboard/copy-trading")}
+                className="px-3 py-1.5 text-xs rounded-lg text-slate-400 hover:text-white"
+              >
+                Dismiss
+              </button>
+              <button type="button" onClick={confirmCopy} disabled={copying} className="nl-btn-neon !px-4 !py-2 !text-xs">
+                {copying && <Loader2 size={12} className="animate-spin" />} Confirm copy
+              </button>
+            </div>
+          </div>
+        )}
         <div className="flex items-start justify-between gap-3 mb-6">
           <div>
             <h1 className="text-2xl font-bold">Copy Trading</h1>

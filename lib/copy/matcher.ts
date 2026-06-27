@@ -232,9 +232,12 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
           `\nSize you'd copy: $${sizeUsd.toFixed(2)}\nTap to confirm.`,
         url:
           `/dashboard/copy-trading?action=${isSell ? "sell" : "buy"}` +
+          `&whale=${encodeURIComponent(event.whale_address)}` +
           `&token=${encodeURIComponent(event.token_address)}` +
+          `&symbol=${encodeURIComponent(event.token_symbol ?? "")}` +
           `&chain=${encodeURIComponent(event.chain)}` +
-          `&tx=${encodeURIComponent(event.tx_hash)}`,
+          `&tx=${encodeURIComponent(event.tx_hash)}` +
+          `&amount=${isSell ? "" : sizeUsd}`,
       });
       if (!isSell) spentMap.set(rule.user_id, spentToday + sizeUsd);
       out.alerted++;
