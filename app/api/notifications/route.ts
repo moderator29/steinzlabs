@@ -151,8 +151,12 @@ async function fetchSupabaseNotifications(userId?: string): Promise<Notification
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId') || undefined;
+    // Security (IDOR fix): derive the user from the authenticated session.
+    // Previously this trusted a client-supplied ?userId and read it back with
+    // the service role, so anyone could enumerate any user's notifications.
+    const guard = await guardRoute(req, { rate: 'med', allowAnon: true });
+    if (!guard.ok) return guard.response;
+    const userId = guard.user?.id;
     let supabaseNotifications: NotificationItem[] = [];
     if (userId) supabaseNotifications = await fetchSupabaseNotifications(userId);
 
@@ -161,7 +165,8 @@ export async function GET(req: NextRequest) {
         ? [...supabaseNotifications, ...cache.data].slice(0, 50)
         : cache.data;
       return NextResponse.json({ notifications: merged, source: supabaseNotifications.length > 0 ? 'supabase+market' : 'cache' }, {
-        headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60' },
+        // Per-user data must never sit in a shared cache.
+        headers: { 'Cache-Control': supabaseNotifications.length > 0 ? 'private, no-store' : 'public, s-maxage=30, stale-while-revalidate=60' },
       });
     }
 
@@ -182,7 +187,7 @@ export async function GET(req: NextRequest) {
       : marketNotifications;
 
     return NextResponse.json({ notifications, source: supabaseNotifications.length > 0 ? 'supabase+market' : 'market' }, {
-      headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60' },
+      headers: { 'Cache-Control': supabaseNotifications.length > 0 ? 'private, no-store' : 'public, s-maxage=30, stale-while-revalidate=60' },
     });
   } catch {
     return NextResponse.json({ notifications: [], error: 'Failed to fetch notifications' }, { status: 500 });
