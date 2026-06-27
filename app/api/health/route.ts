@@ -14,6 +14,7 @@ interface HealthResponse {
     JWT_SECRET: boolean;
     ANTHROPIC_API_KEY: boolean;
     NEXT_PUBLIC_SITE_URL: string;
+    NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: boolean;
     VERCEL_URL: string;
     NODE_ENV: string;
   };
@@ -85,6 +86,7 @@ export async function GET() {
     JWT_SECRET: !!process.env.JWT_SECRET,
     ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY,
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || '(not set)',
+    NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: !!process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,
     VERCEL_URL: process.env.VERCEL_URL || '(not set)',
     NODE_ENV: process.env.NODE_ENV || '(not set)',
   };

@@ -12,13 +12,15 @@ import {
 } from '@/components/icons/brand';
 import {
   ArrowLeft, RotateCcw, Key, Globe, Layers, ArrowUpRight, ArrowDownLeft,
-  Repeat, DollarSign, QrCode, ShoppingCart, Zap,
+  Repeat, DollarSign, QrCode, ShoppingCart, Zap, Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 import BackButton from '@/components/ui/BackButton';
 import SteinzLogo from '@/components/SteinzLogo';
 import { notifyWalletCreated, notifyWalletImported, notifySeedBackupReminder } from '@/lib/notifications';
 import { WalletTokenRow } from '@/components/wallet/WalletTokenRow';
+import { WatchlistTab } from '@/components/wallet/WatchlistTab';
+import { ScanQrModal } from '@/components/wallet/ScanQrModal';
 import { NftTab } from '@/components/wallet/NftTab';
 // Audit B4 — shared AES-GCM crypto, lifted from this file so the new
 // UnlockWalletModal can verify a typed password without duplicating
@@ -239,7 +241,9 @@ export default function WalletPage() {
   useFeatureUsageLog('wallet');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token' | 'add-network' | 'wallet-settings'>('main');
+  const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token' | 'add-network' | 'wallet-settings' | 'customize'>('main');
+  // Per-user hidden tokens (Manage/Customize). Token key = chain:contract|symbol.
+  const [hiddenTokens, setHiddenTokens] = useState<Set<string>>(new Set());
   const [wallets, setWallets] = useState<StoredWallet[]>([]);
   // Bug §5.1 — without this flag the empty-state "Create Wallet" CTA renders
   // on first paint for ~500ms even when localStorage has wallets, because the
@@ -263,7 +267,7 @@ export default function WalletPage() {
   const [activeChain, setActiveChain] = useState<ChainInfo>(SOLANA_CHAIN);
   const [multiChainBalances, setMultiChainBalances] = useState<Record<string, WalletData | null>>({});
   const [multiChainLoading, setMultiChainLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'crypto' | 'nfts' | 'activity'>('crypto');
+  const [activeTab, setActiveTab] = useState<'crypto' | 'watchlist' | 'nfts' | 'activity'>('crypto');
   const [hideBalance, setHideBalance] = useState(false);
   const [hideSmallBalances, setHideSmallBalances] = useState(false);
   const [tokenSort, setTokenSort] = useState<'value' | 'name' | 'balance'>('value');
@@ -353,7 +357,6 @@ export default function WalletPage() {
     // still remove them via the Add Token view if they choose to.
     const DEFAULT_TOKENS = [
       'ethereum:0x6967b9a8c0b14849CFE8f9E5732B401433fD2898', // Naka Go
-      'polygon:0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19',  // Pleasure Coin
     ];
     const stored = localStorage.getItem('steinz_custom_tokens');
     const parsed: string[] = stored ? JSON.parse(stored) : [];
@@ -556,6 +559,14 @@ export default function WalletPage() {
       window.history.replaceState({}, '', url.toString());
     } catch { /* SSR — ignore */ }
   }, [searchParams]);
+
+  // Load hidden tokens (Manage/Customize) from localStorage on mount.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('steinz_hidden_tokens');
+      if (raw) setHiddenTokens(new Set(JSON.parse(raw)));
+    } catch { /* ignore */ }
+  }, []);
 
   // Hydrate custom-token metadata (Naka Go, Pleasure Coin, anything the
   // user added). Each entry is "<chain>:<contract>"; we call
@@ -800,6 +811,21 @@ export default function WalletPage() {
     { id: 'bnb', label: 'BSC' },
   ];
 
+  // Stable token identity for hidden/customize (chain-aware, matches the IIFE).
+  const tokenKeyOf = (chain: string, contractAddress: string | null | undefined, symbol: string) =>
+    `${chain}:${contractAddress ? normalizeAddress(contractAddress, chain) : symbol.toLowerCase()}`;
+  const isHidden = (t: { chain: string; contractAddress?: string | null; symbol: string }) =>
+    hiddenTokens.has(tokenKeyOf(t.chain, t.contractAddress, t.symbol));
+  const toggleHiddenToken = (t: { chain: string; contractAddress?: string | null; symbol: string }) => {
+    const key = tokenKeyOf(t.chain, t.contractAddress, t.symbol);
+    setHiddenTokens((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      try { localStorage.setItem('steinz_hidden_tokens', JSON.stringify(Array.from(next))); } catch { /* ignore */ }
+      return next;
+    });
+  };
+
   const allHoldings = (() => {
     // Base holdings from the on-chain balance fetch, plus every
     // hydrated custom token (Naka Go, Pleasure Coin, user adds).
@@ -893,6 +919,16 @@ export default function WalletPage() {
     if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
     return `${Math.floor(diff / 86400000)}d ago`;
   };
+
+  if (view === 'customize') return (
+    <CustomizeTokensView
+      onBack={() => setView('main')}
+      tokens={allHoldings}
+      isHidden={isHidden}
+      onToggle={toggleHiddenToken}
+      onAddToken={() => setView('add-token')}
+    />
+  );
 
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-28">
@@ -1052,15 +1088,16 @@ export default function WalletPage() {
                   key={btn.label}
                   onClick={btn.action}
                   disabled={!btn.enabled}
-                  className={`flex flex-col items-center justify-center gap-2 rounded-xl border min-h-[80px] p-3 transition-all duration-200 ${
+                  style={btn.enabled ? { boxShadow: '0 0 0 1px rgba(0,102,255,.45), 0 0 16px rgba(0,102,255,.2)' } : undefined}
+                  className={`nl-glass flex flex-col items-center justify-center gap-2 rounded-2xl min-h-[80px] p-3 transition-all duration-200 ${
                     btn.enabled
-                      ? 'bg-slate-900/80 border-slate-800 hover:bg-slate-800 hover:-translate-y-0.5 hover:border-blue-500/30 hover:shadow-[0_8px_30px_rgba(59,130,246,0.12)] active:scale-95'
-                      : 'bg-slate-900/40 border-slate-800/40 opacity-40 cursor-not-allowed'
+                      ? 'hover:-translate-y-0.5 active:scale-95'
+                      : 'opacity-40 cursor-not-allowed'
                   }`}
                 >
                   <div style={{ color: btn.enabled ? btn.color : '#64748b' }}>{btn.icon}</div>
-                  <span className="text-xs font-medium text-slate-300">{btn.label}</span>
-                  {!btn.enabled && <span className="text-[8px] text-slate-600 -mt-1">Soon</span>}
+                  <span className="text-xs font-semibold text-white">{btn.label}</span>
+                  {!btn.enabled && <span className="text-[8px] text-slate-500 -mt-1">Soon</span>}
                 </button>
               ))}
             </div>
@@ -1071,10 +1108,13 @@ export default function WalletPage() {
                 <button
                   key={p.id}
                   onClick={() => { setChainFilter(p.id); if (p.id !== 'all') { const c = SUPPORTED_CHAINS.find(c => c.id === p.id); if (c) setActiveChain(c); } }}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap border transition-all ${
+                  style={chainFilter === p.id
+                    ? { background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 14px rgba(0,102,255,.5), inset 0 1px 0 rgba(255,255,255,.2)' }
+                    : { boxShadow: '0 0 0 1px rgba(0,102,255,.15)' }}
+                  className={`px-3 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all ${
                     chainFilter === p.id
-                      ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
-                      : 'bg-slate-900/50 text-slate-400 border-slate-800/60 hover:bg-slate-800 hover:text-slate-300'
+                      ? 'text-white nl-glass'
+                      : 'bg-white/[0.03] text-slate-400 hover:text-white'
                   }`}
                 >
                   {p.label}
@@ -1125,6 +1165,7 @@ export default function WalletPage() {
             <div className="flex items-center gap-1 mb-3 rounded-xl nl-glass/50 p-1" role="tablist" aria-label="Wallet content">
               {([
                 { id: 'crypto' as const, label: 'Holdings' },
+                { id: 'watchlist' as const, label: 'Watchlist' },
                 { id: 'nfts' as const, label: 'NFTs' },
                 { id: 'activity' as const, label: 'Activity' },
               ]).map((t) => (
@@ -1135,16 +1176,21 @@ export default function WalletPage() {
                   aria-controls={`wallet-panel-${t.id}`}
                   id={`wallet-tab-${t.id}`}
                   onClick={() => setActiveTab(t.id)}
+                  style={activeTab === t.id ? { background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 14px rgba(0,102,255,.5), inset 0 1px 0 rgba(255,255,255,.2)' } : undefined}
                   className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${
-                    activeTab === t.id
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-300 hover:text-white'
+                    activeTab === t.id ? 'text-white' : 'text-slate-300 hover:text-white'
                   }`}
                 >
                   {t.label}
                 </button>
               ))}
             </div>
+
+            {activeTab === 'watchlist' && (
+              <div role="tabpanel" id="wallet-panel-watchlist" aria-labelledby="wallet-tab-watchlist" className="mb-6">
+                <WatchlistTab />
+              </div>
+            )}
 
             {activeTab === 'nfts' && activeWallet && (
               <div
@@ -1182,8 +1228,8 @@ export default function WalletPage() {
                     <div key={i} className="h-[64px] bg-slate-900/30 my-1 rounded-xl animate-pulse" />
                   ))}
                 </>
-              ) : allHoldings.length > 0 ? (
-                allHoldings.map((token, i) => {
+              ) : allHoldings.filter((t) => !isHidden(t)).length > 0 ? (
+                allHoldings.filter((t) => !isHidden(t)).map((token, i) => {
                   // Logo resolution order: native-symbol map (ETH/SOL/…), then
                   // per-token logo the hydrator pulled from CoinGecko (gives
                   // Naka Go / Pleasure Coin their real branded icons), then
@@ -1225,25 +1271,18 @@ export default function WalletPage() {
                   );
                 })
               ) : (
-                <div className="py-12 text-center">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-slate-900 rounded-2xl flex items-center justify-center border border-slate-800">
-                    <Wallet className="w-8 h-8 text-slate-600" />
-                  </div>
-                  <p className="text-slate-300 font-semibold mb-1">No assets yet</p>
-                  <p className="text-slate-500 text-sm mb-4">Your Naka Wallet is ready. Add funds to get started.</p>
-                  <div className="flex gap-2 justify-center">
-                    <button onClick={() => setView('receive')} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold transition-colors">Receive</button>
-                    <button disabled className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm font-semibold text-slate-400 opacity-60">Buy (soon)</button>
-                  </div>
-                </div>
+                <FundWalletEmpty onFund={() => setView('receive')} onManage={() => setView('customize')} />
               )}
 
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => setView('add-network')} className="py-3 border border-dashed border-slate-800 rounded-xl text-xs text-slate-500 hover:text-slate-300 hover:border-slate-700 flex items-center justify-center gap-2 transition-all">
-                  <Plus className="w-3.5 h-3.5" /> Add Network
+              <div className="grid grid-cols-3 gap-2">
+                <button onClick={() => setView('add-network')} className="nl-glass py-3 rounded-xl text-[11px] text-slate-200 hover:-translate-y-px flex items-center justify-center gap-1.5 transition-all" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}>
+                  <Plus className="w-3.5 h-3.5 text-blue-300" /> Network
                 </button>
-                <button onClick={() => setView('add-token')} className="py-3 border border-dashed border-slate-800 rounded-xl text-xs text-slate-500 hover:text-slate-300 hover:border-slate-700 flex items-center justify-center gap-2 transition-all">
-                  <Plus className="w-3.5 h-3.5" /> Add Custom Token
+                <button onClick={() => setView('add-token')} className="nl-glass py-3 rounded-xl text-[11px] text-slate-200 hover:-translate-y-px flex items-center justify-center gap-1.5 transition-all" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}>
+                  <Plus className="w-3.5 h-3.5 text-blue-300" /> Add Token
+                </button>
+                <button onClick={() => setView('customize')} className="nl-glass py-3 rounded-xl text-[11px] text-slate-200 hover:-translate-y-px flex items-center justify-center gap-1.5 transition-all" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}>
+                  <Settings className="w-3.5 h-3.5 text-blue-300" /> Customize
                 </button>
               </div>
             </div>
@@ -1691,32 +1730,103 @@ function isValidAddressForChain(addr: string, chainId: string): boolean {
   return /^0x[a-fA-F0-9]{40}$/.test(addr);
 }
 
+// Native-asset CoinGecko id per chain — for the ≈USD amount preview.
+const NATIVE_CG_ID: Record<string, string> = {
+  ethereum: 'ethereum', base: 'ethereum', arbitrum: 'ethereum', optimism: 'ethereum',
+  polygon: 'matic-network', avalanche: 'avalanche-2', bnb: 'binancecoin', fantom: 'fantom',
+  solana: 'solana',
+};
+
+const SOLANA_RPC = process.env.NEXT_PUBLIC_ALCHEMY_SOLANA_RPC || 'https://api.mainnet-beta.solana.com';
+
+function shortAddr(a: string): string {
+  return a && a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a;
+}
+
+// Multi-step Send flow (Phantom/Trust pattern, Naka glass-blue style):
+//   form → confirm → password → processing → sent (with block-explorer link).
+// Hard-validates amount ≤ balance (incl. gas) before letting the user advance.
 function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: StoredWallet; chain: ChainInfo }) {
+  type Step = 'form' | 'confirm' | 'password' | 'processing' | 'sent';
+  const [step, setStep] = useState<Step>('form');
   const [to, setTo] = useState('');
   const [amount, setAmount] = useState('');
   const [password, setPassword] = useState('');
-  const [status, setStatus] = useState<'input' | 'estimating' | 'sending' | 'success' | 'error'>('input');
-  const [txHash, setTxHash] = useState('');
   const [error, setError] = useState('');
+  const [pwError, setPwError] = useState('');
   const [nativeBalance, setNativeBalance] = useState<string>('0');
+  const [nativeUsd, setNativeUsd] = useState<number | null>(null);
   const [gasEstimateEth, setGasEstimateEth] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState('');
+  const [txNonce, setTxNonce] = useState<number | null>(null);
+  const [ensAddr, setEnsAddr] = useState<string | null>(null);
+  const [ensLoading, setEnsLoading] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
 
-  // FIX 5A.1 / Phase 4: load native balance so the MAX button is meaningful and gas can be deducted.
+  // Native balance — powers MAX + the >balance guard.
   useEffect(() => {
-    if (chain.id === 'solana' || chain.id === 'bitcoin') return;
-    const rpc = CHAIN_RPC[chain.id];
-    if (!rpc) return;
+    if (chain.id === 'bitcoin') return;
+    let cancelled = false;
     (async () => {
       try {
+        if (chain.id === 'solana') {
+          const sol = wallet.solanaAddress;
+          if (!sol) return;
+          const web3 = await import('@solana/web3.js');
+          const conn = new web3.Connection(SOLANA_RPC, 'confirmed');
+          const lamports = await conn.getBalance(new web3.PublicKey(sol));
+          if (!cancelled) setNativeBalance((lamports / web3.LAMPORTS_PER_SOL).toString());
+          return;
+        }
+        const rpc = CHAIN_RPC[chain.id];
+        if (!rpc) return;
         const ethers = await import('ethers');
         const provider = new ethers.JsonRpcProvider(rpc);
         const bal = await provider.getBalance(wallet.address);
-        setNativeBalance(ethers.formatEther(bal));
-      } catch {
-        /* ignore */
-      }
+        if (!cancelled) setNativeBalance(ethers.formatEther(bal));
+      } catch { /* ignore */ }
     })();
-  }, [chain.id, wallet.address]);
+    return () => { cancelled = true; };
+  }, [chain.id, wallet.address, wallet.solanaAddress]);
+
+  // Native USD price for the ≈$ preview.
+  useEffect(() => {
+    const id = NATIVE_CG_ID[chain.id];
+    if (!id) return;
+    let cancelled = false;
+    fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelled && d?.[id]?.usd) setNativeUsd(d[id].usd); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [chain.id]);
+
+  // ENS resolution (.eth) — resolve to a 0x address on mainnet before send so
+  // users can send to a domain and never fat-finger a hex address.
+  const isEns = /\.eth$/i.test(to.trim());
+  useEffect(() => {
+    if (!isEns) { setEnsAddr(null); return; }
+    let cancelled = false;
+    setEnsLoading(true); setEnsAddr(null);
+    const t = setTimeout(async () => {
+      try {
+        const ethers = await import('ethers');
+        const provider = new ethers.JsonRpcProvider(CHAIN_RPC.ethereum);
+        const resolved = await provider.resolveName(to.trim());
+        if (!cancelled) setEnsAddr(resolved && /^0x[a-fA-F0-9]{40}$/.test(resolved) ? resolved : null);
+      } catch { if (!cancelled) setEnsAddr(null); }
+      finally { if (!cancelled) setEnsLoading(false); }
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [to, isEns]);
+
+  const recipient = (ensAddr || to).trim();
+  const amtNum = parseFloat(amount) || 0;
+  const balNum = parseFloat(nativeBalance) || 0;
+  const overBalance = amtNum > balNum;
+  const validAddr = isEns ? !!ensAddr : (!!to && isValidAddressForChain(to, chain.id));
+  const usdValue = nativeUsd != null && amtNum > 0 ? amtNum * nativeUsd : null;
+  const canProceed = validAddr && amtNum > 0 && !overBalance;
 
   const setMax = async () => {
     try {
@@ -1730,114 +1840,214 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
       const bal = ethers.parseEther(nativeBalance || '0');
       const max = bal > reserved ? bal - reserved : BigInt(0);
       setAmount(ethers.formatEther(max));
-    } catch {
-      setAmount(nativeBalance);
-    }
+    } catch { setAmount(nativeBalance); }
+  };
+
+  // Estimate gas, then advance to the confirm step.
+  const goConfirm = async () => {
+    if (!canProceed) return;
+    setError('');
+    try {
+      const ethers = await import('ethers');
+      const rpc = CHAIN_RPC[chain.id];
+      if (rpc) {
+        const provider = new ethers.JsonRpcProvider(rpc);
+        const feeData = await provider.getFeeData();
+        const gasPrice = feeData.gasPrice || feeData.maxFeePerGas || BigInt(0);
+        setGasEstimateEth(ethers.formatEther(gasPrice * BigInt(21000)));
+      }
+    } catch { /* fee preview is best-effort */ }
+    setStep('confirm');
   };
 
   const handleSend = async () => {
-    if (!to || !amount || !password) return;
-    if (!isValidAddressForChain(to, chain.id)) {
-      setError(`Recipient isn't a valid ${chain.name} address.`); setStatus('error'); return;
-    }
-    setStatus('sending'); setError('');
+    if (!password) { setPwError('Enter your wallet password.'); return; }
+    setPwError(''); setStep('processing');
     try {
       if (chain.id === 'solana') {
-        setError('Solana send requires the private key to be stored as a base58 keypair. This build supports EVM sends only; Solana send ships next.');
-        setStatus('error');
+        // Native SOL transfer. Needs the seed phrase to derive the signing
+        // keypair — raw-private-key imports have no Solana key.
+        if (!wallet.encryptedMnemonic) {
+          setPwError('Solana send needs a seed-phrase wallet (this wallet was imported by private key).');
+          setStep('password'); return;
+        }
+        const web3 = await import('@solana/web3.js');
+        const { deriveSolanaKeypair } = await import('@/lib/wallet/derive');
+        let mnemonic: string;
+        try { mnemonic = await decryptPrivateKey(wallet.encryptedMnemonic, password); }
+        catch { setPwError('Wrong wallet password.'); setStep('password'); return; }
+        const keypair = deriveSolanaKeypair(mnemonic);
+        const conn = new web3.Connection(SOLANA_RPC, 'confirmed');
+        const lamports = Math.round(parseFloat(amount) * web3.LAMPORTS_PER_SOL);
+        const tx = new web3.Transaction().add(web3.SystemProgram.transfer({
+          fromPubkey: keypair.publicKey,
+          toPubkey: new web3.PublicKey(recipient),
+          lamports,
+        }));
+        const sig = await web3.sendAndConfirmTransaction(conn, tx, [keypair], { commitment: 'confirmed' });
+        setTxHash(sig);
+        setStep('sent');
         return;
       }
       const rpc = CHAIN_RPC[chain.id];
-      if (!rpc) { setError(`${chain.name} send not supported yet.`); setStatus('error'); return; }
+      if (!rpc) { setError(`${chain.name} send not supported yet.`); setStep('confirm'); return; }
       const ethers = await import('ethers');
       const decryptedKey = await decryptPrivateKey(wallet.encryptedKey, password);
       const provider = new ethers.JsonRpcProvider(rpc);
       const signer = new ethers.Wallet(decryptedKey, provider);
-
-      // Gas estimate prior to sending — surfaces clear errors instead of generic "Transaction failed".
       const value = ethers.parseEther(amount);
-      const feeData = await provider.getFeeData();
-      const gasLimit = BigInt(21000);
-      const gasPrice = feeData.gasPrice || feeData.maxFeePerGas || BigInt(0);
-      setGasEstimateEth(ethers.formatEther(gasPrice * gasLimit));
-
-      const tx = await signer.sendTransaction({ to, value, gasLimit });
-      setTxHash(tx.hash); setStatus('success');
+      const tx = await signer.sendTransaction({ to: recipient, value, gasLimit: BigInt(21000) });
+      setTxHash(tx.hash);
+      setTxNonce(tx.nonce);
+      setStep('sent');
     } catch (e: any) {
       const msg = (e?.shortMessage || e?.message || 'Transaction failed') as string;
-      if (/decrypt|password|bad key/i.test(msg)) setError('Wrong wallet password.');
-      else if (/insufficient/i.test(msg)) setError('Insufficient balance for amount + gas.');
+      if (/decrypt|password|bad key/i.test(msg)) { setPwError('Wrong wallet password.'); setStep('password'); return; }
+      if (/insufficient/i.test(msg)) setError('Insufficient balance for amount + gas.');
       else setError(msg.slice(0, 200));
-      setStatus('error');
+      setStep('confirm');
     }
   };
+
+  const Card = ({ children }: { children: React.ReactNode }) => (
+    <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}>{children}</div>
+  );
+  const fieldCls = 'w-full nl-glass rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none';
+  const fieldStyle = { boxShadow: '0 0 0 1px rgba(0,102,255,.22)' } as const;
+  const primaryStyle = { background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 18px rgba(0,102,255,.5), inset 0 1px 0 rgba(255,255,255,.2)' } as const;
 
   return (
     <div className="min-h-screen text-white pb-24">
       <div className="px-4 pt-6 max-w-lg mx-auto">
-        <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-xs mb-6 hover:text-white">
-          <ArrowLeft className="w-4 h-4" /> Back
+        <button
+          onClick={() => (step === 'form' || step === 'sent' ? onBack() : setStep(step === 'password' ? 'confirm' : 'form'))}
+          className="flex items-center gap-2 text-gray-400 text-xs mb-6 hover:text-white"
+        >
+          <ArrowLeft className="w-4 h-4" /> {step === 'form' || step === 'sent' ? 'Back' : 'Back'}
         </button>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${chain.color}15`, border: `1px solid ${chain.color}25` }}>
-            <ArrowUpRight className="w-5 h-5" style={{ color: chain.color }} />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF 60%,#1233AE)', boxShadow: '0 0 14px rgba(0,102,255,.5)' }}>
+            <ArrowUpRight className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-heading font-bold">Send {chain.symbol}</h1>
+            <h1 className="text-xl font-heading font-bold">
+              {step === 'confirm' ? 'Confirm send' : step === 'sent' ? `${chain.symbol} Sent` : `Send ${chain.symbol}`}
+            </h1>
             <p className="text-gray-400 text-xs">on {chain.name}</p>
           </div>
         </div>
 
-        {status === 'success' ? (
-          <div className="text-center py-8">
-            <div className="w-20 h-20 bg-[#10B981]/10 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-[#10B981]/20">
-              <Check className="w-10 h-10 text-[#10B981]" />
-            </div>
-            <h2 className="text-xl font-bold mb-2">Transaction Sent!</h2>
-            <p className="text-gray-400 text-sm mb-4">{amount} {chain.symbol} sent successfully</p>
-            <a href={`${chain.explorerUrl}/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="text-[#0066FF] text-xs underline flex items-center justify-center gap-1">
-              View on {chain.explorerName} <ExternalLink className="w-3 h-3" />
-            </a>
-            <button onClick={onBack} className="w-full mt-6 py-3 bg-[#111827] border border-white/10 rounded-xl text-sm font-semibold">Done</button>
-          </div>
-        ) : (
+        {/* STEP 1 — recipient + amount */}
+        {step === 'form' && (
           <div className="space-y-4">
             <div>
-              <label className="text-xs text-gray-400 mb-1.5 block font-medium">Recipient Address</label>
-              <input
-                value={to}
-                onChange={e => setTo(e.target.value)}
-                className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0066FF]/50"
-                placeholder={chain.id === 'solana' ? 'Solana address...' : '0x...'}
-              />
-              {/* FIX 5A.1 / Phase 4: inline address-validity feedback. */}
-              {to && !isValidAddressForChain(to, chain.id) && (
-                <p className="text-[11px] text-[#F59E0B] mt-1.5">Not a valid {chain.name} address format.</p>
-              )}
+              <label className="text-xs text-gray-400 mb-1.5 block font-medium">Address or Domain Name</label>
+              <div className="relative">
+                <input value={to} onChange={e => setTo(e.target.value)} className={`${fieldCls} font-mono pe-24`} style={fieldStyle} placeholder={chain.id === 'solana' ? 'Solana address…' : '0x… or name.eth'} />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  <button type="button" onClick={async () => { try { const t = await navigator.clipboard.readText(); if (t) setTo(t.trim()); } catch { /* denied */ } }} className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] font-semibold text-blue-300 border border-white/10">Paste</button>
+                  <button type="button" onClick={() => setScanOpen(true)} aria-label="Scan QR" className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-blue-300 border border-white/10"><QrCode className="w-4 h-4" /></button>
+                </div>
+              </div>
+              {scanOpen && <ScanQrModal onResult={(a) => { setTo(a); setScanOpen(false); }} onClose={() => setScanOpen(false)} />}
+              {isEns && ensLoading && <p className="text-[11px] text-slate-500 mt-1.5">Resolving {to.trim()}…</p>}
+              {isEns && !ensLoading && ensAddr && <p className="text-[11px] text-emerald-400 mt-1.5 font-mono">→ {shortAddr(ensAddr)}</p>}
+              {isEns && !ensLoading && !ensAddr && <p className="text-[11px] text-[#F59E0B] mt-1.5">Couldn&apos;t resolve that name.</p>}
+              {!isEns && to && !validAddr && <p className="text-[11px] text-[#F59E0B] mt-1.5">Not a valid {chain.name} address.</p>}
             </div>
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs text-gray-400 font-medium">Amount ({chain.symbol})</label>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-slate-500">Balance: {parseFloat(nativeBalance || '0').toFixed(6)}</span>
-                  {/* FIX 5A.1 / Phase 4: MAX button — was missing. Reserves gas for EVM chains. */}
+                  <span className="text-[10px] text-slate-500">Balance: {balNum.toFixed(6)}</span>
                   <button type="button" onClick={setMax} className="text-[10px] font-bold text-[#0066FF] hover:text-[#3B4EFF]">MAX</button>
                 </div>
               </div>
-              <input type="number" value={amount} onChange={e => setAmount(e.target.value)} step="0.001" className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#0066FF]/50" placeholder="0.01" />
-              {gasEstimateEth && (
-                <p className="text-[10px] text-slate-500 mt-1.5">Est. gas: {parseFloat(gasEstimateEth).toFixed(6)} {chain.symbol}</p>
-              )}
+              <input type="number" value={amount} onChange={e => setAmount(e.target.value)} step="0.001" className={`${fieldCls} font-mono`} style={fieldStyle} placeholder="0.01" />
+              <div className="flex items-center justify-between mt-1.5">
+                <span className="text-[11px] text-slate-500">{usdValue != null ? `≈ $${usdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : ''}</span>
+                {overBalance && <span className="text-[11px] font-semibold text-[#EF4444]">Amount exceeds your balance</span>}
+              </div>
             </div>
+            <button onClick={goConfirm} disabled={!canProceed} style={canProceed ? primaryStyle : undefined} className="w-full py-3.5 rounded-2xl font-bold text-sm disabled:opacity-40 disabled:bg-white/[0.05]">
+              Next
+            </button>
+          </div>
+        )}
+
+        {/* STEP 2 — confirm */}
+        {step === 'confirm' && (
+          <div className="space-y-3">
+            <Card>
+              <div className="text-2xl font-bold">{usdValue != null ? `$${usdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : `${amount} ${chain.symbol}`}</div>
+              <div className="text-sm text-slate-400 font-mono">{amount} {chain.symbol}</div>
+            </Card>
+            <Card>
+              <div className="space-y-2.5 text-sm">
+                <div className="flex justify-between"><span className="text-slate-400">From</span><span className="font-mono">{shortAddr(wallet.address)}</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">To</span><span className="font-mono">{shortAddr(recipient)}</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Network</span><span>{chain.name}</span></div>
+                {gasEstimateEth && <div className="flex justify-between"><span className="text-slate-400">Network fee</span><span className="font-mono">{parseFloat(gasEstimateEth).toFixed(6)} {chain.symbol}</span></div>}
+              </div>
+            </Card>
+            {error && <p className="text-xs text-[#EF4444] bg-[#EF4444]/5 p-3 rounded-xl border border-[#EF4444]/10">{error}</p>}
+            <button onClick={() => setStep('password')} style={primaryStyle} className="w-full py-3.5 rounded-2xl font-bold text-sm">Continue</button>
+          </div>
+        )}
+
+        {/* STEP 3 — password */}
+        {step === 'password' && (
+          <div className="space-y-4">
+            <Card>
+              <div className="text-sm text-slate-300">Sending <span className="font-semibold text-white">{amount} {chain.symbol}</span> to <span className="font-mono">{shortAddr(recipient)}</span></div>
+            </Card>
             <div>
               <label className="text-xs text-gray-400 mb-1.5 block font-medium">Wallet Password</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0066FF]/50" placeholder="Enter your wallet password" />
+              <input type="password" value={password} onChange={e => { setPassword(e.target.value); setPwError(''); }} className={fieldCls} style={fieldStyle} placeholder="Enter your wallet password" />
+              {pwError && <p className="text-[11px] font-semibold text-[#EF4444] mt-1.5">{pwError}</p>}
             </div>
-            {error && <p className="text-xs text-[#EF4444] bg-[#EF4444]/5 p-3 rounded-xl border border-[#EF4444]/10">{error}</p>}
-            <button onClick={handleSend} disabled={status === 'sending' || !to || !amount || !password} className="w-full py-3.5 bg-gradient-to-r from-[#0066FF] to-[#7C3AED] rounded-xl font-bold text-sm disabled:opacity-50">
-              {status === 'sending' ? 'Sending...' : 'Send Transaction'}
+            <button onClick={handleSend} disabled={!password} style={password ? primaryStyle : undefined} className="w-full py-3.5 rounded-2xl font-bold text-sm disabled:opacity-40 disabled:bg-white/[0.05]">
+              Confirm &amp; Send
             </button>
+          </div>
+        )}
+
+        {/* STEP 4 — processing */}
+        {step === 'processing' && (
+          <div className="text-center py-14">
+            <Loader2 className="w-12 h-12 text-[#0066FF] animate-spin mx-auto mb-4" />
+            <h2 className="text-lg font-bold mb-1">Processing transaction…</h2>
+            <p className="text-slate-400 text-sm">Broadcasting to {chain.name}. Don&apos;t close this screen.</p>
+          </div>
+        )}
+
+        {/* STEP 5 — sent / status */}
+        {step === 'sent' && (
+          <div className="space-y-3">
+            <div className="text-center py-2">
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-3" style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF 60%,#1233AE)', boxShadow: '0 0 18px rgba(0,102,255,.5)' }}>
+                <ArrowUpRight className="w-8 h-8 text-white" />
+              </div>
+              <div className="text-2xl font-bold">-{amount} {chain.symbol}</div>
+              {usdValue != null && <div className="text-sm text-slate-400">${usdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>}
+            </div>
+            <Card>
+              <div className="space-y-2.5 text-sm">
+                <div className="flex justify-between"><span className="text-slate-400">Status</span><span className="font-semibold text-[#F59E0B]">Pending</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Recipient</span><span className="font-mono">{shortAddr(recipient)}</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Network</span><span>{chain.name}</span></div>
+                {gasEstimateEth && <div className="flex justify-between"><span className="text-slate-400">Network fee</span><span className="font-mono">{parseFloat(gasEstimateEth).toFixed(6)} {chain.symbol}</span></div>}
+                <div className="flex justify-between"><span className="text-slate-400">Confirmations</span><span>--</span></div>
+                {txNonce != null && <div className="flex justify-between"><span className="text-slate-400">Nonce</span><span>{txNonce}</span></div>}
+              </div>
+            </Card>
+            {txHash && (
+              <a href={`${chain.explorerUrl}/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="nl-glass flex items-center justify-center gap-1.5 py-3 rounded-2xl text-[#8FA3FF] text-sm font-semibold" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.3)' }}>
+                View on block explorer <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
+            <button onClick={onBack} className="w-full py-3.5 rounded-2xl font-bold text-sm nl-glass" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}>Done</button>
           </div>
         )}
       </div>
@@ -2047,8 +2257,8 @@ function ReceiveView({
 
           <p className="text-gray-400 text-xs mb-3">Send {chain.symbol} or tokens to this address:</p>
 
-          <div className="bg-[#111827] border border-white/10 rounded-xl p-4 mb-4">
-            <p className="text-xs font-mono break-all text-[#0066FF]">{address}</p>
+          <div className="nl-glass rounded-xl p-4 mb-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.3)' }}>
+            <p className="text-xs font-mono break-all text-[#8FA3FF]">{address}</p>
           </div>
 
           {/* Trust-Wallet-style 3-action row: Copy · Set Amount · Share. Each
@@ -2146,6 +2356,11 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
     level: string;
     reasons: string[];
   }>(null);
+  // On-chain token metadata auto-fetch (Trust "Import crypto" parity): when a
+  // valid contract is entered, resolve real name/symbol/decimals + logo so the
+  // user sees exactly what they're importing before confirming.
+  const [meta, setMeta] = useState<null | { symbol: string; name: string; decimals: number; logo: string | null }>(null);
+  const [metaLoading, setMetaLoading] = useState(false);
 
   // Audit B4 / P1 #11 — paste affordance. Long contract addresses are
   // notoriously typo-prone; clipboard.readText (with permission) is the
@@ -2190,6 +2405,25 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
       setScanning(false);
     }
   };
+
+  // Auto-resolve token metadata on-chain when the address looks valid.
+  useEffect(() => {
+    const trimmed = address.trim();
+    const valid = isEvmChain(chain) ? /^0x[a-fA-F0-9]{40}$/.test(trimmed) : (chain === 'solana' && isSolanaAddress(trimmed));
+    if (!valid) { setMeta(null); return; }
+    let cancelled = false;
+    setMetaLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/swap/token-meta?chain=${encodeURIComponent(chain)}&address=${encodeURIComponent(trimmed)}`);
+        if (!res.ok) { if (!cancelled) setMeta(null); return; }
+        const d = await res.json();
+        if (!cancelled && typeof d.decimals === 'number') setMeta({ symbol: d.symbol, name: d.name, decimals: d.decimals, logo: d.logo ?? null });
+      } catch { if (!cancelled) setMeta(null); }
+      finally { if (!cancelled) setMetaLoading(false); }
+    }, 350);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [address, chain]);
 
   const handleAdd = async () => {
     // Chain-aware validation: EVM contracts are 0x + 40 hex, Solana is base58.
@@ -2275,6 +2509,22 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
               </button>
             </div>
           </div>
+          {/* Auto-resolved on-chain metadata (read-only) — Trust Import parity. */}
+          {metaLoading && <p className="text-[11px] text-slate-500">Resolving token on-chain…</p>}
+          {meta && (
+            <div className="nl-glass rounded-xl p-3 space-y-2" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}>
+              <div className="flex items-center gap-2.5">
+                {meta.logo
+                  // eslint-disable-next-line @next/next/no-img-element
+                  ? <img src={meta.logo} alt="" className="w-8 h-8 rounded-full" />
+                  : <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-[10px] font-bold">{meta.symbol.slice(0, 3)}</div>}
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-white truncate">{meta.name}</div>
+                  <div className="text-[11px] text-slate-400">{meta.symbol} · {meta.decimals} decimals</div>
+                </div>
+              </div>
+            </div>
+          )}
           {error && <p className="text-xs text-[#EF4444]">{error}</p>}
           {scanVerdict && (
             <div className={`rounded-xl border p-3 text-xs space-y-1 ${verdictClass}`}>
@@ -2335,6 +2585,128 @@ function ToggleSwitch({ on, onToggle }: { on: boolean; onToggle: () => void }) {
     <button onClick={onToggle} className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${on ? 'bg-blue-600' : 'bg-slate-700'}`}>
       <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
     </button>
+  );
+}
+
+// Fresh-wallet empty state — a floating 3D-ish cluster of real chain coins
+// (our own neon-glass vibe, not a Trust clone) + a prominent Fund CTA.
+function FundWalletEmpty({ onFund, onManage }: { onFund: () => void; onManage: () => void }) {
+  // Each coin: chain id (for ChainLogo), size, and an absolute position +
+  // rotation that gives the cluster depth. BTC/SOL/ETH lead, others orbit.
+  const coins: Array<{ id: string; size: number; top: string; left: string; rot: number; z: number }> = [
+    { id: 'ethereum', size: 64, top: '18%', left: '38%', rot: -8, z: 5 },
+    { id: 'solana', size: 50, top: '6%', left: '60%', rot: 10, z: 4 },
+    { id: 'bnb', size: 46, top: '40%', left: '62%', rot: 14, z: 3 },
+    { id: 'polygon', size: 44, top: '46%', left: '20%', rot: -14, z: 3 },
+    { id: 'base', size: 40, top: '12%', left: '14%', rot: 6, z: 2 },
+    { id: 'arbitrum', size: 38, top: '52%', left: '44%', rot: -4, z: 4 },
+  ];
+  return (
+    <div className="py-10 flex flex-col items-center text-center">
+      <div className="relative w-56 h-44 mb-2">
+        {coins.map((c) => {
+          const ci = SUPPORTED_CHAINS.find((x) => x.id === c.id);
+          if (!ci) return null;
+          return (
+          <div
+            key={c.id}
+            className="absolute rounded-full"
+            style={{
+              top: c.top, left: c.left, width: c.size, height: c.size, zIndex: c.z,
+              transform: `rotate(${c.rot}deg)`,
+              boxShadow: '0 10px 24px rgba(0,0,0,.45), 0 0 22px rgba(0,102,255,.35), inset 0 2px 6px rgba(255,255,255,.25)',
+              borderRadius: '9999px',
+              animation: `nlFloat 5s ease-in-out infinite`,
+              animationDelay: `${c.z * 0.25}s`,
+            }}
+          >
+            <ChainLogo chain={ci} size={c.size} />
+          </div>
+          );
+        })}
+        <style>{`@keyframes nlFloat{0%,100%{translate:0 0}50%{translate:0 -8px}}`}</style>
+      </div>
+      <p className="text-slate-300 font-semibold text-base mb-1">Add funds to get started</p>
+      <p className="text-slate-500 text-sm mb-5 max-w-xs">Receive crypto to your wallet — your address works across every EVM chain, plus Solana.</p>
+      <button
+        onClick={onFund}
+        className="w-full max-w-xs py-3.5 rounded-2xl font-bold text-white text-sm"
+        style={{ background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 22px rgba(0,102,255,.55), inset 0 1px 0 rgba(255,255,255,.22)' }}
+      >
+        Fund your wallet
+      </button>
+      <button onClick={onManage} className="mt-3 text-[13px] font-semibold text-[#8FA3FF] hover:text-white transition-colors">Manage crypto</button>
+    </div>
+  );
+}
+
+// Manage/Customize tokens (Trust "Manage crypto" parity): search + network
+// filter + per-token on/off toggle that actually hides/shows the asset on the
+// wallet home. Glass blue-stride styling.
+function CustomizeTokensView({ onBack, tokens, isHidden, onToggle, onAddToken }: {
+  onBack: () => void;
+  tokens: Array<{ symbol: string; name: string; contractAddress?: string | null; chain: string }>;
+  isHidden: (t: { chain: string; contractAddress?: string | null; symbol: string }) => boolean;
+  onToggle: (t: { chain: string; contractAddress?: string | null; symbol: string }) => void;
+  onAddToken: () => void;
+}) {
+  const [q, setQ] = useState('');
+  const [net, setNet] = useState('all');
+  const nets = Array.from(new Set(tokens.map((t) => t.chain)));
+  const filtered = tokens.filter((t) =>
+    (net === 'all' || t.chain === net) &&
+    (!q || t.symbol.toLowerCase().includes(q.toLowerCase()) || t.name.toLowerCase().includes(q.toLowerCase())),
+  );
+  return (
+    <div className="min-h-screen text-white pb-24">
+      <div className="px-4 pt-6 max-w-lg mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-xs hover:text-white">
+            <ArrowLeft className="w-4 h-4" /> Back
+          </button>
+          <button onClick={onAddToken} className="nl-glass inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4)' }}>
+            <Plus className="w-3.5 h-3.5 text-blue-300" /> Add Token
+          </button>
+        </div>
+        <h1 className="text-xl font-heading font-bold mb-4">Manage crypto</h1>
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search tokens…"
+          className="w-full nl-glass rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none mb-3"
+          style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}
+        />
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-2 mb-2">
+          {['all', ...nets].map((n) => (
+            <button
+              key={n}
+              onClick={() => setNet(n)}
+              style={net === n ? { background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 12px rgba(0,102,255,.5)' } : { boxShadow: '0 0 0 1px rgba(0,102,255,.15)' }}
+              className={`px-3 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap capitalize ${net === n ? 'text-white nl-glass' : 'bg-white/[0.03] text-slate-400'}`}
+            >
+              {n === 'all' ? 'All Networks' : n}
+            </button>
+          ))}
+        </div>
+        <div className="space-y-1.5">
+          {filtered.length === 0 ? (
+            <p className="text-sm text-slate-500 italic py-6 text-center">No tokens match.</p>
+          ) : filtered.map((t) => {
+            const on = !isHidden(t);
+            return (
+              <div key={`${t.chain}:${t.contractAddress || t.symbol}`} className="flex items-center gap-3 p-2.5 rounded-xl nl-glass" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.15)' }}>
+                <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-[11px] font-bold shrink-0">{t.symbol.slice(0, 3)}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold text-white truncate">{t.symbol} <span className="text-[10px] text-slate-500 font-medium capitalize">· {t.chain}</span></div>
+                  <div className="text-[11px] text-slate-400 truncate">{t.name}</div>
+                </div>
+                <ToggleSwitch on={on} onToggle={() => onToggle(t)} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 

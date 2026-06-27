@@ -61,6 +61,10 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
   const [chartLoading, setChartLoading] = useState(false);
   const [chartError, setChartError] = useState(false);
   const [chartReloadKey, setChartReloadKey] = useState(0);
+  // Real transaction history for the Activity tab (wired to /api/wallet/transactions).
+  interface WalletTx { tx_hash: string; tx_type: string; token_in: string | null; token_out: string | null; amount_in: number | null; amount_out: number | null; usd_value: number | null; timestamp: string }
+  const [txs, setTxs] = useState<WalletTx[] | null>(null);
+  const [txLoading, setTxLoading] = useState(false);
 
   const md = detail?.market_data;
   const price = md?.current_price?.usd ?? 0;
@@ -116,6 +120,26 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
 
   const chartData = chartPoints.length > 1 ? chartPoints : sparklineData;
 
+  // Load this token's transactions when the Activity tab opens.
+  useEffect(() => {
+    if (tab !== 'activity' || !takerAddress) return;
+    let cancelled = false;
+    setTxLoading(true);
+    fetch(`/api/wallet/transactions?address=${encodeURIComponent(takerAddress)}&chain=${encodeURIComponent(chain)}&limit=30`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { transactions?: WalletTx[] } | null) => {
+        if (cancelled) return;
+        const all = d?.transactions ?? [];
+        // Prefer txs that mention this token's symbol; fall back to all recent.
+        const sym = symbol.toUpperCase();
+        const mine = all.filter((t) => (t.token_in || '').toUpperCase() === sym || (t.token_out || '').toUpperCase() === sym);
+        setTxs(mine.length ? mine : all);
+      })
+      .catch(() => { if (!cancelled) setTxs([]); })
+      .finally(() => { if (!cancelled) setTxLoading(false); });
+    return () => { cancelled = true; };
+  }, [tab, takerAddress, chain, symbol]);
+
   return (
     <div className="min-h-screen text-white pb-24">
       {/* Header */}
@@ -129,18 +153,6 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
           <Star size={20} className={watched ? 'fill-emerald-400 text-emerald-400' : 'text-slate-500'} />
         </button>
       </div>
-
-      {/* Gas + stakers row — stakers pill only for ETH (real stakers count
-          is public: ETH2 has ~1M validators but the "45K stakers" line
-          from the Trust Wallet reference is their own DEX integration
-          and doesn't apply to generic tokens). Hide on non-ETH. */}
-      {symbol.toUpperCase() === 'ETH' && (
-        <div className="flex items-center justify-center gap-2 px-4 mb-2">
-          <div className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#A78BFA] bg-[#A78BFA]/15 px-2.5 py-1 rounded-full">
-            <span>👥</span> ETH staking active
-          </div>
-        </div>
-      )}
 
       {/* Price */}
       <div className="text-center py-6">
@@ -192,8 +204,9 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
           <button
             key={tf}
             onClick={() => setTimeframe(tf)}
-            className={`px-3 py-1.5 rounded-md font-semibold transition-colors ${
-              timeframe === tf ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-white'
+            style={timeframe === tf ? { background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 12px rgba(0,102,255,.5)' } : undefined}
+            className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${
+              timeframe === tf ? 'text-white' : 'text-slate-500 hover:text-white'
             }`}
           >
             {tf}
@@ -236,7 +249,35 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
           </div>
         )}
         {tab === 'activity' && (
-          <p className="text-sm text-slate-500">Your {symbol} activity on {chainLabel} will appear here once you transact.</p>
+          txLoading ? (
+            <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-12 rounded-xl bg-slate-900/40 animate-pulse" />)}</div>
+          ) : txs && txs.length > 0 ? (
+            <div className="space-y-1.5">
+              {txs.map((t) => {
+                const out = t.tx_type === 'send' || (t.token_out || '').toUpperCase() === symbol.toUpperCase();
+                const amt = out ? t.amount_out : t.amount_in;
+                const explorer = `https://${chain === 'ethereum' ? 'etherscan.io' : chain === 'bsc' ? 'bscscan.com' : chain === 'polygon' ? 'polygonscan.com' : chain === 'base' ? 'basescan.org' : chain === 'arbitrum' ? 'arbiscan.io' : chain === 'optimism' ? 'optimistic.etherscan.io' : chain === 'solana' ? 'solscan.io' : 'etherscan.io'}/tx/${t.tx_hash}`;
+                return (
+                  <a key={t.tx_hash} href={explorer} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-2.5 rounded-xl nl-glass" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.15)' }}>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: out ? 'rgba(239,68,68,.15)' : 'rgba(16,185,129,.15)' }}>
+                      {out ? <ArrowUpRight className="w-4 h-4 text-red-400" /> : <ArrowDownLeft className="w-4 h-4 text-emerald-400" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-white capitalize">{t.tx_type || 'transfer'}</div>
+                      <div className="text-[11px] text-slate-500">{new Date(t.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</div>
+                    </div>
+                    <div className="text-end">
+                      {amt != null && <div className="text-sm font-semibold tabular-nums text-white">{out ? '-' : '+'}{amt.toLocaleString(undefined, { maximumFractionDigits: 6 })}</div>}
+                      {t.usd_value != null && <div className="text-[11px] text-slate-500">{formatPrice(t.usd_value)}</div>}
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">No {symbol} activity on {chainLabel} yet.</p>
+          )
         )}
       </div>
 
@@ -291,11 +332,10 @@ function WalletAction({
     <button
       type="button"
       onClick={onClick}
-      className={`flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl transition-colors ${
-        primary
-          ? 'bg-[#0066FF] text-white shadow-[0_0_16px_rgba(0,102,255,0.35)] hover:bg-[#0818CC]'
-          : 'bg-slate-900/70 text-slate-300 hover:bg-slate-800'
-      }`}
+      style={primary
+        ? { background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 18px rgba(0,102,255,.5), inset 0 1px 0 rgba(255,255,255,.2)' }
+        : { boxShadow: '0 0 0 1px rgba(0,102,255,.3)' }}
+      className={`nl-glass flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl transition-transform hover:-translate-y-0.5 ${primary ? 'text-white' : 'text-slate-200'}`}
     >
       <div>{icon}</div>
       <span className="text-[10px] font-semibold">{label}</span>
