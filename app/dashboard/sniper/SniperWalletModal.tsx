@@ -167,8 +167,9 @@ export function SniperWalletModal({ userId, onClose, onConnected }: {
         </div>
 
         <p className="text-xs text-white/60 leading-relaxed mb-4">
-          The bot never holds your funds. We generate a throwaway session key in your browser and your wallet signs a
-          spend-capped, time-boxed authorization. Snipes execute within those limits and you can revoke anytime.
+          The bot never holds your funds or your main key. We set spend caps (max per trade + daily limit) and the sniper
+          pre-stages matched trades within those limits. You approve each fill in-app — you always sign your own trades,
+          and you can revoke anytime. Hands-off auto-signing arrives with the on-chain relayer upgrade.
         </p>
 
         {/* Chain */}

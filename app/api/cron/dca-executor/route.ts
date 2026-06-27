@@ -4,6 +4,8 @@ import { verifyCron, cronResponse } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getDexPrice } from "@/lib/services/dexscreener";
 import { executeTrade } from "@/lib/trading/relayer";
+import { usdcForChain } from "@/lib/trading/usdc";
+import { getEvmTokenDecimals } from "@/lib/sniper/priceFeed";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -106,15 +108,23 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Resolve a real from-token contract (older rows stored the literal "USDC"
+    // symbol, which aggregators reject) and scale the human amount to base units.
+    const dcaFromAddr = /^0x[a-fA-F0-9]{40}$/.test(bot.from_token_address)
+      ? bot.from_token_address
+      : (usdcForChain(bot.chain) ?? bot.from_token_address);
+    const dcaFromDecimals = await getEvmTokenDecimals(bot.chain, dcaFromAddr);
+    const dcaAmountInBase = (BigInt(Math.round(Number(bot.amount_per_execution) * 1e6)) * (BigInt(10) ** BigInt(dcaFromDecimals)) / BigInt(1e6)).toString();
+
     const result = await executeTrade({
       userId: bot.user_id,
       chain: bot.chain,
       walletSource: bot.wallet_source,
-      fromTokenAddress: bot.from_token_address,
+      fromTokenAddress: dcaFromAddr,
       fromTokenSymbol: bot.from_token_symbol,
       toTokenAddress: bot.to_token_address,
       toTokenSymbol: bot.to_token_symbol,
-      amountIn: String(bot.amount_per_execution),
+      amountIn: dcaAmountInBase,
       slippageBps: bot.slippage_bps ?? 100,
       reason: "dca",
       sourceOrderId: bot.id,

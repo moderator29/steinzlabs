@@ -323,7 +323,7 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
           {/* Auto-execute */}
           <Toggle
             label="Auto-Execute"
-            hint="Fire automatically when matched. Off = alert only."
+            hint="Auto-stage a buy for one-tap approval on match (you sign). Off = alert only."
             value={autoExecute}
             onChange={setAutoExecute}
             icon={Zap}
@@ -437,7 +437,7 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
 
         {showReview && (
           <div className="absolute inset-0 z-20 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => !saving && setShowReview(false)}>
-            <div onClick={e => e.stopPropagation()} className="w-full max-w-md rounded-2xl border-2 border-blue-500/30 bg-[#0a0d18] shadow-2xl p-5">
+            <div onClick={e => e.stopPropagation()} className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border-2 border-blue-500/30 bg-[#0a0d18] shadow-2xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold flex items-center gap-2"><Zap className="w-5 h-5 text-blue-400" /> Confirm sniper</h3>
                 <button onClick={() => !saving && setShowReview(false)} disabled={saving} aria-label="Close confirm sniper" className="p-1.5 rounded-lg hover:bg-white/10 transition disabled:opacity-50"><X className="w-4 h-4" aria-hidden="true" /></button>
