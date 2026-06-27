@@ -1138,10 +1138,9 @@ export default function WalletPage() {
                   aria-controls={`wallet-panel-${t.id}`}
                   id={`wallet-tab-${t.id}`}
                   onClick={() => setActiveTab(t.id)}
+                  style={activeTab === t.id ? { background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 14px rgba(0,102,255,.5), inset 0 1px 0 rgba(255,255,255,.2)' } : undefined}
                   className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${
-                    activeTab === t.id
-                      ? 'bg-slate-800 text-white'
-                      : 'text-slate-300 hover:text-white'
+                    activeTab === t.id ? 'text-white' : 'text-slate-300 hover:text-white'
                   }`}
                 >
                   {t.label}
