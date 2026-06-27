@@ -6,6 +6,8 @@ const INTEL_SOURCES = [
   { name: 'Fresh Pairs (all chains)', desc: 'Genuinely new liquidity pools across Ethereum, Base, Arbitrum, Optimism, BSC, Polygon and Avalanche — not just curated lists.' },
   { name: 'Solana Coverage', desc: 'High-quality Solana trending by real 24h volume, plus pump.fun launches gated to strong-volume coins only (no flood).' },
   { name: 'Security & Rug Alerts', desc: 'Honeypot, high-tax and ownership-risk tokens flagged from live security scans so danger surfaces, not just hype.' },
+  { name: 'Personal Feed Alerts', desc: 'Subscribe to a slice of the feed (chain + kind + volume/price thresholds); matching launches arrive in your notifications in real time.' },
+  { name: 'Inline Token Safety', desc: 'View Proof shows live liquidity-lock %, holder count and top-holder concentration so you can vet a token before you buy.' },
 ];
 
 const SIGNAL_TYPES = [
