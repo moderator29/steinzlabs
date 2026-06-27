@@ -77,6 +77,113 @@ async function pollTransfers(
 
 type WhaleRow = { address: string; chain: string };
 
+// Base/quote assets — when a whale swaps one of these for something else, the
+// "something else" is the traded token and the base side tells us buy vs sell.
+const BASE_ASSETS = new Set([
+  "USDC", "USDT", "DAI", "BUSD", "FRAX", "USDC.E", "TUSD", "USDE",
+  "ETH", "WETH", "BNB", "WBNB", "SOL", "WSOL", "MATIC", "WMATIC", "AVAX", "WAVAX",
+]);
+function isBaseAsset(sym: string | null): boolean {
+  return !!sym && BASE_ASSETS.has(sym.toUpperCase());
+}
+
+interface ActivityInsert {
+  whale_address: string;
+  chain: string;
+  tx_hash: string;
+  action: string;
+  token_address: string | null;
+  token_symbol: string | null;
+  amount: number | null;
+  value_usd: number | null;
+  counterparty: string | null;
+  counterparty_label: null;
+  block_number: number;
+  timestamp: string;
+}
+
+/**
+ * Turn a whale's raw out/in transfer legs into priced whale_activity rows.
+ * A DEX swap surfaces as opposite-direction legs sharing one tx_hash; we pair
+ * them into a single buy/sell/swap row (token = the non-base side) so the feed
+ * shows real trades and copy-trade-monitor — which only acts on buy/sell/swap —
+ * has something to mirror. Lone legs stay transfer_in/transfer_out.
+ */
+async function buildRows(whale: WhaleRow, legs: AlchemyAssetTransfer[]): Promise<ActivityInsert[]> {
+  const byTx = new Map<string, AlchemyAssetTransfer[]>();
+  for (const t of legs) {
+    const arr = byTx.get(t.hash) ?? [];
+    arr.push(t);
+    byTx.set(t.hash, arr);
+  }
+
+  const price = (t: AlchemyAssetTransfer) =>
+    priceActivityUsd({
+      chain: whale.chain,
+      token_address: t.rawContract?.address ?? null,
+      token_symbol: t.asset,
+      amount: typeof t.value === "number" ? t.value : null,
+    });
+  const largest = (arr: AlchemyAssetTransfer[]) =>
+    arr.reduce((m, t) => ((t.value ?? 0) > (m.value ?? 0) ? t : m), arr[0]);
+
+  const rows: ActivityInsert[] = [];
+  for (const [hash, group] of byTx) {
+    const outLegs = group.filter((t) => addressesEqual(t.from, whale.address, whale.chain));
+    const inLegs = group.filter((t) => !addressesEqual(t.from, whale.address, whale.chain));
+    const ts = group[0].metadata?.blockTimestamp ?? new Date().toISOString();
+    const block = parseInt(group[0].blockNum, 16);
+
+    if (outLegs.length > 0 && inLegs.length > 0) {
+      // Swap: classify by which side is a base asset.
+      const out = largest(outLegs);
+      const inc = largest(inLegs);
+      const outBase = isBaseAsset(out.asset);
+      const incBase = isBaseAsset(inc.asset);
+      let action: "buy" | "sell" | "swap";
+      let traded: AlchemyAssetTransfer;
+      if (outBase && !incBase) { action = "buy"; traded = inc; }
+      else if (!outBase && incBase) { action = "sell"; traded = out; }
+      else { action = "swap"; traded = inc; }
+      const [outUsd, incUsd] = await Promise.all([price(out), price(inc)]);
+      rows.push({
+        whale_address: whale.address,
+        chain: whale.chain,
+        tx_hash: hash,
+        action,
+        token_address: traded.rawContract?.address ?? null,
+        token_symbol: traded.asset,
+        amount: typeof traded.value === "number" ? traded.value : null,
+        value_usd: Math.max(outUsd ?? 0, incUsd ?? 0) || null,
+        counterparty: out.to,
+        counterparty_label: null,
+        block_number: block,
+        timestamp: ts,
+      });
+    } else {
+      // Plain transfer(s) — emit the largest leg for this tx (the upsert key is
+      // tx+whale+chain, so one row per tx is all that survives anyway).
+      const t = largest(group);
+      const isOut = addressesEqual(t.from, whale.address, whale.chain);
+      rows.push({
+        whale_address: whale.address,
+        chain: whale.chain,
+        tx_hash: hash,
+        action: isOut ? "transfer_out" : "transfer_in",
+        token_address: t.rawContract?.address ?? null,
+        token_symbol: t.asset,
+        amount: typeof t.value === "number" ? t.value : null,
+        value_usd: await price(t),
+        counterparty: isOut ? t.to : t.from,
+        counterparty_label: null,
+        block_number: block,
+        timestamp: ts,
+      });
+    }
+  }
+  return rows;
+}
+
 async function ingestWhale(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   whale: WhaleRow,
@@ -85,39 +192,12 @@ async function ingestWhale(
     pollTransfers(whale.chain, whale.address, "out"),
     pollTransfers(whale.chain, whale.address, "in"),
   ]);
+  const rows = await buildRows(whale, [...outbound, ...inbound]);
   let inserted = 0;
-  for (const t of [...outbound, ...inbound]) {
-    const amount = typeof t.value === "number" ? t.value : null;
-    const ts = t.metadata?.blockTimestamp ?? new Date().toISOString();
-    const isOut = addressesEqual(t.from, whale.address, whale.chain);
-    const action = isOut ? "transfer_out" : "transfer_in";
-    // Price at ingest so the feed (which filters value_usd >= minUsd) is
-    // populated the moment a row lands — no waiting for the price backfill
-    // cron. priceActivityUsd caches per-token, so native ETH rows in the same
-    // tick share one price lookup.
-    const value_usd = await priceActivityUsd({
-      chain: whale.chain,
-      token_address: t.rawContract?.address ?? null,
-      token_symbol: t.asset,
-      amount,
-    });
-    const { error } = await supabase.from("whale_activity").upsert(
-      {
-        whale_address: whale.address,
-        chain: whale.chain,
-        tx_hash: t.hash,
-        action,
-        token_address: t.rawContract?.address ?? null,
-        token_symbol: t.asset,
-        amount,
-        value_usd,
-        counterparty: isOut ? t.to : t.from,
-        counterparty_label: null,
-        block_number: parseInt(t.blockNum, 16),
-        timestamp: ts,
-      },
-      { onConflict: "tx_hash,whale_address,chain" },
-    );
+  for (const row of rows) {
+    const { error } = await supabase
+      .from("whale_activity")
+      .upsert(row, { onConflict: "tx_hash,whale_address,chain" });
     if (!error) inserted++;
   }
   await supabase
