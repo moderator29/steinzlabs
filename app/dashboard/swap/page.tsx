@@ -216,7 +216,7 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
         const data = await res.json();
         if (cancelled) return;
         if (res.ok && typeof data.decimals === 'number') {
-          setImported({ symbol: data.symbol, name: data.name, decimals: data.decimals, logo: data.logo ?? undefined, color: '#6B7280', address: data.address, chain });
+          setImported({ symbol: data.symbol, name: data.name, decimals: data.decimals, logo: data.logo ?? undefined, color: '#6B7280', address: data.address, chain: data.chain ?? chain });
         } else {
           setImportError('Token not found on this chain');
         }
