@@ -1735,7 +1735,10 @@ function isValidAddressForChain(addr: string, chainId: string): boolean {
 const NATIVE_CG_ID: Record<string, string> = {
   ethereum: 'ethereum', base: 'ethereum', arbitrum: 'ethereum', optimism: 'ethereum',
   polygon: 'matic-network', avalanche: 'avalanche-2', bnb: 'binancecoin', fantom: 'fantom',
+  solana: 'solana',
 };
+
+const SOLANA_RPC = process.env.NEXT_PUBLIC_ALCHEMY_SOLANA_RPC || 'https://api.mainnet-beta.solana.com';
 
 function shortAddr(a: string): string {
   return a && a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a;
@@ -1762,18 +1765,29 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
 
   // Native balance — powers MAX + the >balance guard.
   useEffect(() => {
-    if (chain.id === 'solana' || chain.id === 'bitcoin') return;
-    const rpc = CHAIN_RPC[chain.id];
-    if (!rpc) return;
+    if (chain.id === 'bitcoin') return;
+    let cancelled = false;
     (async () => {
       try {
+        if (chain.id === 'solana') {
+          const sol = wallet.solanaAddress;
+          if (!sol) return;
+          const web3 = await import('@solana/web3.js');
+          const conn = new web3.Connection(SOLANA_RPC, 'confirmed');
+          const lamports = await conn.getBalance(new web3.PublicKey(sol));
+          if (!cancelled) setNativeBalance((lamports / web3.LAMPORTS_PER_SOL).toString());
+          return;
+        }
+        const rpc = CHAIN_RPC[chain.id];
+        if (!rpc) return;
         const ethers = await import('ethers');
         const provider = new ethers.JsonRpcProvider(rpc);
         const bal = await provider.getBalance(wallet.address);
-        setNativeBalance(ethers.formatEther(bal));
+        if (!cancelled) setNativeBalance(ethers.formatEther(bal));
       } catch { /* ignore */ }
     })();
-  }, [chain.id, wallet.address]);
+    return () => { cancelled = true; };
+  }, [chain.id, wallet.address, wallet.solanaAddress]);
 
   // Native USD price for the ≈$ preview.
   useEffect(() => {
@@ -1851,8 +1865,29 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
     setPwError(''); setStep('processing');
     try {
       if (chain.id === 'solana') {
-        setError('Solana send ships next — this build supports EVM sends only.');
-        setStep('confirm'); return;
+        // Native SOL transfer. Needs the seed phrase to derive the signing
+        // keypair — raw-private-key imports have no Solana key.
+        if (!wallet.encryptedMnemonic) {
+          setPwError('Solana send needs a seed-phrase wallet (this wallet was imported by private key).');
+          setStep('password'); return;
+        }
+        const web3 = await import('@solana/web3.js');
+        const { deriveSolanaKeypair } = await import('@/lib/wallet/derive');
+        let mnemonic: string;
+        try { mnemonic = await decryptPrivateKey(wallet.encryptedMnemonic, password); }
+        catch { setPwError('Wrong wallet password.'); setStep('password'); return; }
+        const keypair = deriveSolanaKeypair(mnemonic);
+        const conn = new web3.Connection(SOLANA_RPC, 'confirmed');
+        const lamports = Math.round(parseFloat(amount) * web3.LAMPORTS_PER_SOL);
+        const tx = new web3.Transaction().add(web3.SystemProgram.transfer({
+          fromPubkey: keypair.publicKey,
+          toPubkey: new web3.PublicKey(recipient),
+          lamports,
+        }));
+        const sig = await web3.sendAndConfirmTransaction(conn, tx, [keypair], { commitment: 'confirmed' });
+        setTxHash(sig);
+        setStep('sent');
+        return;
       }
       const rpc = CHAIN_RPC[chain.id];
       if (!rpc) { setError(`${chain.name} send not supported yet.`); setStep('confirm'); return; }

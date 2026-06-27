@@ -71,6 +71,21 @@ export function deriveSolanaPublicKey(mnemonic: string): string {
 }
 
 /**
+ * Derive the full Solana Keypair (for signing transactions) from a BIP-39
+ * mnemonic at Phantom's default path. Same derivation as deriveSolanaPublicKey
+ * so the signing key matches the displayed address. Throws on invalid mnemonic.
+ */
+export function deriveSolanaKeypair(mnemonic: string): Keypair {
+  const trimmed = mnemonic.trim();
+  if (!bip39.validateMnemonic(trimmed)) {
+    throw new Error('Invalid BIP-39 mnemonic');
+  }
+  const seedHex = bip39.mnemonicToSeedSync(trimmed).toString('hex');
+  const { key } = derivePath(SOL_DERIVATION_PATH, seedHex);
+  return Keypair.fromSeed(key);
+}
+
+/**
  * Convenience: derive every supported chain's address in one call.
  * Used at wallet-create / wallet-import time so we can persist the
  * full set on the StoredWallet record.
