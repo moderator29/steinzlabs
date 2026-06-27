@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useFeatureUsageLog } from '@/lib/hooks/useFeatureUsageLog';
 // Naka Labs brand icons — broad swap of available glowing-geometric versions.
@@ -1250,7 +1250,7 @@ export default function WalletPage() {
                 aria-labelledby="wallet-tab-activity"
                 className="mb-6 rounded-xl nl-glass/40 p-3"
               >
-                <ActivityTab address={activeWallet.address} chain={activeChain} />
+                <ActivityTab address={activeWallet.address} chain={activeChain} enabledChains={enabledChains} />
               </div>
             )}
 
@@ -3451,10 +3451,28 @@ interface DecodedTx {
   timestamp: string;
 }
 
-function ActivityTab({ address, chain }: { address: string; chain: ChainInfo }) {
+// Per-tx explorer URL — resolves the chain the tx actually happened on so
+// multi-chain mode links to the right explorer, not just the active one.
+function explorerTxUrl(txChainId: string, txHash: string): string {
+  if (txChainId === 'solana') return `https://solscan.io/tx/${txHash}`;
+  const c = SUPPORTED_CHAINS.find((x) => x.id === txChainId);
+  return c ? `${c.explorerUrl}/tx/${txHash}` : `https://etherscan.io/tx/${txHash}`;
+}
+
+function ActivityTab({ address, chain, enabledChains }: { address: string; chain: ChainInfo; enabledChains: string[] }) {
   const [txs, setTxs] = useState<DecodedTx[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [upstreamWarning, setUpstreamWarning] = useState<string | null>(null);
+  // Chains we can actually decode activity for (transactions API support).
+  const scopeChains = useMemo(
+    () => enabledChains.filter((c) => LIVE_CHAINS.includes(c)),
+    [enabledChains],
+  );
+  const canGoGlobal = scopeChains.length > 1;
+  const [scope, setScope] = useState<'current' | 'all'>('current');
+  // Reset to current-chain view when the wallet/chain changes so the toggle
+  // never shows stale cross-chain data for a different address.
+  useEffect(() => { setScope('current'); }, [address]);
 
   useEffect(() => {
     if (!address) return;
@@ -3462,22 +3480,44 @@ function ActivityTab({ address, chain }: { address: string; chain: ChainInfo }) 
     (async () => {
       setError(null);
       setUpstreamWarning(null);
+      setTxs(null);
+      const chainsToFetch = scope === 'all' && canGoGlobal ? scopeChains : [chain.id];
       try {
-        const res = await fetch(
-          `/api/wallet/transactions?address=${encodeURIComponent(address)}&chain=${chain.id}&limit=30`,
-          { signal: AbortSignal.timeout(15_000), cache: 'no-store' },
+        const results = await Promise.allSettled(
+          chainsToFetch.map(async (cid) => {
+            const res = await fetch(
+              `/api/wallet/transactions?address=${encodeURIComponent(address)}&chain=${cid}&limit=30`,
+              { signal: AbortSignal.timeout(20_000), cache: 'no-store' },
+            );
+            if (!res.ok) throw new Error(`status ${res.status}`);
+            return (await res.json()) as { transactions: DecodedTx[]; upstream_error?: string | null };
+          }),
         );
-        if (!res.ok) throw new Error(`status ${res.status}`);
-        const json = (await res.json()) as { transactions: DecodedTx[]; upstream_error?: string | null };
         if (cancelled) return;
-        setTxs(json.transactions ?? []);
-        if (json.upstream_error) setUpstreamWarning(json.upstream_error);
+        const merged: DecodedTx[] = [];
+        let warn: string | null = null;
+        let anyOk = false;
+        for (const r of results) {
+          if (r.status === 'fulfilled') {
+            anyOk = true;
+            merged.push(...(r.value.transactions ?? []));
+            if (r.value.upstream_error && !warn) warn = r.value.upstream_error;
+          }
+        }
+        if (!anyOk) throw new Error('Failed to load activity');
+        // Newest first across all chains; de-dupe by hash (a tx can't be on two
+        // chains, but cached + live merges can double up).
+        const seen = new Set<string>();
+        merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        const deduped = merged.filter((t) => (seen.has(t.tx_hash) ? false : (seen.add(t.tx_hash), true)));
+        setTxs(deduped.slice(0, 50));
+        if (warn) setUpstreamWarning(warn);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load activity');
       }
     })();
     return () => { cancelled = true; };
-  }, [address, chain.id]);
+  }, [address, chain.id, scope, canGoGlobal, scopeChains]);
 
   if (!address) {
     return (
@@ -3490,20 +3530,33 @@ function ActivityTab({ address, chain }: { address: string; chain: ChainInfo }) 
     );
   }
 
+  // Current-chain vs all-networks toggle — only shown when more than one
+  // decodable chain is enabled, so single-chain users see a clean list.
+  const scopeToggle = canGoGlobal ? (
+    <div className="flex items-center gap-1 mb-3 rounded-lg nl-glass/50 p-1">
+      {([
+        { id: 'current' as const, label: chain.name },
+        { id: 'all' as const, label: 'All networks' },
+      ]).map((s) => (
+        <button
+          key={s.id}
+          onClick={() => setScope(s.id)}
+          style={scope === s.id ? { background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 12px rgba(0,102,255,.45)' } : undefined}
+          className={`flex-1 py-1.5 rounded-md text-[11px] font-semibold transition-colors ${scope === s.id ? 'text-white' : 'text-slate-400 hover:text-white'}`}
+        >
+          {s.label}
+        </button>
+      ))}
+    </div>
+  ) : null;
+
+  let body: React.ReactNode;
   if (txs === null && !error) {
-    return (
-      <div className="py-6 text-center text-xs text-gray-300">Loading activity…</div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-lg border border-red-500/40 bg-red-500/5 px-3 py-2 text-xs text-red-200">{error}</div>
-    );
-  }
-
-  if (!txs || txs.length === 0) {
-    return (
+    body = <div className="py-6 text-center text-xs text-gray-300">Loading activity…</div>;
+  } else if (error) {
+    body = <div className="rounded-lg border border-red-500/40 bg-red-500/5 px-3 py-2 text-xs text-red-200">{error}</div>;
+  } else if (!txs || txs.length === 0) {
+    body = (
       <div className="py-8 text-center">
         <div className="w-14 h-14 mx-auto mb-3 bg-white/5 rounded-2xl flex items-center justify-center">
           <TrendingUp className="w-6 h-6 text-gray-300" />
@@ -3512,59 +3565,68 @@ function ActivityTab({ address, chain }: { address: string; chain: ChainInfo }) 
         <p className="text-xs text-gray-400 mt-1">Decoded on-chain activity will appear here</p>
       </div>
     );
+  } else {
+    body = (
+      <div className="space-y-1">
+        {upstreamWarning && (
+          <div className="mb-2 rounded-lg border border-amber-500/40 bg-amber-500/5 px-2.5 py-1.5 text-[10px] text-amber-200">
+            Live decoder unavailable, showing cached entries · {upstreamWarning}
+          </div>
+        )}
+        {txs.map((tx) => {
+          const isSwap = tx.tx_type === 'swap';
+          const isSend = tx.tx_type === 'send' || (tx.amount_out !== null && tx.amount_in === null);
+          const date = new Date(tx.timestamp);
+          const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+          const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+          const Icon = isSwap ? Repeat : ArrowUpRight;
+          const txChainId = tx.chain || chain.id;
+          const txChainName = SUPPORTED_CHAINS.find((c) => c.id === txChainId)?.name ?? txChainId;
+          const explorerTxHref = explorerTxUrl(txChainId, tx.tx_hash);
+          return (
+            <div key={`${txChainId}:${tx.tx_hash}`} className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-white/5 transition-colors">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isSwap ? 'bg-[#0066FF]/10' : 'bg-[#F59E0B]/10'}`}>
+                <Icon className={`w-4 h-4 ${isSwap ? 'text-[#0066FF]' : 'text-[#F59E0B]'}`} aria-hidden />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold capitalize">
+                  {isSwap
+                    ? `Swap ${tx.token_out ?? ''} → ${tx.token_in ?? ''}`.trim()
+                    : isSend
+                      ? `Send ${tx.token_out ?? chain.symbol}`
+                      : `${tx.tx_type} ${tx.token_in ?? tx.token_out ?? ''}`}
+                </p>
+                <p className="text-[10px] text-gray-300">
+                  {dateStr} · {timeStr}{scope === 'all' && canGoGlobal ? ` · ${txChainName}` : ''}
+                </p>
+              </div>
+              <div className="text-end shrink-0">
+                {tx.amount_out !== null && (
+                  <p className="text-xs font-mono">-{tx.amount_out.toLocaleString(undefined, { maximumFractionDigits: 6 })} {tx.token_out ?? ''}</p>
+                )}
+                {tx.amount_in !== null && (
+                  <p className="text-[10px] text-[#10B981] font-mono">+{tx.amount_in.toLocaleString(undefined, { maximumFractionDigits: 6 })} {tx.token_in ?? ''}</p>
+                )}
+                <a
+                  href={explorerTxHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[9px] text-[#0066FF] hover:underline"
+                >
+                  View ↗
+                </a>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-1">
-      {upstreamWarning && (
-        <div className="mb-2 rounded-lg border border-amber-500/40 bg-amber-500/5 px-2.5 py-1.5 text-[10px] text-amber-200">
-          Live decoder unavailable, showing cached entries · {upstreamWarning}
-        </div>
-      )}
-      {txs.map((tx) => {
-        const isSwap = tx.tx_type === 'swap';
-        const isSend = tx.tx_type === 'send' || (tx.amount_out !== null && tx.amount_in === null);
-        const date = new Date(tx.timestamp);
-        const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-        const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-        const Icon = isSwap ? Repeat : ArrowUpRight;
-        const explorerTxHref = chain.id === 'solana'
-          ? `https://solscan.io/tx/${tx.tx_hash}`
-          : `${chain.explorerUrl}/tx/${tx.tx_hash}`;
-        return (
-          <div key={tx.tx_hash} className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-white/5 transition-colors">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isSwap ? 'bg-[#0066FF]/10' : 'bg-[#F59E0B]/10'}`}>
-              <Icon className={`w-4 h-4 ${isSwap ? 'text-[#0066FF]' : 'text-[#F59E0B]'}`} aria-hidden />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold capitalize">
-                {isSwap
-                  ? `Swap ${tx.token_out ?? ''} → ${tx.token_in ?? ''}`.trim()
-                  : isSend
-                    ? `Send ${tx.token_out ?? chain.symbol}`
-                    : `${tx.tx_type} ${tx.token_in ?? tx.token_out ?? ''}`}
-              </p>
-              <p className="text-[10px] text-gray-300">{dateStr} · {timeStr}</p>
-            </div>
-            <div className="text-end shrink-0">
-              {tx.amount_out !== null && (
-                <p className="text-xs font-mono">-{tx.amount_out.toLocaleString(undefined, { maximumFractionDigits: 6 })} {tx.token_out ?? ''}</p>
-              )}
-              {tx.amount_in !== null && (
-                <p className="text-[10px] text-[#10B981] font-mono">+{tx.amount_in.toLocaleString(undefined, { maximumFractionDigits: 6 })} {tx.token_in ?? ''}</p>
-              )}
-              <a
-                href={explorerTxHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[9px] text-[#0066FF] hover:underline"
-              >
-                View ↗
-              </a>
-            </div>
-          </div>
-        );
-      })}
+    <div>
+      {scopeToggle}
+      {body}
     </div>
   );
 }
