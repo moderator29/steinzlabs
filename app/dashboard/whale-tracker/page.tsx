@@ -27,6 +27,7 @@ import { ChainLogo } from "@/components/common/ChainLogo";
 import { NakaLoader } from "@/components/brand/NakaLoader";
 import { WhaleAvatar } from "@/components/whales/WhaleAvatar";
 import { useNavState } from "@/lib/nav/useNavState";
+import { useTier } from "@/lib/hooks/useTier";
 
 type Action = "buy" | "sell" | "transfer" | null;
 type Size = "10k" | "50k" | "100k" | "500k" | "1m";
@@ -108,6 +109,10 @@ function timeAgo(iso: string): string {
 export default function WhaleTrackerPage() {
   useFeatureUsageLog('whale_tracker');
   const router = useRouter();
+  // Following/alerts/copy are Pro+ features. Mini users can view the feed but
+  // their write controls must upsell, not fire a request that 403s silently.
+  const { isPro, isMax, isAdmin } = useTier();
+  const canFollow = isPro || isMax || isAdmin;
   const [selectedChains, setSelectedChains] = useState<string[]>(["all"]);
   const [size, setSize] = useState<Size>("100k");
   const [timeRange, setTimeRange] = useState<TimeRange>("24h");
@@ -271,6 +276,7 @@ export default function WhaleTrackerPage() {
     );
 
   const toggleWatch = async (address: string, chain: string) => {
+    if (!canFollow) { router.push("/dashboard/pricing?feature=whale-follow"); return; }
     const watched = isWatched(address, chain);
     if (watched) {
       await fetch(
@@ -522,7 +528,8 @@ export default function WhaleTrackerPage() {
         <div className="space-y-4">
           <WatchlistPanel
             items={watchlist}
-            onAddClick={() => setShowAdd(true)}
+            canFollow={canFollow}
+            onAddClick={() => canFollow ? setShowAdd(true) : router.push("/dashboard/pricing?feature=whale-follow")}
             onRemove={async (addr, chain) => {
               await fetch(
                 `/api/whale-tracker/watchlist?whale_address=${addr}&chain=${chain}`,
@@ -696,12 +703,14 @@ function FeedCard({
 
 function WatchlistPanel({
   items,
+  canFollow,
   onAddClick,
   onRemove,
   onToggleAlert,
   onOpen,
 }: {
   items: WatchlistItem[];
+  canFollow: boolean;
   onAddClick: () => void;
   onRemove: (address: string, chain: string) => void;
   onToggleAlert: (item: WatchlistItem) => void;
@@ -717,9 +726,10 @@ function WatchlistPanel({
         <button
           type="button"
           onClick={onAddClick}
+          title={canFollow ? "Add a whale to follow" : "Following whales is a Pro feature — upgrade to unlock"}
           className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-[#0066FF]/10 hover:bg-[#0066FF]/20 text-[#6F7EFF] border border-[#0066FF]/30 font-semibold"
         >
-          <Plus size={12} /> Add
+          <Plus size={12} /> {canFollow ? "Add" : "Add · Pro"}
         </button>
       </div>
       {items.length === 0 ? (
