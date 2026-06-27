@@ -152,7 +152,7 @@ export default function FollowWhaleModal({
           <div className="flex items-center gap-2">
             {(['push', 'email', 'telegram'] as const).map((k) => (
               <label key={k} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold cursor-pointer border transition-colors ${
-                channels[k] ? 'bg-[#0066FF]/15 text-[#8FA3FF] border-[#0066FF]/40' : 'bg-white/5 text-slate-400 border-white/10 hover:text-white'
+                channels[k] ? 'bg-[#0066FF]/15 text-[#8FA3FF] border-[#0066FF]/40' : 'bg-white/[0.04] text-slate-400 border border-white/10 hover:text-white'
               }`}>
                 <input
                   type="checkbox"
@@ -232,9 +232,9 @@ function ModeCard({
       onClick={onClick}
       disabled={locked}
       className={`w-full flex items-start gap-3 p-3 rounded-xl border transition-all text-start ${
-        active ? 'bg-[#0066FF]/15 border-[#0066FF]/50'
-        : locked ? 'bg-white/[0.02] border-white/10 opacity-60 cursor-not-allowed'
-        : 'bg-white/[0.03] border-white/10 hover:border-white/20'
+        active ? 'nl-glass !border-[#0066FF]/50 ring-1 ring-[#0066FF]/40 bg-[#0066FF]/15'
+        : locked ? 'nl-glass opacity-60 cursor-not-allowed'
+        : 'nl-glass hover:border-white/20'
       }`}
     >
       <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${active ? 'bg-[#0066FF]/20 text-[#8FA3FF]' : 'bg-white/5 text-slate-400'}`}>
@@ -264,7 +264,7 @@ function NumberRow({ label, value, setValue, step }: { label: string; value: num
         value={value}
         step={step}
         onChange={(e) => setValue(parseInt(e.target.value || '0', 10) || 0)}
-        className="w-28 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs font-mono text-end outline-none focus:border-[#0066FF]/50"
+        className="nl-glass w-28 rounded-lg px-2 py-1 text-xs font-mono text-end outline-none focus:border-[#0066FF]/50"
       />
     </div>
   );

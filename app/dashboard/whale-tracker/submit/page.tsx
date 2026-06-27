@@ -66,6 +66,7 @@ export default function SubmitWhalePage() {
         <p className="text-xs text-slate-500 mb-6">
           Propose a public wallet for inclusion in the Naka Labs whale directory. An admin reviews every submission before it goes live.
         </p>
+        <div className="nl-glass rounded-2xl p-5">
         <form onSubmit={submit} className="space-y-4">
           <Field label="Wallet address">
             <input
@@ -128,6 +129,7 @@ export default function SubmitWhalePage() {
             Submit for review
           </button>
         </form>
+        </div>
       </div>
     </div>
   );

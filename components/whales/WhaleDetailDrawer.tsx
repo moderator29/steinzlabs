@@ -190,7 +190,7 @@ export default function WhaleDetailDrawer({
         </div>
 
         {/* Address row */}
-        <div className="px-5 py-3 flex items-center gap-2 bg-white/[0.02]">
+        <div className="px-5 py-3 flex items-center gap-2 nl-glass">
           <Wallet className="w-3.5 h-3.5 text-slate-500" />
           <code className="flex-1 text-xs font-mono text-slate-300 truncate">{w.address}</code>
           <button onClick={copyAddress} className="p-1.5 rounded hover:bg-white/5">
@@ -237,7 +237,7 @@ export default function WhaleDetailDrawer({
                 href={`https://x.com/${(w.x_handle || ark?.twitter || '').replace(/^@/, '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs"
+                className="nl-btn-neon !px-3 !py-1.5 !text-xs flex items-center gap-1.5"
               >
                 <Twitter className="w-3.5 h-3.5" /> @{(w.x_handle || ark?.twitter)?.replace(/^@/, '')}
               </a>
@@ -247,7 +247,7 @@ export default function WhaleDetailDrawer({
                 href={w.website || ark?.website || '#'}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs"
+                className="nl-btn-neon !px-3 !py-1.5 !text-xs flex items-center gap-1.5"
               >
                 <Globe className="w-3.5 h-3.5" /> Website
               </a>
@@ -328,7 +328,7 @@ function ActivityItem({ row, chain }: { row: ActivityRow; chain: string }) {
       href={txUrl(chain, row.tx_hash)}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-2 p-2.5 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 transition-colors"
+      className="flex items-center gap-2 p-2.5 nl-glass hover:bg-white/[0.04] transition-colors"
     >
       <div className={`w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center ${tone}`}>
         <Arrow className="w-3.5 h-3.5" />

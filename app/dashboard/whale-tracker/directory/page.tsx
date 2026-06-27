@@ -263,7 +263,7 @@ export default function WhaleDirectoryPage() {
         <div className="max-w-7xl mx-auto px-4 pb-3 space-y-2">
           {/* Search + sort */}
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex-1 min-w-[220px] flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+            <div className="flex-1 min-w-[220px] flex items-center gap-2 nl-glass rounded-lg px-3 py-2">
               <Search className="w-3.5 h-3.5 text-slate-500" />
               <input
                 value={q}
@@ -278,13 +278,13 @@ export default function WhaleDirectoryPage() {
             <select
               value={sort}
               onChange={(e) => { setSort(e.target.value); setOffset(0); }}
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none"
+              className="nl-glass rounded-lg px-3 py-2 text-xs outline-none"
             >
               {SORT_OPTIONS.map((s) => (
                 <option key={s.id} value={s.id} className="bg-[#05081E]">{s.label}</option>
               ))}
             </select>
-            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs">
+            <div className="flex items-center gap-2 nl-glass rounded-lg px-3 py-2 text-xs">
               <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
               <label className="text-slate-400">Min score</label>
               <input
@@ -367,7 +367,7 @@ export default function WhaleDirectoryPage() {
                 <p className="text-slate-500 text-sm mb-3">No whale matches <code className="px-1 py-0.5 rounded bg-slate-900 text-[11px] font-mono">{q.slice(0, 10)}…</code> in our directory.</p>
                 <a
                   href={`/dashboard/whale-tracker/submit?address=${encodeURIComponent(q.trim())}`}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0066FF] hover:bg-[#0066FF]/90 text-white text-xs font-semibold"
+                  className="nl-btn-neon !px-4 !py-2 !text-xs"
                 >
                   Submit this whale
                 </a>
@@ -395,7 +395,7 @@ export default function WhaleDirectoryPage() {
             <button
               disabled={offset === 0}
               onClick={() => setOffset(Math.max(0, offset - 24))}
-              className="px-3 py-1.5 rounded-lg bg-white/5 text-xs disabled:opacity-40"
+              className="nl-btn-neon !px-3 !py-1.5 !text-xs disabled:opacity-40"
             >
               Prev
             </button>
@@ -403,7 +403,7 @@ export default function WhaleDirectoryPage() {
             <button
               disabled={offset + 24 >= total}
               onClick={() => setOffset(offset + 24)}
-              className="px-3 py-1.5 rounded-lg bg-white/5 text-xs disabled:opacity-40"
+              className="nl-btn-neon !px-3 !py-1.5 !text-xs disabled:opacity-40"
             >
               Next
             </button>

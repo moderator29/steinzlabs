@@ -749,7 +749,7 @@ function WatchlistPanel({
           {items.map((it) => (
             <li
               key={`${it.chain}:${it.whale_address}`}
-              className="rounded-lg border border-slate-800 bg-slate-900/30 p-3 hover:border-blue-500/30 transition-colors"
+              className="rounded-lg nl-glass p-3 hover:border-blue-500/30 transition-colors"
             >
               <div className="flex items-center justify-between gap-2">
                 <button
@@ -1128,7 +1128,7 @@ function AddWhaleModal({
               />
             </div>
           </div>
-          <div className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/50 px-3 py-2">
+          <div className="flex items-center justify-between rounded-lg nl-glass px-3 py-2">
             <div>
               <div className="text-xs text-white">Alerts</div>
               <div className="text-[10px] text-slate-500">Notify when this whale moves</div>
@@ -1160,7 +1160,7 @@ function AddWhaleModal({
                       className={`flex-1 py-1.5 text-[10px] rounded-lg transition-colors ${
                         threshold === v
                           ? "bg-[#0066FF]/15 text-[#6F7EFF] border border-[#0066FF]/30"
-                          : "bg-slate-900 text-slate-400 border border-slate-800"
+                          : "bg-white/[0.04] text-slate-400 border border-white/10"
                       }`}
                     >
                       ${v.toLocaleString()}
@@ -1185,7 +1185,7 @@ function AddWhaleModal({
                         className={`flex-1 py-1.5 text-[10px] rounded-lg uppercase transition-colors ${
                           on
                             ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-                            : "bg-slate-900 text-slate-400 border border-slate-800"
+                            : "bg-white/[0.04] text-slate-400 border border-white/10"
                         }`}
                       >
                         {c}
