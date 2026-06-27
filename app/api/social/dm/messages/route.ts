@@ -30,11 +30,18 @@ export async function GET(req: NextRequest) {
   // Verify caller is a participant before reading.
   const { data: conv } = await sb
     .from('dm_conversations')
-    .select('id, user_a_id, user_b_id')
+    .select('id, user_a_id, user_b_id, request_state')
     .eq('id', conversationId)
     .maybeSingle();
   if (!conv || (conv.user_a_id !== user.id && conv.user_b_id !== user.id)) {
     return NextResponse.json({ error: 'Not a participant' }, { status: 403 });
+  }
+  // A declined request is hidden in the inbox list (.neq request_state
+  // 'declined'); mirror that here so the per-thread read can't resurrect a
+  // history the user already dismissed. (pending stays readable — that's how
+  // a recipient reviews a message request before accepting.)
+  if (conv.request_state === 'declined') {
+    return NextResponse.json({ messages: [] });
   }
 
   // §dm-block-bypass — even if the conversation row exists from before

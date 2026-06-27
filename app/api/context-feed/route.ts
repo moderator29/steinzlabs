@@ -472,8 +472,12 @@ async function getKnownWhales(): Promise<Map<string, KnownWhale>> {
 function applySmartMoneyLabels(events: WhaleEvent[], whales: Map<string, KnownWhale>): WhaleEvent[] {
   if (whales.size === 0) return events;
   for (const e of events) {
-    const fromKey = e.from ? normalizeAddress(e.from, 'ethereum') : '';
-    const toKey = e.to ? normalizeAddress(e.to, 'ethereum') : '';
+    // Normalize by the EVENT's own chain, not a hardcoded 'ethereum'. The whale
+    // keys in `whales` are normalized per their real chain (getKnownWhales), so
+    // lowercasing a Solana event address here would never match a case-sensitive
+    // Solana whale key — silently disabling Solana smart-money labeling.
+    const fromKey = e.from ? normalizeAddress(e.from, e.chain) : '';
+    const toKey = e.to ? normalizeAddress(e.to, e.chain) : '';
     const hit = (fromKey && whales.get(fromKey)) || (toKey && whales.get(toKey));
     if (!hit) continue;
     const isBuy = !!(toKey && whales.get(toKey));

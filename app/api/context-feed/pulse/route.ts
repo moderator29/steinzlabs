@@ -52,12 +52,14 @@ export async function POST(req: NextRequest) {
 
   // DB cache — the durable cap across all serverless instances.
   const admin = getSupabaseAdmin();
+  let existing: { pulse: string | null; tone: string | null; updated_at: string | null } | null = null;
   try {
     const { data: row } = await admin
       .from('market_pulse')
       .select('pulse, tone, updated_at')
       .eq('id', 1)
       .maybeSingle();
+    existing = row ?? null;
     if (row?.pulse && row.updated_at && Date.now() - new Date(row.updated_at).getTime() < CACHE_TTL) {
       memo = { pulse: row.pulse, tone: row.tone ?? 'mixed', ts: Date.now() };
       return NextResponse.json({ pulse: row.pulse, tone: row.tone ?? 'mixed', cached: true });
@@ -71,9 +73,43 @@ export async function POST(req: NextRequest) {
   } catch {
     events = [];
   }
+  // Empty feed never costs an Anthropic call and isn't worth caching for 8h
+  // (it's transient) — answer cheaply and let the next non-empty request
+  // regenerate. No claim, no memo poisoning.
   if (events.length === 0) {
     return NextResponse.json({ pulse: 'No live market signals right now — check back shortly.', tone: 'neutral' });
   }
+
+  // Thundering-herd guard: every feed viewer's browser POSTs once the feed
+  // loads, so on a cold start / after TTL many requests arrive at once. Claim
+  // generation rights with ONE atomic conditional update — only the request
+  // that flips the stale `updated_at` proceeds to Anthropic; everyone else
+  // serves the stale pulse (or a transient "updating" message). The in-memory
+  // memo can't do this (it's per-lambda and empty on the first burst).
+  const nowIso = new Date().toISOString();
+  const cutoffIso = new Date(Date.now() - CACHE_TTL).toISOString();
+  // Seed the singleton if missing (epoch ts → immediately claimable), no-op if present.
+  try {
+    await admin
+      .from('market_pulse')
+      .upsert(
+        { id: 1, pulse: existing?.pulse ?? '', tone: existing?.tone ?? 'neutral', updated_at: existing?.updated_at ?? new Date(0).toISOString() },
+        { onConflict: 'id', ignoreDuplicates: true },
+      );
+    const { data: claimed } = await admin
+      .from('market_pulse')
+      .update({ updated_at: nowIso })
+      .eq('id', 1)
+      .lt('updated_at', cutoffIso)
+      .select('id');
+    if (!claimed || claimed.length === 0) {
+      // Lost the race — another instance is generating. Serve stale if we have it.
+      if (existing?.pulse) {
+        return NextResponse.json({ pulse: existing.pulse, tone: existing.tone ?? 'mixed', cached: true, stale: true });
+      }
+      return NextResponse.json({ pulse: 'Reading the market…', tone: 'neutral', updating: true });
+    }
+  } catch { /* claim failed (DB hiccup) — proceed; worst case a rare duplicate gen */ }
 
   // Compact the events into a token-efficient list for the model.
   const lines = events.map((e) => {
@@ -108,6 +144,17 @@ export async function POST(req: NextRequest) {
     await admin.from('market_pulse').upsert({ id: 1, pulse, tone, updated_at: new Date().toISOString() }, { onConflict: 'id' });
     return NextResponse.json({ pulse, tone });
   } catch {
+    // Generation failed AFTER we claimed (which bumped updated_at to now). Roll
+    // the claim back so the next request can retry in ~10 min instead of the row
+    // looking "fresh" for 8h, and serve the stale pulse if we have one rather
+    // than a hard error.
+    try {
+      const retryIso = new Date(Date.now() - CACHE_TTL + 10 * 60 * 1000).toISOString();
+      await admin.from('market_pulse').update({ updated_at: retryIso }).eq('id', 1);
+    } catch { /* best-effort */ }
+    if (existing?.pulse) {
+      return NextResponse.json({ pulse: existing.pulse, tone: existing.tone ?? 'mixed', cached: true, stale: true });
+    }
     return NextResponse.json({ error: 'pulse_failed' }, { status: 502 });
   }
 }

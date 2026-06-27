@@ -310,6 +310,11 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
           id: saved.message.id, sender_id: me ?? '', body, created_at: saved.message.created_at ?? new Date().toISOString(), read_at: null,
         }]);
       }
+    } catch {
+      // Network/throw path: the draft was never cleared (we only clear on a 2xx),
+      // so the user's text is intact — just surface the failure instead of the
+      // message silently vanishing.
+      setError('Could not send — check your connection and try again.');
     } finally {
       setSending(false);
     }
