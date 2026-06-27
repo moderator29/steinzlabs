@@ -65,6 +65,55 @@ export function shortAddr(a?: string | null): string {
   return a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a;
 }
 
+// ─── Token avatar (real logo → clean branded gradient fallback) ───────────────
+
+const GRADIENTS: [string, string][] = [
+  ['#0066FF', '#00D1FF'], ['#7C3AED', '#EC4899'], ['#F59E0B', '#EF4444'],
+  ['#10B981', '#3B82F6'], ['#06B6D4', '#8B5CF6'], ['#F43F5E', '#FB923C'],
+];
+function gradientFor(seed: string): [string, string] {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return GRADIENTS[h % GRADIENTS.length];
+}
+
+/** Token avatar that uses the real logo and falls back to a clean, deterministic
+ *  gradient monogram (never a plain gray box) when the token has no logo yet. */
+export function TokenAvatar({ logo, symbol, address, size = 40 }: { logo?: string | null; symbol: string; address?: string; size?: number }) {
+  const [failed, setFailed] = useState(false);
+  const [g1, g2] = gradientFor(address || symbol || '?');
+  const initials = (symbol || '?').replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() || (symbol || '?').slice(0, 2);
+  if (logo && !failed) {
+    return <img src={logo} alt={symbol} width={size} height={size} onError={() => setFailed(true)} className="rounded-full flex-shrink-0 object-cover" style={{ width: size, height: size }} />;
+  }
+  return (
+    <div
+      className="rounded-full flex-shrink-0 flex items-center justify-center font-bold text-white"
+      style={{ width: size, height: size, background: `linear-gradient(135deg, ${g1}, ${g2})`, fontSize: size * 0.34 }}
+    >
+      {initials}
+    </div>
+  );
+}
+
+// ─── Source / DEX presentation ────────────────────────────────────────────────
+
+/** Brand color + short label for a DEX/source id. Self-contained (no external
+ *  images that 404); renders as a colored monogram in a glass chip. */
+export function sourceMeta(raw: string): { label: string; color: string; short: string } {
+  const s = (raw || '').toLowerCase();
+  const pick = (label: string, color: string) => ({ label, color, short: label.replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase() });
+  if (s.includes('uniswap')) return pick(raw.replace(/_/g, ' '), '#FF007A');
+  if (s.includes('pancake')) return pick(raw.replace(/_/g, ' '), '#33E6B5');
+  if (s.includes('sushi')) return pick(raw.replace(/_/g, ' '), '#FA52A0');
+  if (s.includes('quick')) return pick(raw.replace(/_/g, ' '), '#418ACA');
+  if (s.includes('aerodrome')) return pick(raw.replace(/_/g, ' '), '#1E6BFF');
+  if (s.includes('camelot')) return pick(raw.replace(/_/g, ' '), '#E0A857');
+  if (s.includes('four') || s.includes('meme')) return pick(raw.replace(/_/g, ' '), '#F0B90B');
+  if (s.includes('pump')) return pick(raw.replace(/_/g, ' '), '#22C55E');
+  return pick(raw.replace(/_/g, ' '), '#6B7280');
+}
+
 // ─── Shadow Guardian — lazy, concurrency-limited per-token audit ──────────────
 
 const auditCache = new Map<string, TokenAudit>();

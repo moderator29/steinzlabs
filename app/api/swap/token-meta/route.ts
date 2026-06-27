@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenMetadata } from '@/lib/services/alchemy';
+import { getTokenPairs } from '@/lib/services/dexscreener';
+import { getEvmTokenDecimals } from '@/lib/sniper/priceFeed';
 
 export const runtime = 'nodejs';
+
+// DexScreener chainId → our canonical chain id. Lets a pasted contract resolve
+// on whatever chain it actually trades on (e.g. an ETH-mainnet token while the
+// UI defaulted to another chain).
+const DEX_TO_CHAIN: Record<string, string> = {
+  ethereum: 'ethereum', bsc: 'bsc', base: 'base', arbitrum: 'arbitrum',
+  optimism: 'optimism', polygon: 'polygon', avalanche: 'avalanche',
+};
 
 /**
  * GET /api/swap/token-meta?chain=<chain>&address=<contract|mint>
@@ -49,22 +59,38 @@ async function resolveSolana(mint: string): Promise<TokenMetaResponse | null> {
 }
 
 async function resolveEvm(address: string, chain: string): Promise<TokenMetaResponse | null> {
-  try {
-    const meta = await getTokenMetadata(address, chain);
-    // Alchemy returns null fields for non-token addresses; decimals is the
-    // critical one — bail if it's missing.
-    if (!meta || typeof meta.decimals !== 'number') return null;
-    return {
-      symbol: (meta.symbol || address.slice(2, 6)).toUpperCase(),
-      name: meta.name || meta.symbol || 'Unknown token',
-      decimals: meta.decimals,
-      logo: meta.logo ?? null,
-      address: address.toLowerCase(),
-      chain,
-    };
-  } catch {
-    return null;
-  }
+  // Resolve from MULTIPLE sources so any token listed on a DEX (or known to
+  // Alchemy) imports — not just Alchemy-indexed ones:
+  //  1. Alchemy metadata (authoritative symbol/name/decimals/logo when present)
+  //  2. DexScreener pairs (symbol/name/logo + the REAL chain it trades on)
+  //  3. On-chain eth_call for decimals when Alchemy didn't have it
+  const [alchemy, pairs] = await Promise.all([
+    getTokenMetadata(address, chain).catch(() => null),
+    getTokenPairs(address).catch(() => []),
+  ]);
+
+  // Prefer a pair on the requested chain; otherwise the highest-liquidity pair
+  // anywhere (the token may live on mainnet while the UI defaulted elsewhere).
+  const onChain = pairs.filter((p) => p.chainId === chain);
+  const best = (onChain.length ? onChain : pairs)
+    .slice()
+    .sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0))[0];
+
+  // Require at least one real source — never fabricate metadata for an
+  // arbitrary/non-token address (no-mock rule).
+  const hasAlchemy = !!(alchemy && typeof alchemy.decimals === 'number');
+  if (!hasAlchemy && !best) return null;
+
+  const resolvedChain = best?.chainId && DEX_TO_CHAIN[best.chainId] ? DEX_TO_CHAIN[best.chainId] : chain;
+  const decimals = hasAlchemy
+    ? alchemy!.decimals as number
+    : await getEvmTokenDecimals(resolvedChain, address);
+
+  const symbol = (alchemy?.symbol || best?.baseToken?.symbol || address.slice(2, 6)).toUpperCase();
+  const name = alchemy?.name || best?.baseToken?.name || symbol;
+  const logo = alchemy?.logo || best?.info?.imageUrl || null;
+
+  return { symbol, name, decimals, logo, address: address.toLowerCase(), chain: resolvedChain };
 }
 
 export async function GET(req: NextRequest) {

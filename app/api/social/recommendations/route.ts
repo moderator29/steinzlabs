@@ -73,7 +73,24 @@ export async function GET(req: NextRequest) {
     .eq('muter_id', user.id);
   const muted = new Set((mutes ?? []).map((m) => m.muted_id));
 
-  // 5. Candidate pool: high-success-rate users + recently-active users
+  // 4b. Top-followed users — bias recommendations toward ESTABLISHED accounts
+  // (most followers on the platform) rather than brand-new signups. Aggregate
+  // accepted follow edges and rank by follower count.
+  const { data: followEdges } = await sb
+    .from('social_follows')
+    .select('following_id')
+    .eq('status', 'accepted')
+    .limit(5000);
+  const followerCounts = new Map<string, number>();
+  for (const e of followEdges ?? []) {
+    followerCounts.set(e.following_id, (followerCounts.get(e.following_id) ?? 0) + 1);
+  }
+  const topFollowed = Array.from(followerCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 40)
+    .map(([id]) => id);
+
+  // 5. Candidate pool: top-followed + high-success-rate + recently-active users
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   type ProfileLite = { id: string; username: string | null; display_name: string | null; avatar_url: string | null; tier: string | null; verified_badge: string | null; is_chosen: boolean | null };
 
@@ -91,6 +108,7 @@ export async function GET(req: NextRequest) {
 
   const repMap = new Map(highRep.map((r) => [r.user_id, r.success_rate]));
   const candidateIds = new Set<string>([
+    ...topFollowed,
     ...Array.from(repMap.keys()),
     ...recent.map((p) => p.id),
     ...collabProfiles.map((p) => p.id),
@@ -111,6 +129,12 @@ export async function GET(req: NextRequest) {
   const scored = (profiles ?? []).map((p) => {
     let score = 0;
     let reason = '';
+    // Top followers rank highest — established accounts, not brand-new ones.
+    const fc = followerCounts.get(p.id) ?? 0;
+    if (fc > 0) {
+      score += 4 + Math.min(4, Math.floor(fc / 5));
+      reason = `${fc.toLocaleString()} follower${fc === 1 ? '' : 's'}`;
+    }
     if (collabCounts.has(p.id)) {
       score += 3 + Math.min(2, collabCounts.get(p.id)! - 1);
       reason = 'Followed by people you follow';

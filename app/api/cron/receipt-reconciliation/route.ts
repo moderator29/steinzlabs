@@ -9,6 +9,8 @@ import {
   type ReceiptResult,
 } from "@/lib/trading/receiptParser";
 import { getDexPrice } from "@/lib/services/dexscreener";
+import { usdcForChain } from "@/lib/trading/usdc";
+import { getEvmTokenDecimals } from "@/lib/sniper/priceFeed";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -296,7 +298,12 @@ export async function GET(request: NextRequest) {
         // (user, chain, token) and compute realized pnl on the sell row.
         // Skip if the tx reverted or we don't have actuals.
         if (row.action === "sell" && !r.reverted && r.actualAmountOut) {
-          const proceedsUsd = parseFloat(r.actualAmountOut);
+          // actualAmountOut is RAW base units of the to-token (USDC). Convert to
+          // USD with the chain's real USDC decimals (6 on most, 18 on BSC) —
+          // parsing it as dollars inflated PnL by ~1e6.
+          const usdcAddr = usdcForChain(chain);
+          const usdcDecimals = usdcAddr ? await getEvmTokenDecimals(chain, usdcAddr) : 6;
+          const proceedsUsd = parseFloat(r.actualAmountOut) / 10 ** usdcDecimals;
           if (Number.isFinite(proceedsUsd) && proceedsUsd > 0) {
             const { data: matchedBuy } = await admin
               .from("user_copy_trades")

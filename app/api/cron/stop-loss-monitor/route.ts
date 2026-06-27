@@ -4,6 +4,8 @@ import { verifyCron, cronResponse, cronHasWork } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getDexPrice } from "@/lib/services/dexscreener";
 import { executeTrade } from "@/lib/trading/relayer";
+import { usdcForChain } from "@/lib/trading/usdc";
+import { getEvmTokenDecimals } from "@/lib/sniper/priceFeed";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -121,15 +123,23 @@ export async function GET(request: NextRequest) {
         ? (currentPrice - Number(order.entry_price_usd)) * Number(order.position_amount)
         : null;
 
+    // Resolve a real exit-token contract (older rows stored literal "USDC") and
+    // scale the held position (whole tokens) to base units by its real decimals.
+    const slExitAddr = /^0x[a-fA-F0-9]{40}$/.test(order.exit_to_token_address)
+      ? order.exit_to_token_address
+      : (usdcForChain(order.chain) ?? order.exit_to_token_address);
+    const slFromDecimals = await getEvmTokenDecimals(order.chain, order.token_address);
+    const slAmountInBase = (BigInt(Math.round(Number(order.position_amount) * 1e6)) * (BigInt(10) ** BigInt(slFromDecimals)) / BigInt(1e6)).toString();
+
     const result = await executeTrade({
       userId: order.user_id,
       chain: order.chain,
       walletSource: order.wallet_source,
       fromTokenAddress: order.token_address,
       fromTokenSymbol: order.token_symbol,
-      toTokenAddress: order.exit_to_token_address,
+      toTokenAddress: slExitAddr,
       toTokenSymbol: order.exit_to_token_symbol,
-      amountIn: String(order.position_amount),
+      amountIn: slAmountInBase,
       slippageBps: order.slippage_bps ?? 100,
       reason: triggerKind,
       sourceOrderId: order.id,

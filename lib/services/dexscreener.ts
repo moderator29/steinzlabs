@@ -43,7 +43,7 @@ export interface DexPair {
   fdv?: number;
   marketCap?: number;
   pairCreatedAt?: number;
-  info?: { imageUrl?: string; websites?: { label: string; url: string }[] };
+  info?: { imageUrl?: string; websites?: { label: string; url: string }[]; socials?: { type: string; url: string }[] };
 }
 
 export interface DexRecentTrade {

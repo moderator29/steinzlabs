@@ -91,7 +91,7 @@ export function RecommendationsStrip() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={u.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover border border-white/10 mb-2" />
               ) : (
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0066FF)] to-[#7C3AED] flex items-center justify-center text-sm font-bold text-white mb-2">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-extrabold text-white mb-2" style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF 45%,#7C3AED)', boxShadow: '0 0 16px rgba(0,102,255,.4), inset 0 1px 0 rgba(255,255,255,.25)' }}>
                   {(u.display_name || u.username || '?').slice(0, 1).toUpperCase()}
                 </div>
               )}

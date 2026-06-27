@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { getEvmTokenDecimals } from "@/lib/sniper/priceFeed";
+import { usdcForChain } from "@/lib/trading/usdc";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,6 +52,8 @@ interface PendingRow {
   status: string;
   expires_at: string;
   amount_in: string;
+  chain: string;
+  to_token_address: string;
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -73,7 +77,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { data: pending, error: readErr } = await supabase
     .from("pending_trades")
     .select(
-      "id,user_id,source_reason,source_order_id,source_order_table,status,expires_at,amount_in",
+      "id,user_id,source_reason,source_order_id,source_order_table,status,expires_at,amount_in,chain,to_token_address",
     )
     .eq("id", id)
     .single<PendingRow>();
@@ -184,7 +188,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           // BUY confirm — promote the open position to 'confirmed' with the real
           // entry price + tokens received so the autosell engine (TP/SL/trailing)
           // and PnL can act on it. peak_price seeds the trailing-stop tracker.
-          const tokensReceived = body.clientReportedAmountOut ? Number(body.clientReportedAmountOut) : null;
+          // clientReportedAmountOut is 0x buyAmount in BASE UNITS; store
+          // tokens_received as WHOLE tokens (÷10**decimals) so autosell — which
+          // scales whole→base — doesn't double-scale, and the numeric stays well
+          // within JS-number precision.
+          const tokDecimals = await getEvmTokenDecimals(pending.chain, pending.to_token_address);
+          const tokensReceived = body.clientReportedAmountOut
+            ? Number(body.clientReportedAmountOut) / 10 ** tokDecimals
+            : null;
           const entryPrice = body.clientReportedPrice ?? null;
           await admin
             .from("sniper_executions")
@@ -207,7 +218,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             .select("buy_amount_usd")
             .eq("id", pending.source_order_id)
             .single<{ buy_amount_usd: number | null }>();
-          const proceedsUsd = body.clientReportedAmountOut ? Number(body.clientReportedAmountOut) : null;
+          // Proceeds arrive as USDC BASE UNITS (0x buyAmount); convert to USD
+          // with the real USDC decimals for the chain (6 on most, 18 on BSC).
+          const usdcAddr = usdcForChain(pending.chain);
+          const usdcDecimals = usdcAddr ? await getEvmTokenDecimals(pending.chain, usdcAddr) : 6;
+          const proceedsUsd = body.clientReportedAmountOut
+            ? Number(body.clientReportedAmountOut) / 10 ** usdcDecimals
+            : null;
           const buyCost = posRow?.buy_amount_usd != null ? Number(posRow.buy_amount_usd) : null;
           const pnlUsd = proceedsUsd != null && buyCost != null && Number.isFinite(proceedsUsd) ? proceedsUsd - buyCost : null;
           await admin

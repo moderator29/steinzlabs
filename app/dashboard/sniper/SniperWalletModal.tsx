@@ -91,11 +91,21 @@ export function SniperWalletModal({ userId, onClose, onConnected }: {
     try {
       let resolved = await getEvmProvider();
       if (!resolved) {
-        // No wallet connected — open the connect modal then retry once.
+        // No wallet connected — open the connect modal and WAIT for the user to
+        // approve in their wallet (Trust Wallet / WalletConnect), then continue
+        // to signing automatically instead of making them tap Authorize again.
         getAppKit()?.open();
-        setError('Connect your EVM wallet, then press Authorize again.');
-        setBusy(false);
-        return;
+        setError('Approve the connection in your wallet…');
+        for (let i = 0; i < 120 && !resolved; i++) {
+          await new Promise((r) => setTimeout(r, 500));
+          resolved = await getEvmProvider();
+        }
+        if (!resolved) {
+          setError('Wallet not connected yet. Tap Authorize to try again.');
+          setBusy(false);
+          return;
+        }
+        setError(null);
       }
       const { provider, address: mainAddress } = resolved;
 
@@ -167,8 +177,9 @@ export function SniperWalletModal({ userId, onClose, onConnected }: {
         </div>
 
         <p className="text-xs text-white/60 leading-relaxed mb-4">
-          The bot never holds your funds. We generate a throwaway session key in your browser and your wallet signs a
-          spend-capped, time-boxed authorization. Snipes execute within those limits and you can revoke anytime.
+          The bot never holds your funds or your main key. We set spend caps (max per trade + daily limit) and the sniper
+          pre-stages matched trades within those limits. You approve each fill in-app — you always sign your own trades,
+          and you can revoke anytime. Hands-off auto-signing arrives with the on-chain relayer upgrade.
         </p>
 
         {/* Chain */}

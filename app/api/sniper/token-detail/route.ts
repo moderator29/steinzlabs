@@ -137,6 +137,8 @@ export async function GET(request: NextRequest) {
         dexId: bestPair.dexId,
         url: bestPair.url,
         websites: bestPair.info?.websites ?? [],
+        socials: bestPair.info?.socials ?? [],
+        logo: bestPair.info?.imageUrl ?? null,
       }
     : null;
 

@@ -56,6 +56,18 @@ export async function GET(request: NextRequest) {
     return cronResponse('sniper-auto-execute', startedAt, { pending: 0, noWork: true });
   }
 
+  // Honor the admin platform kill switch — don't queue new buys while disabled.
+  // Fail CLOSED: if the state can't be read (error or missing row), block,
+  // matching the manual /api/sniper/execute safety posture.
+  const { data: killState, error: killErr } = await supabase
+    .from('platform_sniper_state')
+    .select('enabled')
+    .eq('id', 1)
+    .single();
+  if (killErr || !killState || killState.enabled === false) {
+    return cronResponse('sniper-auto-execute', startedAt, { pending: count, killed: true, reason: killErr ? 'kill-state unreadable (fail-closed)' : (!killState ? 'kill-state missing (fail-closed)' : 'admin disabled') });
+  }
+
   const { data: matches, error } = await supabase
     .from('sniper_match_events')
     .select('id, criteria_id, user_id, matched_token_address, matched_chain, details')
@@ -156,8 +168,14 @@ export async function GET(request: NextRequest) {
     //    (from_token_address/to_token_address/amount_in base units/route_data/
     //    source_order_table). USDC is 6-decimal, so base units = usd * 1e6.
     const amountInBaseUnits = String(Math.round(criteria.amount_per_snipe_usd * 1e6));
-    const walletSource = (criteria.wallet_source === 'metamask' || criteria.wallet_source === 'phantom' || criteria.wallet_source === 'builtin')
-      ? criteria.wallet_source : 'metamask';
+    // Map the criteria wallet vocabulary (metamask/phantom/builtin) to the
+    // relayer/pending_trades vocabulary (external_evm/external_solana/builtin).
+    // The pending_trades CHECK only allows the latter set.
+    const walletSource = criteria.wallet_source === 'phantom'
+      ? 'external_solana'
+      : criteria.wallet_source === 'builtin'
+        ? 'builtin'
+        : 'external_evm';
     const expiresAt = new Date(Date.now() + 30 * 60_000).toISOString();
     const { data: pending, error: insErr } = await supabase
       .from('pending_trades')

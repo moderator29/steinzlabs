@@ -23,6 +23,7 @@ import * as Sentry from '@sentry/nextjs';
 import { verifyCron, cronResponse, logCronExecution } from '../_shared';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { getTokenSecurity } from '@/lib/services/goplus';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
   const groups = new Map<string, { token: string; chain: string; ids: string[] }>();
   for (const e of needs) {
     if (!e.matched_token_address || !e.matched_chain) continue;
-    const key = `${e.matched_chain}:${e.matched_token_address.toLowerCase()}`;
+    const key = `${e.matched_chain}:${normalizeAddress(e.matched_token_address) ?? e.matched_token_address}`;
     const existing = groups.get(key);
     if (existing) {
       existing.ids.push(e.id);

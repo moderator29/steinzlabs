@@ -492,7 +492,21 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
           tokenId={address}
           symbol={symbol}
           currentPrice={price}
-          onAdd={async () => setShowAlert(false)}
+          onAdd={async (input) => {
+            // Actually persist the alert (this was a no-op that just closed).
+            await fetch('/api/market/alerts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                token_id: input.token_id,
+                token_symbol: input.token_symbol,
+                target_price: input.target_price,
+                direction: input.direction,
+                chain,
+              }),
+            }).catch(() => {});
+            setShowAlert(false);
+          }}
           onClose={() => setShowAlert(false)}
         />
       )}

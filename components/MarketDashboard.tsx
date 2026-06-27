@@ -342,10 +342,14 @@ export default function MarketDashboard() {
 
   return (
     <div className="pb-4">
-      <div className="flex gap-1 p-1 bg-[#111827] border border-white/[0.06] rounded-xl mb-4">
+      <div
+        className="flex gap-1 p-1 rounded-xl mb-4 nl-glass"
+        style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
+      >
         {(['prices','watchlist'] as const).map(t=>(
           <button key={t} onClick={()=>setTab(t)}
-            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all capitalize ${t===tab?'bg-[#0066FF] text-white shadow-[0_0_10px_rgba(0,102,255,0.35)]':'text-gray-400 hover:text-white'}`}>
+            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all capitalize ${t===tab?'text-white':'text-gray-400 hover:text-white'}`}
+            style={t===tab ? { background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 18px rgba(0,102,255,.55), inset 0 1px 0 rgba(255,255,255,.22)' } : {}}>
             {t==='prices'?'Prices':'Watchlist'}
           </button>
         ))}

@@ -87,14 +87,19 @@ export function FollowButton({ targetId, initialState, mutual, onChange, size = 
     size === 'sm'
       ? 'text-[11px] px-2.5 py-1 rounded-md'
       : 'text-[12px] px-3.5 py-1.5 rounded-lg';
+  // "Follow" (primary) uses the platform glass look with a neon-blue edge stride
+  // (matches the profile stat containers). Other states keep their semantic tint.
   const palette =
     state === 'not_following'
-      ? 'bg-[var(--nl-blue,#0066FF)] hover:bg-[var(--nl-blue-strong,#0052CC)] text-white border border-transparent'
+      ? 'bg-[#0066FF]/12 hover:bg-[#0066FF]/20 text-white border border-[#0066FF]/45'
       : state === 'pending'
       ? 'bg-white/[0.04] hover:bg-amber-500/10 text-amber-300 border border-amber-500/30'
       : showDestructive
       ? 'bg-red-500/10 text-red-400 border border-red-500/30'
       : 'bg-emerald-500/[0.08] text-emerald-300 border border-emerald-500/25';
+  const glowStyle = state === 'not_following'
+    ? { boxShadow: '0 0 0 1px rgba(0,102,255,.45), 0 0 14px rgba(0,102,255,.20)' }
+    : undefined;
 
   return (
     <div className={className}>
@@ -106,7 +111,8 @@ export function FollowButton({ targetId, initialState, mutual, onChange, size = 
         onMouseLeave={() => { setHover(false); setJustChanged(false); }}
         onFocus={() => setHover(true)}
         onBlur={() => { setHover(false); setJustChanged(false); }}
-        className={`inline-flex items-center gap-1.5 font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${base} ${palette}`}
+        style={glowStyle}
+        className={`inline-flex items-center gap-1.5 font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed ${base} ${palette}`}
         aria-label={
           state === 'not_following' ? `Follow user` :
           state === 'pending' ? `Cancel follow request` :

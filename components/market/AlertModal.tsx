@@ -17,14 +17,13 @@ interface AlertModalProps {
 export function AlertModal({ tokenId, symbol, currentPrice, onAdd, onClose }: AlertModalProps) {
   const [direction, setDirection] = useState<'above' | 'below'>('above');
   const [price, setPrice] = useState('');
-  const [email, setEmail] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
     if (!price || isNaN(parseFloat(price))) return;
     setLoading(true);
     try {
-      await onAdd({ token_id: tokenId, token_symbol: symbol, target_price: parseFloat(price), direction, notify_email: email });
+      await onAdd({ token_id: tokenId, token_symbol: symbol, target_price: parseFloat(price), direction });
       onClose();
     } finally {
       setLoading(false);
@@ -63,12 +62,7 @@ export function AlertModal({ tokenId, symbol, currentPrice, onAdd, onClose }: Al
           placeholder="Enter target price..."
           className="w-full bg-[#141824] border border-[#1E2433] rounded-lg px-3 py-2.5 text-white font-mono text-sm mb-3 focus:outline-none focus:border-[#0066FF]"
         />
-        {price && <p className="text-gray-500 text-xs mb-3">Alert when {symbol} goes {direction} ${parseFloat(price || '0').toFixed(4)}</p>}
-
-        <label className="flex items-center gap-2 mb-4 cursor-pointer">
-          <input type="checkbox" checked={email} onChange={(e) => setEmail(e.target.checked)} className="w-4 h-4 accent-[#0066FF]" />
-          <span className="text-gray-400 text-sm">Also notify by email</span>
-        </label>
+        {price && <p className="text-gray-500 text-xs mb-4">Alert when {symbol} goes {direction} ${parseFloat(price || '0').toFixed(4)} — delivered to your in-app notifications.</p>}
 
         <div className="flex gap-2">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-lg text-sm text-gray-400 border border-[#1E2433] hover:text-white transition-colors">Cancel</button>

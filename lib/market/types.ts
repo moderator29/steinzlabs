@@ -95,7 +95,10 @@ export interface PriceAlertInput {
   token_symbol: string;
   target_price: number;
   direction: 'above' | 'below';
-  notify_email: boolean;
+  /** Optional EVM chain for address-keyed (memecoin) alerts. */
+  chain?: string;
+  /** Deprecated — email alert delivery is not wired; kept optional for callers. */
+  notify_email?: boolean;
 }
 
 // ─── Swap ─────────────────────────────────────────────────────────────────────

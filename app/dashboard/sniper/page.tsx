@@ -7,7 +7,7 @@ import {
   AlertTriangle, Play, Pause, ExternalLink, Plus, TrendingUp, Trash2,
 } from '@/components/icons/brand';
 import {
-  Crosshair, Loader2, Lock, Power, Zap, Target, Search, RefreshCw, Radar, Flame, Clock, Bell,
+  Crosshair, Loader2, Lock, Power, Zap, Target, Search, RefreshCw, Radar, Flame, Clock, Bell, Copy, Check, ShieldAlert,
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { ChainLogo } from '@/components/common/ChainLogo';
@@ -22,7 +22,7 @@ import { SniperTokenDrawer } from './SniperTokenDrawer';
 import { WalletStatus } from './WalletStatus';
 import { LimitOrdersTab, AlertsTab, useAlertSound } from './OrdersAlerts';
 import {
-  type DetectedToken, fmtUSD, fmtCompact, timeAgo, useTokenAudit, GuardianBadges,
+  type DetectedToken, fmtUSD, fmtCompact, timeAgo, shortAddr, useTokenAudit, GuardianBadges, TokenAvatar, sourceMeta,
 } from './sniperShared';
 
 interface SniperCriteriaRow {
@@ -454,13 +454,18 @@ function DiscoverTab({
   sources: string[]; sourceFilter: string[]; setSourceFilter: (s: string[]) => void;
   query: string; setQuery: (s: string) => void; ogOnly: boolean; setOgOnly: (b: boolean) => void;
 }) {
+  const [feedView, setFeedView] = useState<'live' | 'blocked'>('live');
   const toggleSource = (s: string) => setSourceFilter(sourceFilter.includes(s) ? sourceFilter.filter((x) => x !== s) : [...sourceFilter, s]);
   const q = query.trim().toLowerCase();
-  let shown = q
+  let filtered = q
     ? tokens.filter((t) => t.symbol.toLowerCase().includes(q) || t.name.toLowerCase().includes(q) || t.address.toLowerCase() === q)
     : tokens;
   // OG-Token mode: established names only (heuristic — meaningful liquidity + MC).
-  if (ogOnly) shown = shown.filter((t) => t.liquidity >= 50_000 && (t.marketCap ?? 0) >= 250_000);
+  if (ogOnly) filtered = filtered.filter((t) => t.liquidity >= 50_000 && (t.marketCap ?? 0) >= 250_000);
+  // Shadow Guardian: blocked tokens get their own tab — keep the live feed clean.
+  const liveTokens = filtered.filter((t) => t.status !== 'blocked');
+  const blockedTokens = filtered.filter((t) => t.status === 'blocked');
+  const shown = feedView === 'blocked' ? blockedTokens : liveTokens;
 
   return (
     <div>
@@ -490,23 +495,46 @@ function DiscoverTab({
           ))}
         </div>
         {sources.length > 0 && (
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold me-1">Source</span>
-            {sources.map((s) => (
-              <button key={s} onClick={() => toggleSource(s)} className={`px-2.5 py-1 rounded-lg text-[11px] font-medium capitalize transition ${sourceFilter.includes(s) ? 'bg-emerald-500/15 border border-emerald-500/40 text-emerald-200' : 'bg-white/[0.04] border border-white/10 text-white/60 hover:text-white'}`}>{s.replace(/_/g, ' ')}</button>
-            ))}
+            {sources.map((s) => {
+              const meta = sourceMeta(s);
+              const active = sourceFilter.includes(s);
+              return (
+                <button
+                  key={s}
+                  onClick={() => toggleSource(s)}
+                  className={`nl-glass inline-flex items-center gap-1.5 ps-1 pe-2.5 py-1 rounded-lg text-[11px] font-semibold capitalize transition ${active ? 'text-blue-100' : 'text-white/70 hover:text-white'}`}
+                  style={active ? { boxShadow: '0 0 0 1px rgba(0,102,255,.55), 0 0 12px rgba(0,102,255,.25)' } : undefined}
+                >
+                  <span className="w-4 h-4 rounded-md flex items-center justify-center text-[8px] font-bold text-white shrink-0" style={{ background: meta.color }}>{meta.short}</span>
+                  {meta.label}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
 
-      <div className="text-xs text-white/50 font-medium mb-2">
-        {loading ? 'Scanning new pairs…' : `${shown.length} live ${shown.length === 1 ? 'pair' : 'pairs'}${chainFilter !== 'all' ? ` on ${CHAIN_CONFIGS[chainFilter].name}` : ' across EVM'}`}
+      {/* Live vs Blocked (Shadow Guardian) */}
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/10">
+          <button onClick={() => setFeedView('live')} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${feedView === 'live' ? 'bg-[#0066FF]/20 text-blue-200 border border-[#0066FF]/40' : 'text-white/55 hover:text-white border border-transparent'}`}>
+            <Radar className="w-3.5 h-3.5" /> Live <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/10">{liveTokens.length}</span>
+          </button>
+          <button onClick={() => setFeedView('blocked')} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${feedView === 'blocked' ? 'bg-red-500/20 text-red-200 border border-red-500/40' : 'text-white/55 hover:text-white border border-transparent'}`}>
+            <ShieldAlert className="w-3.5 h-3.5" /> Blocked <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/10">{blockedTokens.length}</span>
+          </button>
+        </div>
+        <span className="text-[11px] text-white/45">{loading ? 'Scanning…' : `${chainFilter !== 'all' ? CHAIN_CONFIGS[chainFilter].name : 'EVM'}`}</span>
       </div>
 
       {loading ? (
         <div className="nl-glass rounded-xl p-12 text-center"><Loader2 className="w-6 h-6 mx-auto animate-spin text-blue-400" /></div>
       ) : shown.length === 0 ? (
-        <div className="rounded-xl border-2 border-dashed border-white/10 p-12 text-center text-white/50 text-sm">No new pairs match these filters right now.</div>
+        <div className="rounded-xl border-2 border-dashed border-white/10 p-12 text-center text-white/50 text-sm">
+          {feedView === 'blocked' ? 'No tokens blocked by Shadow Guardian right now.' : 'No fresh pairs match these filters right now.'}
+        </div>
       ) : (
         <div className="grid gap-2">
           {shown.map((t) => <TokenRow key={t.id} t={t} onSnipe={onSnipe} onOpen={onOpen} />)}
@@ -518,13 +546,19 @@ function DiscoverTab({
 
 function TokenRow({ t, onSnipe, onOpen }: { t: DetectedToken; onSnipe: (t: DetectedToken) => void; onOpen: (t: DetectedToken) => void }) {
   const { audit, loading: auditLoading } = useTokenAudit(t.chain, t.address);
+  const [copied, setCopied] = useState(false);
   const snipeBlocked = audit?.blocked ?? false;
   const statusColor = t.status === 'safe' ? 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30'
     : t.status === 'risky' ? 'text-amber-300 bg-amber-500/15 border-amber-500/30'
     : 'text-red-300 bg-red-500/15 border-red-500/30';
+  const src = t.source ? sourceMeta(t.source) : null;
+  const copyAddr = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard?.writeText(t.address).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 1400); }).catch(() => {});
+  };
   return (
     <div onClick={() => onOpen(t)} role="button" tabIndex={0} className="nl-glass rounded-xl p-3 flex items-center gap-3 hover:-translate-y-px transition cursor-pointer">
-      {t.logo ? <img src={t.logo} alt="" className="w-10 h-10 rounded-full flex-shrink-0 object-cover" /> : <div className="w-10 h-10 rounded-full bg-white/10 flex-shrink-0 flex items-center justify-center text-xs font-bold text-white/70">{t.symbol.slice(0, 2)}</div>}
+      <TokenAvatar logo={t.logo} symbol={t.symbol} address={t.address} size={40} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 min-w-0">
           <span className="font-bold truncate">{t.symbol}</span>
@@ -540,8 +574,17 @@ function TokenRow({ t, onSnipe, onOpen }: { t: DetectedToken; onSnipe: (t: Detec
           {t.volume24h ? <span>Vol {fmtCompact(t.volume24h)}</span> : null}
           <span className="text-white/30">·</span>
           <span>{t.pairAge ?? 'new'}</span>
-          {t.source ? <span className="text-white/30 hidden sm:inline">·</span> : null}
-          {t.source ? <span className="capitalize text-white/40 hidden sm:inline">{t.source.replace(/_/g, ' ')}</span> : null}
+        </div>
+        {/* Contract address (copyable) + source chip with logo */}
+        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+          <button onClick={copyAddr} title="Copy contract address" className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/[0.05] border border-white/10 text-[10px] text-white/55 hover:text-white">
+            {copied ? <Check className="w-2.5 h-2.5 text-emerald-300" /> : <Copy className="w-2.5 h-2.5" />}{shortAddr(t.address)}
+          </button>
+          {src && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/[0.04] border border-white/10 text-[10px] text-white/55 capitalize">
+              <span className="w-3 h-3 rounded-[3px] flex items-center justify-center text-[7px] font-bold text-white" style={{ background: src.color }}>{src.short}</span>{src.label}
+            </span>
+          )}
         </div>
         <div className="mt-1.5"><GuardianBadges audit={audit} loading={auditLoading} /></div>
       </div>

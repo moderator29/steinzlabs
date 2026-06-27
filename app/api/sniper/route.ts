@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkTierServer } from '@/lib/subscriptions/serverTierCheck';
 import { getTokenSecurity } from '@/lib/services/goplus';
 import { getNewEvmPairs } from '@/lib/services/geckoterminal';
-import type { DexPair } from '@/lib/services/dexscreener';
+import { getTokensMulti, type DexPair } from '@/lib/services/dexscreener';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -128,6 +128,22 @@ export async function GET(request: NextRequest) {
         volume24h: pair.volume?.h24,
       };
     });
+
+    // Logo enrichment: GeckoTerminal often has no image for brand-new tokens.
+    // Batch-resolve missing logos from DexScreener (one call for up to 30) so
+    // the feed shows REAL token logos instead of placeholders wherever possible.
+    const missing = tokens.filter(t => !t.logo).map(t => t.address);
+    if (missing.length) {
+      try {
+        const meta = await getTokensMulti(missing.slice(0, 30));
+        for (const t of tokens) {
+          if (!t.logo) {
+            const img = meta.get(t.address)?.info?.imageUrl ?? meta.get(t.address.toLowerCase())?.info?.imageUrl;
+            if (img) t.logo = img;
+          }
+        }
+      } catch { /* keep placeholders */ }
+    }
 
     return NextResponse.json({ tokens, sources: availableSources });
   } catch (err: unknown) {

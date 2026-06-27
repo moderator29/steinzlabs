@@ -109,7 +109,7 @@ export function LeaderboardColumn({ kind, title, description, limit = 10 }: Lead
         <ol className="space-y-1.5">
           {rows.map((r, idx) => (
             <li key={r.id} className="group/lb-row">
-              <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-white/[0.04]">
+              <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg bg-white/[0.02] border border-[#0066FF]/20 hover:border-[#0066FF]/40 transition" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.12)' }}>
                 <Link href={`/u/${r.username ?? r.id}`} className="flex items-center gap-2.5 flex-1 min-w-0">
                   <span className="w-6 text-[11px] tabular-nums text-slate-400 text-end">
                     {idx < 3 ? MEDAL[idx] : `${idx + 1}.`}
@@ -118,7 +118,7 @@ export function LeaderboardColumn({ kind, title, description, limit = 10 }: Lead
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={r.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover border border-white/10" />
                   ) : (
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0066FF)] to-[#7C3AED] flex items-center justify-center text-[10px] font-bold text-white">
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-extrabold text-white" style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF 45%,#7C3AED)', boxShadow: '0 0 10px rgba(0,102,255,.4)' }}>
                       {(r.display_name || r.username || '?').slice(0, 1).toUpperCase()}
                     </div>
                   )}

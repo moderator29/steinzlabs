@@ -25,7 +25,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ username: s
   //
   // /u/Puffnutz fix: leaderboard rows fall back to `r.id` (UUID) when
   // username is null. If the slug looks like a UUID, look up by id too.
-  const cols = 'id, username, display_name, avatar_url, bio, tier, verified_badge, is_verified, is_chosen, is_private, dm_permission, show_success_rate, show_wallet_balance, show_activity, social_links, social_suspended_until, created_at';
+  const cols = 'id, username, display_name, avatar_url, cover_url, bio, tier, verified_badge, is_verified, is_chosen, is_private, dm_permission, show_success_rate, show_wallet_balance, show_activity, social_links, social_suspended_until, created_at';
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   // §8 — resolve case-insensitively WITHOUT erroring on a casing collision.
   // Exact match wins first, so /u/Puffnutz resolves to Puffnutz and not its
