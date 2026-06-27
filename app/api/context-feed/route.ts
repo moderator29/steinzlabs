@@ -478,9 +478,15 @@ function applySmartMoneyLabels(events: WhaleEvent[], whales: Map<string, KnownWh
     // whales, 27% of the table, were invisible to smart-money labeling).
     const fromKey = e.from ? normalizeAddress(e.from, isSolanaAddress(e.from) ? 'solana' : 'ethereum') : '';
     const toKey = e.to ? normalizeAddress(e.to, isSolanaAddress(e.to) ? 'solana' : 'ethereum') : '';
-    const hit = (fromKey && whales.get(fromKey)) || (toKey && whales.get(toKey));
-    if (!hit) continue;
-    const isBuy = !!(toKey && whales.get(toKey));
+    const fromHit = fromKey ? whales.get(fromKey) : undefined;
+    const toHit = toKey ? whales.get(toKey) : undefined;
+    if (!fromHit && !toHit) continue;
+    // #20: when BOTH ends are known whales, the label must describe the ACTOR
+    // of the action — a buy (whale on the receiving end) names the receiver, a
+    // sell names the sender. Previously the sender's name was paired with a
+    // "buy" verb whenever both matched.
+    const isBuy = !!toHit;
+    const hit = isBuy ? toHit! : fromHit!;
     e.type = isBuy ? 'smart_money_buy' : 'whale_sell';
     e.platform = 'Smart Money';
     e.trustScore = Math.max(e.trustScore, 90);
