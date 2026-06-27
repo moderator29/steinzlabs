@@ -81,6 +81,7 @@ interface ChainInfo {
   apiChain: string;
   logoUrl: string;
   coinGeckoId: string;
+  testnet?: boolean;
 }
 
 const COIN_LOGOS: Record<string, string> = {
@@ -134,6 +135,27 @@ const SUPPORTED_CHAINS: ChainInfo[] = [
 // NAKA_ENABLED_CHAINS_KEY).
 const LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche', 'solana', 'arbitrum', 'bnb'];
 const EVM_LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche', 'arbitrum', 'bnb'];
+
+// Test networks — opt-in via the "Show test networks" toggle on the Networks
+// screen (persisted to naka_testnet_mode). These are real public testnets with
+// real RPCs + explorers; native balance is read directly via RPC and shown with
+// NO USD value (testnet coins are worthless — we never price them as mainnet).
+const TESTNET_MODE_KEY = 'naka_testnet_mode';
+const TESTNET_CHAINS: ChainInfo[] = [
+  { id: 'sepolia', name: 'Ethereum Sepolia', symbol: 'ETH', color: '#627EEA', explorerUrl: 'https://sepolia.etherscan.io', explorerName: 'Etherscan', apiChain: 'sepolia', logoUrl: COIN_LOGOS.ETH, coinGeckoId: '', testnet: true },
+  { id: 'base-sepolia', name: 'Base Sepolia', symbol: 'ETH', color: '#0052FF', explorerUrl: 'https://sepolia.basescan.org', explorerName: 'BaseScan', apiChain: 'base-sepolia', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/base.png', coinGeckoId: '', testnet: true },
+  { id: 'arbitrum-sepolia', name: 'Arbitrum Sepolia', symbol: 'ETH', color: '#28A0F0', explorerUrl: 'https://sepolia.arbiscan.io', explorerName: 'Arbiscan', apiChain: 'arbitrum-sepolia', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/arbitrum.png', coinGeckoId: '', testnet: true },
+  { id: 'polygon-amoy', name: 'Polygon Amoy', symbol: 'POL', color: '#8247E5', explorerUrl: 'https://amoy.polygonscan.com', explorerName: 'PolygonScan', apiChain: 'polygon-amoy', logoUrl: COIN_LOGOS.MATIC, coinGeckoId: '', testnet: true },
+  { id: 'bnb-testnet', name: 'BNB Testnet', symbol: 'tBNB', color: '#F0B90B', explorerUrl: 'https://testnet.bscscan.com', explorerName: 'BscScan', apiChain: 'bnb-testnet', logoUrl: COIN_LOGOS.BNB, coinGeckoId: '', testnet: true },
+];
+
+function isTestnetChain(id: string): boolean {
+  return TESTNET_CHAINS.some((c) => c.id === id);
+}
+// Lookup across both mainnet + testnet universes (testnets aren't in SUPPORTED_CHAINS).
+function chainById(id: string): ChainInfo | undefined {
+  return SUPPORTED_CHAINS.find((c) => c.id === id) ?? TESTNET_CHAINS.find((c) => c.id === id);
+}
 
 // Default chains to show on the wallet home — in display order.
 // Everything else is toggled on by the user via Add Network.
@@ -260,6 +282,8 @@ export default function WalletPage() {
   // chains (ETH/BNB/Polygon/SOL); anything else the user toggles on
   // via the Add Network flow.
   const [enabledChains, setEnabledChains] = useState<string[]>(DEFAULT_ENABLED_CHAINS);
+  // Test-network mode (opt-in, default off → mainnet behaviour unchanged).
+  const [testnetMode, setTestnetMode] = useState(false);
   // Hydrated TokenBalance rows for each custom-token entry
   // (chain:contractAddress). Pulled from /api/market/token/<addr>
   // (DexScreener fallback when CoinGecko has no slug) so Naka Go +
@@ -379,6 +403,9 @@ export default function WalletPage() {
         localStorage.setItem(NAKA_ENABLED_CHAINS_KEY, JSON.stringify(DEFAULT_ENABLED_CHAINS));
       }
     } catch { /* localStorage quota — use defaults */ }
+    try {
+      if (localStorage.getItem(TESTNET_MODE_KEY) === '1') setTestnetMode(true);
+    } catch { /* ignore */ }
     const savedSort = localStorage.getItem('steinz_token_sort') as 'value' | 'name' | 'balance' | null;
     if (savedSort) setTokenSort(savedSort);
     const savedHideSmall = localStorage.getItem('steinz_hide_small');
@@ -472,6 +499,30 @@ export default function WalletPage() {
     // FIX 5A.1 / Phase 4: was leaving prior chain's holdings visible during the fetch,
     // which is why switching chains felt like "click SOL, still see ETH". Clear first.
     setWalletData(null);
+    // Test networks aren't covered by /api/wallet-intelligence (mainnet only),
+    // so read the native balance straight from the testnet RPC. Value is always
+    // $0 — testnet coins have no market price and we never fake one.
+    if (isTestnetChain(chain.id)) {
+      try {
+        const rpc = CHAIN_RPC[chain.id];
+        const ethers = await import('ethers');
+        const provider = new ethers.JsonRpcProvider(rpc);
+        const balWei = await provider.getBalance(address);
+        const balance = ethers.formatEther(balWei);
+        setWalletData({
+          address,
+          totalBalanceUsd: '0',
+          holdings: [{ symbol: chain.symbol, name: chain.name, balance, valueUsd: '0', contractAddress: null }],
+          tokenCount: 1,
+          chain: chain.id,
+          nativeBalance: balance,
+        });
+      } catch (err) {
+        console.error('[wallet-page] testnet balance fetch failed:', err);
+        setWalletData({ address, totalBalanceUsd: '0', holdings: [], tokenCount: 0, chain: chain.id });
+      } finally { setLoading(false); }
+      return;
+    }
     try {
       // 10s ceiling — RPC balance-of calls can stall on a cold lambda and the
       // user has to see something within the 0.5–1s load budget; we retain the
@@ -787,6 +838,25 @@ export default function WalletPage() {
   if (view === 'add-network') return <AddNetworkView
     onBack={() => setView('main')}
     enabled={enabledChains}
+    chains={testnetMode ? [...SUPPORTED_CHAINS, ...TESTNET_CHAINS] : SUPPORTED_CHAINS}
+    testnetMode={testnetMode}
+    onTestnetModeChange={(on) => {
+      setTestnetMode(on);
+      try { localStorage.setItem(TESTNET_MODE_KEY, on ? '1' : '0'); } catch { /* ignore */ }
+      if (!on) {
+        // Turning testnets off: drop any enabled testnet chains and bounce the
+        // active chain back to a mainnet if it was a testnet.
+        const cleaned = enabledChains.filter((id) => !isTestnetChain(id));
+        const next = cleaned.length ? cleaned : DEFAULT_ENABLED_CHAINS;
+        setEnabledChains(next);
+        try { localStorage.setItem(NAKA_ENABLED_CHAINS_KEY, JSON.stringify(next)); } catch { /* quota */ }
+        if (isTestnetChain(activeChain.id)) {
+          const fallback = SUPPORTED_CHAINS.find((c) => c.id === 'ethereum') ?? SUPPORTED_CHAINS[0];
+          setActiveChain(fallback);
+          setChainFilter('all');
+        }
+      }
+    }}
     onChange={(next) => {
       setEnabledChains(next);
       try { localStorage.setItem(NAKA_ENABLED_CHAINS_KEY, JSON.stringify(next)); } catch { /* quota */ }
@@ -811,6 +881,10 @@ export default function WalletPage() {
     { id: 'arbitrum', label: 'Arbitrum' },
     { id: 'polygon', label: 'Polygon' },
     { id: 'bnb', label: 'BSC' },
+    // Enabled testnets get their own pills so the user can switch to them.
+    ...(testnetMode
+      ? TESTNET_CHAINS.filter((c) => enabledChains.includes(c.id)).map((c) => ({ id: c.id, label: c.name }))
+      : []),
   ];
 
   // Stable token identity for hidden/customize (chain-aware, matches the IIFE).
@@ -854,7 +928,7 @@ export default function WalletPage() {
     const nativePlaceholders: Array<TokenBalance & { chain: string }> = [];
     for (const chainId of enabledChains) {
       if (chainId === activeChain.id) continue;
-      const c = SUPPORTED_CHAINS.find((x) => x.id === chainId);
+      const c = chainById(chainId);
       if (!c) continue;
       const key = tokenKey(chainId, null, c.symbol);
       if (seen.has(key)) continue;
@@ -874,6 +948,9 @@ export default function WalletPage() {
     // the two seeded custom tokens (which live on Ethereum + Polygon,
     // both enabled by default). User extends via Add Network.
     tokens = tokens.filter((t) => enabledChains.includes(t.chain));
+    // Hard guard: never show testnet rows when testnet mode is off (protects
+    // against a stale enabled-chains list carrying testnet ids).
+    if (!testnetMode) tokens = tokens.filter((t) => !isTestnetChain(t.chain));
     // Spam-token auto-hide: airdropped scam tokens name themselves with URLs /
     // "claim" / "airdrop" / "voucher" etc. Drop those UNLESS the user added the
     // token themselves (custom list) — native + user-added tokens are never
@@ -1123,7 +1200,7 @@ export default function WalletPage() {
             {/* ── 4 ACTION BUTTONS ─────────────────────────── */}
             <div className="grid grid-cols-4 sm:grid-cols-4 gap-3 mb-5">
               {[
-                { label: 'Send', icon: <ArrowUpRight className="w-6 h-6" />, color: 'var(--nl-blue)', action: () => setView('send'), enabled: EVM_LIVE_CHAINS.includes(activeChain.id) || activeChain.id === 'solana' },
+                { label: 'Send', icon: <ArrowUpRight className="w-6 h-6" />, color: 'var(--nl-blue)', action: () => setView('send'), enabled: EVM_LIVE_CHAINS.includes(activeChain.id) || activeChain.id === 'solana' || isTestnetChain(activeChain.id) },
                 { label: 'Receive', icon: <ArrowDownLeft className="w-6 h-6" />, color: 'var(--nl-success)', action: () => setView('receive'), enabled: true },
                 { label: 'Swap', icon: <Repeat className="w-6 h-6" />, color: '#8B5CF6', action: () => router.push('/dashboard/swap?from=wallet'), enabled: true },
                 { label: 'Buy', icon: <ShoppingCart className="w-6 h-6" />, color: 'var(--nl-warning)', action: () => setBuyComingSoon(true), enabled: true },
@@ -1151,7 +1228,7 @@ export default function WalletPage() {
               {CHAIN_FILTER_PILLS.map(p => (
                 <button
                   key={p.id}
-                  onClick={() => { setChainFilter(p.id); if (p.id !== 'all') { const c = SUPPORTED_CHAINS.find(c => c.id === p.id); if (c) setActiveChain(c); } }}
+                  onClick={() => { setChainFilter(p.id); if (p.id !== 'all') { const c = chainById(p.id); if (c) setActiveChain(c); } }}
                   style={chainFilter === p.id
                     ? { background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 14px rgba(0,102,255,.5), inset 0 1px 0 rgba(255,255,255,.2)' }
                     : { boxShadow: '0 0 0 1px rgba(0,102,255,.15)' }}
@@ -1298,11 +1375,12 @@ export default function WalletPage() {
                       valueUsd={token.valueUsd}
                       contractAddress={token.contractAddress}
                       logoUrl={logoUrl}
-                      chainLabel={SUPPORTED_CHAINS.find(c => c.id === token.chain)?.name ?? ''}
-                      coinGeckoId={resolveCoinGeckoId(
-                        token.symbol,
-                        SUPPORTED_CHAINS.find(c => c.id === token.chain) ?? activeChain,
-                      )}
+                      chainLabel={chainById(token.chain)?.name ?? ''}
+                      // Testnet tokens get NO price lookup (empty id) so we never
+                      // render a mainnet USD price against a worthless test coin.
+                      coinGeckoId={isTestnetChain(token.chain)
+                        ? ''
+                        : resolveCoinGeckoId(token.symbol, chainById(token.chain) ?? activeChain)}
                       hideBalance={hideBalance}
                       // §4.5 — wallet token click opens the Trust-Wallet-style coin detail
                       // (line chart + fiat buy + Holdings/History/About + Send/Receive/Swap
@@ -1791,6 +1869,12 @@ const CHAIN_RPC: Record<string, string> = {
   optimism: 'https://mainnet.optimism.io',
   bnb: 'https://bsc-dataseed.binance.org',
   fantom: 'https://rpc.ftm.tools',
+  // Test networks (real public RPCs).
+  sepolia: 'https://ethereum-sepolia-rpc.publicnode.com',
+  'base-sepolia': 'https://sepolia.base.org',
+  'arbitrum-sepolia': 'https://sepolia-rollup.arbitrum.io/rpc',
+  'polygon-amoy': 'https://rpc-amoy.polygon.technology',
+  'bnb-testnet': 'https://data-seed-prebsc-1-s1.binance.org:8545',
 };
 
 function isValidAddressForChain(addr: string, chainId: string): boolean {
@@ -2511,6 +2595,8 @@ function PortfolioAnalyticsView({ onBack, wallet }: { onBack: () => void; wallet
 const EVM_RECEIVE_CHAINS = new Set([
   'ethereum', 'base', 'polygon', 'avalanche', 'arbitrum',
   'optimism', 'bnb', 'fantom', 'cronos',
+  // EVM testnets share the same 0x address.
+  'sepolia', 'base-sepolia', 'arbitrum-sepolia', 'polygon-amoy', 'bnb-testnet',
 ]);
 
 function isEvmAddress(addr: string): boolean {
@@ -3809,10 +3895,16 @@ function AddNetworkView({
   onBack,
   enabled,
   onChange,
+  chains,
+  testnetMode,
+  onTestnetModeChange,
 }: {
   onBack: () => void;
   enabled: string[];
   onChange: (next: string[]) => void;
+  chains: ChainInfo[];
+  testnetMode: boolean;
+  onTestnetModeChange: (on: boolean) => void;
 }) {
   const toggle = (id: string) => {
     const next = enabled.includes(id)
@@ -3839,8 +3931,16 @@ function AddNetworkView({
       </div>
 
       <div className="px-4 py-4">
+        {/* Show-testnets master toggle */}
+        <div className="mb-4 flex items-center justify-between nl-glass rounded-xl px-3.5 py-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.18)' }}>
+          <div>
+            <p className="text-sm font-semibold text-white">Show test networks</p>
+            <p className="text-[11px] text-slate-500">Sepolia, Amoy &amp; more · no real value</p>
+          </div>
+          <ToggleSwitch on={testnetMode} onToggle={() => onTestnetModeChange(!testnetMode)} />
+        </div>
         <div className="rounded-xl border border-slate-800/60 bg-slate-950/40 overflow-hidden divide-y divide-slate-800/60">
-          {SUPPORTED_CHAINS.map((c) => {
+          {chains.map((c) => {
             const isOn = enabled.includes(c.id);
             const isDefault = DEFAULT_ENABLED_CHAINS.includes(c.id);
             return (
@@ -3856,6 +3956,7 @@ function AddNetworkView({
                   <div className="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-2">
                     <span>{c.symbol}</span>
                     {isDefault && <span className="text-[#4D6BFF]">· default</span>}
+                    {c.testnet && <span className="text-amber-400">· testnet</span>}
                   </div>
                 </div>
                 {/* iOS-style toggle */}
