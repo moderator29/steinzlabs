@@ -67,6 +67,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ group: stri
   if (!paths) return NextResponse.json({ error: 'unknown_group', group }, { status: 404 });
 
   const secret = process.env.CRON_SECRET ?? '';
+  // Vercel Deployment Protection intercepts same-origin self-fetches with an SSO
+  // challenge page that returns 200 OK — so the dispatcher previously logged
+  // every handler as "2xx success" while NONE of them actually ran, masking a
+  // 45-day platform-wide cron outage as green. Send the automation bypass
+  // header so the request reaches the real handler, and assert the response is
+  // genuine handler JSON ({ ok: ... }) rather than the HTML challenge page.
+  const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET ?? '';
   const proto = req.headers.get('x-forwarded-proto') ?? 'https';
   const host = req.headers.get('host') ?? process.env.VERCEL_URL ?? '';
   const base = `${proto}://${host}`;
@@ -80,11 +87,24 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ group: stri
     await Promise.allSettled(
       batch.map(async (name) => {
         try {
+          const headers: Record<string, string> = { authorization: `Bearer ${secret}` };
+          if (bypass) {
+            headers['x-vercel-protection-bypass'] = bypass;
+            headers['x-vercel-set-bypass-cookie'] = 'true';
+          }
           const r = await fetch(`${base}/api/cron/${name}`, {
-            headers: { authorization: `Bearer ${secret}` },
+            headers,
             signal: AbortSignal.timeout(60_000),
           });
-          results[name] = r.status;
+          // A 2xx that isn't JSON is the Deployment-Protection challenge page,
+          // not a real handler result — record it as a protection failure so
+          // the outage is visible instead of falsely green.
+          const ct = r.headers.get('content-type') ?? '';
+          if (r.ok && !ct.includes('application/json')) {
+            results[name] = 'protected_non_json';
+          } else {
+            results[name] = r.status;
+          }
         } catch (err) {
           results[name] = err instanceof Error ? err.name : 'error';
           Sentry.captureException(err, { tags: { cron: 'dispatch', group, target: name } });
