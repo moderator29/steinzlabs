@@ -27,16 +27,49 @@ const NATIVE_CG: Record<string, string> = {
 const priceCache = new Map<string, { price: number; at: number }>();
 const TTL = 60_000;
 
+// GeckoTerminal (CoinGecko Onchain) network ids keyed by our chain slug. Free,
+// keyless, prices any token by contract — the primary value_usd source.
+const GT_NETWORK: Record<string, string> = {
+  ethereum: 'eth', solana: 'solana', base: 'base', arbitrum: 'arbitrum',
+  bsc: 'bsc', polygon: 'polygon_pos', optimism: 'optimism', avalanche: 'avax',
+};
+
+async function geckoTerminalPrice(chain: string, tokenAddress: string): Promise<number | null> {
+  const network = GT_NETWORK[chain.toLowerCase()];
+  if (!network) return null;
+  try {
+    const res = await fetch(
+      `https://api.geckoterminal.com/api/v2/simple/networks/${network}/token_price/${tokenAddress}`,
+      { headers: { accept: 'application/json' }, next: { revalidate: 60 } },
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as { data?: { attributes?: { token_prices?: Record<string, string> } } };
+    const prices = json.data?.attributes?.token_prices ?? {};
+    // GeckoTerminal lowercases EVM addresses in the response key; match loosely.
+    const raw = prices[tokenAddress] ?? prices[tokenAddress.toLowerCase()] ?? Object.values(prices)[0];
+    const price = raw != null ? parseFloat(raw) : NaN;
+    return Number.isFinite(price) && price > 0 ? price : null;
+  } catch {
+    return null;
+  }
+}
+
 async function tokenPriceUsd(
   chain: string,
   tokenAddress: string | null,
   symbol: string | null,
 ): Promise<number | null> {
-  // 1. By contract via Birdeye (Solana + EVM).
+  // 1. By contract. GeckoTerminal first (free, keyless, all chains), then
+  //    Birdeye as fallback (CU-limited but good Solana depth).
   if (tokenAddress) {
-    const key = `be:${chain}:${normalizeAddress(tokenAddress, chain)}`;
+    const key = `tok:${chain}:${normalizeAddress(tokenAddress, chain)}`;
     const cached = priceCache.get(key);
     if (cached && Date.now() - cached.at < TTL) return cached.price;
+    const gt = await geckoTerminalPrice(chain, tokenAddress);
+    if (gt != null) {
+      priceCache.set(key, { price: gt, at: Date.now() });
+      return gt;
+    }
     try {
       const overview = await getBirdeyeTokenOverview(tokenAddress, chain);
       if (overview && overview.price > 0) {
