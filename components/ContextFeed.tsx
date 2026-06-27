@@ -5,6 +5,7 @@ import { Eye, Heart, Share2, ExternalLink, Copy, X, Check, Bookmark, Archive, Sl
 import { useContextFeed, useArchivedFeed, ChainFilter } from '@/lib/hooks/useContextFeed';
 import { SolanaIcon, EthereumIcon, BscIcon, PolygonIcon, AvalancheIcon, AllChainsIcon } from './ChainIcons';
 import DuneFeedCards from './context-feed/DuneFeedCards';
+import { MarketPulseCard } from './context-feed/MarketPulseCard';
 import { SelectMenu, SelectOption } from '@/components/ui/SelectMenu';
 // FIX 5A.1 / Phase 7: Base / Arbitrum / Optimism added. No bespoke icon — the Ethereum icon
 // with a colored dot is readable enough as a lightweight placeholder until dedicated icons land.
@@ -549,6 +550,9 @@ export default function ContextFeed() {
           smart_money_rotation, mev_sandwich, stablecoin_pulse,
           cex_drain). Renders above the chain-tab feed. Auto-hides
           when no Dune materialized data is present. */}
+      {/* AI Market Pulse — a live read on what the feed is showing. Only on
+          the unfiltered live feed (not archive / specific pills). */}
+      {!isArchive && activeFilter === 'all' && <MarketPulseCard events={events} />}
       <DuneFeedCards limit={8} />
       {/* Chain + type filters are vertical dropdowns (same pattern as the
           swap / whale-tracker pickers) — they only reveal options on click,
