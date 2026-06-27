@@ -874,6 +874,28 @@ export default function WalletPage() {
     // the two seeded custom tokens (which live on Ethereum + Polygon,
     // both enabled by default). User extends via Add Network.
     tokens = tokens.filter((t) => enabledChains.includes(t.chain));
+    // Spam-token auto-hide: airdropped scam tokens name themselves with URLs /
+    // "claim" / "airdrop" / "voucher" etc. Drop those UNLESS the user added the
+    // token themselves (custom list) — native + user-added tokens are never
+    // touched, so this can't hide a real holding. Reversible via Add Token.
+    {
+      const SPAM_RE = /(https?:|www\.|\.com|\.xyz|\.io\b|\.org|t\.me|claim|airdrop|reward|voucher|visit|free\s|giveaway|\$\s)/i;
+      // Build the allow-set with the SAME chain-aware key as the rows so we
+      // never lowercase a raw address (Solana is case-sensitive).
+      const customSet = new Set(
+        customTokens
+          .map((entry) => {
+            const [chainId, contract] = entry.split(':');
+            return chainId && contract ? tokenKeyOf(chainId, contract, '') : null;
+          })
+          .filter((k): k is string => k !== null),
+      );
+      tokens = tokens.filter((t) => {
+        if (!t.contractAddress) return true; // native asset
+        if (customSet.has(tokenKeyOf(t.chain, t.contractAddress, t.symbol))) return true; // user added it
+        return !SPAM_RE.test(`${t.symbol} ${t.name}`);
+      });
+    }
     // Chain pill filter — only apply when not on 'all'. Solana + BTC
     // etc. don't have EVM contract tokens so they naturally filter out.
     if (chainFilter !== 'all') tokens = tokens.filter((t) => t.chain === chainFilter);
