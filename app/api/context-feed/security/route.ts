@@ -52,7 +52,10 @@ export async function GET(req: NextRequest) {
       mintable: sec.isMintable,
       verified: sec.isOpenSource,
       holderCount: sec.holderCount ?? null,
-      topHolderPct: sec.creatorHoldingPct != null ? parseFloat((sec.creatorHoldingPct * 100).toFixed(1)) : null,
+      // #37: report the LARGEST holder's share (real concentration), not the
+      // creator's — the two are different and creator-only understated risk.
+      topHolderPct: sec.topHolderPct ? parseFloat((sec.topHolderPct * 100).toFixed(1)) : null,
+      creatorHoldingPct: sec.creatorHoldingPct ? parseFloat((sec.creatorHoldingPct * 100).toFixed(1)) : null,
       lpLockedPct: deriveLpLocked(sec.lpHolders),
     }, { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' } });
   } catch {

@@ -1,5 +1,6 @@
 import 'server-only';
 import { cache, cacheKey, TTL } from '../api/cache-manager';
+import { normalizeAddress } from '../utils/addressNormalize';
 import { cacheGet, cacheSet } from '../cache/redis';
 
 // Cross-invocation L2 TTL for token security on the hot copy-trade path.
@@ -40,7 +41,7 @@ export async function getTokenSecurity(
   contractAddress: string,
   chain: string
 ): Promise<TokenSecurityResult> {
-  const key = cacheKey('goplus', 'token_security', { contractAddress: contractAddress.toLowerCase(), chain });
+  const key = cacheKey('goplus', 'token_security', { contractAddress: normalizeAddress(contractAddress, chain), chain });
 
   // L1 — in-memory (same-process, microsecond).
   const memHit = cache.get<TokenSecurityResult>(key);
@@ -65,7 +66,7 @@ export async function getAddressSecurity(
   address: string,
   chain: string
 ): Promise<AddressScanResult> {
-  const key = cacheKey('goplus', 'address_security', { address: address.toLowerCase(), chain });
+  const key = cacheKey('goplus', 'address_security', { address: normalizeAddress(address, chain), chain });
   const cached = cache.get<AddressScanResult>(key);
   if (cached) return cached;
 
