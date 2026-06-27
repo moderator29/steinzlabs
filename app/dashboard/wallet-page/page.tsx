@@ -1262,17 +1262,7 @@ export default function WalletPage() {
                   );
                 })
               ) : (
-                <div className="py-12 text-center">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-slate-900 rounded-2xl flex items-center justify-center border border-slate-800">
-                    <Wallet className="w-8 h-8 text-slate-600" />
-                  </div>
-                  <p className="text-slate-300 font-semibold mb-1">No assets yet</p>
-                  <p className="text-slate-500 text-sm mb-4">Your Naka Wallet is ready. Add funds to get started.</p>
-                  <div className="flex gap-2 justify-center">
-                    <button onClick={() => setView('receive')} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-semibold transition-colors">Receive</button>
-                    <button disabled className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm font-semibold text-slate-400 opacity-60">Buy (soon)</button>
-                  </div>
-                </div>
+                <FundWalletEmpty onFund={() => setView('receive')} onManage={() => setView('customize')} />
               )}
 
               <div className="grid grid-cols-3 gap-2">
@@ -2578,6 +2568,58 @@ function ToggleSwitch({ on, onToggle }: { on: boolean; onToggle: () => void }) {
     <button onClick={onToggle} className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${on ? 'bg-blue-600' : 'bg-slate-700'}`}>
       <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
     </button>
+  );
+}
+
+// Fresh-wallet empty state — a floating 3D-ish cluster of real chain coins
+// (our own neon-glass vibe, not a Trust clone) + a prominent Fund CTA.
+function FundWalletEmpty({ onFund, onManage }: { onFund: () => void; onManage: () => void }) {
+  // Each coin: chain id (for ChainLogo), size, and an absolute position +
+  // rotation that gives the cluster depth. BTC/SOL/ETH lead, others orbit.
+  const coins: Array<{ id: string; size: number; top: string; left: string; rot: number; z: number }> = [
+    { id: 'ethereum', size: 64, top: '18%', left: '38%', rot: -8, z: 5 },
+    { id: 'solana', size: 50, top: '6%', left: '60%', rot: 10, z: 4 },
+    { id: 'bnb', size: 46, top: '40%', left: '62%', rot: 14, z: 3 },
+    { id: 'polygon', size: 44, top: '46%', left: '20%', rot: -14, z: 3 },
+    { id: 'base', size: 40, top: '12%', left: '14%', rot: 6, z: 2 },
+    { id: 'arbitrum', size: 38, top: '52%', left: '44%', rot: -4, z: 4 },
+  ];
+  return (
+    <div className="py-10 flex flex-col items-center text-center">
+      <div className="relative w-56 h-44 mb-2">
+        {coins.map((c) => {
+          const ci = SUPPORTED_CHAINS.find((x) => x.id === c.id);
+          if (!ci) return null;
+          return (
+          <div
+            key={c.id}
+            className="absolute rounded-full"
+            style={{
+              top: c.top, left: c.left, width: c.size, height: c.size, zIndex: c.z,
+              transform: `rotate(${c.rot}deg)`,
+              boxShadow: '0 10px 24px rgba(0,0,0,.45), 0 0 22px rgba(0,102,255,.35), inset 0 2px 6px rgba(255,255,255,.25)',
+              borderRadius: '9999px',
+              animation: `nlFloat 5s ease-in-out infinite`,
+              animationDelay: `${c.z * 0.25}s`,
+            }}
+          >
+            <ChainLogo chain={ci} size={c.size} />
+          </div>
+          );
+        })}
+        <style>{`@keyframes nlFloat{0%,100%{translate:0 0}50%{translate:0 -8px}}`}</style>
+      </div>
+      <p className="text-slate-300 font-semibold text-base mb-1">Add funds to get started</p>
+      <p className="text-slate-500 text-sm mb-5 max-w-xs">Receive crypto to your wallet — your address works across every EVM chain, plus Solana.</p>
+      <button
+        onClick={onFund}
+        className="w-full max-w-xs py-3.5 rounded-2xl font-bold text-white text-sm"
+        style={{ background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 22px rgba(0,102,255,.55), inset 0 1px 0 rgba(255,255,255,.22)' }}
+      >
+        Fund your wallet
+      </button>
+      <button onClick={onManage} className="mt-3 text-[13px] font-semibold text-[#8FA3FF] hover:text-white transition-colors">Manage crypto</button>
+    </div>
   );
 }
 

@@ -134,24 +134,23 @@ export function WalletTokenRow({
         <div className="text-[11px] text-slate-500 truncate leading-tight">
           {name}{chainLabel && !(symbol === 'ETH' && chainLabel !== 'Ethereum') ? <span className="text-slate-600"> · {chainLabel}</span> : null}
         </div>
+        {/* qty held + unit price */}
         <div className="flex items-center gap-1.5 mt-0.5">
-          <span className="text-[12px] text-slate-400 font-mono">{formatPrice(price)}</span>
-          {changePct != null && (
-            <span className={`text-[12px] font-semibold ${changeColor}`}>
-              {changeSign}{changePct.toFixed(2)}%
-            </span>
-          )}
+          <span className="text-[12px] text-slate-400 font-mono">{hideBalance ? '••••' : `${formatQty(qty)} ${symbol}`}</span>
+          <span className="text-[12px] text-slate-500 font-mono">{formatPrice(price)}</span>
         </div>
       </div>
 
-      {/* Right — qty + USD value */}
+      {/* Right — USD value + colored 24h change (Trust/Exodus column). */}
       <div className="text-end shrink-0">
         <div className="text-[15px] font-semibold text-white tabular-nums leading-tight">
-          {hideBalance ? '••••' : formatQty(qty)}
-        </div>
-        <div className="text-[12px] text-slate-400 tabular-nums leading-tight mt-0.5">
           {hideBalance ? '••••' : formatValue(val)}
         </div>
+        {changePct != null && (
+          <div className={`text-[12px] font-semibold tabular-nums leading-tight mt-0.5 ${changeColor}`}>
+            {changeSign}{changePct.toFixed(2)}%
+          </div>
+        )}
       </div>
 
       <ChevronRight className="w-4 h-4 text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
