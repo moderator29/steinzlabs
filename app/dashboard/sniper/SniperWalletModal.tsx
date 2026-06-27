@@ -91,11 +91,21 @@ export function SniperWalletModal({ userId, onClose, onConnected }: {
     try {
       let resolved = await getEvmProvider();
       if (!resolved) {
-        // No wallet connected — open the connect modal then retry once.
+        // No wallet connected — open the connect modal and WAIT for the user to
+        // approve in their wallet (Trust Wallet / WalletConnect), then continue
+        // to signing automatically instead of making them tap Authorize again.
         getAppKit()?.open();
-        setError('Connect your EVM wallet, then press Authorize again.');
-        setBusy(false);
-        return;
+        setError('Approve the connection in your wallet…');
+        for (let i = 0; i < 120 && !resolved; i++) {
+          await new Promise((r) => setTimeout(r, 500));
+          resolved = await getEvmProvider();
+        }
+        if (!resolved) {
+          setError('Wallet not connected yet. Tap Authorize to try again.');
+          setBusy(false);
+          return;
+        }
+        setError(null);
       }
       const { provider, address: mainAddress } = resolved;
 

@@ -8,7 +8,7 @@ import {
   Users, Layers, TrendingUp, TrendingDown, Bell, Clock3,
 } from 'lucide-react';
 import { ChainLogo } from '@/components/common/ChainLogo';
-import { type DetectedToken, fmtCompact, shortAddr } from './sniperShared';
+import { type DetectedToken, fmtCompact, shortAddr, TokenAvatar } from './sniperShared';
 
 const EXPLORER: Record<string, string> = {
   ethereum: 'https://etherscan.io',
@@ -39,6 +39,7 @@ interface MarketDetail {
   priceUsd: number | null; liquidity: number; marketCap: number | null; volume24h: number;
   priceChange24h: number; priceChange1h: number; pairCreatedAt: number | null;
   dexId: string; url: string; websites: { label: string; url: string }[];
+  socials: { type: string; url: string }[]; logo: string | null;
 }
 interface SimilarToken {
   address: string; symbol: string; name: string; chain: string;
@@ -163,7 +164,7 @@ export function SniperTokenDrawer({ token, onClose, onSnipe }: { token: Detected
         {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="flex items-center gap-3 min-w-0">
-            {token.logo ? <img src={token.logo} alt="" className="w-12 h-12 rounded-full object-cover" /> : <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center font-bold text-white/70">{token.symbol.slice(0, 2)}</div>}
+            <TokenAvatar logo={token.logo ?? market?.logo} symbol={token.symbol} address={token.address} size={48} />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-extrabold truncate">{token.symbol}</h2>
@@ -183,6 +184,22 @@ export function SniperTokenDrawer({ token, onClose, onSnipe }: { token: Detected
           <a href={addrLink(token.chain, token.address)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/[0.04] border border-white/10 text-[11px] text-blue-300 hover:text-blue-200">Explorer <ExternalLink className="w-3 h-3" /></a>
           {market?.url && <a href={market.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/[0.04] border border-white/10 text-[11px] text-blue-300 hover:text-blue-200">Chart <ExternalLink className="w-3 h-3" /></a>}
         </div>
+
+        {/* Socials (real, from the pair) */}
+        {((market?.socials?.length ?? 0) > 0 || (market?.websites?.length ?? 0) > 0) && (
+          <div className="flex items-center gap-1.5 mb-4 flex-wrap">
+            {market?.socials?.map((s) => (
+              <a key={s.url} href={s.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/[0.04] border border-white/10 text-[11px] text-white/70 hover:text-white capitalize">
+                {s.type} <ExternalLink className="w-3 h-3" />
+              </a>
+            ))}
+            {market?.websites?.map((w) => (
+              <a key={w.url} href={w.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/[0.04] border border-white/10 text-[11px] text-white/70 hover:text-white">
+                {w.label || 'Website'} <ExternalLink className="w-3 h-3" />
+              </a>
+            ))}
+          </div>
+        )}
 
         {/* Price + stats */}
         <div className="rounded-xl bg-white/[0.03] border border-white/10 p-3 mb-3">
