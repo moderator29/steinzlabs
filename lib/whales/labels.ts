@@ -158,7 +158,10 @@ const REGISTRY: RegistryEntry[] = [
 ];
 
 const REGISTRY_INDEX: Map<string, RegistryEntry> = new Map(
-  REGISTRY.map((e) => [`${e.chain}:${e.address.toLowerCase()}`, e]),
+  // #22: mirror classifyAddress's chain-aware casing — lowercasing the Solana
+  // entries here made them unreachable (the lookup compares Solana verbatim),
+  // so the curated Solana CEX wallets never classified.
+  REGISTRY.map((e) => [`${e.chain}:${e.chain === 'solana' ? e.address : e.address.toLowerCase()}`, e]),
 );
 
 export interface ClassificationResult {

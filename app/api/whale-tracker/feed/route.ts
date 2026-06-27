@@ -25,6 +25,11 @@ interface FeedRow {
   label: string | null;
   entity_type: string | null;
   whale_label: WhaleLabel;
+  // #8: behavioral metrics the feed actually enriches each row with — typed so
+  // they aren't silently dropped from the contract.
+  pnl_30d_usd?: number | null;
+  win_rate?: number | null;
+  avg_hold_hours?: number | null;
 }
 
 /**
