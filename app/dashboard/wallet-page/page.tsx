@@ -20,6 +20,7 @@ import SteinzLogo from '@/components/SteinzLogo';
 import { notifyWalletCreated, notifyWalletImported, notifySeedBackupReminder } from '@/lib/notifications';
 import { WalletTokenRow } from '@/components/wallet/WalletTokenRow';
 import { WatchlistTab } from '@/components/wallet/WatchlistTab';
+import { ScanQrModal } from '@/components/wallet/ScanQrModal';
 import { NftTab } from '@/components/wallet/NftTab';
 // Audit B4 — shared AES-GCM crypto, lifted from this file so the new
 // UnlockWalletModal can verify a typed password without duplicating
@@ -1760,6 +1761,7 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
   const [txNonce, setTxNonce] = useState<number | null>(null);
   const [ensAddr, setEnsAddr] = useState<string | null>(null);
   const [ensLoading, setEnsLoading] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
 
   // Native balance — powers MAX + the >balance guard.
   useEffect(() => {
@@ -1941,7 +1943,14 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
           <div className="space-y-4">
             <div>
               <label className="text-xs text-gray-400 mb-1.5 block font-medium">Address or Domain Name</label>
-              <input value={to} onChange={e => setTo(e.target.value)} className={`${fieldCls} font-mono`} style={fieldStyle} placeholder={chain.id === 'solana' ? 'Solana address…' : '0x… or name.eth'} />
+              <div className="relative">
+                <input value={to} onChange={e => setTo(e.target.value)} className={`${fieldCls} font-mono pe-24`} style={fieldStyle} placeholder={chain.id === 'solana' ? 'Solana address…' : '0x… or name.eth'} />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  <button type="button" onClick={async () => { try { const t = await navigator.clipboard.readText(); if (t) setTo(t.trim()); } catch { /* denied */ } }} className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] font-semibold text-blue-300 border border-white/10">Paste</button>
+                  <button type="button" onClick={() => setScanOpen(true)} aria-label="Scan QR" className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-blue-300 border border-white/10"><QrCode className="w-4 h-4" /></button>
+                </div>
+              </div>
+              {scanOpen && <ScanQrModal onResult={(a) => { setTo(a); setScanOpen(false); }} onClose={() => setScanOpen(false)} />}
               {isEns && ensLoading && <p className="text-[11px] text-slate-500 mt-1.5">Resolving {to.trim()}…</p>}
               {isEns && !ensLoading && ensAddr && <p className="text-[11px] text-emerald-400 mt-1.5 font-mono">→ {shortAddr(ensAddr)}</p>}
               {isEns && !ensLoading && !ensAddr && <p className="text-[11px] text-[#F59E0B] mt-1.5">Couldn&apos;t resolve that name.</p>}
