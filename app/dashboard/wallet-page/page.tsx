@@ -2152,8 +2152,8 @@ function ReceiveView({
 
           <p className="text-gray-400 text-xs mb-3">Send {chain.symbol} or tokens to this address:</p>
 
-          <div className="bg-[#111827] border border-white/10 rounded-xl p-4 mb-4">
-            <p className="text-xs font-mono break-all text-[#0066FF]">{address}</p>
+          <div className="nl-glass rounded-xl p-4 mb-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.3)' }}>
+            <p className="text-xs font-mono break-all text-[#8FA3FF]">{address}</p>
           </div>
 
           {/* Trust-Wallet-style 3-action row: Copy · Set Amount · Share. Each

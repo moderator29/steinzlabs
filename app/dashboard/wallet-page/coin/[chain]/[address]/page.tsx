@@ -332,11 +332,10 @@ function WalletAction({
     <button
       type="button"
       onClick={onClick}
-      className={`flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl transition-colors ${
-        primary
-          ? 'bg-[#0066FF] text-white shadow-[0_0_16px_rgba(0,102,255,0.35)] hover:bg-[#0818CC]'
-          : 'bg-slate-900/70 text-slate-300 hover:bg-slate-800'
-      }`}
+      style={primary
+        ? { background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 18px rgba(0,102,255,.5), inset 0 1px 0 rgba(255,255,255,.2)' }
+        : { boxShadow: '0 0 0 1px rgba(0,102,255,.3)' }}
+      className={`nl-glass flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl transition-transform hover:-translate-y-0.5 ${primary ? 'text-white' : 'text-slate-200'}`}
     >
       <div>{icon}</div>
       <span className="text-[10px] font-semibold">{label}</span>
