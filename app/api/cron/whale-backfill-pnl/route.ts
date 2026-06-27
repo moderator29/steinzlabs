@@ -145,6 +145,30 @@ function calculatePnl(whaleAddress: string, transfers: TransferLite[], windowMs:
   };
 }
 
+/**
+ * Composite whale_score (0..100) derived from the real metrics this cron
+ * already computes. The old whale-score-populator RPC reads whale_activity
+ * (dead/ethereum-only for 45 days), so scores went stale; this rides the
+ * working Arkham-backed data path instead. Returns null when there isn't
+ * enough signal, so a curated/seeded score is never flattened to a default.
+ */
+function computeWhaleScore(
+  m: { win_rate: number | null; pnl_30d_usd: number; trade_count_30d: number },
+  portfolio: number | null,
+): number | null {
+  const hasSignal = m.win_rate != null || (m.trade_count_30d > 0 && m.pnl_30d_usd !== 0);
+  if (!hasSignal) return null;
+  let score = 50;
+  if (m.win_rate != null) score += (m.win_rate - 50) * 0.4; // win_rate is 0..100 → ±20
+  const pnl = m.pnl_30d_usd ?? 0;
+  if (pnl > 0) score += Math.min(20, Math.log10(pnl + 1) * 5);
+  else if (pnl < 0) score -= Math.min(20, Math.log10(-pnl + 1) * 5);
+  score += Math.min(10, (m.trade_count_30d ?? 0) / 5);
+  const port = portfolio ?? 0;
+  if (port > 0) score += Math.min(10, Math.log10(port) * 2);
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
 function deriveArchetype(pnl: number, winRate: number | null, holdHours: number | null): WhaleArchetype | null {
   const wr = winRate ?? 0;
   const hold = holdHours ?? 0;
@@ -278,6 +302,7 @@ export async function GET(request: NextRequest) {
         computePortfolioValue(w.address, chain),
       ]);
 
+      const score = computeWhaleScore(metrics, portfolio);
       updates.push({
         id: w.id,
         fields: {
@@ -288,6 +313,9 @@ export async function GET(request: NextRequest) {
           last_active_at: metrics.last_active_at,
           avg_hold_hours: metrics.avg_hold_hours,
           archetype: metrics.archetype,
+          // Refresh whale_score from real metrics (decoupled from the dead
+          // whale_activity RPC); only when there's signal, else leave as-is.
+          ...(score !== null ? { whale_score: score } : {}),
           // Only overwrite portfolio_value_usd if Arkham returned something;
           // otherwise leave existing value alone.
           ...(portfolio !== null ? { portfolio_value_usd: portfolio } : {}),
