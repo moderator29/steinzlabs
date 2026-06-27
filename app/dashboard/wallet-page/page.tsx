@@ -1776,6 +1776,8 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
   const [ensAddr, setEnsAddr] = useState<string | null>(null);
   const [ensLoading, setEnsLoading] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
+  const [contacts, setContacts] = useState<Array<{ id: string; label: string; address: string; chain: string | null }>>([]);
+  const [saved, setSaved] = useState(false);
 
   // Native balance — powers MAX + the >balance guard.
   useEffect(() => {
@@ -1833,6 +1835,27 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
     }, 400);
     return () => { cancelled = true; clearTimeout(t); };
   }, [to, isEns]);
+
+  // Load the address book once.
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/wallet/contacts').then((r) => (r.ok ? r.json() : null)).then((d) => {
+      if (!cancelled && d?.contacts) setContacts(d.contacts);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const saveContact = async () => {
+    const addr = recipient;
+    if (!addr) return;
+    try {
+      const res = await fetch('/api/wallet/contacts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label: shortAddr(addr), address: addr, chain: chain.id }),
+      });
+      if (res.ok) setSaved(true);
+    } catch { /* ignore */ }
+  };
 
   const recipient = (ensAddr || to).trim();
   const amtNum = parseFloat(amount) || 0;
@@ -1969,6 +1992,18 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
               {isEns && !ensLoading && ensAddr && <p className="text-[11px] text-emerald-400 mt-1.5 font-mono">→ {shortAddr(ensAddr)}</p>}
               {isEns && !ensLoading && !ensAddr && <p className="text-[11px] text-[#F59E0B] mt-1.5">Couldn&apos;t resolve that name.</p>}
               {!isEns && to && !validAddr && <p className="text-[11px] text-[#F59E0B] mt-1.5">Not a valid {chain.name} address.</p>}
+              {!to && contacts.length > 0 && (
+                <div className="mt-2.5">
+                  <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-1.5 font-semibold">Address book</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {contacts.slice(0, 8).map((c) => (
+                      <button key={c.id} type="button" onClick={() => setTo(c.address)} className="nl-glass px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-200" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.2)' }}>
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <div className="flex items-center justify-between mb-1.5">
@@ -2060,6 +2095,11 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
               <a href={`${chain.explorerUrl}/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="nl-glass flex items-center justify-center gap-1.5 py-3 rounded-2xl text-[#8FA3FF] text-sm font-semibold" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.3)' }}>
                 View on block explorer <ExternalLink className="w-3.5 h-3.5" />
               </a>
+            )}
+            {!contacts.some((c) => c.address.toLowerCase() === recipient.toLowerCase()) && (
+              <button onClick={() => void saveContact()} disabled={saved} className="w-full py-3 rounded-2xl font-semibold text-[13px] text-[#8FA3FF] nl-glass disabled:opacity-60" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.2)' }}>
+                {saved ? 'Saved to address book ✓' : 'Save recipient to address book'}
+              </button>
             )}
             <button onClick={onBack} className="w-full py-3.5 rounded-2xl font-bold text-sm nl-glass" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}>Done</button>
           </div>
