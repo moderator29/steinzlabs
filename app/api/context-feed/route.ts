@@ -12,6 +12,7 @@ import {
   getTopTokens as cgTopTokens,
 } from '@/lib/services/coingecko';
 import { getTokenSecurity } from '@/lib/services/goplus';
+import { getNewEvmPairs } from '@/lib/services/geckoterminal';
 import { getTrendingTokens as lcTrendingTokens, getSocialVelocity as lcSocialVelocity } from '@/lib/services/lunarcrush';
 
 async function buildPersonalContext(request: Request): Promise<PersonalContext | undefined> {
@@ -613,6 +614,29 @@ async function fetchPumpFunTokens(): Promise<WhaleEvent[]> {
   }
 }
 
+// Genuinely fresh on-chain pools from GeckoTerminal (free, no key) across all
+// supported EVM chains. This is the real "new coins" source — DexScreener
+// boosts/profiles are curated, not freshly-launched. Mapped to `new_listing`
+// so they populate the New Coins pill on every chain, not just Solana/pump.fun.
+async function fetchGeckoTerminalNewPairs(chain?: string): Promise<WhaleEvent[]> {
+  try {
+    const pairs = await getNewEvmPairs(3000, chain);
+    const out: WhaleEvent[] = [];
+    for (const pair of pairs.slice(0, 60)) {
+      const ev = mapDexPairToEvent(pair, 'GeckoTerminal');
+      if (!ev) continue;
+      ev.type = 'new_listing';
+      // Use the real pool-creation time so recency sorting reflects the
+      // actual launch, not fetch time.
+      if (pair.pairCreatedAt) ev.timestamp = new Date(pair.pairCreatedAt).toISOString();
+      out.push(ev);
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
 function getDexPlatformLabel(dexId: string): string {
   if (dexId.includes('pump') || dexId.includes('pumpswap')) return 'Pump.fun';
   if (dexId.includes('raydium')) return 'Raydium';
@@ -1175,7 +1199,7 @@ export async function GET(request: Request) {
       // FIX 5A.1 / Phase 7: added base/arbitrum/optimism branches — user-reported "only Solana /
       // pump.fun trash" was largely driven by these L2s having zero coverage.
       const SRC_TIMEOUT = 5000;
-      const [alchemyEvents, solanaNetEvents, pumpEvents, dexTrending, ethDex, solDex, bscDex, polygonDex, avalancheDex, baseDex, arbDex, opDex, cgEvents, rugAlerts, socialVel] = await Promise.all([
+      const [alchemyEvents, solanaNetEvents, pumpEvents, dexTrending, ethDex, solDex, bscDex, polygonDex, avalancheDex, baseDex, arbDex, opDex, cgEvents, rugAlerts, socialVel, gtNew] = await Promise.all([
         withSrcTimeout(fetchAlchemyTransfers(), SRC_TIMEOUT, 'alchemy'),
         withSrcTimeout(fetchSolanaNetworkActivity(), SRC_TIMEOUT, 'alchemy-solana'),
         withSrcTimeout(fetchPumpFunTokens(), SRC_TIMEOUT, 'pumpfun'),
@@ -1194,12 +1218,15 @@ export async function GET(request: Request) {
         // can't stall the feed.
         withSrcTimeout(fetchRugAlerts(), 7000, 'goplus-rug'),
         withSrcTimeout(fetchSocialVelocity(), 7000, 'lunarcrush-social'),
+        // Genuine fresh pools across all EVM chains — the real "new coins".
+        withSrcTimeout(fetchGeckoTerminalNewPairs(), 7000, 'geckoterminal-new'),
       ]);
 
       // Order matters: rug alerts + smart-money first (highest type weight),
       // then trending. The score function in /lib/contextFeed/filter.ts
       // re-ranks by type/trust/USD, so this is just the de-dupe input order.
-      events = [...rugAlerts, ...cgEvents, ...socialVel, ...dexTrending, ...ethDex, ...solDex, ...bscDex, ...polygonDex, ...avalancheDex, ...baseDex, ...arbDex, ...opDex, ...pumpEvents, ...alchemyEvents, ...solanaNetEvents];
+      events = [...rugAlerts, ...cgEvents, ...socialVel, ...gtNew, ...dexTrending, ...ethDex, ...solDex, ...bscDex, ...polygonDex, ...avalancheDex, ...baseDex, ...arbDex, ...opDex, ...pumpEvents, ...alchemyEvents, ...solanaNetEvents];
+      if (gtNew.length > 0) sources.push('geckoterminal');
       if (rugAlerts.length > 0) sources.push('goplus');
       if (socialVel.length > 0) sources.push('lunarcrush');
       if (cgEvents.length > 0) sources.push('coingecko');
@@ -1217,14 +1244,29 @@ export async function GET(request: Request) {
       if (opDex.length > 0) sources.push('dex-optimism');
 
     } else if (chain === 'base') {
-      events = await withSrcTimeout(fetchBaseDexEvents(), 5000, 'dex-base');
-      if (events.length > 0) sources.push('dexscreener');
+      const [dex, gtNew] = await Promise.all([
+        withSrcTimeout(fetchBaseDexEvents(), 5000, 'dex-base'),
+        withSrcTimeout(fetchGeckoTerminalNewPairs('base'), 7000, 'geckoterminal-new'),
+      ]);
+      events = [...gtNew, ...dex];
+      if (dex.length > 0) sources.push('dexscreener');
+      if (gtNew.length > 0) sources.push('geckoterminal');
     } else if (chain === 'arbitrum') {
-      events = await withSrcTimeout(fetchArbitrumDexEvents(), 5000, 'dex-arbitrum');
-      if (events.length > 0) sources.push('dexscreener');
+      const [dex, gtNew] = await Promise.all([
+        withSrcTimeout(fetchArbitrumDexEvents(), 5000, 'dex-arbitrum'),
+        withSrcTimeout(fetchGeckoTerminalNewPairs('arbitrum'), 7000, 'geckoterminal-new'),
+      ]);
+      events = [...gtNew, ...dex];
+      if (dex.length > 0) sources.push('dexscreener');
+      if (gtNew.length > 0) sources.push('geckoterminal');
     } else if (chain === 'optimism') {
-      events = await withSrcTimeout(fetchOptimismDexEvents(), 5000, 'dex-optimism');
-      if (events.length > 0) sources.push('dexscreener');
+      const [dex, gtNew] = await Promise.all([
+        withSrcTimeout(fetchOptimismDexEvents(), 5000, 'dex-optimism'),
+        withSrcTimeout(fetchGeckoTerminalNewPairs('optimism'), 7000, 'geckoterminal-new'),
+      ]);
+      events = [...gtNew, ...dex];
+      if (dex.length > 0) sources.push('dexscreener');
+      if (gtNew.length > 0) sources.push('geckoterminal');
     } else if (chain === 'solana') {
       const [solanaNetEvents, pumpEvents, solDex] = await Promise.all([
         withSrcTimeout(fetchSolanaNetworkActivity(), 5000, 'alchemy-solana'),
@@ -1238,29 +1280,43 @@ export async function GET(request: Request) {
       if (solDex.length > 0) sources.push('dexscreener');
 
     } else if (chain === 'ethereum') {
-      const [alchemyEvents, ethDex] = await Promise.all([
+      const [alchemyEvents, ethDex, gtNew] = await Promise.all([
         withSrcTimeout(fetchAlchemyTransfers(), 5000, 'alchemy'),
         withSrcTimeout(fetchEthereumDexEvents(), 5000, 'dex-ethereum'),
+        withSrcTimeout(fetchGeckoTerminalNewPairs('ethereum'), 7000, 'geckoterminal-new'),
       ]);
 
-      events = [...ethDex, ...alchemyEvents];
+      events = [...gtNew, ...ethDex, ...alchemyEvents];
       if (alchemyEvents.length > 0) sources.push('alchemy');
       if (ethDex.length > 0) sources.push('dexscreener');
+      if (gtNew.length > 0) sources.push('geckoterminal');
 
     } else if (chain === 'bsc') {
-      const bscEvents = await withSrcTimeout(fetchBSCDexEvents(), 5000, 'dex-bsc');
-      events = bscEvents;
+      const [bscEvents, gtNew] = await Promise.all([
+        withSrcTimeout(fetchBSCDexEvents(), 5000, 'dex-bsc'),
+        withSrcTimeout(fetchGeckoTerminalNewPairs('bsc'), 7000, 'geckoterminal-new'),
+      ]);
+      events = [...gtNew, ...bscEvents];
       if (bscEvents.length > 0) sources.push('dexscreener');
+      if (gtNew.length > 0) sources.push('geckoterminal');
 
     } else if (chain === 'polygon') {
-      const polygonEvents = await withSrcTimeout(fetchPolygonDexEvents(), 5000, 'dex-polygon');
-      events = polygonEvents;
+      const [polygonEvents, gtNew] = await Promise.all([
+        withSrcTimeout(fetchPolygonDexEvents(), 5000, 'dex-polygon'),
+        withSrcTimeout(fetchGeckoTerminalNewPairs('polygon'), 7000, 'geckoterminal-new'),
+      ]);
+      events = [...gtNew, ...polygonEvents];
       if (polygonEvents.length > 0) sources.push('dexscreener');
+      if (gtNew.length > 0) sources.push('geckoterminal');
 
     } else if (chain === 'avalanche') {
-      const avalancheEvents = await withSrcTimeout(fetchAvalancheDexEvents(), 5000, 'dex-avalanche');
-      events = avalancheEvents;
+      const [avalancheEvents, gtNew] = await Promise.all([
+        withSrcTimeout(fetchAvalancheDexEvents(), 5000, 'dex-avalanche'),
+        withSrcTimeout(fetchGeckoTerminalNewPairs('avalanche'), 7000, 'geckoterminal-new'),
+      ]);
+      events = [...gtNew, ...avalancheEvents];
       if (avalancheEvents.length > 0) sources.push('dexscreener');
+      if (gtNew.length > 0) sources.push('geckoterminal');
     }
 
     // FIX 5A.1 / Phase 7: was pure-timestamp sort, which let low-quality pump.fun tokens
