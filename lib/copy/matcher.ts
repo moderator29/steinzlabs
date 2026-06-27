@@ -278,21 +278,22 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
       amountIn = String(sizeUsd);
     }
 
-    const { data: inserted } = await admin
-      .from("user_copy_trades")
-      .insert({
-        user_id: rule.user_id,
-        source_whale: event.whale_address,
-        source_tx_hash: event.tx_hash,
-        chain: event.chain,
-        token_address: event.token_address,
-        token_symbol: event.token_symbol,
-        action: isSell ? "sell" : "buy",
-        amount_usd: isSell ? null : sizeUsd,
-        status: "pending",
-      })
-      .select("id")
-      .single();
+    // #13: atomic per-user cap claim instead of a bare insert + the racy
+    // app-level cap reduce(). Null = the buy would breach daily_cap_usd.
+    const { data: claimedId } = await admin.rpc("claim_copy_trade", {
+      p_user: rule.user_id,
+      p_daily_cap: rule.daily_cap_usd ?? null,
+      p_amount: isSell ? null : sizeUsd,
+      p_source_whale: event.whale_address,
+      p_source_tx: event.tx_hash,
+      p_chain: event.chain,
+      p_token_address: event.token_address,
+      p_token_symbol: event.token_symbol,
+      p_action: isSell ? "sell" : "buy",
+      p_security_score: null,
+    });
+    if (!claimedId) { out.blocked++; continue; }
+    const inserted = { id: claimedId as string };
 
     const result = await executeTrade({
       userId: rule.user_id,
