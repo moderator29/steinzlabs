@@ -34,7 +34,10 @@ interface FeedAlert {
   min_volume_usd: number | null;
   min_price_change_pct: number | null;
   last_token: string | null;
+  recent_tokens: string[] | null;
 }
+
+const RECENT_TOKENS_KEEP = 10;
 
 function kindMatches(kind: string, type: string): boolean {
   const t = (type || '').toLowerCase();
@@ -59,7 +62,7 @@ export async function GET(req: NextRequest) {
   // Exit instantly when nobody has alerts.
   const { data: alerts } = await sb
     .from('feed_alerts')
-    .select('id, user_id, label, chain, kind, min_volume_usd, min_price_change_pct, last_token')
+    .select('id, user_id, label, chain, kind, min_volume_usd, min_price_change_pct, last_token, recent_tokens')
     .eq('active', true)
     .limit(2000);
   if (!alerts || alerts.length === 0) {
@@ -99,7 +102,10 @@ export async function GET(req: NextRequest) {
     const tokenKey = top.tokenAddress
       ? normalizeAddress(top.tokenAddress, top.chain ?? undefined)
       : (top.tokenSymbol || '').toUpperCase();
-    if (!tokenKey || tokenKey === (a.last_token ?? '')) continue; // already notified
+    // #36: dedupe against a small recent-tokens ring (not just the single most
+    // recent), so token churn can't re-ping a token the user already saw.
+    const recent = a.recent_tokens ?? [];
+    if (!tokenKey || recent.includes(tokenKey)) continue; // already notified recently
 
     const sym = top.tokenSymbol ? `$${top.tokenSymbol}` : 'A token';
     const chainTxt = top.chain ? ` on ${top.chain}` : '';
@@ -117,7 +123,8 @@ export async function GET(req: NextRequest) {
       metadata: { alert_id: a.id, token: tokenKey, chain: top.chain, symbol: top.tokenSymbol },
       read: false,
     });
-    await sb.from('feed_alerts').update({ last_token: tokenKey, last_triggered_at: new Date().toISOString() }).eq('id', a.id);
+    const nextRecent = [...recent.filter((t) => t !== tokenKey), tokenKey].slice(-RECENT_TOKENS_KEEP);
+    await sb.from('feed_alerts').update({ last_token: tokenKey, recent_tokens: nextRecent, last_triggered_at: new Date().toISOString() }).eq('id', a.id);
     notified++;
   }
 
