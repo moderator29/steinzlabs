@@ -46,3 +46,25 @@
 - Mini-tier write controls still render then 403 silently — convert to locked/upsell chips.
 - Directory "—" for CEX/exchange entities: PnL/win-rate is meaningless for custodial wallets; hide those tiles for `exchange`/`bridge` entity types instead of showing "—".
 - SSE `whale-activity/stream` polls a 15s-cached endpoint every 5s with an unbounded `seen` set.
+
+## Backlog burn-down (post-audit) — ~48 of 97 findings closed
+
+### Security (all closed)
+- #40 notification-injection, #41 login-activity forgery/IDOR, #42 anon-executable SECURITY DEFINER RPCs (REVOKE migration).
+
+### Solana case-sensitivity (CLAUDE.md) — closed
+- #23 FIFO PnL, #32/#33 smart-money labels, #34 feed-alert dedupe, #11 copy blacklists (execute/monitor/matcher), #22 curated registry Solana CEX labels, #38 GoPlus cache keys.
+
+### AI Market Pulse — closed: #29 thundering-herd claim, #31 prompt-injection hardening, #19 swallowed cache error.
+### View-Proof — closed: #37 real top-holder, #38 cache key, #26/#39 retry UI.
+### Whale scoring — closed: #16 whale_score derived from real metrics (off the dead RPC); backfill no-work logging.
+### Feed — closed: #16 SSE polling aligned to cache + bounded set, #36 recent-tokens dedupe ring (migration), #20 smart-money label direction, #8 FeedRow type.
+### Copy-trade — closed: #13 atomic daily-cap (claim_copy_trade function, all 3 paths), #9/#10 one-click confirm from alert deep-link. Mode-write bug fixed earlier.
+### DMs — closed: #43 shadow-block realtime leak.
+### Schema consolidation — closed (#17/#18/#19 orphan-drop): dropped copy_trades, whale_transactions, whale_tracking, whale_wallets, smart_money_follows, smart_money_rankings, entity_cache, smart_money_wallets; repointed clustering to `whales`.
+
+### Still open (deliberate)
+- #12 copy monitor/matcher consolidation — pure internal refactor of money code; both paths work today, deferred until a staging env can verify execution end-to-end.
+- #35 feed-alert volume alerts — needs per-event 24h-volume enrichment in the feed sources (data completeness).
+- Per-feature table migrations (followed_entities→moneyRadar, whale_watchlist→whale-alerts stream, whale_addresses→admin/clusters, whale_ai_summaries) — these have LIVE code in separate features (moneyRadar, dune, ai-summary); they need those features' context, not a blind drop.
+- Minor P2 polish: #18 card TTL comment, #24 kindMatches, #2 price-cron filter robustness.
