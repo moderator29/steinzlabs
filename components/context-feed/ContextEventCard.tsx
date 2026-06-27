@@ -43,7 +43,7 @@ export default function ContextEventCard({ event }: { event: ContextEvent }) {
   const hasStats = !!(event.tokenVolume24h || event.tokenLiquidity || event.tokenMarketCap);
 
   return (
-    <div className="glass rounded-2xl p-5 border border-white/10 hover:border-[#0066FF]/30 transition-all overflow-hidden">
+    <div className="nl-glass rounded-2xl p-5 hover:border-[#0066FF]/40 transition-all overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
       {/* Badge row + time */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2 flex-wrap">

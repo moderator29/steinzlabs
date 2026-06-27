@@ -5,6 +5,7 @@ import { Eye, Heart, Share2, ExternalLink, Copy, X, Check, Bookmark, Archive, Sl
 import { useContextFeed, useArchivedFeed, ChainFilter } from '@/lib/hooks/useContextFeed';
 import { SolanaIcon, EthereumIcon, BscIcon, PolygonIcon, AvalancheIcon, AllChainsIcon } from './ChainIcons';
 import DuneFeedCards from './context-feed/DuneFeedCards';
+import { SelectMenu, SelectOption } from '@/components/ui/SelectMenu';
 // FIX 5A.1 / Phase 7: Base / Arbitrum / Optimism added. No bespoke icon — the Ethereum icon
 // with a colored dot is readable enough as a lightweight placeholder until dedicated icons land.
 import { supabase } from '@/lib/supabase';
@@ -557,6 +558,16 @@ export default function ContextFeed() {
 
   const activeTab = CHAIN_TABS.find(t => t.id === activeMode)!;
 
+  // Real chain ids that ChainLogo can render an actual coin logo for. The
+  // pseudo-tabs (all / bookmarks / archive) keep their lucide icon instead.
+  const REAL_CHAINS = new Set(['solana', 'ethereum', 'bsc', 'polygon', 'avalanche', 'base', 'arbitrum', 'optimism']);
+  const chainOptions: SelectOption[] = CHAIN_TABS.map(t => (
+    REAL_CHAINS.has(t.id)
+      ? { id: t.id, label: t.label, chain: t.id }
+      : { id: t.id, label: t.label, Icon: t.icon }
+  ));
+  const filterOptions: SelectOption[] = FEED_FILTERS.map(f => ({ id: f.id, label: f.label, Icon: f.icon }));
+
   return (
     <div className="space-y-4">
       {/* §5.6 — Dune-derived Context Feed cards (bridge_flow,
@@ -564,49 +575,25 @@ export default function ContextFeed() {
           cex_drain). Renders above the chain-tab feed. Auto-hides
           when no Dune materialized data is present. */}
       <DuneFeedCards limit={8} />
-      <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
-        {CHAIN_TABS.map(tab => {
-          const isActive = activeMode === tab.id;
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveMode(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-200 border ${
-                isActive
-                  ? `bg-gradient-to-r ${tab.gradient} text-white border-transparent shadow-lg`
-                  : 'text-gray-400 border-white/10 hover:text-white hover:border-white/20 bg-white/5'
-              }`}
-              style={isActive ? { boxShadow: `0 0 12px ${tab.color}40` } : {}}
-            >
-              <Icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* FIX 5A.1 / Phase 7: event-type filter was buried in a dropdown; now a visible pill row
-          so users can shape the feed at a glance. Both chain + type filters compose. */}
-      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
-        {FEED_FILTERS.map(f => {
-          const FIcon = f.icon;
-          const isActive = activeFilter === f.id;
-          return (
-            <button
-              key={f.id}
-              onClick={() => setActiveFilter(f.id)}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all border ${
-                isActive
-                  ? 'bg-[#0066FF]/15 text-[#8FA3FF] border-[#0066FF]/40'
-                  : 'text-gray-400 border-white/10 hover:text-white hover:border-white/20 bg-white/5'
-              }`}
-            >
-              <FIcon className="w-3 h-3" />
-              {f.label}
-            </button>
-          );
-        })}
+      {/* Chain + type filters are vertical dropdowns (same pattern as the
+          swap / whale-tracker pickers) — they only reveal options on click,
+          so the two rows no longer overlap or scroll horizontally. Chain rows
+          render the real coin logo via ChainLogo. */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <SelectMenu
+          value={activeMode}
+          options={chainOptions}
+          onChange={(id) => setActiveMode(id as FeedMode)}
+          prefix="Chain"
+          accentClass="text-[#8FA3FF]"
+        />
+        <SelectMenu
+          value={activeFilter}
+          options={filterOptions}
+          onChange={(id) => setActiveFilter(id as typeof activeFilter)}
+          prefix="Type"
+          accentClass="text-[#8FA3FF]"
+        />
       </div>
 
       <div className="flex items-center justify-between">
@@ -698,7 +685,8 @@ export default function ContextFeed() {
           return (
             <div
               key={`${event.id}-${i}`}
-              className="glass rounded-2xl p-5 border border-white/10 hover:border-[#0066FF]/30 transition-all overflow-hidden"
+              className="nl-glass rounded-2xl p-5 hover:border-[#0066FF]/40 transition-all overflow-hidden"
+              style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2 flex-wrap">
