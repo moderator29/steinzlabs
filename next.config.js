@@ -74,7 +74,14 @@ const nextConfig = {
     {
       source: '/:path*',
       headers: [
-        { key: 'X-Frame-Options', value: 'DENY' },
+        // NOTE: do NOT use a blanket `X-Frame-Options: DENY` here. Reown/AppKit's
+        // WalletConnect Verify API frames our own origin to attest the dapp
+        // before the relay session settles — DENY blocked that iframe, so the
+        // modal opened but "Open" never completed (platform-wide). Use a
+        // frame-ancestors CSP that still blocks third-party framing of our pages
+        // while allowing WalletConnect Verify. (Auth routes get a strict DENY
+        // in their own block below.)
+        { key: 'Content-Security-Policy', value: "frame-ancestors 'self' https://verify.walletconnect.org https://verify.walletconnect.com https://*.walletconnect.org https://*.walletconnect.com;" },
         { key: 'X-Content-Type-Options', value: 'nosniff' },
         { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
         { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=()' },
@@ -85,6 +92,7 @@ const nextConfig = {
     {
       source: '/api/auth/:path*',
       headers: [
+        { key: 'X-Frame-Options', value: 'DENY' },
         { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
         { key: 'Pragma', value: 'no-cache' },
       ],

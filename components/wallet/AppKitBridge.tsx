@@ -28,18 +28,24 @@ const LS_PROVIDER = 'wallet_provider';
 const WALLET_CHANGE_EVENT = 'steinz_wallet_changed';
 
 export default function AppKitBridge() {
-  const { address, isConnected } = useAppKitAccount();
-  const { caipNetwork } = useAppKitNetwork();
+  // Read BOTH namespaces explicitly. A bare useAppKitAccount() returns only the
+  // currently-active namespace, so an EVM connect while Solana was active (or
+  // vice-versa) read as "not connected" and the bridge never mirrored it into
+  // the legacy wallet state — making the whole app look disconnected.
+  const evm = useAppKitAccount({ namespace: 'eip155' });
+  const sol = useAppKitAccount({ namespace: 'solana' });
+  useAppKitNetwork();
   const lastWritten = useRef<string | null>(null);
+
+  const isConnected = evm.isConnected || sol.isConnected;
+  const address = evm.isConnected ? evm.address : sol.address;
+  const isSolana = !evm.isConnected && sol.isConnected;
 
   useEffect(() => {
     if (!isConnected || !address) return;
     if (address === lastWritten.current) return;
 
-    // Determine provider label from the network family. AppKit uses
-    // CAIP-2 namespaces — 'eip155' for EVM, 'solana' for Solana.
-    const namespace = caipNetwork?.chainNamespace;
-    const provider = namespace === 'solana' ? 'phantom' : 'metamask';
+    const provider = isSolana ? 'phantom' : 'metamask';
 
     try {
       localStorage.setItem(LS_ADDRESS, address);
@@ -53,7 +59,7 @@ export default function AppKitBridge() {
       // miss the connection but the swap page can read AppKit hooks
       // directly. Soft fail.
     }
-  }, [address, isConnected, caipNetwork]);
+  }, [address, isConnected, isSolana]);
 
   // On disconnect, clear the legacy state so the rest of the app
   // doesn't show a stale "connected" wallet.

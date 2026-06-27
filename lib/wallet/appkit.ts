@@ -50,15 +50,16 @@ export const APPKIT_NETWORKS = [...APPKIT_EVM_NETWORKS, solana] as const;
 // to the canonical on the server. buildMetadata() is invoked inside getAppKit so
 // the origin is read after hydration, never at module init (no SSR/CSR mismatch).
 function buildMetadata() {
-  const origin =
-    typeof window !== 'undefined' && window.location?.origin
-      ? window.location.origin
-      : (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://nakalabs.xyz');
+  // Pin to the CANONICAL origin so WalletConnect Verify always sees a single,
+  // allow-listed domain (register this exact origin — and any www/preview you
+  // test from — in the reown dashboard). Using the live window origin made
+  // Verify fail on www/preview hosts that weren't allow-listed.
+  const origin = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://nakalabs.xyz').replace(/\/$/, '');
   return {
     name: 'Naka Labs',
     description: 'Top-1% on-chain trading terminal',
     url: origin,
-    icons: [`${origin.replace(/\/$/, '')}/logo.png`],
+    icons: [`${origin}/logo.png`],
   };
 }
 
@@ -70,7 +71,11 @@ export const wagmiAdapter = HAS_APPKIT
   ? new WagmiAdapter({
       networks: [...APPKIT_EVM_NETWORKS],
       projectId: PROJECT_ID,
-      ssr: true,
+      // ssr:false — the app is client-rendered and AppKit init is client-only.
+      // ssr:true defers hydration to a server initialState (cookieStorage +
+      // cookieToInitialState) that is NOT wired here, which dropped the in-flight
+      // session on the mobile deep-link return.
+      ssr: false,
     })
   : null;
 
