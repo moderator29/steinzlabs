@@ -89,6 +89,39 @@ export async function priceActivityUsd(a: ActivityToPrice): Promise<number | nul
   return a.amount * price;
 }
 
+function tokenKey(a: ActivityToPrice): string {
+  return a.token_address
+    ? `${a.chain}:${normalizeAddress(a.token_address, a.chain)}`
+    : `${a.chain}:sym:${(a.token_symbol ?? '').toUpperCase()}`;
+}
+
+/**
+ * Price a batch of rows, looking up each distinct token's UNIT price exactly
+ * once. Pricing N rows concurrently with priceActivityUsd would fire N parallel
+ * identical lookups before the 60s cache populates (a thundering herd that
+ * burns CoinGecko/Birdeye rate-limit on a batch full of ETH/USDC transfers).
+ * This dedupes by token first, then multiplies per row. Returns value_usd
+ * aligned to the input order (null where unpriceable).
+ */
+export async function priceActivityUsdBatch(items: ActivityToPrice[]): Promise<(number | null)[]> {
+  const uniq = new Map<string, ActivityToPrice>();
+  for (const a of items) {
+    const k = tokenKey(a);
+    if (!uniq.has(k)) uniq.set(k, a);
+  }
+  const unit = new Map<string, number | null>();
+  // Sequential over DISTINCT tokens (usually a handful per batch) so we never
+  // duplicate a lookup; the per-token call still benefits from the module cache.
+  for (const [k, a] of uniq) {
+    unit.set(k, await tokenPriceUsd(a.chain, a.token_address, a.token_symbol));
+  }
+  return items.map((a) => {
+    if (a.amount == null || a.amount <= 0) return null;
+    const p = unit.get(tokenKey(a));
+    return p == null ? null : a.amount * p;
+  });
+}
+
 /** Loosely-typed just-inserted whale_activity row for price-at-ingest. */
 interface PersistableRow {
   chain?: unknown;
