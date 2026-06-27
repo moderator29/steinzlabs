@@ -1,4 +1,12 @@
-import { Radio, Filter } from 'lucide-react';
+import { Radio, Filter, Sparkles, Crown } from 'lucide-react';
+
+const INTEL_SOURCES = [
+  { name: 'AI Market Pulse', desc: 'An AI read on the live feed — what is hot, where volume sits, and the overall tone (bullish/bearish/mixed). Refreshed a few times daily.' },
+  { name: 'Smart-Money Labels', desc: 'On-chain moves by our curated, labeled whale wallets are surfaced as high-signal smart-money events with the wallet label and archetype.' },
+  { name: 'Fresh Pairs (all chains)', desc: 'Genuinely new liquidity pools across Ethereum, Base, Arbitrum, Optimism, BSC, Polygon and Avalanche — not just curated lists.' },
+  { name: 'Solana Coverage', desc: 'High-quality Solana trending by real 24h volume, plus pump.fun launches gated to strong-volume coins only (no flood).' },
+  { name: 'Security & Rug Alerts', desc: 'Honeypot, high-tax and ownership-risk tokens flagged from live security scans so danger surfaces, not just hype.' },
+];
 
 const SIGNAL_TYPES = [
   { tag: 'BULLISH', color: '#10B981', bg: '#10B98115', desc: 'Whale accumulation, smart money entries, rising buy pressure, or strong holder growth.' },
@@ -30,6 +38,25 @@ export function DocsSection03() {
             <div key={s.tag} className="flex items-start gap-3 nl-glass rounded-xl p-4">
               <span className="text-[10px] font-bold px-2.5 py-1 rounded-full flex-shrink-0 mt-0.5" style={{ color: s.color, background: s.bg }}>{s.tag}</span>
               <p className="text-sm text-gray-400 leading-relaxed">{s.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div id="context-sources" className="scroll-mt-20 mb-10">
+        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-[#0066FF]" />Intelligence Sources
+        </h3>
+        <p className="text-sm text-gray-400 leading-relaxed mb-4">
+          The feed is Ethereum-first (our primary chain) with every other chain mixed in, ranked by quality — not a single-chain or pump.fun flood. The pills (News, Coins, New Coins, Volume, Trending) each surface exactly their kind of signal.
+        </p>
+        <div className="space-y-3">
+          {INTEL_SOURCES.map(s => (
+            <div key={s.name} className="flex items-start gap-3 nl-glass rounded-xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.18)' }}>
+              <Crown className="w-4 h-4 text-[#4D6BFF] flex-shrink-0 mt-0.5" />
+              <div>
+                <div className="text-sm font-semibold text-white">{s.name}</div>
+                <p className="text-sm text-gray-400 leading-relaxed mt-0.5">{s.desc}</p>
+              </div>
             </div>
           ))}
         </div>

@@ -20,6 +20,7 @@ export const DOC_SECTIONS: DocSection[] = [
   ]},
   { id: 'context-feed', number: '03', label: 'Context Feed', subsections: [
     { id: 'context-signals', label: 'Signal Types' },
+    { id: 'context-sources', label: 'Intelligence Sources' },
     { id: 'context-trust', label: 'Trust Score' },
   ]},
   { id: 'vtx-ai', number: '04', label: 'VTX AI Engine', subsections: [
