@@ -4,7 +4,7 @@ import { verifyCron, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { fetchWithRetry } from "@/lib/api/fetchWithRetry";
 import { normalizeAddress, addressesEqual } from "@/lib/utils/addressNormalize";
-import { priceActivityUsd } from "@/lib/whales/priceActivity";
+import { priceActivityUsdBatch } from "@/lib/whales/priceActivity";
 
 export const maxDuration = 60;
 export const runtime = "nodejs";
@@ -177,34 +177,35 @@ export async function GET(request: NextRequest) {
       (c) => !existingKeys.has(`${c.chain}:${normalizeAddress(c.whale_address, c.chain)}:${c.tx_hash}`),
     );
 
-    // 3. Price at ingest. priceActivityUsd caches by token for 60s, so repeated
-    //    ETH/USDC transfers in the same batch cost one lookup. Rows that can't
-    //    be priced go in as null and the backfill cron retries them.
-    const rows = await Promise.all(
-      fresh.map(async (c) => {
-        const value_usd = await priceActivityUsd({
-          chain: c.chain,
-          token_address: c.token_address,
-          token_symbol: c.token_symbol,
-          amount: c.amount,
-        });
-        if (value_usd != null) priced++;
-        return {
-          whale_address: c.whale_address,
-          chain: c.chain,
-          tx_hash: c.tx_hash,
-          action: c.action,
-          token_address: c.token_address,
-          token_symbol: c.token_symbol,
-          amount: c.amount,
-          value_usd,
-          counterparty: c.counterparty,
-          counterparty_label: null,
-          block_number: c.block_number,
-          timestamp: c.timestamp,
-        };
-      }),
+    // 3. Price at ingest. priceActivityUsdBatch looks up each DISTINCT token's
+    //    unit price once (no per-row herd), then multiplies per row. Rows that
+    //    can't be priced go in as null and the backfill cron retries them.
+    const values = await priceActivityUsdBatch(
+      fresh.map((c) => ({
+        chain: c.chain,
+        token_address: c.token_address,
+        token_symbol: c.token_symbol,
+        amount: c.amount,
+      })),
     );
+    const rows = fresh.map((c, i) => {
+      const value_usd = values[i];
+      if (value_usd != null) priced++;
+      return {
+        whale_address: c.whale_address,
+        chain: c.chain,
+        tx_hash: c.tx_hash,
+        action: c.action,
+        token_address: c.token_address,
+        token_symbol: c.token_symbol,
+        amount: c.amount,
+        value_usd,
+        counterparty: c.counterparty,
+        counterparty_label: null,
+        block_number: c.block_number,
+        timestamp: c.timestamp,
+      };
+    });
 
     if (rows.length > 0) {
       // ignoreDuplicates guards against a concurrent webhook inserting the same

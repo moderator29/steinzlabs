@@ -144,21 +144,23 @@ interface PersistableRow {
 export async function priceAndPersistWhaleRows(rows: PersistableRow[]): Promise<number> {
   if (rows.length === 0) return 0;
   const sb = getSupabaseAdmin();
+  // Price the whole batch deduping per-token (no herd), then persist each.
+  const values = await priceActivityUsdBatch(
+    rows.map((r) => ({
+      chain: String(r.chain ?? ''),
+      token_address: (r.token_address as string | null) ?? null,
+      token_symbol: (r.token_symbol as string | null) ?? null,
+      amount: typeof r.amount === 'number' ? r.amount : Number(r.amount),
+    })),
+  );
   let priced = 0;
   await Promise.all(
-    rows.map(async (r) => {
-      const amount = typeof r.amount === 'number' ? r.amount : Number(r.amount);
+    rows.map(async (r, i) => {
+      const value = values[i];
       const chain = String(r.chain ?? '');
       const txHash = String(r.tx_hash ?? '');
       const whaleAddress = String(r.whale_address ?? '');
-      if (!chain || !txHash || !whaleAddress || !Number.isFinite(amount)) return;
-      const value = await priceActivityUsd({
-        chain,
-        token_address: (r.token_address as string | null) ?? null,
-        token_symbol: (r.token_symbol as string | null) ?? null,
-        amount,
-      });
-      if (value == null || value <= 0) return;
+      if (value == null || value <= 0 || !chain || !txHash || !whaleAddress) return;
       r.value_usd = value;
       const { error } = await sb
         .from('whale_activity')
