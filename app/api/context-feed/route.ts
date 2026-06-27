@@ -13,6 +13,7 @@ import {
 } from '@/lib/services/coingecko';
 import { getTokenSecurity } from '@/lib/services/goplus';
 import { getNewEvmPairs } from '@/lib/services/geckoterminal';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 import { getTrendingTokens as lcTrendingTokens, getSocialVelocity as lcSocialVelocity } from '@/lib/services/lunarcrush';
 
 async function buildPersonalContext(request: Request): Promise<PersonalContext | undefined> {
@@ -433,6 +434,57 @@ async function fetchCoingeckoEvents(): Promise<WhaleEvent[]> {
     console.error('[context-feed] coingecko events failed:', err);
   }
   return out;
+}
+
+// ─── Smart-money labels (free — our own curated whales table) ───────────────
+// Replaces the (now-defunct) Arkham labeling. We load the platform's known,
+// labeled whale wallets and use them to upgrade matching on-chain transfers
+// into high-signal "smart money" events (Nansen/Arkham-style), with the real
+// label + archetype. Cached 10 min so the feed scan is cheap.
+interface KnownWhale { label: string; archetype: string | null; logoUrl: string | null }
+const whaleCache: { map: Map<string, KnownWhale> | null; ts: number } = { map: null, ts: 0 };
+const WHALE_TTL = 10 * 60 * 1000;
+
+async function getKnownWhales(): Promise<Map<string, KnownWhale>> {
+  if (whaleCache.map && Date.now() - whaleCache.ts < WHALE_TTL) return whaleCache.map;
+  const map = new Map<string, KnownWhale>();
+  try {
+    const admin = getSupabaseAdmin();
+    const { data } = await admin
+      .from('whales')
+      .select('address, label, archetype, chain, logo_url')
+      .eq('is_active', true)
+      .limit(1000);
+    for (const w of (data ?? []) as Array<{ address: string; label: string | null; archetype: string | null; chain: string | null; logo_url: string | null }>) {
+      if (!w.address) continue;
+      const key = normalizeAddress(w.address, (w.chain as never) ?? undefined);
+      map.set(key, { label: w.label ?? 'Smart money', archetype: w.archetype, logoUrl: w.logo_url });
+    }
+  } catch { /* leave map empty — feed degrades to plain transfers */ }
+  whaleCache.map = map;
+  whaleCache.ts = Date.now();
+  return map;
+}
+
+// Upgrade any transfer whose counterparty is a known labeled whale into a
+// high-signal smart_money event. Mutates in place and returns the list.
+function applySmartMoneyLabels(events: WhaleEvent[], whales: Map<string, KnownWhale>): WhaleEvent[] {
+  if (whales.size === 0) return events;
+  for (const e of events) {
+    const fromKey = e.from ? normalizeAddress(e.from, 'ethereum') : '';
+    const toKey = e.to ? normalizeAddress(e.to, 'ethereum') : '';
+    const hit = (fromKey && whales.get(fromKey)) || (toKey && whales.get(toKey));
+    if (!hit) continue;
+    const isBuy = !!(toKey && whales.get(toKey));
+    e.type = isBuy ? 'smart_money_buy' : 'whale_sell';
+    e.platform = 'Smart Money';
+    e.trustScore = Math.max(e.trustScore, 90);
+    const verb = isBuy ? 'accumulating' : 'distributing';
+    e.title = `${hit.label}${hit.archetype ? ` (${hit.archetype})` : ''} ${verb} ${e.tokenSymbol || 'tokens'}`;
+    e.summary = `Smart-money wallet ${hit.label} ${verb} ${e.tokenSymbol || 'tokens'}. ${e.summary}`;
+    if (hit.logoUrl && !e.tokenIcon) e.tokenIcon = hit.logoUrl;
+  }
+  return events;
 }
 
 async function fetchAlchemyTransfers(): Promise<WhaleEvent[]> {
@@ -1222,6 +1274,10 @@ export async function GET(request: Request) {
         withSrcTimeout(fetchGeckoTerminalNewPairs(), 7000, 'geckoterminal-new'),
       ]);
 
+      // Upgrade transfers from/to our known labeled whales into smart-money
+      // events (free Arkham/Nansen-style labeling from our own whales table).
+      applySmartMoneyLabels(alchemyEvents, await getKnownWhales());
+
       // Order matters: rug alerts + smart-money first (highest type weight),
       // then trending. The score function in /lib/contextFeed/filter.ts
       // re-ranks by type/trust/USD, so this is just the de-dupe input order.
@@ -1286,6 +1342,7 @@ export async function GET(request: Request) {
         withSrcTimeout(fetchGeckoTerminalNewPairs('ethereum'), 7000, 'geckoterminal-new'),
       ]);
 
+      applySmartMoneyLabels(alchemyEvents, await getKnownWhales());
       events = [...gtNew, ...ethDex, ...alchemyEvents];
       if (alchemyEvents.length > 0) sources.push('alchemy');
       if (ethDex.length > 0) sources.push('dexscreener');
