@@ -1,19 +1,26 @@
 import 'server-only';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 
-export async function GET(request: Request) {
+// Login/session activity is strictly self-scoped. Both handlers derive the
+// user from the verified session and IGNORE any client-supplied ?userId /
+// body.userId — previously the GET read any user's sessions by query param
+// (IDOR) and the POST inserted a login_activity row for an arbitrary userId
+// via the service role (session-log forgery: an attacker could plant a row
+// that the GET then reports as the victim's "current session").
+
+export async function GET(request: NextRequest) {
   try {
-    const url = new URL(request.url);
-    const userId = url.searchParams.get('userId');
-    if (!userId) return NextResponse.json({ sessions: [] });
+    const user = await getAuthenticatedUser(request);
+    if (!user) return NextResponse.json({ sessions: [] }, { status: 401 });
 
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from('login_activity')
       .select('id, user_agent, ip, created_at')
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(10);
 
@@ -22,11 +29,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ sessions: [] });
     }
 
-    const sessions = (data || []).map((s, idx) => ({
-      ...s,
-      current: idx === 0,
-    }));
-
+    const sessions = (data || []).map((s, idx) => ({ ...s, current: idx === 0 }));
     return NextResponse.json({ sessions });
   } catch (err) {
     console.error('[login-activity GET] failed:', err);
@@ -35,10 +38,10 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    if (!body.userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
+    const user = await getAuthenticatedUser(request);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const supabase = getSupabaseAdmin();
     const userAgent = request.headers.get('user-agent') || 'Unknown';
@@ -47,7 +50,7 @@ export async function POST(request: Request) {
       || 'Unknown';
 
     const { error } = await supabase.from('login_activity').insert({
-      user_id: body.userId,
+      user_id: user.id,
       user_agent: userAgent,
       ip,
     });
@@ -56,7 +59,6 @@ export async function POST(request: Request) {
       console.error('[login-activity POST] insert failed:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('[login-activity POST] failed:', err);
