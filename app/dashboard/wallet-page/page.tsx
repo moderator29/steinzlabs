@@ -239,7 +239,9 @@ export default function WalletPage() {
   useFeatureUsageLog('wallet');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token' | 'add-network' | 'wallet-settings'>('main');
+  const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token' | 'add-network' | 'wallet-settings' | 'customize'>('main');
+  // Per-user hidden tokens (Manage/Customize). Token key = chain:contract|symbol.
+  const [hiddenTokens, setHiddenTokens] = useState<Set<string>>(new Set());
   const [wallets, setWallets] = useState<StoredWallet[]>([]);
   // Bug §5.1 — without this flag the empty-state "Create Wallet" CTA renders
   // on first paint for ~500ms even when localStorage has wallets, because the
@@ -556,6 +558,14 @@ export default function WalletPage() {
     } catch { /* SSR — ignore */ }
   }, [searchParams]);
 
+  // Load hidden tokens (Manage/Customize) from localStorage on mount.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('steinz_hidden_tokens');
+      if (raw) setHiddenTokens(new Set(JSON.parse(raw)));
+    } catch { /* ignore */ }
+  }, []);
+
   // Hydrate custom-token metadata (Naka Go, Pleasure Coin, anything the
   // user added). Each entry is "<chain>:<contract>"; we call
   // /api/market/token/<contract> which hits DexScreener for small-cap
@@ -799,6 +809,21 @@ export default function WalletPage() {
     { id: 'bnb', label: 'BSC' },
   ];
 
+  // Stable token identity for hidden/customize (chain-aware, matches the IIFE).
+  const tokenKeyOf = (chain: string, contractAddress: string | null | undefined, symbol: string) =>
+    `${chain}:${contractAddress ? normalizeAddress(contractAddress, chain) : symbol.toLowerCase()}`;
+  const isHidden = (t: { chain: string; contractAddress?: string | null; symbol: string }) =>
+    hiddenTokens.has(tokenKeyOf(t.chain, t.contractAddress, t.symbol));
+  const toggleHiddenToken = (t: { chain: string; contractAddress?: string | null; symbol: string }) => {
+    const key = tokenKeyOf(t.chain, t.contractAddress, t.symbol);
+    setHiddenTokens((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      try { localStorage.setItem('steinz_hidden_tokens', JSON.stringify(Array.from(next))); } catch { /* ignore */ }
+      return next;
+    });
+  };
+
   const allHoldings = (() => {
     // Base holdings from the on-chain balance fetch, plus every
     // hydrated custom token (Naka Go, Pleasure Coin, user adds).
@@ -892,6 +917,16 @@ export default function WalletPage() {
     if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
     return `${Math.floor(diff / 86400000)}d ago`;
   };
+
+  if (view === 'customize') return (
+    <CustomizeTokensView
+      onBack={() => setView('main')}
+      tokens={allHoldings}
+      isHidden={isHidden}
+      onToggle={toggleHiddenToken}
+      onAddToken={() => setView('add-token')}
+    />
+  );
 
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-28">
@@ -1184,8 +1219,8 @@ export default function WalletPage() {
                     <div key={i} className="h-[64px] bg-slate-900/30 my-1 rounded-xl animate-pulse" />
                   ))}
                 </>
-              ) : allHoldings.length > 0 ? (
-                allHoldings.map((token, i) => {
+              ) : allHoldings.filter((t) => !isHidden(t)).length > 0 ? (
+                allHoldings.filter((t) => !isHidden(t)).map((token, i) => {
                   // Logo resolution order: native-symbol map (ETH/SOL/…), then
                   // per-token logo the hydrator pulled from CoinGecko (gives
                   // Naka Go / Pleasure Coin their real branded icons), then
@@ -1240,12 +1275,15 @@ export default function WalletPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => setView('add-network')} className="py-3 border border-dashed border-slate-800 rounded-xl text-xs text-slate-500 hover:text-slate-300 hover:border-slate-700 flex items-center justify-center gap-2 transition-all">
-                  <Plus className="w-3.5 h-3.5" /> Add Network
+              <div className="grid grid-cols-3 gap-2">
+                <button onClick={() => setView('add-network')} className="nl-glass py-3 rounded-xl text-[11px] text-slate-200 hover:-translate-y-px flex items-center justify-center gap-1.5 transition-all" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}>
+                  <Plus className="w-3.5 h-3.5 text-blue-300" /> Network
                 </button>
-                <button onClick={() => setView('add-token')} className="py-3 border border-dashed border-slate-800 rounded-xl text-xs text-slate-500 hover:text-slate-300 hover:border-slate-700 flex items-center justify-center gap-2 transition-all">
-                  <Plus className="w-3.5 h-3.5" /> Add Custom Token
+                <button onClick={() => setView('add-token')} className="nl-glass py-3 rounded-xl text-[11px] text-slate-200 hover:-translate-y-px flex items-center justify-center gap-1.5 transition-all" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}>
+                  <Plus className="w-3.5 h-3.5 text-blue-300" /> Add Token
+                </button>
+                <button onClick={() => setView('customize')} className="nl-glass py-3 rounded-xl text-[11px] text-slate-200 hover:-translate-y-px flex items-center justify-center gap-1.5 transition-all" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}>
+                  <Settings className="w-3.5 h-3.5 text-blue-300" /> Customize
                 </button>
               </div>
             </div>
@@ -2480,6 +2518,76 @@ function ToggleSwitch({ on, onToggle }: { on: boolean; onToggle: () => void }) {
     <button onClick={onToggle} className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${on ? 'bg-blue-600' : 'bg-slate-700'}`}>
       <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
     </button>
+  );
+}
+
+// Manage/Customize tokens (Trust "Manage crypto" parity): search + network
+// filter + per-token on/off toggle that actually hides/shows the asset on the
+// wallet home. Glass blue-stride styling.
+function CustomizeTokensView({ onBack, tokens, isHidden, onToggle, onAddToken }: {
+  onBack: () => void;
+  tokens: Array<{ symbol: string; name: string; contractAddress?: string | null; chain: string }>;
+  isHidden: (t: { chain: string; contractAddress?: string | null; symbol: string }) => boolean;
+  onToggle: (t: { chain: string; contractAddress?: string | null; symbol: string }) => void;
+  onAddToken: () => void;
+}) {
+  const [q, setQ] = useState('');
+  const [net, setNet] = useState('all');
+  const nets = Array.from(new Set(tokens.map((t) => t.chain)));
+  const filtered = tokens.filter((t) =>
+    (net === 'all' || t.chain === net) &&
+    (!q || t.symbol.toLowerCase().includes(q.toLowerCase()) || t.name.toLowerCase().includes(q.toLowerCase())),
+  );
+  return (
+    <div className="min-h-screen text-white pb-24">
+      <div className="px-4 pt-6 max-w-lg mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-xs hover:text-white">
+            <ArrowLeft className="w-4 h-4" /> Back
+          </button>
+          <button onClick={onAddToken} className="nl-glass inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4)' }}>
+            <Plus className="w-3.5 h-3.5 text-blue-300" /> Add Token
+          </button>
+        </div>
+        <h1 className="text-xl font-heading font-bold mb-4">Manage crypto</h1>
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search tokens…"
+          className="w-full nl-glass rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none mb-3"
+          style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}
+        />
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-2 mb-2">
+          {['all', ...nets].map((n) => (
+            <button
+              key={n}
+              onClick={() => setNet(n)}
+              style={net === n ? { background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 12px rgba(0,102,255,.5)' } : { boxShadow: '0 0 0 1px rgba(0,102,255,.15)' }}
+              className={`px-3 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap capitalize ${net === n ? 'text-white nl-glass' : 'bg-white/[0.03] text-slate-400'}`}
+            >
+              {n === 'all' ? 'All Networks' : n}
+            </button>
+          ))}
+        </div>
+        <div className="space-y-1.5">
+          {filtered.length === 0 ? (
+            <p className="text-sm text-slate-500 italic py-6 text-center">No tokens match.</p>
+          ) : filtered.map((t) => {
+            const on = !isHidden(t);
+            return (
+              <div key={`${t.chain}:${t.contractAddress || t.symbol}`} className="flex items-center gap-3 p-2.5 rounded-xl nl-glass" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.15)' }}>
+                <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-[11px] font-bold shrink-0">{t.symbol.slice(0, 3)}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold text-white truncate">{t.symbol} <span className="text-[10px] text-slate-500 font-medium capitalize">· {t.chain}</span></div>
+                  <div className="text-[11px] text-slate-400 truncate">{t.name}</div>
+                </div>
+                <ToggleSwitch on={on} onToggle={() => onToggle(t)} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 
