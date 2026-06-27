@@ -25,6 +25,7 @@ import { NextRequest, NextResponse, after } from 'next/server';
 import crypto from 'crypto';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { matchCopyEvent } from '@/lib/copy/matcher';
+import { priceAndPersistWhaleRows } from '@/lib/whales/priceActivity';
 import { mapWithConcurrency } from '@/lib/utils/concurrency';
 import { checkWebhookRateLimit, getWebhookClientIp } from '@/lib/security/webhookRateLimit';
 
@@ -218,6 +219,14 @@ export async function POST(req: NextRequest) {
   // serverless instance dies mid-fan-out, so we don't need to keep Alchemy's
   // delivery open while quotes/security checks run.
   after(async () => {
+    // Price-at-ingest: webhook rows land at value_usd=0; price + persist them
+    // now (mutates rows in place) so the size-filtered feed sees them this
+    // tick AND the copy matcher below gets the real USD instead of 0.
+    try {
+      await priceAndPersistWhaleRows(rows);
+    } catch (err) {
+      console.error('[webhook.alchemy-whale] price-at-ingest failed:', err);
+    }
     const settled = await mapWithConcurrency(rows, MATCHER_CONCURRENCY, async (r) => {
       await matchCopyEvent({
         whale_address: String(r.whale_address ?? ''),

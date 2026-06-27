@@ -1,5 +1,6 @@
 import 'server-only';
 import { getBirdeyeTokenOverview } from '@/lib/services/birdeye';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 /**
@@ -86,4 +87,54 @@ export async function priceActivityUsd(a: ActivityToPrice): Promise<number | nul
   const price = await tokenPriceUsd(a.chain, a.token_address, a.token_symbol);
   if (price == null) return null;
   return a.amount * price;
+}
+
+/** Loosely-typed just-inserted whale_activity row for price-at-ingest. */
+interface PersistableRow {
+  chain?: unknown;
+  token_address?: unknown;
+  token_symbol?: unknown;
+  amount?: unknown;
+  tx_hash?: unknown;
+  whale_address?: unknown;
+  value_usd?: unknown;
+}
+
+/**
+ * Price webhook-inserted whale_activity rows (which land at value_usd=0) and
+ * persist the result, so real-time webhook flow is visible to the size-filtered
+ * feed immediately instead of waiting on the half-hourly backfill. Mutates each
+ * row's value_usd in place so a downstream consumer (e.g. the copy-trade
+ * matcher) sees the real USD. Returns the count priced. Best-effort: a row that
+ * can't be priced is left at 0 for the backfill cron to retry.
+ */
+export async function priceAndPersistWhaleRows(rows: PersistableRow[]): Promise<number> {
+  if (rows.length === 0) return 0;
+  const sb = getSupabaseAdmin();
+  let priced = 0;
+  await Promise.all(
+    rows.map(async (r) => {
+      const amount = typeof r.amount === 'number' ? r.amount : Number(r.amount);
+      const chain = String(r.chain ?? '');
+      const txHash = String(r.tx_hash ?? '');
+      const whaleAddress = String(r.whale_address ?? '');
+      if (!chain || !txHash || !whaleAddress || !Number.isFinite(amount)) return;
+      const value = await priceActivityUsd({
+        chain,
+        token_address: (r.token_address as string | null) ?? null,
+        token_symbol: (r.token_symbol as string | null) ?? null,
+        amount,
+      });
+      if (value == null || value <= 0) return;
+      r.value_usd = value;
+      const { error } = await sb
+        .from('whale_activity')
+        .update({ value_usd: value })
+        .eq('tx_hash', txHash)
+        .eq('whale_address', whaleAddress)
+        .eq('chain', chain);
+      if (!error) priced++;
+    }),
+  );
+  return priced;
 }

@@ -24,6 +24,7 @@ import { NextRequest, NextResponse, after } from 'next/server';
 import crypto from 'crypto';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { matchCopyEvent } from '@/lib/copy/matcher';
+import { priceAndPersistWhaleRows } from '@/lib/whales/priceActivity';
 import { mapWithConcurrency } from '@/lib/utils/concurrency';
 import { checkWebhookRateLimit, getWebhookClientIp } from '@/lib/security/webhookRateLimit';
 
@@ -220,6 +221,13 @@ export async function POST(req: NextRequest) {
   // `after` so Helius gets a fast ack once whale_activity is durable. The
   // copy-trade-monitor cron is the catch-up safety net.
   after(async () => {
+    // Price-at-ingest (Solana): Helius rows land at value_usd=0; price + persist
+    // via Birdeye so the feed sees them this tick and the matcher gets real USD.
+    try {
+      await priceAndPersistWhaleRows(rows);
+    } catch (err) {
+      console.error('[webhook.helius-whale] price-at-ingest failed:', err);
+    }
     const settled = await mapWithConcurrency(rows, MATCHER_CONCURRENCY, async (r) => {
       await matchCopyEvent({
         whale_address: String(r.whale_address ?? ''),
