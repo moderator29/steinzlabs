@@ -25,6 +25,7 @@ interface ProfileResponse {
     username: string;
     display_name: string | null;
     avatar_url: string | null;
+    cover_url: string | null;
     bio: string | null;
     tier: string | null;
     verified_badge: string | null;
@@ -115,38 +116,53 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
   const rel = data.relationship;
   const initial = (p.display_name || p.username || '?').slice(0, 1).toUpperCase();
   const mutual = !!rel?.i_follow && !!rel?.they_follow_me;
-  // Open-DM model — anyone can message unless the user explicitly restricted
-  // DMs (mutual/following/nobody) or there's a block. Default (unset) is open.
-  const dmPermissionView: 'allowed' | 'not_mutual' | 'not_following' | 'nobody' | 'blocked' =
-    rel?.i_blocked
-      ? 'blocked'
-      : p.dm_permission === 'nobody'
-      ? 'nobody'
-      : p.dm_permission === 'following'
-      ? rel?.they_follow_me ? 'allowed' : 'not_following'
-      : p.dm_permission === 'mutual'
-      ? mutual ? 'allowed' : 'not_mutual'
-      : 'allowed';
+  // Fully open-DM model — anyone can message anyone; an unfollowed recipient
+  // just gets it in their Requests queue. The ONLY thing that disables Message
+  // is a block.
+  const dmPermissionView: 'allowed' | 'blocked' = rel?.i_blocked ? 'blocked' : 'allowed';
 
   return (
     <div className="min-h-screen p-4 sm:p-6 max-w-4xl mx-auto">
-      <div className="mb-4"><BackButton /></div>
+      {/* Cover banner — shows the user's uploaded cover, else a 2030 aurora
+          gradient. Back button (top-left) + More menu (top-right) float over it. */}
+      <div className="relative rounded-2xl overflow-hidden h-32 sm:h-44 mb-[-2.5rem] nl-glass">
+        {p.cover_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={p.cover_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        ) : (
+          <div className="absolute inset-0" style={{ background: 'radial-gradient(120% 140% at 0% 0%, #0066FF55 0%, transparent 55%), radial-gradient(120% 140% at 100% 0%, #7C3AED55 0%, transparent 55%), linear-gradient(135deg, #0a0d18, #0d1424)' }} />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-[#070b14]" />
+        <div className="absolute top-3 left-3 z-10"><BackButton /></div>
+        {rel && (
+          <div className="absolute top-3 right-3 z-10">
+            <MoreMenu
+              targetId={p.id}
+              targetUsername={p.username}
+              isBlocked={rel.i_blocked}
+              isMuted={rel.i_muted}
+              onChange={() => load()}
+            />
+          </div>
+        )}
+      </div>
 
-      <header className="flex items-start gap-4 mb-5">
+      <header className="relative flex items-end gap-4 mb-5 px-1">
         {p.avatar_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={p.avatar_url} alt="" className="w-20 h-20 rounded-2xl object-cover border border-white/10" />
+          <img src={p.avatar_url} alt="" className="w-20 h-20 rounded-2xl object-cover border-2 border-[#070b14] shadow-lg" />
         ) : (
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[var(--nl-blue,#0066FF)] to-[#7C3AED] flex items-center justify-center text-2xl font-bold text-white">
+          <div
+            className="w-20 h-20 rounded-2xl flex items-center justify-center text-2xl font-extrabold text-white border-2 border-[#070b14]"
+            style={{ background: 'linear-gradient(135deg, #1E90FF 0%, #0066FF 45%, #7C3AED 100%)', boxShadow: '0 0 22px rgba(0,102,255,.45), inset 0 1px 0 rgba(255,255,255,.25)' }}
+          >
             {initial}
           </div>
         )}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 pb-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-bold text-white truncate">{p.display_name || p.username}</h1>
             <TierBadge tier={p.tier} size={20} />
-            {/* The gold 'verified_badge' is already represented by the gold Max
-                TierBadge above, so only render a chip for other badge values. */}
             {p.verified_badge && p.verified_badge !== 'gold' ? <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 uppercase">{p.verified_badge}</span> : null}
             {p.is_private ? <span className="text-[10px] px-2 py-0.5 rounded bg-white/[0.06] text-slate-300 border border-white/10 uppercase">Private</span> : null}
           </div>
@@ -164,13 +180,6 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
             onChange={() => load()}
           />
           <MessageButton peerId={p.id} permission={dmPermissionView} />
-          <MoreMenu
-            targetId={p.id}
-            targetUsername={p.username}
-            isBlocked={rel.i_blocked}
-            isMuted={rel.i_muted}
-            onChange={() => load()}
-          />
           {rel.pending_incoming && (
             <Link
               href="#"
@@ -214,8 +223,9 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 py-2 text-[12px] font-semibold rounded-lg transition-colors capitalize ${
-              tab === t ? 'bg-[var(--nl-blue,#0066FF)] text-white' : 'text-slate-400 hover:text-white'
+            style={tab === t ? { boxShadow: '0 0 0 1px rgba(0,102,255,.45), 0 0 12px rgba(0,102,255,.18)' } : undefined}
+            className={`flex-1 py-1.5 text-[11px] font-semibold rounded-lg transition capitalize ${
+              tab === t ? 'bg-[#0066FF]/15 text-blue-100 border border-[#0066FF]/45' : 'text-slate-400 hover:text-white border border-transparent'
             }`}
           >
             {t}

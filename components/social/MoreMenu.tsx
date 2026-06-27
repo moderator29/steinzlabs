@@ -77,7 +77,8 @@ export function MoreMenu({ targetId, targetUsername, isBlocked, isMuted, onChang
         type="button"
         onClick={() => setOpen(o => !o)}
         aria-label="More actions"
-        className="p-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-white/20 text-slate-300"
+        style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 12px rgba(0,102,255,.18)' }}
+        className="nl-glass p-2 rounded-lg text-white/80 hover:text-white"
       >
         <MoreHorizontal className="w-4 h-4" />
       </button>
