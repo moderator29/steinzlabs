@@ -26,7 +26,7 @@ const GROUPS: Record<string, string[]> = {
   frequent: [
     'sniper-monitor', 'sniper-auto-execute', 'sniper-autosell', 'sniper-enrich-security',
     'copy-trade-monitor', 'alert-monitor', 'limit-order-monitor', 'stop-loss-monitor',
-    'publish-scheduled-research',
+    'publish-scheduled-research', 'feed-alert-monitor',
   ],
   // Every ~30 minutes.
   'half-hourly': [
