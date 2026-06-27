@@ -11,7 +11,8 @@ export interface SniperCriteria {
   enabled: boolean;
   paused: boolean;
 
-  trigger_type: "new_pair" | "whale_buy" | "price_target" | "manual";
+  // Canonical values — match the live sniper_criteria.trigger_type CHECK.
+  trigger_type: "new_token_launch" | "whale_buy" | "price_target";
   chains_allowed: SniperChain[];
 
   // Filters
@@ -44,7 +45,8 @@ export interface SniperCriteria {
   auto_sell_on_liquidity_drop_pct: number | null;
 
   // Wallets
-  wallet_source: "primary" | "selected" | "any";
+  // Canonical values — match the live sniper_criteria.wallet_source CHECK.
+  wallet_source: "metamask" | "phantom" | "builtin";
   wallet_addresses: string[];
 
   expiry_hours: number | null;
