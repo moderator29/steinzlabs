@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useFeatureUsageLog } from '@/lib/hooks/useFeatureUsageLog';
 // Naka Labs brand icons — broad swap of available glowing-geometric versions.
@@ -12,7 +12,7 @@ import {
 } from '@/components/icons/brand';
 import {
   ArrowLeft, RotateCcw, Key, Globe, Layers, ArrowUpRight, ArrowDownLeft,
-  Repeat, DollarSign, QrCode, ShoppingCart, Zap, Loader2,
+  Repeat, DollarSign, QrCode, ShoppingCart, Zap, Loader2, BarChart3,
 } from 'lucide-react';
 import Link from 'next/link';
 import BackButton from '@/components/ui/BackButton';
@@ -22,6 +22,7 @@ import { WalletTokenRow } from '@/components/wallet/WalletTokenRow';
 import { WatchlistTab } from '@/components/wallet/WatchlistTab';
 import { ScanQrModal } from '@/components/wallet/ScanQrModal';
 import { NftTab } from '@/components/wallet/NftTab';
+import { BiometricUnlockRow } from '@/components/wallet/BiometricUnlockRow';
 // Audit B4 — shared AES-GCM crypto, lifted from this file so the new
 // UnlockWalletModal can verify a typed password without duplicating
 // the Web Crypto plumbing. Original inline definitions removed below.
@@ -81,6 +82,7 @@ interface ChainInfo {
   apiChain: string;
   logoUrl: string;
   coinGeckoId: string;
+  testnet?: boolean;
 }
 
 const COIN_LOGOS: Record<string, string> = {
@@ -134,6 +136,27 @@ const SUPPORTED_CHAINS: ChainInfo[] = [
 // NAKA_ENABLED_CHAINS_KEY).
 const LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche', 'solana', 'arbitrum', 'bnb'];
 const EVM_LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche', 'arbitrum', 'bnb'];
+
+// Test networks — opt-in via the "Show test networks" toggle on the Networks
+// screen (persisted to naka_testnet_mode). These are real public testnets with
+// real RPCs + explorers; native balance is read directly via RPC and shown with
+// NO USD value (testnet coins are worthless — we never price them as mainnet).
+const TESTNET_MODE_KEY = 'naka_testnet_mode';
+const TESTNET_CHAINS: ChainInfo[] = [
+  { id: 'sepolia', name: 'Ethereum Sepolia', symbol: 'ETH', color: '#627EEA', explorerUrl: 'https://sepolia.etherscan.io', explorerName: 'Etherscan', apiChain: 'sepolia', logoUrl: COIN_LOGOS.ETH, coinGeckoId: '', testnet: true },
+  { id: 'base-sepolia', name: 'Base Sepolia', symbol: 'ETH', color: '#0052FF', explorerUrl: 'https://sepolia.basescan.org', explorerName: 'BaseScan', apiChain: 'base-sepolia', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/base.png', coinGeckoId: '', testnet: true },
+  { id: 'arbitrum-sepolia', name: 'Arbitrum Sepolia', symbol: 'ETH', color: '#28A0F0', explorerUrl: 'https://sepolia.arbiscan.io', explorerName: 'Arbiscan', apiChain: 'arbitrum-sepolia', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/arbitrum.png', coinGeckoId: '', testnet: true },
+  { id: 'polygon-amoy', name: 'Polygon Amoy', symbol: 'POL', color: '#8247E5', explorerUrl: 'https://amoy.polygonscan.com', explorerName: 'PolygonScan', apiChain: 'polygon-amoy', logoUrl: COIN_LOGOS.MATIC, coinGeckoId: '', testnet: true },
+  { id: 'bnb-testnet', name: 'BNB Testnet', symbol: 'tBNB', color: '#F0B90B', explorerUrl: 'https://testnet.bscscan.com', explorerName: 'BscScan', apiChain: 'bnb-testnet', logoUrl: COIN_LOGOS.BNB, coinGeckoId: '', testnet: true },
+];
+
+function isTestnetChain(id: string): boolean {
+  return TESTNET_CHAINS.some((c) => c.id === id);
+}
+// Lookup across both mainnet + testnet universes (testnets aren't in SUPPORTED_CHAINS).
+function chainById(id: string): ChainInfo | undefined {
+  return SUPPORTED_CHAINS.find((c) => c.id === id) ?? TESTNET_CHAINS.find((c) => c.id === id);
+}
 
 // Default chains to show on the wallet home — in display order.
 // Everything else is toggled on by the user via Add Network.
@@ -241,9 +264,11 @@ export default function WalletPage() {
   useFeatureUsageLog('wallet');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token' | 'add-network' | 'wallet-settings' | 'customize'>('main');
+  const [view, setView] = useState<'main' | 'create' | 'import' | 'send' | 'receive' | 'add-token' | 'add-network' | 'wallet-settings' | 'customize' | 'approvals' | 'analytics'>('main');
   // Per-user hidden tokens (Manage/Customize). Token key = chain:contract|symbol.
   const [hiddenTokens, setHiddenTokens] = useState<Set<string>>(new Set());
+  // Fiat Buy on-ramp (Transak) — "coming soon" until the provider is live.
+  const [buyComingSoon, setBuyComingSoon] = useState(false);
   const [wallets, setWallets] = useState<StoredWallet[]>([]);
   // Bug §5.1 — without this flag the empty-state "Create Wallet" CTA renders
   // on first paint for ~500ms even when localStorage has wallets, because the
@@ -258,6 +283,8 @@ export default function WalletPage() {
   // chains (ETH/BNB/Polygon/SOL); anything else the user toggles on
   // via the Add Network flow.
   const [enabledChains, setEnabledChains] = useState<string[]>(DEFAULT_ENABLED_CHAINS);
+  // Test-network mode (opt-in, default off → mainnet behaviour unchanged).
+  const [testnetMode, setTestnetMode] = useState(false);
   // Hydrated TokenBalance rows for each custom-token entry
   // (chain:contractAddress). Pulled from /api/market/token/<addr>
   // (DexScreener fallback when CoinGecko has no slug) so Naka Go +
@@ -377,6 +404,9 @@ export default function WalletPage() {
         localStorage.setItem(NAKA_ENABLED_CHAINS_KEY, JSON.stringify(DEFAULT_ENABLED_CHAINS));
       }
     } catch { /* localStorage quota — use defaults */ }
+    try {
+      if (localStorage.getItem(TESTNET_MODE_KEY) === '1') setTestnetMode(true);
+    } catch { /* ignore */ }
     const savedSort = localStorage.getItem('steinz_token_sort') as 'value' | 'name' | 'balance' | null;
     if (savedSort) setTokenSort(savedSort);
     const savedHideSmall = localStorage.getItem('steinz_hide_small');
@@ -470,6 +500,30 @@ export default function WalletPage() {
     // FIX 5A.1 / Phase 4: was leaving prior chain's holdings visible during the fetch,
     // which is why switching chains felt like "click SOL, still see ETH". Clear first.
     setWalletData(null);
+    // Test networks aren't covered by /api/wallet-intelligence (mainnet only),
+    // so read the native balance straight from the testnet RPC. Value is always
+    // $0 — testnet coins have no market price and we never fake one.
+    if (isTestnetChain(chain.id)) {
+      try {
+        const rpc = CHAIN_RPC[chain.id];
+        const ethers = await import('ethers');
+        const provider = new ethers.JsonRpcProvider(rpc);
+        const balWei = await provider.getBalance(address);
+        const balance = ethers.formatEther(balWei);
+        setWalletData({
+          address,
+          totalBalanceUsd: '0',
+          holdings: [{ symbol: chain.symbol, name: chain.name, balance, valueUsd: '0', contractAddress: null }],
+          tokenCount: 1,
+          chain: chain.id,
+          nativeBalance: balance,
+        });
+      } catch (err) {
+        console.error('[wallet-page] testnet balance fetch failed:', err);
+        setWalletData({ address, totalBalanceUsd: '0', holdings: [], tokenCount: 0, chain: chain.id });
+      } finally { setLoading(false); }
+      return;
+    }
     try {
       // 10s ceiling — RPC balance-of calls can stall on a cold lambda and the
       // user has to see something within the 0.5–1s load budget; we retain the
@@ -785,6 +839,25 @@ export default function WalletPage() {
   if (view === 'add-network') return <AddNetworkView
     onBack={() => setView('main')}
     enabled={enabledChains}
+    chains={testnetMode ? [...SUPPORTED_CHAINS, ...TESTNET_CHAINS] : SUPPORTED_CHAINS}
+    testnetMode={testnetMode}
+    onTestnetModeChange={(on) => {
+      setTestnetMode(on);
+      try { localStorage.setItem(TESTNET_MODE_KEY, on ? '1' : '0'); } catch { /* ignore */ }
+      if (!on) {
+        // Turning testnets off: drop any enabled testnet chains and bounce the
+        // active chain back to a mainnet if it was a testnet.
+        const cleaned = enabledChains.filter((id) => !isTestnetChain(id));
+        const next = cleaned.length ? cleaned : DEFAULT_ENABLED_CHAINS;
+        setEnabledChains(next);
+        try { localStorage.setItem(NAKA_ENABLED_CHAINS_KEY, JSON.stringify(next)); } catch { /* quota */ }
+        if (isTestnetChain(activeChain.id)) {
+          const fallback = SUPPORTED_CHAINS.find((c) => c.id === 'ethereum') ?? SUPPORTED_CHAINS[0];
+          setActiveChain(fallback);
+          setChainFilter('all');
+        }
+      }
+    }}
     onChange={(next) => {
       setEnabledChains(next);
       try { localStorage.setItem(NAKA_ENABLED_CHAINS_KEY, JSON.stringify(next)); } catch { /* quota */ }
@@ -809,6 +882,10 @@ export default function WalletPage() {
     { id: 'arbitrum', label: 'Arbitrum' },
     { id: 'polygon', label: 'Polygon' },
     { id: 'bnb', label: 'BSC' },
+    // Enabled testnets get their own pills so the user can switch to them.
+    ...(testnetMode
+      ? TESTNET_CHAINS.filter((c) => enabledChains.includes(c.id)).map((c) => ({ id: c.id, label: c.name }))
+      : []),
   ];
 
   // Stable token identity for hidden/customize (chain-aware, matches the IIFE).
@@ -852,7 +929,7 @@ export default function WalletPage() {
     const nativePlaceholders: Array<TokenBalance & { chain: string }> = [];
     for (const chainId of enabledChains) {
       if (chainId === activeChain.id) continue;
-      const c = SUPPORTED_CHAINS.find((x) => x.id === chainId);
+      const c = chainById(chainId);
       if (!c) continue;
       const key = tokenKey(chainId, null, c.symbol);
       if (seen.has(key)) continue;
@@ -872,6 +949,31 @@ export default function WalletPage() {
     // the two seeded custom tokens (which live on Ethereum + Polygon,
     // both enabled by default). User extends via Add Network.
     tokens = tokens.filter((t) => enabledChains.includes(t.chain));
+    // Hard guard: never show testnet rows when testnet mode is off (protects
+    // against a stale enabled-chains list carrying testnet ids).
+    if (!testnetMode) tokens = tokens.filter((t) => !isTestnetChain(t.chain));
+    // Spam-token auto-hide: airdropped scam tokens name themselves with URLs /
+    // "claim" / "airdrop" / "voucher" etc. Drop those UNLESS the user added the
+    // token themselves (custom list) — native + user-added tokens are never
+    // touched, so this can't hide a real holding. Reversible via Add Token.
+    {
+      const SPAM_RE = /(https?:|www\.|\.com|\.xyz|\.io\b|\.org|t\.me|claim|airdrop|reward|voucher|visit|free\s|giveaway|\$\s)/i;
+      // Build the allow-set with the SAME chain-aware key as the rows so we
+      // never lowercase a raw address (Solana is case-sensitive).
+      const customSet = new Set(
+        customTokens
+          .map((entry) => {
+            const [chainId, contract] = entry.split(':');
+            return chainId && contract ? tokenKeyOf(chainId, contract, '') : null;
+          })
+          .filter((k): k is string => k !== null),
+      );
+      tokens = tokens.filter((t) => {
+        if (!t.contractAddress) return true; // native asset
+        if (customSet.has(tokenKeyOf(t.chain, t.contractAddress, t.symbol))) return true; // user added it
+        return !SPAM_RE.test(`${t.symbol} ${t.name}`);
+      });
+    }
     // Chain pill filter — only apply when not on 'all'. Solana + BTC
     // etc. don't have EVM contract tokens so they naturally filter out.
     if (chainFilter !== 'all') tokens = tokens.filter((t) => t.chain === chainFilter);
@@ -930,8 +1032,28 @@ export default function WalletPage() {
     />
   );
 
+  if (view === 'approvals' && activeWallet) return (
+    <ApprovalsView onBack={() => setView('main')} wallet={activeWallet} chain={activeChain} />
+  );
+
+  if (view === 'analytics' && activeWallet) return (
+    <PortfolioAnalyticsView onBack={() => setView('main')} wallet={activeWallet} />
+  );
+
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-28">
+      {buyComingSoon && (
+        <div className="fixed inset-0 z-[70] bg-black/70 flex items-end sm:items-center justify-center p-4" onClick={() => setBuyComingSoon(false)}>
+          <div className="w-full max-w-sm nl-glass rounded-2xl p-6 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 26px rgba(0,102,255,.25)' }} onClick={(e) => e.stopPropagation()}>
+            <div className="w-14 h-14 mx-auto mb-3 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF 60%,#1233AE)', boxShadow: '0 0 18px rgba(0,102,255,.5)' }}>
+              <ShoppingCart className="w-7 h-7 text-white" />
+            </div>
+            <h3 className="text-lg font-bold text-white mb-1">Buy with card — Coming soon</h3>
+            <p className="text-sm text-slate-400 mb-5">Fiat on-ramp is launching shortly. You&apos;ll be able to buy crypto with a card or bank transfer, delivered straight to your wallet.</p>
+            <button onClick={() => setBuyComingSoon(false)} className="w-full py-3 rounded-xl font-bold text-white text-sm" style={{ background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 18px rgba(0,102,255,.5)' }}>Got it</button>
+          </div>
+        </div>
+      )}
       {/* Ambient glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-blue-600/[0.04] rounded-full blur-[120px]" />
@@ -1079,10 +1201,10 @@ export default function WalletPage() {
             {/* ── 4 ACTION BUTTONS ─────────────────────────── */}
             <div className="grid grid-cols-4 sm:grid-cols-4 gap-3 mb-5">
               {[
-                { label: 'Send', icon: <ArrowUpRight className="w-6 h-6" />, color: 'var(--nl-blue)', action: () => setView('send'), enabled: EVM_LIVE_CHAINS.includes(activeChain.id) || activeChain.id === 'solana' },
+                { label: 'Send', icon: <ArrowUpRight className="w-6 h-6" />, color: 'var(--nl-blue)', action: () => setView('send'), enabled: EVM_LIVE_CHAINS.includes(activeChain.id) || activeChain.id === 'solana' || isTestnetChain(activeChain.id) },
                 { label: 'Receive', icon: <ArrowDownLeft className="w-6 h-6" />, color: 'var(--nl-success)', action: () => setView('receive'), enabled: true },
                 { label: 'Swap', icon: <Repeat className="w-6 h-6" />, color: '#8B5CF6', action: () => router.push('/dashboard/swap?from=wallet'), enabled: true },
-                { label: 'Buy', icon: <ShoppingCart className="w-6 h-6" />, color: 'var(--nl-warning)', action: () => { /* coming soon */ }, enabled: false },
+                { label: 'Buy', icon: <ShoppingCart className="w-6 h-6" />, color: 'var(--nl-warning)', action: () => setBuyComingSoon(true), enabled: true },
               ].map(btn => (
                 <button
                   key={btn.label}
@@ -1107,7 +1229,7 @@ export default function WalletPage() {
               {CHAIN_FILTER_PILLS.map(p => (
                 <button
                   key={p.id}
-                  onClick={() => { setChainFilter(p.id); if (p.id !== 'all') { const c = SUPPORTED_CHAINS.find(c => c.id === p.id); if (c) setActiveChain(c); } }}
+                  onClick={() => { setChainFilter(p.id); if (p.id !== 'all') { const c = chainById(p.id); if (c) setActiveChain(c); } }}
                   style={chainFilter === p.id
                     ? { background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 14px rgba(0,102,255,.5), inset 0 1px 0 rgba(255,255,255,.2)' }
                     : { boxShadow: '0 0 0 1px rgba(0,102,255,.15)' }}
@@ -1210,7 +1332,7 @@ export default function WalletPage() {
                 aria-labelledby="wallet-tab-activity"
                 className="mb-6 rounded-xl nl-glass/40 p-3"
               >
-                <ActivityTab address={activeWallet.address} chain={activeChain} />
+                <ActivityTab address={activeWallet.address} chain={activeChain} enabledChains={enabledChains} />
               </div>
             )}
 
@@ -1254,11 +1376,12 @@ export default function WalletPage() {
                       valueUsd={token.valueUsd}
                       contractAddress={token.contractAddress}
                       logoUrl={logoUrl}
-                      chainLabel={SUPPORTED_CHAINS.find(c => c.id === token.chain)?.name ?? ''}
-                      coinGeckoId={resolveCoinGeckoId(
-                        token.symbol,
-                        SUPPORTED_CHAINS.find(c => c.id === token.chain) ?? activeChain,
-                      )}
+                      chainLabel={chainById(token.chain)?.name ?? ''}
+                      // Testnet tokens get NO price lookup (empty id) so we never
+                      // render a mainnet USD price against a worthless test coin.
+                      coinGeckoId={isTestnetChain(token.chain)
+                        ? ''
+                        : resolveCoinGeckoId(token.symbol, chainById(token.chain) ?? activeChain)}
                       hideBalance={hideBalance}
                       // §4.5 — wallet token click opens the Trust-Wallet-style coin detail
                       // (line chart + fiat buy + Holdings/History/About + Send/Receive/Swap
@@ -1330,6 +1453,25 @@ export default function WalletPage() {
                     </div>
                     <span className="text-xs text-slate-500 px-3 py-1.5 border border-slate-800 rounded-lg">Soon</span>
                   </div>
+                  <div className="flex items-center justify-between p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                        <Shield className="w-4 h-4 text-blue-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-white font-medium">Token approvals</p>
+                        <p className="text-xs text-slate-500">Review &amp; revoke spending permissions</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setView('approvals')}
+                      disabled={!EVM_LIVE_CHAINS.includes(activeChain.id)}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-xs font-semibold text-white transition-colors"
+                    >
+                      {EVM_LIVE_CHAINS.includes(activeChain.id) ? 'Review' : 'EVM only'}
+                    </button>
+                  </div>
+                  {activeWallet && <BiometricUnlockRow encryptedKey={activeWallet.encryptedKey} />}
                   {/* "View on Solscan/Explorer" button removed per product
                       direction — users stay inside Naka; explorer links live
                       on individual activity rows if needed. */}
@@ -1340,6 +1482,13 @@ export default function WalletPage() {
             {/* ── ADVANCED ─────────────────────────────────── */}
             <div className="mb-6">
               <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Advanced</h2>
+              <button
+                onClick={() => setView('analytics')}
+                className="w-full mb-2 py-3 nl-glass rounded-xl text-xs font-semibold hover:-translate-y-px flex items-center justify-center gap-1.5 transition-all"
+                style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}
+              >
+                <BarChart3 className="w-3.5 h-3.5 text-blue-400" /> Portfolio Analytics
+              </button>
               <div className="flex gap-2">
                 <button
                   onClick={() => setView('create')}
@@ -1722,6 +1871,12 @@ const CHAIN_RPC: Record<string, string> = {
   optimism: 'https://mainnet.optimism.io',
   bnb: 'https://bsc-dataseed.binance.org',
   fantom: 'https://rpc.ftm.tools',
+  // Test networks (real public RPCs).
+  sepolia: 'https://ethereum-sepolia-rpc.publicnode.com',
+  'base-sepolia': 'https://sepolia.base.org',
+  'arbitrum-sepolia': 'https://sepolia-rollup.arbitrum.io/rpc',
+  'polygon-amoy': 'https://rpc-amoy.polygon.technology',
+  'bnb-testnet': 'https://data-seed-prebsc-1-s1.binance.org:8545',
 };
 
 function isValidAddressForChain(addr: string, chainId: string): boolean {
@@ -1762,6 +1917,8 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
   const [ensAddr, setEnsAddr] = useState<string | null>(null);
   const [ensLoading, setEnsLoading] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
+  const [contacts, setContacts] = useState<Array<{ id: string; label: string; address: string; chain: string | null }>>([]);
+  const [saved, setSaved] = useState(false);
 
   // Native balance — powers MAX + the >balance guard.
   useEffect(() => {
@@ -1819,6 +1976,27 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
     }, 400);
     return () => { cancelled = true; clearTimeout(t); };
   }, [to, isEns]);
+
+  // Load the address book once.
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/wallet/contacts').then((r) => (r.ok ? r.json() : null)).then((d) => {
+      if (!cancelled && d?.contacts) setContacts(d.contacts);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const saveContact = async () => {
+    const addr = recipient;
+    if (!addr) return;
+    try {
+      const res = await fetch('/api/wallet/contacts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label: shortAddr(addr), address: addr, chain: chain.id }),
+      });
+      if (res.ok) setSaved(true);
+    } catch { /* ignore */ }
+  };
 
   const recipient = (ensAddr || to).trim();
   const amtNum = parseFloat(amount) || 0;
@@ -1955,6 +2133,18 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
               {isEns && !ensLoading && ensAddr && <p className="text-[11px] text-emerald-400 mt-1.5 font-mono">→ {shortAddr(ensAddr)}</p>}
               {isEns && !ensLoading && !ensAddr && <p className="text-[11px] text-[#F59E0B] mt-1.5">Couldn&apos;t resolve that name.</p>}
               {!isEns && to && !validAddr && <p className="text-[11px] text-[#F59E0B] mt-1.5">Not a valid {chain.name} address.</p>}
+              {!to && contacts.length > 0 && (
+                <div className="mt-2.5">
+                  <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-1.5 font-semibold">Address book</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {contacts.slice(0, 8).map((c) => (
+                      <button key={c.id} type="button" onClick={() => setTo(c.address)} className="nl-glass px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-200" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.2)' }}>
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <div className="flex items-center justify-between mb-1.5">
@@ -2047,8 +2237,349 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
                 View on block explorer <ExternalLink className="w-3.5 h-3.5" />
               </a>
             )}
+            {!contacts.some((c) => c.address.toLowerCase() === recipient.toLowerCase()) && (
+              <button onClick={() => void saveContact()} disabled={saved} className="w-full py-3 rounded-2xl font-semibold text-[13px] text-[#8FA3FF] nl-glass disabled:opacity-60" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.2)' }}>
+                {saved ? 'Saved to address book ✓' : 'Save recipient to address book'}
+              </button>
+            )}
             <button onClick={onBack} className="w-full py-3.5 rounded-2xl font-bold text-sm nl-glass" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}>Done</button>
           </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── TOKEN APPROVALS MANAGER ───────────────────────────────────────────────
+// revoke.cash-style: lists real on-chain ERC-20 spending allowances the wallet
+// has granted and lets the user revoke them by signing approve(spender, 0) with
+// their own key (same password → decrypt → ethers.Wallet flow as Send). EVM-only.
+interface ApprovalRow {
+  tokenAddress: string;
+  spender: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+  logo: string | null;
+  allowanceRaw: string;
+  allowanceDisplay: string;
+  unlimited: boolean;
+  revokeCalldata: string;
+}
+
+function ApprovalsView({ onBack, wallet, chain }: { onBack: () => void; wallet: StoredWallet; chain: ChainInfo }) {
+  const [rows, setRows] = useState<ApprovalRow[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  // Per-approval revoke state, keyed by `${tokenAddress}:${spender}`.
+  const [revoking, setRevoking] = useState<string | null>(null);
+  const [revoked, setRevoked] = useState<Set<string>>(new Set());
+  const [pwModal, setPwModal] = useState<ApprovalRow | null>(null);
+  const [password, setPassword] = useState('');
+  const [pwError, setPwError] = useState('');
+
+  const rowKey = (r: ApprovalRow) => `${r.tokenAddress}:${r.spender}`;
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setError(null);
+      setRows(null);
+      try {
+        const res = await fetch(
+          `/api/wallet/approvals?wallet=${encodeURIComponent(wallet.address)}&chain=${chain.id}`,
+          { cache: 'no-store', signal: AbortSignal.timeout(30_000) },
+        );
+        const json = await res.json();
+        if (cancelled) return;
+        if (!res.ok) { setError(json?.error || 'Failed to load approvals'); setRows([]); return; }
+        setRows(json.approvals ?? []);
+      } catch (e) {
+        if (!cancelled) { setError(e instanceof Error ? e.message : 'Failed to load approvals'); setRows([]); }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [wallet.address, chain.id]);
+
+  const doRevoke = async () => {
+    const target = pwModal;
+    if (!target) return;
+    if (!password) { setPwError('Enter your wallet password.'); return; }
+    setPwError('');
+    setRevoking(rowKey(target));
+    setPwModal(null);
+    try {
+      const rpc = CHAIN_RPC[chain.id];
+      if (!rpc) throw new Error(`${chain.name} not supported`);
+      const ethers = await import('ethers');
+      const decryptedKey = await decryptPrivateKey(wallet.encryptedKey, password);
+      const provider = new ethers.JsonRpcProvider(rpc);
+      const signer = new ethers.Wallet(decryptedKey, provider);
+      // approve(spender, 0) — calldata built server-side, sent to the token.
+      const tx = await signer.sendTransaction({ to: target.tokenAddress, data: target.revokeCalldata });
+      await tx.wait(1);
+      setRevoked((prev) => new Set(prev).add(rowKey(target)));
+    } catch (e) {
+      const msg = (e instanceof Error ? (e as { shortMessage?: string }).shortMessage || e.message : 'Revoke failed') as string;
+      if (/decrypt|password|bad key/i.test(msg)) setPwError('Wrong wallet password.');
+      setError(/decrypt|password|bad key/i.test(msg) ? null : msg.slice(0, 160));
+    } finally {
+      setRevoking(null);
+      setPassword('');
+    }
+  };
+
+  const visible = (rows ?? []).filter((r) => !revoked.has(rowKey(r)));
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-white pb-28">
+      <div className="max-w-md mx-auto px-4 pt-6">
+        <div className="flex items-center gap-3 mb-6">
+          <button onClick={onBack} aria-label="Back" className="p-2 -ms-2 hover:bg-white/5 rounded-xl transition-colors">
+            <ArrowLeft className="w-5 h-5 text-slate-400" />
+          </button>
+          <div>
+            <h1 className="text-lg font-bold">Token Approvals</h1>
+            <p className="text-[11px] text-slate-500">{chain.name} · {shortAddr(wallet.address)}</p>
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+          These contracts can spend your tokens. Revoke any you don&apos;t recognize or no
+          longer use — especially <span className="text-amber-400 font-semibold">Unlimited</span> grants.
+        </p>
+
+        {rows === null && (
+          <div className="py-12 text-center text-sm text-slate-400">Scanning on-chain approvals…</div>
+        )}
+        {error && (
+          <div className="rounded-xl border border-red-500/40 bg-red-500/5 px-3 py-2.5 text-xs text-red-200 mb-4">{error}</div>
+        )}
+        {rows !== null && visible.length === 0 && !error && (
+          <div className="py-12 text-center">
+            <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+              <Shield className="w-6 h-6 text-emerald-400" />
+            </div>
+            <p className="text-sm text-white font-medium">No open approvals</p>
+            <p className="text-xs text-slate-500 mt-1">This wallet has no active token spending permissions on {chain.name}.</p>
+          </div>
+        )}
+
+        <div className="space-y-2.5">
+          {visible.map((r) => {
+            const k = rowKey(r);
+            return (
+              <div key={k} className="nl-glass rounded-2xl p-3.5" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.18)' }}>
+                <div className="flex items-center gap-3">
+                  {r.logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={r.logo} alt="" className="w-9 h-9 rounded-full shrink-0" />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center shrink-0 text-[11px] font-bold text-slate-300">
+                      {r.symbol.slice(0, 3)}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{r.symbol} <span className="text-slate-500 font-normal">· {r.name}</span></p>
+                    <p className="text-[11px] text-slate-500 truncate">Spender {shortAddr(r.spender)}</p>
+                  </div>
+                  <button
+                    onClick={() => { setPwModal(r); setPassword(''); setPwError(''); }}
+                    disabled={revoking === k}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-red-300 bg-red-500/15 border border-red-500/30 hover:bg-red-500/25 disabled:opacity-50 transition-colors shrink-0"
+                  >
+                    {revoking === k ? 'Revoking…' : 'Revoke'}
+                  </button>
+                </div>
+                <div className="mt-2.5 flex items-center gap-2">
+                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-semibold ${r.unlimited ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30' : 'bg-slate-800 text-slate-400'}`}>
+                    Allowance: {r.allowanceDisplay}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Password confirm modal — revoke signs with the wallet's own key. */}
+      {pwModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => setPwModal(null)} />
+          <div className="relative w-full max-w-[340px] mx-4 nl-glass/50 rounded-2xl p-5 shadow-2xl" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.3)' }}>
+            <h3 className="text-sm font-bold mb-1 text-white">Revoke {pwModal.symbol} approval</h3>
+            <p className="text-xs text-slate-400 mb-4">Sends an on-chain transaction (network fee applies). Enter your wallet password to sign.</p>
+            <input
+              type="password"
+              value={password}
+              autoFocus
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void doRevoke(); }}
+              placeholder="Wallet password"
+              className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0066FF]/50 mb-2"
+            />
+            {pwError && <p className="text-xs text-red-400 mb-2">{pwError}</p>}
+            <div className="flex gap-2 mt-2">
+              <button onClick={() => setPwModal(null)} className="flex-1 py-2.5 bg-slate-800 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-700 transition-colors">Cancel</button>
+              <button onClick={() => void doRevoke()} className="flex-1 py-2.5 bg-red-500/20 text-red-300 rounded-xl text-xs font-semibold hover:bg-red-500/30 transition-colors border border-red-500/20">Revoke</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── PORTFOLIO ANALYTICS ───────────────────────────────────────────────────
+// Real cross-chain allocation view. Fetches /api/wallet-intelligence for every
+// live chain for the active address and aggregates by network and by asset.
+// No fabricated numbers — chains that return nothing simply contribute $0.
+function PortfolioAnalyticsView({ onBack, wallet }: { onBack: () => void; wallet: StoredWallet }) {
+  const [chainData, setChainData] = useState<Record<string, WalletData | null> | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setError(null);
+      setChainData(null);
+      try {
+        const entries = await Promise.all(
+          LIVE_CHAINS.map(async (cid) => {
+            try {
+              const res = await fetch(`/api/wallet-intelligence?address=${wallet.address}&chain=${cid}`, {
+                signal: AbortSignal.timeout(20_000),
+                cache: 'no-store',
+              });
+              return [cid, res.ok ? ((await res.json()) as WalletData) : null] as const;
+            } catch {
+              return [cid, null] as const;
+            }
+          }),
+        );
+        if (cancelled) return;
+        setChainData(Object.fromEntries(entries));
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load analytics');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [wallet.address]);
+
+  // Aggregate per-chain + per-asset from the real intelligence payloads.
+  const { perChain, perAsset, total, assetCount } = useMemo(() => {
+    const chains: { id: string; name: string; color: string; usd: number }[] = [];
+    const assetMap = new Map<string, { symbol: string; name: string; usd: number; logo?: string }>();
+    let totalUsd = 0;
+    let assets = 0;
+    for (const cid of LIVE_CHAINS) {
+      const d = chainData?.[cid];
+      if (!d) continue;
+      const chainUsd = parseFloat(d.totalBalanceUsd || '0');
+      const info = SUPPORTED_CHAINS.find((c) => c.id === cid);
+      if (chainUsd > 0) chains.push({ id: cid, name: info?.name ?? cid, color: info?.color ?? '#0066FF', usd: chainUsd });
+      totalUsd += chainUsd;
+      for (const h of d.holdings || []) {
+        const v = parseFloat(h.valueUsd || '0');
+        if (v <= 0) continue;
+        assets += 1;
+        const key = `${h.symbol}`.toUpperCase();
+        const prev = assetMap.get(key);
+        if (prev) prev.usd += v;
+        else assetMap.set(key, { symbol: h.symbol, name: h.name, usd: v, logo: h.logo });
+      }
+    }
+    chains.sort((a, b) => b.usd - a.usd);
+    const assetList = Array.from(assetMap.values()).sort((a, b) => b.usd - a.usd);
+    return { perChain: chains, perAsset: assetList, total: totalUsd, assetCount: assets };
+  }, [chainData]);
+
+  const fmt = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const pct = (n: number) => (total > 0 ? (n / total) * 100 : 0);
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-white pb-28">
+      <div className="max-w-md mx-auto px-4 pt-6">
+        <div className="flex items-center gap-3 mb-6">
+          <button onClick={onBack} aria-label="Back" className="p-2 -ms-2 hover:bg-white/5 rounded-xl transition-colors">
+            <ArrowLeft className="w-5 h-5 text-slate-400" />
+          </button>
+          <div>
+            <h1 className="text-lg font-bold">Portfolio Analytics</h1>
+            <p className="text-[11px] text-slate-500">{shortAddr(wallet.address)} · all networks</p>
+          </div>
+        </div>
+
+        {error && (
+          <div className="rounded-xl border border-red-500/40 bg-red-500/5 px-3 py-2.5 text-xs text-red-200 mb-4">{error}</div>
+        )}
+
+        {chainData === null ? (
+          <div className="py-12 text-center text-sm text-slate-400">Aggregating across networks…</div>
+        ) : total === 0 ? (
+          <div className="py-12 text-center">
+            <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-white/5 flex items-center justify-center">
+              <BarChart3 className="w-6 h-6 text-slate-400" />
+            </div>
+            <p className="text-sm text-white font-medium">No balances to analyze</p>
+            <p className="text-xs text-slate-500 mt-1">Fund this wallet to see your allocation breakdown.</p>
+          </div>
+        ) : (
+          <>
+            {/* Headline stats */}
+            <div className="grid grid-cols-3 gap-2 mb-5">
+              {[
+                { label: 'Total value', value: fmt(total) },
+                { label: 'Networks', value: String(perChain.length) },
+                { label: 'Assets', value: String(assetCount) },
+              ].map((s) => (
+                <div key={s.label} className="nl-glass rounded-xl p-3 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.18)' }}>
+                  <p className="text-sm font-bold text-white truncate">{s.value}</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">{s.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Allocation by network */}
+            <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">By network</h2>
+            <div className="space-y-2.5 mb-6">
+              {perChain.map((c) => (
+                <div key={c.id}>
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="font-medium text-white">{c.name}</span>
+                    <span className="text-slate-400">{fmt(c.usd)} · {pct(c.usd).toFixed(1)}%</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${Math.max(pct(c.usd), 1.5)}%`, background: c.color }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Top assets */}
+            <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Top assets</h2>
+            <div className="space-y-2">
+              {perAsset.slice(0, 12).map((a) => (
+                <div key={a.symbol} className="nl-glass rounded-xl p-3 flex items-center gap-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.12)' }}>
+                  {a.logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={a.logo} alt="" className="w-8 h-8 rounded-full shrink-0" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center shrink-0 text-[10px] font-bold text-slate-300">{a.symbol.slice(0, 3)}</div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{a.symbol}</p>
+                    <div className="h-1.5 mt-1 rounded-full bg-slate-800 overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${Math.max(pct(a.usd), 1.5)}%`, background: 'linear-gradient(90deg,#1E90FF,#0066FF)' }} />
+                    </div>
+                  </div>
+                  <div className="text-end shrink-0">
+                    <p className="text-xs font-mono text-white">{fmt(a.usd)}</p>
+                    <p className="text-[10px] text-slate-500">{pct(a.usd).toFixed(1)}%</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -2066,6 +2597,8 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
 const EVM_RECEIVE_CHAINS = new Set([
   'ethereum', 'base', 'polygon', 'avalanche', 'arbitrum',
   'optimism', 'bnb', 'fantom', 'cronos',
+  // EVM testnets share the same 0x address.
+  'sepolia', 'base-sepolia', 'arbitrum-sepolia', 'polygon-amoy', 'bnb-testnet',
 ]);
 
 function isEvmAddress(addr: string): boolean {
@@ -3174,10 +3707,28 @@ interface DecodedTx {
   timestamp: string;
 }
 
-function ActivityTab({ address, chain }: { address: string; chain: ChainInfo }) {
+// Per-tx explorer URL — resolves the chain the tx actually happened on so
+// multi-chain mode links to the right explorer, not just the active one.
+function explorerTxUrl(txChainId: string, txHash: string): string {
+  if (txChainId === 'solana') return `https://solscan.io/tx/${txHash}`;
+  const c = SUPPORTED_CHAINS.find((x) => x.id === txChainId);
+  return c ? `${c.explorerUrl}/tx/${txHash}` : `https://etherscan.io/tx/${txHash}`;
+}
+
+function ActivityTab({ address, chain, enabledChains }: { address: string; chain: ChainInfo; enabledChains: string[] }) {
   const [txs, setTxs] = useState<DecodedTx[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [upstreamWarning, setUpstreamWarning] = useState<string | null>(null);
+  // Chains we can actually decode activity for (transactions API support).
+  const scopeChains = useMemo(
+    () => enabledChains.filter((c) => LIVE_CHAINS.includes(c)),
+    [enabledChains],
+  );
+  const canGoGlobal = scopeChains.length > 1;
+  const [scope, setScope] = useState<'current' | 'all'>('current');
+  // Reset to current-chain view when the wallet/chain changes so the toggle
+  // never shows stale cross-chain data for a different address.
+  useEffect(() => { setScope('current'); }, [address]);
 
   useEffect(() => {
     if (!address) return;
@@ -3185,22 +3736,44 @@ function ActivityTab({ address, chain }: { address: string; chain: ChainInfo }) 
     (async () => {
       setError(null);
       setUpstreamWarning(null);
+      setTxs(null);
+      const chainsToFetch = scope === 'all' && canGoGlobal ? scopeChains : [chain.id];
       try {
-        const res = await fetch(
-          `/api/wallet/transactions?address=${encodeURIComponent(address)}&chain=${chain.id}&limit=30`,
-          { signal: AbortSignal.timeout(15_000), cache: 'no-store' },
+        const results = await Promise.allSettled(
+          chainsToFetch.map(async (cid) => {
+            const res = await fetch(
+              `/api/wallet/transactions?address=${encodeURIComponent(address)}&chain=${cid}&limit=30`,
+              { signal: AbortSignal.timeout(20_000), cache: 'no-store' },
+            );
+            if (!res.ok) throw new Error(`status ${res.status}`);
+            return (await res.json()) as { transactions: DecodedTx[]; upstream_error?: string | null };
+          }),
         );
-        if (!res.ok) throw new Error(`status ${res.status}`);
-        const json = (await res.json()) as { transactions: DecodedTx[]; upstream_error?: string | null };
         if (cancelled) return;
-        setTxs(json.transactions ?? []);
-        if (json.upstream_error) setUpstreamWarning(json.upstream_error);
+        const merged: DecodedTx[] = [];
+        let warn: string | null = null;
+        let anyOk = false;
+        for (const r of results) {
+          if (r.status === 'fulfilled') {
+            anyOk = true;
+            merged.push(...(r.value.transactions ?? []));
+            if (r.value.upstream_error && !warn) warn = r.value.upstream_error;
+          }
+        }
+        if (!anyOk) throw new Error('Failed to load activity');
+        // Newest first across all chains; de-dupe by hash (a tx can't be on two
+        // chains, but cached + live merges can double up).
+        const seen = new Set<string>();
+        merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        const deduped = merged.filter((t) => (seen.has(t.tx_hash) ? false : (seen.add(t.tx_hash), true)));
+        setTxs(deduped.slice(0, 50));
+        if (warn) setUpstreamWarning(warn);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load activity');
       }
     })();
     return () => { cancelled = true; };
-  }, [address, chain.id]);
+  }, [address, chain.id, scope, canGoGlobal, scopeChains]);
 
   if (!address) {
     return (
@@ -3213,20 +3786,33 @@ function ActivityTab({ address, chain }: { address: string; chain: ChainInfo }) 
     );
   }
 
+  // Current-chain vs all-networks toggle — only shown when more than one
+  // decodable chain is enabled, so single-chain users see a clean list.
+  const scopeToggle = canGoGlobal ? (
+    <div className="flex items-center gap-1 mb-3 rounded-lg nl-glass/50 p-1">
+      {([
+        { id: 'current' as const, label: chain.name },
+        { id: 'all' as const, label: 'All networks' },
+      ]).map((s) => (
+        <button
+          key={s.id}
+          onClick={() => setScope(s.id)}
+          style={scope === s.id ? { background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 12px rgba(0,102,255,.45)' } : undefined}
+          className={`flex-1 py-1.5 rounded-md text-[11px] font-semibold transition-colors ${scope === s.id ? 'text-white' : 'text-slate-400 hover:text-white'}`}
+        >
+          {s.label}
+        </button>
+      ))}
+    </div>
+  ) : null;
+
+  let body: React.ReactNode;
   if (txs === null && !error) {
-    return (
-      <div className="py-6 text-center text-xs text-gray-300">Loading activity…</div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-lg border border-red-500/40 bg-red-500/5 px-3 py-2 text-xs text-red-200">{error}</div>
-    );
-  }
-
-  if (!txs || txs.length === 0) {
-    return (
+    body = <div className="py-6 text-center text-xs text-gray-300">Loading activity…</div>;
+  } else if (error) {
+    body = <div className="rounded-lg border border-red-500/40 bg-red-500/5 px-3 py-2 text-xs text-red-200">{error}</div>;
+  } else if (!txs || txs.length === 0) {
+    body = (
       <div className="py-8 text-center">
         <div className="w-14 h-14 mx-auto mb-3 bg-white/5 rounded-2xl flex items-center justify-center">
           <TrendingUp className="w-6 h-6 text-gray-300" />
@@ -3235,59 +3821,68 @@ function ActivityTab({ address, chain }: { address: string; chain: ChainInfo }) 
         <p className="text-xs text-gray-400 mt-1">Decoded on-chain activity will appear here</p>
       </div>
     );
+  } else {
+    body = (
+      <div className="space-y-1">
+        {upstreamWarning && (
+          <div className="mb-2 rounded-lg border border-amber-500/40 bg-amber-500/5 px-2.5 py-1.5 text-[10px] text-amber-200">
+            Live decoder unavailable, showing cached entries · {upstreamWarning}
+          </div>
+        )}
+        {txs.map((tx) => {
+          const isSwap = tx.tx_type === 'swap';
+          const isSend = tx.tx_type === 'send' || (tx.amount_out !== null && tx.amount_in === null);
+          const date = new Date(tx.timestamp);
+          const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+          const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+          const Icon = isSwap ? Repeat : ArrowUpRight;
+          const txChainId = tx.chain || chain.id;
+          const txChainName = SUPPORTED_CHAINS.find((c) => c.id === txChainId)?.name ?? txChainId;
+          const explorerTxHref = explorerTxUrl(txChainId, tx.tx_hash);
+          return (
+            <div key={`${txChainId}:${tx.tx_hash}`} className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-white/5 transition-colors">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isSwap ? 'bg-[#0066FF]/10' : 'bg-[#F59E0B]/10'}`}>
+                <Icon className={`w-4 h-4 ${isSwap ? 'text-[#0066FF]' : 'text-[#F59E0B]'}`} aria-hidden />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold capitalize">
+                  {isSwap
+                    ? `Swap ${tx.token_out ?? ''} → ${tx.token_in ?? ''}`.trim()
+                    : isSend
+                      ? `Send ${tx.token_out ?? chain.symbol}`
+                      : `${tx.tx_type} ${tx.token_in ?? tx.token_out ?? ''}`}
+                </p>
+                <p className="text-[10px] text-gray-300">
+                  {dateStr} · {timeStr}{scope === 'all' && canGoGlobal ? ` · ${txChainName}` : ''}
+                </p>
+              </div>
+              <div className="text-end shrink-0">
+                {tx.amount_out !== null && (
+                  <p className="text-xs font-mono">-{tx.amount_out.toLocaleString(undefined, { maximumFractionDigits: 6 })} {tx.token_out ?? ''}</p>
+                )}
+                {tx.amount_in !== null && (
+                  <p className="text-[10px] text-[#10B981] font-mono">+{tx.amount_in.toLocaleString(undefined, { maximumFractionDigits: 6 })} {tx.token_in ?? ''}</p>
+                )}
+                <a
+                  href={explorerTxHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[9px] text-[#0066FF] hover:underline"
+                >
+                  View ↗
+                </a>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-1">
-      {upstreamWarning && (
-        <div className="mb-2 rounded-lg border border-amber-500/40 bg-amber-500/5 px-2.5 py-1.5 text-[10px] text-amber-200">
-          Live decoder unavailable, showing cached entries · {upstreamWarning}
-        </div>
-      )}
-      {txs.map((tx) => {
-        const isSwap = tx.tx_type === 'swap';
-        const isSend = tx.tx_type === 'send' || (tx.amount_out !== null && tx.amount_in === null);
-        const date = new Date(tx.timestamp);
-        const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-        const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-        const Icon = isSwap ? Repeat : ArrowUpRight;
-        const explorerTxHref = chain.id === 'solana'
-          ? `https://solscan.io/tx/${tx.tx_hash}`
-          : `${chain.explorerUrl}/tx/${tx.tx_hash}`;
-        return (
-          <div key={tx.tx_hash} className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-white/5 transition-colors">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isSwap ? 'bg-[#0066FF]/10' : 'bg-[#F59E0B]/10'}`}>
-              <Icon className={`w-4 h-4 ${isSwap ? 'text-[#0066FF]' : 'text-[#F59E0B]'}`} aria-hidden />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold capitalize">
-                {isSwap
-                  ? `Swap ${tx.token_out ?? ''} → ${tx.token_in ?? ''}`.trim()
-                  : isSend
-                    ? `Send ${tx.token_out ?? chain.symbol}`
-                    : `${tx.tx_type} ${tx.token_in ?? tx.token_out ?? ''}`}
-              </p>
-              <p className="text-[10px] text-gray-300">{dateStr} · {timeStr}</p>
-            </div>
-            <div className="text-end shrink-0">
-              {tx.amount_out !== null && (
-                <p className="text-xs font-mono">-{tx.amount_out.toLocaleString(undefined, { maximumFractionDigits: 6 })} {tx.token_out ?? ''}</p>
-              )}
-              {tx.amount_in !== null && (
-                <p className="text-[10px] text-[#10B981] font-mono">+{tx.amount_in.toLocaleString(undefined, { maximumFractionDigits: 6 })} {tx.token_in ?? ''}</p>
-              )}
-              <a
-                href={explorerTxHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[9px] text-[#0066FF] hover:underline"
-              >
-                View ↗
-              </a>
-            </div>
-          </div>
-        );
-      })}
+    <div>
+      {scopeToggle}
+      {body}
     </div>
   );
 }
@@ -3302,10 +3897,16 @@ function AddNetworkView({
   onBack,
   enabled,
   onChange,
+  chains,
+  testnetMode,
+  onTestnetModeChange,
 }: {
   onBack: () => void;
   enabled: string[];
   onChange: (next: string[]) => void;
+  chains: ChainInfo[];
+  testnetMode: boolean;
+  onTestnetModeChange: (on: boolean) => void;
 }) {
   const toggle = (id: string) => {
     const next = enabled.includes(id)
@@ -3332,8 +3933,16 @@ function AddNetworkView({
       </div>
 
       <div className="px-4 py-4">
+        {/* Show-testnets master toggle */}
+        <div className="mb-4 flex items-center justify-between nl-glass rounded-xl px-3.5 py-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.18)' }}>
+          <div>
+            <p className="text-sm font-semibold text-white">Show test networks</p>
+            <p className="text-[11px] text-slate-500">Sepolia, Amoy &amp; more · no real value</p>
+          </div>
+          <ToggleSwitch on={testnetMode} onToggle={() => onTestnetModeChange(!testnetMode)} />
+        </div>
         <div className="rounded-xl border border-slate-800/60 bg-slate-950/40 overflow-hidden divide-y divide-slate-800/60">
-          {SUPPORTED_CHAINS.map((c) => {
+          {chains.map((c) => {
             const isOn = enabled.includes(c.id);
             const isDefault = DEFAULT_ENABLED_CHAINS.includes(c.id);
             return (
@@ -3349,6 +3958,7 @@ function AddNetworkView({
                   <div className="text-[10px] uppercase tracking-wider text-slate-500 flex items-center gap-2">
                     <span>{c.symbol}</span>
                     {isDefault && <span className="text-[#4D6BFF]">· default</span>}
+                    {c.testnet && <span className="text-amber-400">· testnet</span>}
                   </div>
                 </div>
                 {/* iOS-style toggle */}

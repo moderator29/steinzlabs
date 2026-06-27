@@ -16,10 +16,28 @@ import {
   getStoredSaltBytes,
   getWrapBlob,
   deleteWrapBlob,
+  listWrappedCredentialIds,
+  clearAllWraps,
 } from './passkeyWrap';
 
 export function isPasskeySupported(): boolean {
   try { return browserSupportsWebAuthn(); } catch { return false; }
+}
+
+/** True if this device has at least one locally-wrapped passkey blob. */
+export function hasLocalPasskey(): boolean {
+  try { return listWrappedCredentialIds().length > 0; } catch { return false; }
+}
+
+/**
+ * Remove biometric unlock: delete every server-side credential we have a local
+ * wrap for, then clear all local wrap blobs. Best-effort on the server side —
+ * the local blobs are what actually gate unwrap, so we always clear those.
+ */
+export async function removeAllPasskeys(): Promise<void> {
+  const ids = listWrappedCredentialIds();
+  await Promise.allSettled(ids.map((id) => rollbackCredential(id)));
+  clearAllWraps();
 }
 
 // base64url helpers (kept local to avoid a circular import with passkeyWrap)
