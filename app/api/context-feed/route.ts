@@ -1,6 +1,6 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
-import { applyContextFilter, matchesTypeFilter, type PersonalContext, type ContextTypeFilter } from '@/lib/contextFeed/filter';
+import { applyContextFilter, matchesEventFilter, type PersonalContext, type ContextTypeFilter } from '@/lib/contextFeed/filter';
 import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 // Static imports — replaces the dynamic import inside fetchCoingeckoEvents
@@ -12,6 +12,7 @@ import {
   getTopTokens as cgTopTokens,
 } from '@/lib/services/coingecko';
 import { getTokenSecurity } from '@/lib/services/goplus';
+import { getNewEvmPairs } from '@/lib/services/geckoterminal';
 import { getTrendingTokens as lcTrendingTokens, getSocialVelocity as lcSocialVelocity } from '@/lib/services/lunarcrush';
 
 async function buildPersonalContext(request: Request): Promise<PersonalContext | undefined> {
@@ -89,6 +90,9 @@ interface WhaleEvent {
   tokenMarketCap?: number;
   tokenPriceChange24h?: number;
   pairAddress?: string;
+  // The REAL token contract (not the LP pair) — needed by View Proof to load
+  // on-chain holders (bubble map) and to preload the correct buy token.
+  tokenAddress?: string;
   dexUrl?: string;
   tokenIcon?: string;
   platform?: string;
@@ -561,10 +565,14 @@ async function fetchPumpFunTokens(): Promise<WhaleEvent[]> {
     );
     if (!res.ok) return [];
     const data = await res.json();
+    // Only surface pump.fun coins with genuinely good 24h volume — the feed
+    // shouldn't be a wall of dead sub-$25k launches.
+    const PUMP_VOL_FLOOR = 25_000;
     const pairs = (data.pairs || [])
       .filter((p: any) => p.chainId === 'solana' && (p.dexId === 'pump' || p.dexId === 'raydium'))
+      .filter((p: any) => (parseFloat(p.volume?.h24 || 0)) >= PUMP_VOL_FLOOR)
       .sort((a: any, b: any) => (parseFloat(b.volume?.h24 || 0)) - (parseFloat(a.volume?.h24 || 0)))
-      .slice(0, 10);
+      .slice(0, 12);
 
     return pairs.map((pair: any) => {
       const mcap = pair.fdv || pair.marketCap || 0;
@@ -591,12 +599,40 @@ async function fetchPumpFunTokens(): Promise<WhaleEvent[]> {
         tokenName: pair.baseToken?.name || 'Unknown',
         tokenSymbol: pair.baseToken?.symbol || '???',
         tokenMarketCap: mcap,
+        tokenVolume24h: vol24h,
+        tokenPriceChange24h: change24h,
+        pairAddress: pair.pairAddress || '',
+        tokenAddress: pair.baseToken?.address || '',
+        dexUrl: pair.url || '',
         platform: 'Pump.fun',
         tokenIcon: pair.info?.imageUrl || '',
       };
     });
   } catch (error) {
 
+    return [];
+  }
+}
+
+// Genuinely fresh on-chain pools from GeckoTerminal (free, no key) across all
+// supported EVM chains. This is the real "new coins" source — DexScreener
+// boosts/profiles are curated, not freshly-launched. Mapped to `new_listing`
+// so they populate the New Coins pill on every chain, not just Solana/pump.fun.
+async function fetchGeckoTerminalNewPairs(chain?: string): Promise<WhaleEvent[]> {
+  try {
+    const pairs = await getNewEvmPairs(3000, chain);
+    const out: WhaleEvent[] = [];
+    for (const pair of pairs.slice(0, 60)) {
+      const ev = mapDexPairToEvent(pair, 'GeckoTerminal');
+      if (!ev) continue;
+      ev.type = 'new_listing';
+      // Use the real pool-creation time so recency sorting reflects the
+      // actual launch, not fetch time.
+      if (pair.pairCreatedAt) ev.timestamp = new Date(pair.pairCreatedAt).toISOString();
+      out.push(ev);
+    }
+    return out;
+  } catch {
     return [];
   }
 }
@@ -703,6 +739,7 @@ function mapDexPairToEvent(pair: any, source: string): WhaleEvent | null {
       tokenMarketCap: mcap,
       tokenPriceChange24h: priceChange,
       pairAddress,
+      tokenAddress,
       dexUrl,
       tokenIcon: pair.info?.imageUrl || '',
       platform: platformLabel,
@@ -807,6 +844,7 @@ async function fetchRugAlerts(): Promise<WhaleEvent[]> {
         // are exactly the ones a rug alert must surface. MCap lives in the
         // summary instead.
         pairAddress: pair?.pairAddress || '',
+        tokenAddress: s.c.tokenAddress,
         dexUrl: pair?.url || '',
         platform: 'GoPlus',
       });
@@ -976,10 +1014,10 @@ async function fetchDexSearchPairs(query: string, chainFilter: string, count: nu
 
 async function fetchEthereumDexEvents(): Promise<WhaleEvent[]> {
   const ethTokens = ['PEPE', 'SHIB', 'LINK', 'UNI', 'AAVE', 'DOGE', 'MATIC', 'ARB', 'OP', 'MKR', 'LDO', 'CRV', 'COMP', 'SNX', 'ENS'];
-  const searches = ethTokens.slice(0, 8).map(t => fetchDexSearchPairs(t, 'ethereum', 2));
+  const searches = ethTokens.slice(0, 12).map(t => fetchDexSearchPairs(t, 'ethereum', 3));
   const results = await Promise.all([
     ...searches,
-    fetchDexScreenerProfiles('ethereum', 15),
+    fetchDexScreenerProfiles('ethereum', 25),
   ]);
   return results.flat();
 }
@@ -990,7 +1028,7 @@ async function fetchSolanaDexEvents(): Promise<WhaleEvent[]> {
     fetchDexSearchPairs('meteora', 'solana', 5),
     fetchDexSearchPairs('jupiter', 'solana', 5),
     fetchDexSearchPairs('orca', 'solana', 5),
-    fetchDexScreenerProfiles('solana', 15),
+    fetchDexScreenerProfiles('solana', 25),
   ]);
   return [...raydiumEvents, ...meteoraEvents, ...jupiterEvents, ...orcaEvents, ...profileEvents];
 }
@@ -1000,7 +1038,7 @@ async function fetchBSCDexEvents(): Promise<WhaleEvent[]> {
     fetchDexSearchPairs('pancakeswap', 'bsc', 8),
     fetchDexSearchPairs('fourmeme', 'bsc', 8),
     fetchDexSearchPairs('four.meme', 'bsc', 8),
-    fetchDexScreenerProfiles('bsc', 15),
+    fetchDexScreenerProfiles('bsc', 25),
   ]);
   return [...pancakeEvents, ...fourmemeEvents, ...fourmeme2Events, ...profileEvents];
 }
@@ -1010,7 +1048,7 @@ async function fetchAvalancheDexEvents(): Promise<WhaleEvent[]> {
   const searches = avaxTokens.map(t => fetchDexSearchPairs(t, 'avalanche', 3));
   const results = await Promise.all([
     ...searches,
-    fetchDexScreenerProfiles('avalanche', 15),
+    fetchDexScreenerProfiles('avalanche', 25),
   ]);
   return results.flat();
 }
@@ -1020,7 +1058,7 @@ async function fetchPolygonDexEvents(): Promise<WhaleEvent[]> {
   const searches = polyTokens.map(t => fetchDexSearchPairs(t, 'polygon', 3));
   const results = await Promise.all([
     ...searches,
-    fetchDexScreenerProfiles('polygon', 15),
+    fetchDexScreenerProfiles('polygon', 25),
   ]);
   return results.flat();
 }
@@ -1030,21 +1068,21 @@ async function fetchPolygonDexEvents(): Promise<WhaleEvent[]> {
 async function fetchBaseDexEvents(): Promise<WhaleEvent[]> {
   const tokens = ['ETH', 'AERO', 'BRETT', 'DEGEN', 'WETH', 'USDC', 'WELL'];
   const searches = tokens.map(t => fetchDexSearchPairs(t, 'base', 3));
-  const results = await Promise.all([...searches, fetchDexScreenerProfiles('base', 15)]);
+  const results = await Promise.all([...searches, fetchDexScreenerProfiles('base', 25)]);
   return results.flat();
 }
 
 async function fetchArbitrumDexEvents(): Promise<WhaleEvent[]> {
   const tokens = ['ARB', 'GMX', 'MAGIC', 'GNS', 'PENDLE', 'WETH', 'USDC'];
   const searches = tokens.map(t => fetchDexSearchPairs(t, 'arbitrum', 3));
-  const results = await Promise.all([...searches, fetchDexScreenerProfiles('arbitrum', 15)]);
+  const results = await Promise.all([...searches, fetchDexScreenerProfiles('arbitrum', 25)]);
   return results.flat();
 }
 
 async function fetchOptimismDexEvents(): Promise<WhaleEvent[]> {
   const tokens = ['OP', 'VELO', 'WELL', 'SNX', 'WETH', 'USDC'];
   const searches = tokens.map(t => fetchDexSearchPairs(t, 'optimism', 3));
-  const results = await Promise.all([...searches, fetchDexScreenerProfiles('optimism', 15)]);
+  const results = await Promise.all([...searches, fetchDexScreenerProfiles('optimism', 25)]);
   return results.flat();
 }
 
@@ -1087,11 +1125,16 @@ const VALID_FILTERS: ReadonlySet<FilterKind> = new Set(['all', 'news', 'coins', 
 
 function applyTypeFilter(events: WhaleEvent[], filter: FilterKind): WhaleEvent[] {
   if (filter === 'all') return events;
-  // §B5 — delegate to the ONE shared matcher in lib/contextFeed/filter.ts.
-  // The old inline predicates matched a hyphenated/coingecko taxonomy that NO
-  // fetcher emits (real types are underscored: new_listing, token_launch,
-  // whale_accumulation, …), so `news` and `new_coins` returned zero rows.
-  return events.filter((e) => matchesTypeFilter(e.type, filter));
+  // Delegate to the ONE shared matcher in lib/contextFeed/filter.ts.
+  // matchesEventFilter reads metrics so the "volume" pill is real (>= floor)
+  // instead of a string match that returned ~3 rows. News = informational
+  // events only; coins/new_coins/trending = discovery.
+  const matched = events.filter((e) => matchesEventFilter(e, filter));
+  // Volume pill: rank by actual 24h volume so the biggest movers lead.
+  if (filter === 'volume') {
+    return matched.sort((a, b) => (b.tokenVolume24h ?? 0) - (a.tokenVolume24h ?? 0));
+  }
+  return matched;
 }
 
 export async function GET(request: Request) {
@@ -1129,7 +1172,7 @@ export async function GET(request: Request) {
       storeEvents(cached.data);
       const liveEvents = getLiveEvents(chain);
       const personalCached = await buildPersonalContext(request);
-      let cachedFiltered = applyContextFilter(liveEvents, { minMarketCap: 500_000, personal: personalCached });
+      let cachedFiltered = applyContextFilter(liveEvents, { minMarketCap: 500_000, minVolume: 50_000, personal: personalCached });
       if (cachedFiltered.length < 5) {
         cachedFiltered = applyContextFilter(liveEvents, { minMarketCap: 0, personal: personalCached });
       }
@@ -1156,7 +1199,7 @@ export async function GET(request: Request) {
       // FIX 5A.1 / Phase 7: added base/arbitrum/optimism branches — user-reported "only Solana /
       // pump.fun trash" was largely driven by these L2s having zero coverage.
       const SRC_TIMEOUT = 5000;
-      const [alchemyEvents, solanaNetEvents, pumpEvents, dexTrending, ethDex, solDex, bscDex, polygonDex, avalancheDex, baseDex, arbDex, opDex, cgEvents, rugAlerts, socialVel] = await Promise.all([
+      const [alchemyEvents, solanaNetEvents, pumpEvents, dexTrending, ethDex, solDex, bscDex, polygonDex, avalancheDex, baseDex, arbDex, opDex, cgEvents, rugAlerts, socialVel, gtNew] = await Promise.all([
         withSrcTimeout(fetchAlchemyTransfers(), SRC_TIMEOUT, 'alchemy'),
         withSrcTimeout(fetchSolanaNetworkActivity(), SRC_TIMEOUT, 'alchemy-solana'),
         withSrcTimeout(fetchPumpFunTokens(), SRC_TIMEOUT, 'pumpfun'),
@@ -1175,12 +1218,15 @@ export async function GET(request: Request) {
         // can't stall the feed.
         withSrcTimeout(fetchRugAlerts(), 7000, 'goplus-rug'),
         withSrcTimeout(fetchSocialVelocity(), 7000, 'lunarcrush-social'),
+        // Genuine fresh pools across all EVM chains — the real "new coins".
+        withSrcTimeout(fetchGeckoTerminalNewPairs(), 7000, 'geckoterminal-new'),
       ]);
 
       // Order matters: rug alerts + smart-money first (highest type weight),
       // then trending. The score function in /lib/contextFeed/filter.ts
       // re-ranks by type/trust/USD, so this is just the de-dupe input order.
-      events = [...rugAlerts, ...cgEvents, ...socialVel, ...dexTrending, ...ethDex, ...solDex, ...bscDex, ...polygonDex, ...avalancheDex, ...baseDex, ...arbDex, ...opDex, ...pumpEvents, ...alchemyEvents, ...solanaNetEvents];
+      events = [...rugAlerts, ...cgEvents, ...socialVel, ...gtNew, ...dexTrending, ...ethDex, ...solDex, ...bscDex, ...polygonDex, ...avalancheDex, ...baseDex, ...arbDex, ...opDex, ...pumpEvents, ...alchemyEvents, ...solanaNetEvents];
+      if (gtNew.length > 0) sources.push('geckoterminal');
       if (rugAlerts.length > 0) sources.push('goplus');
       if (socialVel.length > 0) sources.push('lunarcrush');
       if (cgEvents.length > 0) sources.push('coingecko');
@@ -1198,14 +1244,29 @@ export async function GET(request: Request) {
       if (opDex.length > 0) sources.push('dex-optimism');
 
     } else if (chain === 'base') {
-      events = await withSrcTimeout(fetchBaseDexEvents(), 5000, 'dex-base');
-      if (events.length > 0) sources.push('dexscreener');
+      const [dex, gtNew] = await Promise.all([
+        withSrcTimeout(fetchBaseDexEvents(), 5000, 'dex-base'),
+        withSrcTimeout(fetchGeckoTerminalNewPairs('base'), 7000, 'geckoterminal-new'),
+      ]);
+      events = [...gtNew, ...dex];
+      if (dex.length > 0) sources.push('dexscreener');
+      if (gtNew.length > 0) sources.push('geckoterminal');
     } else if (chain === 'arbitrum') {
-      events = await withSrcTimeout(fetchArbitrumDexEvents(), 5000, 'dex-arbitrum');
-      if (events.length > 0) sources.push('dexscreener');
+      const [dex, gtNew] = await Promise.all([
+        withSrcTimeout(fetchArbitrumDexEvents(), 5000, 'dex-arbitrum'),
+        withSrcTimeout(fetchGeckoTerminalNewPairs('arbitrum'), 7000, 'geckoterminal-new'),
+      ]);
+      events = [...gtNew, ...dex];
+      if (dex.length > 0) sources.push('dexscreener');
+      if (gtNew.length > 0) sources.push('geckoterminal');
     } else if (chain === 'optimism') {
-      events = await withSrcTimeout(fetchOptimismDexEvents(), 5000, 'dex-optimism');
-      if (events.length > 0) sources.push('dexscreener');
+      const [dex, gtNew] = await Promise.all([
+        withSrcTimeout(fetchOptimismDexEvents(), 5000, 'dex-optimism'),
+        withSrcTimeout(fetchGeckoTerminalNewPairs('optimism'), 7000, 'geckoterminal-new'),
+      ]);
+      events = [...gtNew, ...dex];
+      if (dex.length > 0) sources.push('dexscreener');
+      if (gtNew.length > 0) sources.push('geckoterminal');
     } else if (chain === 'solana') {
       const [solanaNetEvents, pumpEvents, solDex] = await Promise.all([
         withSrcTimeout(fetchSolanaNetworkActivity(), 5000, 'alchemy-solana'),
@@ -1219,29 +1280,43 @@ export async function GET(request: Request) {
       if (solDex.length > 0) sources.push('dexscreener');
 
     } else if (chain === 'ethereum') {
-      const [alchemyEvents, ethDex] = await Promise.all([
+      const [alchemyEvents, ethDex, gtNew] = await Promise.all([
         withSrcTimeout(fetchAlchemyTransfers(), 5000, 'alchemy'),
         withSrcTimeout(fetchEthereumDexEvents(), 5000, 'dex-ethereum'),
+        withSrcTimeout(fetchGeckoTerminalNewPairs('ethereum'), 7000, 'geckoterminal-new'),
       ]);
 
-      events = [...ethDex, ...alchemyEvents];
+      events = [...gtNew, ...ethDex, ...alchemyEvents];
       if (alchemyEvents.length > 0) sources.push('alchemy');
       if (ethDex.length > 0) sources.push('dexscreener');
+      if (gtNew.length > 0) sources.push('geckoterminal');
 
     } else if (chain === 'bsc') {
-      const bscEvents = await withSrcTimeout(fetchBSCDexEvents(), 5000, 'dex-bsc');
-      events = bscEvents;
+      const [bscEvents, gtNew] = await Promise.all([
+        withSrcTimeout(fetchBSCDexEvents(), 5000, 'dex-bsc'),
+        withSrcTimeout(fetchGeckoTerminalNewPairs('bsc'), 7000, 'geckoterminal-new'),
+      ]);
+      events = [...gtNew, ...bscEvents];
       if (bscEvents.length > 0) sources.push('dexscreener');
+      if (gtNew.length > 0) sources.push('geckoterminal');
 
     } else if (chain === 'polygon') {
-      const polygonEvents = await withSrcTimeout(fetchPolygonDexEvents(), 5000, 'dex-polygon');
-      events = polygonEvents;
+      const [polygonEvents, gtNew] = await Promise.all([
+        withSrcTimeout(fetchPolygonDexEvents(), 5000, 'dex-polygon'),
+        withSrcTimeout(fetchGeckoTerminalNewPairs('polygon'), 7000, 'geckoterminal-new'),
+      ]);
+      events = [...gtNew, ...polygonEvents];
       if (polygonEvents.length > 0) sources.push('dexscreener');
+      if (gtNew.length > 0) sources.push('geckoterminal');
 
     } else if (chain === 'avalanche') {
-      const avalancheEvents = await withSrcTimeout(fetchAvalancheDexEvents(), 5000, 'dex-avalanche');
-      events = avalancheEvents;
+      const [avalancheEvents, gtNew] = await Promise.all([
+        withSrcTimeout(fetchAvalancheDexEvents(), 5000, 'dex-avalanche'),
+        withSrcTimeout(fetchGeckoTerminalNewPairs('avalanche'), 7000, 'geckoterminal-new'),
+      ]);
+      events = [...gtNew, ...avalancheEvents];
       if (avalancheEvents.length > 0) sources.push('dexscreener');
+      if (gtNew.length > 0) sources.push('geckoterminal');
     }
 
     // FIX 5A.1 / Phase 7: was pure-timestamp sort, which let low-quality pump.fun tokens
@@ -1265,7 +1340,7 @@ export async function GET(request: Request) {
     // filters out junk pump.fun tokens. If that leaves the feed sparse
     // (<5 events) or empty, drop the gate so we never show users a blank
     // feed just because our live sources only returned microcaps that tick.
-    let filtered = applyContextFilter(liveEvents, { minMarketCap: 500_000, personal });
+    let filtered = applyContextFilter(liveEvents, { minMarketCap: 500_000, minVolume: 50_000, personal });
     if (filtered.length < 5) {
       filtered = applyContextFilter(liveEvents, { minMarketCap: 0, personal });
     }

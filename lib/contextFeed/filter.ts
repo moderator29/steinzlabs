@@ -17,6 +17,7 @@ export interface FilterableEvent {
   trustScore: number;
   valueUsd: number;
   tokenMarketCap?: number;
+  tokenVolume24h?: number;
   tokenSymbol?: string;
   from?: string;
   to?: string;
@@ -34,6 +35,10 @@ export interface PersonalContext {
 
 export interface FilterOptions {
   minMarketCap?: number;
+  /** Keep a low-mcap token anyway when its 24h volume clears this floor —
+   *  real activity (a fresh coin pumping) shouldn't be hidden by the mcap
+   *  gate. 0 disables the volume escape hatch. */
+  minVolume?: number;
   personal?: PersonalContext;
 }
 
@@ -98,11 +103,22 @@ export const CONTEXT_TYPE_FILTERS: readonly ContextTypeFilter[] = [
 ] as const;
 
 // Pill → the canonical underscored event types it should surface.
+//
+// Two content families:
+//   • NEWS   = informational / "what's happening" stories — whale moves,
+//     large transfers, network activity, big-cap swings, rug alerts. These
+//     are NOT coin-discovery cards; the News pill must show only these.
+//   • COINS  = discovery — tradable tokens trending / launching / listing /
+//     pumping. This is what the default feed should be mostly made of.
+//
+// `volume` is intentionally NOT a type list — it's metric-based (24h volume)
+// and resolved by matchesEventFilter below. The entry here is only a fallback
+// for type-only call sites (it reuses the coin discovery set).
 const FILTER_TYPE_MAP: Record<Exclude<ContextTypeFilter, 'all'>, readonly string[]> = {
-  news:      ['new_listing', 'trending', 'token_launch'],
-  coins:     ['new_listing', 'token_launch', 'trade', 'trending'],
-  new_coins: ['new_listing', 'token_launch'],
-  volume:    ['whale_accumulation', 'whale_sell', 'large_transfer', 'trade'],
+  news:      ['whale_transfer', 'token_transfer', 'whale_accumulation', 'whale_sell', 'large_transfer', 'network_activity', 'rug_alert', 'smart_money'],
+  coins:     ['trending', 'token_launch', 'new_listing', 'trade'],
+  new_coins: ['token_launch', 'new_listing'],
+  volume:    ['trending', 'token_launch', 'new_listing', 'trade'],
   trending:  ['trending'],
 };
 
@@ -117,11 +133,32 @@ export function matchesTypeFilter(type: string | undefined, filter: ContextTypeF
   return FILTER_TYPE_MAP[filter].some((allowed) => t.includes(allowed));
 }
 
+// Minimum 24h volume (USD) for an event to qualify under the "Volume" pill.
+// The string-matching approach surfaced ~3 events; this metric-based gate
+// surfaces every genuinely-traded coin and the route sorts them by volume.
+export const VOLUME_PILL_FLOOR = 25_000;
+
+/**
+ * Full-event filter — like matchesTypeFilter but can read metrics. The
+ * "volume" pill is metric-based (real 24h volume), everything else delegates
+ * to the type matcher. Used by the API route so each pill returns the right
+ * set instead of the client double-filtering with stale string predicates.
+ */
+export function matchesEventFilter(
+  e: { type?: string; tokenVolume24h?: number },
+  filter: ContextTypeFilter,
+): boolean {
+  if (filter === 'all') return true;
+  if (filter === 'volume') return (e.tokenVolume24h ?? 0) >= VOLUME_PILL_FLOOR;
+  return matchesTypeFilter(e.type, filter);
+}
+
 export function applyContextFilter<T extends FilterableEvent>(
   events: T[],
   opts: FilterOptions = {},
 ): T[] {
   const minMcap = opts.minMarketCap ?? 500_000;
+  const minVol = opts.minVolume ?? 0;
   const muted = opts.personal?.mutedSources;
   const filtered = events.filter((e) => {
     // CF3: drop events whose source/platform the user explicitly muted.
@@ -132,7 +169,11 @@ export function applyContextFilter<T extends FilterableEvent>(
       if (src && muted.has(src.toLowerCase())) return false;
     }
     if (typeof e.tokenMarketCap === "number" && e.tokenMarketCap > 0) {
-      return e.tokenMarketCap >= minMcap;
+      if (e.tokenMarketCap >= minMcap) return true;
+      // Low mcap but real traded volume — a fresh coin actually moving. Keep
+      // it rather than hiding the exact "things happening" the feed is for.
+      if (minVol > 0 && (e.tokenVolume24h ?? 0) >= minVol) return true;
+      return false;
     }
     return true; // unknown mcap — keep (native transfers)
   });

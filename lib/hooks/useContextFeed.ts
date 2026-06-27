@@ -31,6 +31,7 @@ export interface ContextEvent {
   tokenMarketCap?: number;
   tokenPriceChange24h?: number;
   pairAddress?: string;
+  tokenAddress?: string;
   dexUrl?: string;
   tokenIcon?: string;
   platform?: string;
