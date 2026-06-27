@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { verifyCron, cronResponse, cronHasWork } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getNewEvmPairs } from "@/lib/services/geckoterminal";
+import { normalizeAddress, addressesEqual } from "@/lib/utils/addressNormalize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -193,7 +194,7 @@ export async function GET(request: NextRequest) {
         (a) =>
           c.chains_allowed.includes(a.chain) &&
           (!c.trigger_whale_address ||
-            a.whale_address.toLowerCase() === c.trigger_whale_address.toLowerCase()) &&
+            addressesEqual(a.whale_address, c.trigger_whale_address)) &&
           (a.value_usd ?? 0) > 0,
       );
 
@@ -214,7 +215,7 @@ export async function GET(request: NextRequest) {
         const event = {
           criteria_id: c.id,
           user_id: c.user_id,
-          matched_token_address: a.token_address.toLowerCase(),
+          matched_token_address: normalizeAddress(a.token_address) ?? a.token_address,
           matched_chain: a.chain,
           trigger_reason: `Whale ${a.whale_address.slice(0, 8)}… bought $${(a.value_usd ?? 0).toLocaleString()}`,
           decision,
@@ -254,7 +255,12 @@ export async function GET(request: NextRequest) {
           (t.buy_tax_bps == null || t.buy_tax_bps <= c.max_buy_tax_bps) &&
           (t.sell_tax_bps == null || t.sell_tax_bps <= c.max_sell_tax_bps) &&
           (t.holder_count == null || t.holder_count >= c.min_holder_count) &&
-          (c.min_security_score === 0 || (t.security_score ?? 0) >= c.min_security_score) &&
+          // Treat an unknown (null) security_score as "allow" — fresh
+          // DexScreener candidates have no score yet, so the old `?? 0`
+          // rejected EVERY default new-launch sniper (min score 60). The
+          // execute-time GoPlus gate is the real safety wall; this is a
+          // pre-filter only.
+          (t.security_score == null || t.security_score >= c.min_security_score) &&
           (!c.block_honeypots || t.is_honeypot !== true),
       );
 
@@ -273,7 +279,7 @@ export async function GET(request: NextRequest) {
         events.push({
           criteria_id: c.id,
           user_id: c.user_id,
-          matched_token_address: t.token_address.toLowerCase(),
+          matched_token_address: normalizeAddress(t.token_address) ?? t.token_address,
           matched_chain: t.chain,
           trigger_reason: `New token listed — liquidity $${(t.liquidity_usd ?? 0).toLocaleString()}, score ${t.security_score ?? "?"}`,
           decision,

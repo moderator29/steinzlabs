@@ -21,13 +21,15 @@ import type { SniperChain } from "@/lib/sniper/chains";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// This route can create sniped_pending events that the money-moving
+// auto-execute cron turns into real buys, so it is gated to CRON_SECRET ONLY.
+// The ADMIN_MIGRATION_SECRET bypass was removed — a schema-migration secret
+// must never be able to inject real-money trade triggers (the auto-execute
+// cron already dropped the same bypass for this reason).
 function authorized(req: NextRequest): boolean {
   const cronSecret = process.env.CRON_SECRET;
-  const adminSecret = process.env.ADMIN_MIGRATION_SECRET;
   const auth = req.headers.get("authorization");
-  if (cronSecret && auth === `Bearer ${cronSecret}`) return true;
-  if (adminSecret && req.headers.get("x-migration-secret") === adminSecret) return true;
-  return false;
+  return !!cronSecret && auth === `Bearer ${cronSecret}`;
 }
 
 interface ReplayBody {

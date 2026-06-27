@@ -32,6 +32,10 @@ const RPC_BY_CHAIN: Record<string, string> = {
   ethereum: "https://eth.llamarpc.com",
   bsc: "https://bsc-dataseed.binance.org",
   avalanche: "https://api.avax.network/ext/bc/C/rpc",
+  base: "https://mainnet.base.org",
+  arbitrum: "https://arb1.arbitrum.io/rpc",
+  optimism: "https://mainnet.optimism.io",
+  polygon: "https://polygon-rpc.com",
 };
 
 const decimalsCache = new Map<string, number>();
@@ -108,8 +112,11 @@ async function priceUsdEvm(chain: SniperChain, tokenAddress: string, decimals?: 
     );
     const buyAmount = BigInt(json.buyAmount ?? "0");
     if (buyAmount === BigInt(0)) return null;
-    // USDC has 6 decimals on every supported EVM chain.
-    return Number(buyAmount) / 1e6;
+    // USDC is 6 decimals on most chains but 18 on BSC (Binance-Peg USDC) —
+    // the old hardcoded /1e6 over-reported BSC prices by ~1e12 and poisoned
+    // autosell TP/SL on BSC.
+    const usdcDecimals = chain === "bsc" ? 18 : 6;
+    return Number(buyAmount) / 10 ** usdcDecimals;
   } catch {
     return null;
   }

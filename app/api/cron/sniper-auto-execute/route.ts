@@ -57,13 +57,15 @@ export async function GET(request: NextRequest) {
   }
 
   // Honor the admin platform kill switch — don't queue new buys while disabled.
-  const { data: killState } = await supabase
+  // Fail CLOSED: if the state can't be read (error or missing row), block,
+  // matching the manual /api/sniper/execute safety posture.
+  const { data: killState, error: killErr } = await supabase
     .from('platform_sniper_state')
     .select('enabled')
     .eq('id', 1)
     .single();
-  if (killState && killState.enabled === false) {
-    return cronResponse('sniper-auto-execute', startedAt, { pending: count, killed: true });
+  if (killErr || !killState || killState.enabled === false) {
+    return cronResponse('sniper-auto-execute', startedAt, { pending: count, killed: true, reason: killErr ? 'kill-state unreadable (fail-closed)' : (!killState ? 'kill-state missing (fail-closed)' : 'admin disabled') });
   }
 
   const { data: matches, error } = await supabase
