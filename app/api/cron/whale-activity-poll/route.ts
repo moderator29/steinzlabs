@@ -23,8 +23,14 @@ const ALCHEMY_HOSTS: Record<string, string> = {
 
 // Per tick we rotate through the stalest active whales so coverage scales
 // with the whole directory, not just the handful a user happens to follow.
-const WHALES_PER_TICK = 25;
+// Bitquery's bitquery-activity-poll is now the PRIMARY buy-ingest path on both
+// chains; this Alchemy poll is the idempotent backup (and the only source of
+// transfer_in/out + sell legs), so the per-tick count is modest. A wall-clock
+// budget caps the run well under the dispatcher's 60s abort — the timeouts that
+// were paging Sentry came from this loop occasionally overrunning.
+const WHALES_PER_TICK = 14;
 const POOL = 5;
+const TIME_BUDGET_MS = 45_000;
 
 interface AlchemyAssetTransfer {
   hash: string;
@@ -232,14 +238,22 @@ export async function GET(request: NextRequest) {
 
     const queue = (whales ?? []) as WhaleRow[];
     // Bounded pool so a tick never opens dozens of sockets or blows maxDuration.
+    // A wall-clock budget stops launching new batches once we approach the
+    // dispatcher's 60s abort, so the handler always returns cleanly with a
+    // partial result instead of being killed mid-flight (the TimeoutError that
+    // was paging Sentry). The stale-first ordering means the unprocessed tail
+    // is simply picked up on the next tick.
+    let polled = 0;
     for (let i = 0; i < queue.length; i += POOL) {
+      if (Date.now() - startedAt > TIME_BUDGET_MS) break;
       const batch = queue.slice(i, i + POOL);
       const counts = await Promise.all(batch.map((w) => ingestWhale(supabase, w).catch(() => 0)));
       inserted += counts.reduce((a, b) => a + b, 0);
+      polled += batch.length;
     }
 
     await logCronExecution(NAME, "success", Date.now() - startedAt, undefined, inserted);
-    return NextResponse.json({ ok: true, durationMs: Date.now() - startedAt, polled: queue.length, inserted });
+    return NextResponse.json({ ok: true, durationMs: Date.now() - startedAt, polled, inserted });
   } catch (err) {
     Sentry.captureException(err, { tags: { cron: NAME } });
     await logCronExecution(NAME, "failed", Date.now() - startedAt, String(err));
