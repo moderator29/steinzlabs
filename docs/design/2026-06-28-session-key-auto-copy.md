@@ -1,7 +1,9 @@
 # Design — 24/7 Non-Custodial Auto-Copy via Delegated Session Keys
 
-**Status:** Phase 1 (secure storage foundation) implemented. Live signer gated behind
-`SESSION_KEY_SIGNER_ENABLED` + security review + testnet validation. **Not live.**
+**Status:** Phases 1–2 implemented — secure storage + a signer that executes via a
+FIRM 0x quote (raw base-unit sell amount, calldata bound to the session EOA). Still
+gated behind `SESSION_KEY_SIGNER_ENABLED` and requires a **testnet validation pass +
+security review** before enabling on mainnet funds. **Not live until the flag is set.**
 
 **Author trail:** continues the `user_session_keys` scaffold from
 `2026_05_21_trading_signing_ux.sql` / `app/api/trading/session-key/route.ts`.

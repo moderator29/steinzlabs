@@ -5,17 +5,18 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { decryptSessionKey, sessionKeyEncryptionAvailable } from '@/lib/trading/sessionKeyCrypto';
 import { checkSessionScope, type SessionKeyRow } from '@/lib/trading/sessionKeyScope';
 import { isEvmChain } from '@/lib/utils/addressNormalize';
-import type { RouteQuote } from '@/lib/services/swap-aggregator';
+import { getSwapQuote, getChainId } from '@/lib/services/zerox';
 
 /**
  * 24/7 non-custodial Auto-Copy signer — Phase 2 (see
  * docs/design/2026-06-28-session-key-auto-copy.md).
  *
  * Loads a user's delegated session key, enforces scope + the daily ledger,
- * decrypts the key transiently, signs the swap from the session EOA, broadcasts
- * via our existing RPC, and records the spend. Built on existing platform rails
- * (ethers + aggregator route calldata + Supabase) — no smart accounts, no
- * outside services.
+ * decrypts the key transiently, fetches FIRM 0x swap calldata bound to the
+ * session EOA (raw base-unit sell amount), signs + broadcasts it via our
+ * existing RPC, and records the spend. Built on existing platform rails (ethers
+ * + the same 0x service the manual pending flow uses + Supabase) — no smart
+ * accounts, no outside services.
  *
  * GATED OFF by default. Requires SESSION_KEY_SIGNER_ENABLED=true AND a configured
  * SESSION_KEY_ENCRYPTION_SECRET. Until enabled (and testnet-validated), every
@@ -54,36 +55,15 @@ export interface SessionCopyParams {
   chain: string;
   fromTokenAddress: string;
   toTokenAddress: string;
-  amountIn: string;      // smallest-unit / token-unit string for the swap
+  amountInRaw: string;   // RAW base units of the from-token (what 0x expects)
   amountUsd: number;     // for cap accounting
   sourceTxHash: string;  // whale tx — idempotency key
   slippageBps: number;
-  route: RouteQuote | null;
 }
 
 export type SessionCopyResult =
   | { executed: true; broadcastTxHash: string; duplicate?: boolean }
   | null; // null = not handled here; caller falls back to pending-trade flow
-
-/**
- * Pull the executable swap tx (to/data/value) from an aggregator route's raw
- * provider payload. Handles 0x-style (flat to/data/value) and 1inch-style
- * (tx:{to,data,value}). Returns null if the route carries no calldata.
- */
-function extractSwapTx(route: RouteQuote | null): { to: string; data: string; value: string; allowanceTarget?: string } | null {
-  const raw = route?.raw as Record<string, unknown> | undefined;
-  if (!raw) return null;
-  const tx = (raw.tx ?? raw.transaction ?? raw) as Record<string, unknown>;
-  const to = tx.to as string | undefined;
-  const data = (tx.data ?? tx.calldata) as string | undefined;
-  if (!to || !data) return null;
-  return {
-    to,
-    data,
-    value: String(tx.value ?? '0'),
-    allowanceTarget: (raw.allowanceTarget ?? raw.spender ?? to) as string | undefined,
-  };
-}
 
 const ERC20_ABI = [
   'function allowance(address owner, address spender) view returns (uint256)',
@@ -134,45 +114,57 @@ export async function executeWithSessionKey(p: SessionCopyParams): Promise<Sessi
     if (claimErr || !claimId) return null;
     const claim = { id: claimId as string };
 
-    // 5) Execute on-chain from the session EOA.
-    // TESTNET-GATE: the route calldata was built from p.amountIn. Confirm the
-    // aggregator was quoted with RAW token units (not the human-decimal string)
-    // so the swap moves the intended size — verify on testnet before enabling
-    // SESSION_KEY_SIGNER_ENABLED on mainnet (see design doc Phase 2/3).
-    const swap = extractSwapTx(p.route);
-    if (!swap) { await admin.from('session_key_spends').delete().eq('id', claim.id); return null; }
+    // 4) Execute on-chain from the session EOA via a FIRM 0x quote (the same
+    //    service the manual pending flow uses). sellAmount is RAW base units;
+    //    the quote's calldata is bound to the session EOA as taker.
+    const releaseClaim = () => admin.from('session_key_spends').delete().eq('id', claim.id);
+    const chainId = getChainId(p.chain);
     const url = rpcUrl(p.chain);
-    if (!url) { await admin.from('session_key_spends').delete().eq('id', claim.id); return null; }
+    if (!chainId || !url) { await releaseClaim(); return null; }
 
     let pk = '';
     try {
       pk = decryptSessionKey(key.encrypted_session_key);
       const provider = new ethers.JsonRpcProvider(url);
       const wallet = new ethers.Wallet(pk, provider);
+      const taker = wallet.address;
 
-      // ERC-20 approve when the swap spends a token (not native). amountIn is a
-      // human-decimal string (e.g. "50.000000"), so we don't parse it to raw
-      // units here — use the approve-max-once pattern: if there's no existing
-      // allowance, approve MaxUint256 once; subsequent trades skip it.
-      // Zero-address (any casing) or the 'native' sentinel = native asset in.
-      const isNativeIn = /^0x0+$/.test(p.fromTokenAddress) || p.fromTokenAddress === 'native';
-      if (!isNativeIn && swap.allowanceTarget) {
+      const quote = await getSwapQuote({
+        chainId,
+        sellToken: p.fromTokenAddress,
+        buyToken: p.toTokenAddress,
+        sellAmount: p.amountInRaw,
+        taker,
+        slippageBps: p.slippageBps,
+      });
+      if (!quote?.transaction?.to || !quote.transaction.data) { await releaseClaim(); return null; }
+
+      // ERC-20 approve the 0x AllowanceHolder when selling a token. from-token is
+      // a real token (USDC on buys, the whale's token on sells), never native on
+      // the copy path. Approve-max-once: skip when allowance already covers it.
+      const isNativeIn = /^0x0+$/.test(p.fromTokenAddress)
+        || p.fromTokenAddress.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+      if (!isNativeIn && quote.allowanceTarget) {
         const erc20 = new ethers.Contract(p.fromTokenAddress, ERC20_ABI, wallet);
-        const current: bigint = await erc20.allowance(wallet.address, swap.allowanceTarget);
-        if (current === BigInt(0)) {
-          const approveTx = await erc20.approve(swap.allowanceTarget, ethers.MaxUint256);
+        const current: bigint = await erc20.allowance(taker, quote.allowanceTarget);
+        if (current < BigInt(p.amountInRaw)) {
+          const approveTx = await erc20.approve(quote.allowanceTarget, ethers.MaxUint256);
           await approveTx.wait(1);
         }
       }
 
-      const tx = await wallet.sendTransaction({ to: swap.to, data: swap.data, value: BigInt(swap.value || '0') });
+      const tx = await wallet.sendTransaction({
+        to: quote.transaction.to,
+        data: quote.transaction.data,
+        value: BigInt(quote.transaction.value || '0'),
+      });
       const receipt = await tx.wait(1);
       const hash = receipt?.hash ?? tx.hash;
       await admin.from('session_key_spends').update({ broadcast_tx_hash: hash }).eq('id', claim.id);
       return { executed: true, broadcastTxHash: hash };
     } catch (err) {
-      // On-chain failure: release the claim so a later retry/fallback can act.
-      await admin.from('session_key_spends').delete().eq('id', claim.id);
+      // On-chain / quote failure: release the claim so a later retry/fallback can act.
+      await releaseClaim();
       Sentry.captureException(err, { tags: { module: 'sessionKeySigner.execute', chain: p.chain } });
       return null;
     } finally {

@@ -45,6 +45,9 @@ export interface TradeIntent {
   sourceTxHash?: string | null;
   /** USD size of this copy, for session-key daily-cap accounting. */
   tradeUsd?: number | null;
+  /** RAW base units of the from-token — used by the session-key signer's firm
+   *  0x quote (the human-decimal amountIn is only an indicative-route hint). */
+  amountInRaw?: string | null;
 }
 
 export interface TradeResult {
@@ -121,17 +124,16 @@ export async function executeTrade(intent: TradeIntent): Promise<TradeResult> {
     // a valid funded session key exists. On success the trade is broadcast now
     // (no pending row); on null it falls through to the manual pending flow, so
     // with the flag OFF behavior is exactly as before. Never throws into here.
-    if (intent.autoConfirm && intent.sourceTxHash && sessionKeySignerEnabled()) {
+    if (intent.autoConfirm && intent.sourceTxHash && intent.amountInRaw && sessionKeySignerEnabled()) {
       const auto = await executeWithSessionKey({
         userId: intent.userId,
         chain: intent.chain,
         fromTokenAddress: intent.fromTokenAddress,
         toTokenAddress: intent.toTokenAddress,
-        amountIn: intent.amountIn,
+        amountInRaw: intent.amountInRaw,
         amountUsd: intent.tradeUsd ?? 0,
         sourceTxHash: intent.sourceTxHash,
         slippageBps: intent.slippageBps,
-        route: bestRoute,
       });
       if (auto?.executed) {
         // The trade is already on-chain — do NOT send the pending "tap Confirm

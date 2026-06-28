@@ -21,6 +21,7 @@
  */
 
 import * as Sentry from "@sentry/nextjs";
+import { parseUnits } from "ethers";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { executeTrade } from "@/lib/trading/relayer";
 import { sizeCopySell } from "@/lib/trading/copyTradeSell";
@@ -66,6 +67,12 @@ const USDC_BY_CHAIN: Record<string, string> = {
   optimism: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
   bsc: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
   solana: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+};
+
+// USDC decimals differ by chain — 6 on most EVM + Solana, but 18 for the
+// Binance-Peg USDC on BSC. Used to convert a human USD buy size to raw units.
+const USDC_DECIMALS: Record<string, number> = {
+  ethereum: 6, base: 6, polygon: 6, arbitrum: 6, optimism: 6, solana: 6, bsc: 18,
 };
 
 export interface CopyMatchOutcome {
@@ -257,7 +264,8 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
     let fromTokenSymbol: string | null;
     let toTokenAddress: string;
     let toTokenSymbol: string | null;
-    let amountIn: string;
+    let amountIn: string;     // indicative-route hint (human for buys)
+    let amountInRaw: string;  // RAW base units of from-token (for the firm 0x quote)
     if (isSell) {
       const sizing = await sizeCopySell({
         userId: rule.user_id,
@@ -272,7 +280,8 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
       fromTokenSymbol = event.token_symbol;
       toTokenAddress = usdcAddr;
       toTokenSymbol = "USDC";
-      amountIn = sizing.amountInRaw;
+      amountIn = sizing.amountInRaw;     // sizeCopySell already returns raw units
+      amountInRaw = sizing.amountInRaw;
     } else {
       fromTokenAddress = usdcAddr;
       fromTokenSymbol = "USDC";
@@ -281,6 +290,8 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
       // Pin to 6 dp (USDC unit) — String(Number) can drop precision (10.50 -> "10.5"),
       // matching the fix already in /api/copy-trading/execute.
       amountIn = Number(sizeUsd).toFixed(6);
+      // Raw base units (USDC is 6dp on most chains, 18 on BSC) for the firm quote.
+      amountInRaw = parseUnits(amountIn, USDC_DECIMALS[chainLower] ?? 6).toString();
     }
 
     // #13: atomic per-user cap claim instead of a bare insert + the racy
@@ -330,6 +341,7 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
       autoConfirm: rule.mode === "auto_copy",
       sourceTxHash: event.tx_hash,
       tradeUsd: isSell ? null : sizeUsd,
+      amountInRaw,
     });
 
     if (result.success && result.broadcastTxHash && !result.awaitingUserConfirmation) {
