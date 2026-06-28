@@ -80,15 +80,22 @@ export async function GET(request: NextRequest) {
     });
     const emailByUser = new Map<string, { email: string; firstName: string | null }>();
     if (emailCandidates.length > 0) {
+      // first_name lives on profiles; email lives on auth.users (profiles has no
+      // email column — the old profiles.select('email') errored, so the digest
+      // email never sent). Read the name from profiles, the address from auth.
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, email, first_name")
+        .select("id, first_name")
         .in("id", emailCandidates);
-      (profiles ?? []).forEach(
-        (r: { id: string; email: string | null; first_name: string | null }) => {
-          if (r.email) emailByUser.set(r.id, { email: r.email, firstName: r.first_name });
-        },
-      );
+      const firstNameByUser = new Map<string, string | null>();
+      (profiles ?? []).forEach((r: { id: string; first_name: string | null }) => {
+        firstNameByUser.set(r.id, r.first_name);
+      });
+      for (const id of emailCandidates) {
+        const { data } = await supabase.auth.admin.getUserById(id);
+        const email = data?.user?.email ?? null;
+        if (email) emailByUser.set(id, { email, firstName: firstNameByUser.get(id) ?? null });
+      }
     }
 
     const now = new Date();

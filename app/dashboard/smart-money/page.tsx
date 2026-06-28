@@ -249,19 +249,19 @@ export default function SmartMoneyPage() {
         {activeTab === 'leaderboard' && <>
         {/* Stats */}
         <div className="grid grid-cols-3 gap-2">
-          <div className="bg-[#0D1117] rounded-xl p-3 border border-white/[0.04] text-center">
+          <div className="nl-glass rounded-xl p-3 text-center">
             <Users className="w-4 h-4 text-[#0066FF] mx-auto mb-1" />
             <div className="text-lg font-bold">{wallets.length}</div>
             <div className="text-[9px] text-gray-600 uppercase">Tracked</div>
           </div>
-          <div className="bg-[#0D1117] rounded-xl p-3 border border-white/[0.04] text-center">
+          <div className="nl-glass rounded-xl p-3 text-center">
             <DollarSign className="w-4 h-4 text-[#10B981] mx-auto mb-1" />
             <div className="text-lg font-bold text-[#10B981]">
               {loading ? '...' : formatVol(totalVolumeAll)}
             </div>
             <div className="text-[9px] text-gray-600 uppercase">Total Vol</div>
           </div>
-          <div className="bg-[#0D1117] rounded-xl p-3 border border-white/[0.04] text-center">
+          <div className="nl-glass rounded-xl p-3 text-center">
             <Activity className="w-4 h-4 text-[#F59E0B] mx-auto mb-1" />
             <div className="text-lg font-bold">{loading ? '...' : `${avgWin}%`}</div>
             <div className="text-[9px] text-gray-600 uppercase">Avg Win</div>
@@ -325,7 +325,7 @@ export default function SmartMoneyPage() {
 
         {/* Weekly Risers */}
         {weeklyRisers.length > 0 && (
-          <div className="bg-[#0D1117] rounded-2xl border border-white/[0.04] overflow-hidden">
+          <div className="nl-glass rounded-2xl overflow-hidden">
             <div className="px-4 py-3 border-b border-white/[0.04] flex items-center gap-2">
               <Flame className="w-3.5 h-3.5 text-[#EF4444]" />
               <span className="text-xs font-bold">Weekly Risers</span>
@@ -355,7 +355,7 @@ export default function SmartMoneyPage() {
           <SortAsc className="w-3.5 h-3.5 text-gray-600 flex-shrink-0" />
           {(['rank', 'winRate', 'pnlChange', 'totalVolume', 'trades'] as SortKey[]).map(k => (
             <button key={k} onClick={() => setSortKey(k)}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-colors ${sortKey === k ? 'bg-[#0066FF]/20 text-[#0066FF] border border-[#0066FF]/30' : 'bg-white/[0.03] text-gray-500 border border-white/[0.05]'}`}>
+              className={`nl-btn-neon !px-2.5 !py-1 !rounded-lg !text-[10px] ${sortKey === k ? '!border-[#0066FF]/60 text-[#0066FF]' : 'text-gray-400'}`}>
               {k === 'pnlChange' ? 'PnL%' : k === 'totalVolume' ? 'Volume' : k === 'winRate' ? 'Win Rate' : k.charAt(0).toUpperCase() + k.slice(1)}
             </button>
           ))}
@@ -363,7 +363,7 @@ export default function SmartMoneyPage() {
 
         {/* Recent Moves */}
         {(loading || recentMoves.length > 0) && (
-          <div className="bg-[#0D1117] rounded-2xl border border-white/[0.04] overflow-hidden">
+          <div className="nl-glass rounded-2xl overflow-hidden">
             <div className="px-4 py-3 border-b border-white/[0.04] flex items-center justify-between">
               <span className="text-xs font-bold flex items-center gap-2">
                 <Zap className="w-3.5 h-3.5 text-[#F59E0B]" />Recent Moves
@@ -420,9 +420,9 @@ export default function SmartMoneyPage() {
             {filteredWallets.map((wallet) => (
               <div
                 key={wallet.id}
-                className={`bg-[#0D1117] rounded-2xl border transition-all ${
-                  watching.includes(wallet.id) ? 'border-[#0066FF]/15' : 'border-white/[0.04]'
-                } hover:border-white/[0.08]`}
+                className={`nl-glass nl-glass--interactive rounded-2xl transition-all ${
+                  watching.includes(wallet.id) ? '!border-[#0066FF]/30' : ''
+                }`}
               >
                 <div className="p-4 cursor-pointer" onClick={() => setExpandedWallet(expandedWallet === wallet.id ? null : wallet.id)}>
                   <div className="flex items-start justify-between mb-3">
@@ -529,7 +529,7 @@ export default function SmartMoneyPage() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => router.push(`/dashboard/wallet-intelligence?address=${wallet.address}`)}
-                        className="flex-1 py-2.5 bg-[#0066FF]/10 border border-[#0066FF]/20 rounded-xl text-[10px] font-semibold text-[#0066FF] hover:bg-[#0066FF]/15 transition-colors flex items-center justify-center gap-1.5"
+                        className="nl-btn-neon flex-1 !py-2.5 !rounded-xl !text-[10px] flex items-center justify-center gap-1.5"
                       >
                         <Shield className="w-3 h-3" /> Analyze
                       </button>
@@ -570,7 +570,7 @@ export default function SmartMoneyPage() {
                 <p className="text-sm text-gray-500">Loading recent moves…</p>
               </div>
             ) : (
-              <div className="bg-[#0D1117] border border-white/[0.04] rounded-2xl divide-y divide-white/[0.04]">
+              <div className="nl-glass rounded-2xl divide-y divide-white/[0.04]">
                 {recentMoves.map((move, i) => {
                   const isUp = move.action === 'buy';
                   const color = isUp ? '#10B981' : '#EF4444';
@@ -604,7 +604,7 @@ export default function SmartMoneyPage() {
               { label: 'Smart money convergence', desc: 'Multiple wallets buying same token', key: 'convergence' },
               { label: 'Weekly performance report', desc: 'Summary of tracked wallet performance', key: 'weekly' },
             ].map(({ label, desc, key }) => (
-              <div key={key} className="flex items-center justify-between bg-[#0D1117] border border-white/[0.04] rounded-xl p-4">
+              <div key={key} className="flex items-center justify-between nl-glass rounded-xl p-4">
                 <div>
                   <div className="text-xs font-semibold text-white">{label}</div>
                   <div className="text-[10px] text-gray-500 mt-0.5">{desc}</div>
@@ -620,7 +620,7 @@ export default function SmartMoneyPage() {
               { label: 'Show convergence signals', desc: 'Alert when multiple smart wallets target same token' },
               { label: 'Show weekly risers', desc: 'Highlight wallets with improving recent performance' },
             ].map(({ label, desc }) => (
-              <div key={label} className="flex items-center justify-between bg-[#0D1117] border border-white/[0.04] rounded-xl p-4">
+              <div key={label} className="flex items-center justify-between nl-glass rounded-xl p-4">
                 <div>
                   <div className="text-xs font-semibold text-white">{label}</div>
                   <div className="text-[10px] text-gray-500 mt-0.5">{desc}</div>

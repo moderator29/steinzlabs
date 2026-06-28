@@ -840,7 +840,7 @@ function WatchlistPanel({
   onOpen: (address: string, chain: string) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-800/50 bg-slate-950/80 backdrop-blur-xl p-4">
+    <div className="nl-glass rounded-2xl p-4">
       <div className="flex items-center justify-between mb-3">
         <div>
           <h3 className="text-sm font-bold text-white">My Whales</h3>
@@ -948,7 +948,7 @@ function TopTodayPanel({
   onToggleWatch: (addr: string, chain: string) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-800/50 bg-slate-950/80 backdrop-blur-xl p-4">
+    <div className="nl-glass rounded-2xl p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-bold text-white">Top Whales Today</h3>
         <span className="text-[10px] text-slate-500 uppercase">24h volume</span>
@@ -1098,7 +1098,7 @@ function PnlLeaderboardPanel({
   }, []);
 
   return (
-    <div className="rounded-2xl border border-slate-800/50 bg-slate-950/80 backdrop-blur-xl p-4">
+    <div className="nl-glass rounded-2xl p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-bold text-white">PnL Leaderboard</h3>
         <span className="text-[10px] text-slate-500 uppercase">30d realized</span>

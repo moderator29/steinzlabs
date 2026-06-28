@@ -91,8 +91,11 @@ export async function GET(request: NextRequest) {
     const emailCache = new Map<string, string | null>();
     const resolveEmail = async (userId: string): Promise<string | null> => {
       if (emailCache.has(userId)) return emailCache.get(userId) ?? null;
-      const { data } = await sb.from("profiles").select("email").eq("id", userId).maybeSingle<{ email: string | null }>();
-      const email = data?.email ?? null;
+      // Email lives in auth.users, NOT profiles (profiles has no email column —
+      // a profiles.select('email') silently errors → null → the email channel
+      // never fired). Resolve via the admin auth API like the follow route does.
+      const { data } = await sb.auth.admin.getUserById(userId);
+      const email = data?.user?.email ?? null;
       emailCache.set(userId, email);
       return email;
     };
