@@ -144,6 +144,16 @@ export default function CopyTradingPage() {
     load();
   }, []);
 
+  // Pull a specific reason out of a failed response so the user knows why
+  // a copy-trade rule (which moves real funds) didn't change.
+  async function failReason(res: Response, fallback: string): Promise<string> {
+    try {
+      const b = await res.json();
+      if (b && typeof b.error === "string" && b.error) return b.error;
+    } catch { /* non-JSON body */ }
+    return `${fallback} (${res.status})`;
+  }
+
   async function toggleEnabled(rule: CopyRule) {
     const res = await fetch(`/api/copy-trading/rules/${rule.id}`, {
       method: "PATCH",
@@ -151,7 +161,7 @@ export default function CopyTradingPage() {
       body: JSON.stringify({ enabled: !rule.enabled }),
     });
     if (res.ok) load();
-    else toast.error("Failed");
+    else toast.error(await failReason(res, `Couldn't ${rule.enabled ? "disable" : "enable"} this rule`));
   }
 
   async function togglePaused(rule: CopyRule) {
@@ -164,7 +174,7 @@ export default function CopyTradingPage() {
       toast.success(rule.paused ? "Resumed" : "Paused");
       load();
     } else {
-      toast.error("Failed");
+      toast.error(await failReason(res, `Couldn't ${rule.paused ? "resume" : "pause"} this rule`));
     }
   }
 
@@ -173,6 +183,10 @@ export default function CopyTradingPage() {
     if (res.ok) {
       toast.success("Rule removed");
       load();
+    } else {
+      // Critical: a rule that fails to delete is still live and mirroring
+      // trades with the user's funds — say so explicitly.
+      toast.error(await failReason(res, "Couldn't remove rule — it's still active"));
     }
   }
 

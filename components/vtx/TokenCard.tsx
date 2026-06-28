@@ -61,10 +61,21 @@ export function TokenCard({ token }: { token: TokenCardData }) {
     e.stopPropagation();
     setWatching(true);
     try {
-      await supabase.from('watchlist').insert({ token_id: token.contractAddress || token.symbol, symbol: token.symbol, chain: token.chain });
-      setToast('Added to watchlist');
-      setTimeout(() => setToast(''), 2000);
+      // supabase-js resolves with an { error } object rather than throwing,
+      // so check it explicitly — otherwise a failed insert silently shows
+      // the success toast.
+      const { error } = await supabase
+        .from('watchlist')
+        .insert({ token_id: token.contractAddress || token.symbol, symbol: token.symbol, chain: token.chain });
+      if (error) {
+        setToast(/duplicate|unique/i.test(error.message) ? 'Already in your watchlist' : 'Could not add to watchlist — try again');
+      } else {
+        setToast('Added to watchlist');
+      }
+      setTimeout(() => setToast(''), 2500);
     } catch (err) {
+      setToast('Could not add to watchlist — try again');
+      setTimeout(() => setToast(''), 2500);
       console.error('[TokenCard] Watch failed:', err instanceof Error ? err.message : err);
     } finally {
       setWatching(false);
