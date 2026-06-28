@@ -175,7 +175,10 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
         // Explicit wallet choice: 'builtin' = Naka in-app wallet (manual
         // password-sign), 'metamask' = a connected external wallet that
         // authorized a non-custodial session key.
-        wallet_source: walletMode === 'external' && walletAddresses.length > 0 ? 'metamask' : 'builtin',
+        // Key off the explicit mode alone — "External" with no specific wallet
+        // picked means "use my primary external wallet" (empty addresses), NOT
+        // a silent fall-back to the built-in wallet.
+        wallet_source: walletMode === 'external' ? 'metamask' : 'builtin',
         wallet_addresses: walletMode === 'external' ? walletAddresses : [],
         expiry_hours: expiryHours === '' ? null : Number(expiryHours),
       };

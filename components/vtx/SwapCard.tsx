@@ -179,7 +179,12 @@ export function SwapCard({ swap, walletAddress, onCancel, source = 'vtx' }: Prop
       }
     })();
     return () => { cancelled = true; };
-  }, [swap, balance]);
+    // Depend on the primitive fields that drive the quote, NOT the `swap` object
+    // identity — callers that rebuild `swap` each render (e.g. View Proof) would
+    // otherwise refetch the quote on every parent re-render and knock the card
+    // out of signing/done back to ready.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [swap.chain, swap.fromToken, swap.toToken, swap.fromAmount, balance]);
 
   const impactColor =
     quote.priceImpact < 1 ? 'text-emerald-400' :

@@ -2121,7 +2121,9 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
       const provider = new ethers.JsonRpcProvider(rpc);
       const feeData = await provider.getFeeData();
       const gasPrice = feeData.gasPrice || feeData.maxFeePerGas || BigInt(0);
-      const reserved = gasPrice * BigInt(21000);
+      // Reserve gas at the FAST rate (130%) so a MAX send still clears even if
+      // the user bumps speed to Fast on the next step.
+      const reserved = (gasPrice * BigInt(130) / BigInt(100)) * BigInt(21000);
       const bal = ethers.parseEther(nativeBalance || '0');
       const max = bal > reserved ? bal - reserved : BigInt(0);
       setAmount(ethers.formatEther(max));
