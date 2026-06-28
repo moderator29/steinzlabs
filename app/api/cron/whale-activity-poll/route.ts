@@ -55,6 +55,7 @@ async function pollTransfers(
     maxCount: "0xa",
     order: "desc",
     withMetadata: true,
+    excludeZeroValue: true,
   };
   if (direction === "out") params.fromAddress = address;
   else params.toAddress = address;
