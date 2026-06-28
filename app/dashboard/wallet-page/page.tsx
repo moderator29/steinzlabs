@@ -28,6 +28,7 @@ import { BiometricUnlockRow } from '@/components/wallet/BiometricUnlockRow';
 // the Web Crypto plumbing. Original inline definitions removed below.
 import { encryptPrivateKey, decryptPrivateKey, verifyWalletPassword } from '@/lib/wallet/encryption';
 import { normalizeAddress, isEvmChain, isSolanaAddress, addressesEqual } from '@/lib/utils/addressNormalize';
+import { getOnrampUrl } from '@/lib/wallet/onramp';
 
 interface TokenBalance {
   symbol: string;
@@ -1137,18 +1138,52 @@ export default function WalletPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-28">
-      {buyComingSoon && (
-        <div className="fixed inset-0 z-[70] bg-black/70 flex items-end sm:items-center justify-center p-4" onClick={() => setBuyComingSoon(false)}>
-          <div className="w-full max-w-sm nl-glass rounded-2xl p-6 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 26px rgba(0,102,255,.25)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="w-14 h-14 mx-auto mb-3 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF 60%,#1233AE)', boxShadow: '0 0 18px rgba(0,102,255,.5)' }}>
-              <ShoppingCart className="w-7 h-7 text-white" />
+      {buyComingSoon && (() => {
+        // #30 — real fiat on-ramp when a provider is configured (env-gated),
+        // else an honest "coming soon" state. Delivers to the address on the
+        // active chain's correct network (Solana uses the derived SOL address).
+        const onrampAddress = activeChain.id === 'solana' ? (activeWallet?.solanaAddress ?? '') : (activeWallet?.address ?? '');
+        const onrampUrl = onrampAddress ? getOnrampUrl({ address: onrampAddress, chain: activeChain.id }) : null;
+        return (
+          <div className="fixed inset-0 z-[70] bg-black/70 flex items-end sm:items-center justify-center p-4" onClick={() => setBuyComingSoon(false)}>
+            <div className="w-full max-w-sm nl-glass rounded-2xl p-6 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 26px rgba(0,102,255,.25)' }} onClick={(e) => e.stopPropagation()}>
+              <div className="w-14 h-14 mx-auto mb-3 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF 60%,#1233AE)', boxShadow: '0 0 18px rgba(0,102,255,.5)' }}>
+                <ShoppingCart className="w-7 h-7 text-white" />
+              </div>
+              {onrampUrl ? (
+                <>
+                  <h3 className="text-lg font-bold text-white mb-1">Buy crypto with card</h3>
+                  <p className="text-sm text-slate-400 mb-2">
+                    You&apos;ll be taken to our payment partner to buy {activeChain.symbol} with a card or bank transfer, delivered straight to this wallet on {activeChain.name}.
+                  </p>
+                  <p className="text-[11px] font-mono text-slate-500 mb-5 break-all">{onrampAddress.slice(0, 8)}…{onrampAddress.slice(-6)}</p>
+                  <a
+                    href={onrampUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setBuyComingSoon(false)}
+                    className="block w-full py-3 rounded-xl font-bold text-white text-sm mb-2"
+                    style={{ background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 18px rgba(0,102,255,.5)' }}
+                  >
+                    Continue to payment ↗
+                  </a>
+                  <button onClick={() => setBuyComingSoon(false)} className="w-full py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white">Cancel</button>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-bold text-white mb-1">Buy with card — Coming soon</h3>
+                  <p className="text-sm text-slate-400 mb-5">
+                    {onrampAddress
+                      ? `Card / bank on-ramp isn't available for ${activeChain.name} yet. It's launching shortly, delivered straight to your wallet.`
+                      : 'Fiat on-ramp is launching shortly. You’ll be able to buy crypto with a card or bank transfer, delivered straight to your wallet.'}
+                  </p>
+                  <button onClick={() => setBuyComingSoon(false)} className="w-full py-3 rounded-xl font-bold text-white text-sm" style={{ background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 18px rgba(0,102,255,.5)' }}>Got it</button>
+                </>
+              )}
             </div>
-            <h3 className="text-lg font-bold text-white mb-1">Buy with card — Coming soon</h3>
-            <p className="text-sm text-slate-400 mb-5">Fiat on-ramp is launching shortly. You&apos;ll be able to buy crypto with a card or bank transfer, delivered straight to your wallet.</p>
-            <button onClick={() => setBuyComingSoon(false)} className="w-full py-3 rounded-xl font-bold text-white text-sm" style={{ background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 18px rgba(0,102,255,.5)' }}>Got it</button>
           </div>
-        </div>
-      )}
+        );
+      })()}
       {/* Ambient glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-blue-600/[0.04] rounded-full blur-[120px]" />
