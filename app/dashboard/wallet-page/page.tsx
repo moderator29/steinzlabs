@@ -26,8 +26,8 @@ import { BiometricUnlockRow } from '@/components/wallet/BiometricUnlockRow';
 // Audit B4 — shared AES-GCM crypto, lifted from this file so the new
 // UnlockWalletModal can verify a typed password without duplicating
 // the Web Crypto plumbing. Original inline definitions removed below.
-import { encryptPrivateKey, decryptPrivateKey } from '@/lib/wallet/encryption';
-import { normalizeAddress, isEvmChain, isSolanaAddress } from '@/lib/utils/addressNormalize';
+import { encryptPrivateKey, decryptPrivateKey, verifyWalletPassword } from '@/lib/wallet/encryption';
+import { normalizeAddress, isEvmChain, isSolanaAddress, addressesEqual } from '@/lib/utils/addressNormalize';
 
 interface TokenBalance {
   symbol: string;
@@ -70,6 +70,12 @@ interface StoredWallet {
   // Wallets imported via raw private key never get this; the Receive
   // view falls back to its "no SOL address" panel for those.
   solanaAddress?: string;
+  // BIP-44 account index this wallet was derived at (#38). The first
+  // wallet from a seed is index 0 (EVM m/44'/60'/0'/0/0, Solana
+  // m/44'/501'/0'/0'); "Add account" derives the next free index from
+  // the SAME seed so one phrase backs many accounts, MetaMask/Phantom-
+  // style. Absent on legacy records → treated as 0.
+  accountIndex?: number;
 }
 
 interface ChainInfo {
@@ -303,6 +309,11 @@ export default function WalletPage() {
   const [defaultWalletAddress, setDefaultWalletAddress] = useState<string>('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [walletToDelete, setWalletToDelete] = useState<string>('');
+  // #38 — "Add account" (derive next BIP-44 index from the active seed).
+  const [showAddAccount, setShowAddAccount] = useState(false);
+  const [addAcctPwd, setAddAcctPwd] = useState('');
+  const [addAcctBusy, setAddAcctBusy] = useState(false);
+  const [addAcctError, setAddAcctError] = useState<string | null>(null);
   const [assetSearch, setAssetSearch] = useState('');
   const [assetSort, setAssetSort] = useState<'value' | 'change' | 'alpha' | 'recent'>('value');
   const [chainFilter, setChainFilter] = useState('all');
@@ -745,6 +756,97 @@ export default function WalletPage() {
     // non-dismissible paper trail even if the user closes the in-context
     // banner before actually writing their phrase down.
     notifySeedBackupReminder(`${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}`);
+  };
+
+  // #38 — the seed we derive new accounts from. Prefer the active wallet
+  // if it's HD-seed-backed (so "Add account" grows the seed you're
+  // looking at); otherwise the first seed-backed wallet. Private-key
+  // imports have no mnemonic, so they can't spawn derived accounts.
+  const isHdWallet = (w: StoredWallet) =>
+    !!w.encryptedMnemonic && w.importMethod !== 'private_key';
+  const seedSource = useMemo<StoredWallet | null>(() => {
+    if (activeWallet && isHdWallet(activeWallet)) return activeWallet;
+    return wallets.find(isHdWallet) ?? null;
+  }, [activeWallet, wallets]);
+
+  const openAddAccount = () => {
+    setAddAcctPwd('');
+    setAddAcctError(null);
+    // No seed-backed wallet yet (or only private-key imports) → fall back
+    // to the full create-a-new-seed flow.
+    if (!seedSource) { setView('create'); return; }
+    setShowAddAccount(true);
+  };
+
+  /**
+   * Derive the next free BIP-44 account from the active seed and persist
+   * it. Verifies the password against the source wallet, decrypts the
+   * shared mnemonic, then scans indices until it finds one whose EVM
+   * address collides with no existing wallet (collision-proof even if a
+   * seed was imported more than once).
+   */
+  const addDerivedAccount = async () => {
+    if (!seedSource?.encryptedMnemonic) return;
+    if (wallets.length >= MAX_WALLETS) {
+      setAddAcctError(`Max ${MAX_WALLETS} wallets. Remove one to add more.`);
+      return;
+    }
+    if (!addAcctPwd) { setAddAcctError('Enter your wallet password.'); return; }
+    setAddAcctBusy(true);
+    setAddAcctError(null);
+    try {
+      const okPwd = await verifyWalletPassword(seedSource.encryptedKey, addAcctPwd);
+      if (!okPwd) {
+        setAddAcctError('Wrong password for this wallet. Try again.');
+        return;
+      }
+      const mnemonic = await decryptPrivateKey(seedSource.encryptedMnemonic, addAcctPwd);
+      const { deriveEvmAccount, deriveSolanaPublicKey, isValidMnemonic } = await import('@/lib/wallet/derive');
+      if (!isValidMnemonic(mnemonic)) {
+        setAddAcctError('Stored seed phrase is invalid; cannot derive a new account.');
+        return;
+      }
+      // Find the first index not already represented by an existing wallet.
+      let chosen: { idx: number; address: string; privateKey: string } | null = null;
+      for (let idx = 0; idx < 50; idx++) {
+        const acct = deriveEvmAccount(mnemonic, idx);
+        const taken = wallets.some((w) => addressesEqual(w.address, acct.address, 'ethereum'));
+        if (!taken) { chosen = { idx, ...acct }; break; }
+      }
+      if (!chosen) {
+        setAddAcctError('No free account slot found for this seed.');
+        return;
+      }
+      const encryptedKey = await encryptPrivateKey(chosen.privateKey, addAcctPwd);
+      let solanaAddress: string | undefined;
+      try {
+        solanaAddress = deriveSolanaPublicKey(mnemonic, chosen.idx);
+      } catch (err) {
+        console.warn('[wallet] Solana derivation failed for derived account:', err);
+      }
+      const newWallet: StoredWallet = {
+        address: chosen.address,
+        encryptedKey,
+        // Same seed as the source — copy the ciphertext so the whole
+        // group shares one phrase (and one backup).
+        encryptedMnemonic: seedSource.encryptedMnemonic,
+        importMethod: 'generated',
+        accountIndex: chosen.idx,
+        name: `Account ${chosen.idx + 1}`,
+        createdAt: new Date().toISOString(),
+        solanaAddress,
+      };
+      const updated = [...wallets, newWallet];
+      saveWallets(updated);
+      setActiveWallet(newWallet);
+      setShowAddAccount(false);
+      setAddAcctPwd('');
+      notifyWalletCreated(newWallet.name);
+    } catch (e) {
+      setAddAcctError(e instanceof Error ? e.message : 'Failed to add account.');
+    } finally {
+      setAddAcctBusy(false);
+    }
   };
 
   const handleWalletImported = (wallet: StoredWallet) => {
@@ -1484,7 +1586,7 @@ export default function WalletPage() {
               </button>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setView('create')}
+                  onClick={openAddAccount}
                   disabled={wallets.length >= MAX_WALLETS}
                   className="flex-1 py-3 nl-glass rounded-xl text-xs font-semibold hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                 >
@@ -1505,6 +1607,56 @@ export default function WalletPage() {
           </>
         )}
       </div>
+
+      {/* ── ADD ACCOUNT (DERIVE NEXT SEED INDEX) MODAL ───── */}
+      {showAddAccount && seedSource && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => { if (!addAcctBusy) setShowAddAccount(false); }} />
+          <div className="relative w-full max-w-[360px] mx-4 nl-glass rounded-2xl p-5 shadow-2xl">
+            <div className="flex items-center gap-2.5 mb-3">
+              <div className="w-9 h-9 rounded-xl bg-[#0066FF]/10 border border-[#0066FF]/30 flex items-center justify-center">
+                <Plus className="w-4 h-4 text-[#0066FF]" />
+              </div>
+              <h3 className="text-sm font-bold text-white">Add account</h3>
+            </div>
+            <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+              Derives the next account from <span className="text-slate-300 font-medium">{seedSource.name}</span>&rsquo;s
+              seed phrase — one backup covers every account. Enter that
+              wallet&rsquo;s password to continue.
+            </p>
+            <input
+              type="password"
+              value={addAcctPwd}
+              onChange={(e) => { setAddAcctPwd(e.target.value); if (addAcctError) setAddAcctError(null); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !addAcctBusy) void addDerivedAccount(); }}
+              autoComplete="current-password"
+              placeholder="Wallet password"
+              className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0066FF]/50"
+            />
+            {addAcctError && (
+              <p className="text-[11px] text-[#EF4444] mt-2 bg-[#EF4444]/5 px-3 py-2 rounded-lg border border-[#EF4444]/15" role="alert">
+                {addAcctError}
+              </p>
+            )}
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => setShowAddAccount(false)}
+                disabled={addAcctBusy}
+                className="flex-1 py-2.5 bg-slate-800 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-700 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void addDerivedAccount()}
+                disabled={addAcctBusy || !addAcctPwd}
+                className="flex-1 py-2.5 bg-[#0066FF] hover:bg-[#0818CC] rounded-xl text-xs font-semibold text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
+              >
+                {addAcctBusy ? (<><Loader2 className="w-3.5 h-3.5 animate-spin" /> Deriving…</>) : 'Add account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── DELETE CONFIRM MODAL ─────────────────────────── */}
       {showDeleteConfirm && (
@@ -1650,6 +1802,7 @@ function CreateWalletView({ onBack, onCreated, walletCount = 0 }: { onBack: () =
       encryptedKey: encrypted,
       encryptedMnemonic,
       importMethod: 'generated',
+      accountIndex: 0,
       name: walletName,
       createdAt: new Date().toISOString(),
       solanaAddress,
@@ -1861,6 +2014,10 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
         encryptedKey: encrypted,
         encryptedMnemonic,
         importMethod: method === 'phrase' ? 'seed' : 'private_key',
+        // Seed imports land at BIP-44 index 0 (ethers' default path), so
+        // "Add account" derives index 1+ from here. Private-key imports
+        // have no seed and stay index-less.
+        accountIndex: method === 'phrase' ? 0 : undefined,
         name: walletName,
         createdAt: new Date().toISOString(),
         solanaAddress,
@@ -2163,7 +2320,18 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
         let mnemonic: string;
         try { mnemonic = await decryptPrivateKey(wallet.encryptedMnemonic, password); }
         catch { setPwError('Wrong wallet password.'); setStep('password'); return; }
-        const keypair = deriveSolanaKeypair(mnemonic);
+        // #38 — derive at THIS account's BIP-44 index, not always 0, so
+        // derived accounts sign with their own key.
+        const keypair = deriveSolanaKeypair(mnemonic, wallet.accountIndex ?? 0);
+        // Funds-safety guard: the signing key must match the address we
+        // display/send from. A mismatch means a wrong-index derivation —
+        // abort before broadcasting rather than move funds from the wrong
+        // account.
+        if (wallet.solanaAddress && keypair.publicKey.toBase58() !== wallet.solanaAddress) {
+          setPwError('Derived signing key does not match this account. Aborted for safety.');
+          setStep('password');
+          return;
+        }
         const conn = new web3.Connection(SOLANA_RPC, 'confirmed');
         const lamports = Math.round(parseFloat(amount) * web3.LAMPORTS_PER_SOL);
         const tx = new web3.Transaction().add(web3.SystemProgram.transfer({
