@@ -128,7 +128,7 @@ export async function executeWithSessionKey(p: SessionCopyParams): Promise<Sessi
       p_session_key_id: key.id,
       p_user: p.userId,
       p_amount: p.amountUsd,
-      p_daily_cap: key.daily_cap_usd ?? null,
+      p_daily_cap: key.daily_cap_usd != null ? Number(key.daily_cap_usd) : null,
       p_source_tx: p.sourceTxHash,
     });
     if (claimErr || !claimId) return null;
