@@ -1,6 +1,6 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
-import { getTokenSecurity } from '@/lib/services/goplus';
+import { getTokenSecurity, SecurityRateLimitError } from '@/lib/services/goplus';
 
 export const runtime = 'nodejs';
 
@@ -69,7 +69,16 @@ export async function GET(req: NextRequest) {
       creatorHoldingPct: sec.creatorHoldingPct ? parseFloat((sec.creatorHoldingPct * 100).toFixed(1)) : null,
       lpLockedPct: deriveLpLocked(sec.lpHolders),
     }, { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' } });
-  } catch {
+  } catch (err) {
+    // #39: a provider 429 is transient — surface it as a retryable 503 with a
+    // Retry-After hint so the client can back off, distinct from a generic 502
+    // "provider unavailable" which signals a harder failure.
+    if (err instanceof SecurityRateLimitError) {
+      return NextResponse.json(
+        { error: 'rate_limited' },
+        { status: 503, headers: { 'Retry-After': '30' } },
+      );
+    }
     return NextResponse.json({ error: 'unavailable' }, { status: 502 });
   }
 }

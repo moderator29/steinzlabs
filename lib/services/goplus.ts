@@ -15,6 +15,7 @@ import {
   decodeSignature,
   simulateTransaction,
   detectDustTokens,
+  SecurityRateLimitError,
   type TokenSecurityResult,
   type AddressScanResult,
   type DomainScanResult,
@@ -36,6 +37,9 @@ export type {
   SignatureDecodeResult,
   TxSimulationResult,
 };
+// Re-export the typed rate-limit error so HTTP routes can distinguish a 429
+// (provider throttled — retryable) from a generic provider failure.
+export { SecurityRateLimitError };
 
 export async function getTokenSecurity(
   contractAddress: string,

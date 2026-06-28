@@ -27,6 +27,10 @@ function resolveChainId(chain: string): string {
   return CHAIN_MAP[chain.toLowerCase()] ?? chain;
 }
 
+export class SecurityRateLimitError extends Error {
+  constructor() { super('Security API rate-limited'); this.name = 'SecurityRateLimitError'; }
+}
+
 async function goplusGet(path: string): Promise<any> {
   const url = `${GOPLUS_BASE}${path}`;
   const res = await fetch(url, {
@@ -34,6 +38,10 @@ async function goplusGet(path: string): Promise<any> {
     next: { revalidate: 60 },
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
+  // #39: surface 429 as a typed error so callers can return a "temporarily
+  // unavailable, retry shortly" state instead of collapsing it into a hidden/
+  // empty panel that reads like "no data".
+  if (res.status === 429) throw new SecurityRateLimitError();
   if (!res.ok) throw new Error(`Security API error: ${res.status}`);
   const data = await res.json();
   if (data.code !== undefined && data.code !== 1) {
