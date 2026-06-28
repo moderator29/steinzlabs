@@ -9,6 +9,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { notifySwapCompleted } from '@/lib/notifications';
 import { getWalletSessionKey } from '@/lib/wallet/walletSession';
+import { decryptPrivateKey } from '@/lib/wallet/encryption';
+import { addressesEqual } from '@/lib/utils/addressNormalize';
 import UnlockWalletModal from '@/components/wallet/UnlockWalletModal';
 import { NakaLogo, WalletConnectLogo } from '@/components/wallet/WalletLogo';
 import { SelectMenu } from '@/components/ui/SelectMenu';
@@ -1027,16 +1029,33 @@ export default function SwapPage() {
           throw new Error('No Solana transaction data received from API.');
         }
       } else if (detectedWallet === 'builtin') {
-        // Builtin wallet: sign via ethers with stored encrypted key
-        const storedWallets = safeLocalParse<Array<{ address?: string; encryptedKey?: string; iv?: string }>>('steinz_wallets', []);
+        // Builtin Naka wallet: sign via ethers with the stored encrypted
+        // key. The key is persisted by the Wallet page via
+        // encryptPrivateKey (AES-256-GCM, PBKDF2, v2 JSON payload), so we
+        // MUST decrypt with the matching shared helper — the previous
+        // bespoke decrypt assumed a legacy iv-separated format with a raw
+        // password-as-key, which never matched the real payload and
+        // failed every built-in swap.
+        const storedWallets = safeLocalParse<Array<{ address?: string; encryptedKey?: string }>>('steinz_wallets', []);
         const activeAddr = safeLocalGet('steinz_active_wallet_address') || connectedAddress;
-        const storedWallet = storedWallets.find(w => w.address?.toLowerCase() === activeAddr?.toLowerCase());
-        if (!storedWallet || !swapData.transaction) {
-          throw new Error('No wallet keys found. Please re-import your wallet to sign transactions.');
+        // Solana is case-sensitive — compare via the shared normalizer
+        // rather than raw toLowerCase.
+        const storedWallet = storedWallets.find(w => w.address && activeAddr && addressesEqual(w.address, activeAddr, 'ethereum'));
+        if (!storedWallet?.encryptedKey) {
+          throw new Error('No Naka wallet keys found on this device. Re-import your wallet from the Wallet page to sign transactions.');
+        }
+        if (!swapData.transaction) {
+          // The built-in signer here is EVM-only; Solana swaps need a
+          // Solana keypair + versioned-tx flow (Phantom path above).
+          throw new Error(
+            chain === 'solana'
+              ? 'Swapping on Solana with the built-in Naka wallet isn’t supported yet — connect Phantom for Solana swaps.'
+              : 'The router did not return a transaction to sign. Refresh the quote and try again.',
+          );
         }
         const { ethers } = await import('ethers');
-        let pwd = getWalletSessionKey() || '';
-        if (!pwd && storedWallet.encryptedKey) {
+        const pwd = getWalletSessionKey() || '';
+        if (!pwd) {
           // Audit B4 / P1 #8 — surface the unlock modal instead of
           // throwing. handleSwap re-runs after the user enters their
           // password; this keeps the swap flow continuous from the
@@ -1045,33 +1064,18 @@ export default function SwapPage() {
           setSwapping(false);
           pendingPostUnlock.current = () => { void handleSwap(); };
           setUnlockState({
-            encryptedKey: storedWallet.encryptedKey as string,
+            encryptedKey: storedWallet.encryptedKey,
             addressShort: storedWallet.address ? `${storedWallet.address.slice(0, 6)}…${storedWallet.address.slice(-4)}` : undefined,
           });
           return;
         }
-        if (!pwd || !storedWallet.encryptedKey) {
-          throw new Error('Wallet session expired. Please unlock your wallet.');
-        }
-        // AES-GCM decryption for stored keys
+        // AES-256-GCM decryption via the shared wallet-encryption helper
+        // (same format the Wallet page wrote).
         let pk: string;
         try {
-          if (!storedWallet.iv) {
-            // Legacy XOR format removed (§1 Critical) — XOR with a password
-            // keystream is cryptographically broken. User must re-import the
-            // seed phrase to upgrade the at-rest format to AES-256-GCM.
-            throw new Error(
-              'This wallet uses an outdated encryption format. Please re-import the seed phrase from the Wallet page to upgrade to AES-256-GCM.',
-            );
-          }
-          const keyMaterial = new TextEncoder().encode(pwd.padEnd(32).slice(0, 32));
-          const cryptoKey = await crypto.subtle.importKey('raw', keyMaterial, 'AES-GCM', false, ['decrypt']);
-          const iv = Uint8Array.from(atob(storedWallet.iv), c => c.charCodeAt(0));
-          const encrypted = Uint8Array.from(atob(storedWallet.encryptedKey), c => c.charCodeAt(0));
-          const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, cryptoKey, encrypted);
-          pk = new TextDecoder().decode(decrypted);
+          pk = await decryptPrivateKey(storedWallet.encryptedKey, pwd);
         } catch {
-          throw new Error('Failed to decrypt wallet key. Wrong password or corrupted data.');
+          throw new Error('Failed to decrypt wallet key — wrong password, or this wallet predates AES-256-GCM (re-import the seed phrase from the Wallet page).');
         }
         const chainRpcs: Record<string, string> = {
           ethereum: 'https://eth.llamarpc.com',
