@@ -140,6 +140,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'auth_payload does not match the authorized scope' }, { status: 400 });
   }
 
+  // Enforce the time-box server-side: the signed expiry must be in the future
+  // and within the 7-day ceiling. Without this the `hours` clamp above is dead
+  // for the stored value and a tampered client could mint a multi-year key.
+  const nowSec = Math.floor(Date.now() / 1000);
+  const MAX_WINDOW_SEC = 168 * 3600;
+  if (signedExpiresAt <= nowSec || signedExpiresAt > nowSec + MAX_WINDOW_SEC) {
+    return NextResponse.json({ error: 'expiry must be in the future and within 7 days' }, { status: 400 });
+  }
+
+  // Token allowlist is part of the SIGNED scope — derive it from the signed
+  // comma-joined `allowedTokens`, not the unsigned body, so it can't be forged.
+  const signedAllowedRaw = String(signed.allowedTokens ?? '').trim();
+  const allowedTokens = signedAllowedRaw
+    ? signedAllowedRaw.split(',').map((t) => t.trim()).filter(Boolean)
+    : null;
+
   // For 24/7 mode the client sends the session EOA private key; encrypt it at
   // rest (AES-256-GCM, secret not in DB). Verify it actually corresponds to the
   // authorized session_address so we never store a key that can't act for it.
@@ -174,7 +190,7 @@ export async function POST(req: NextRequest) {
       chain: signedChain.toLowerCase(),
       max_per_trade_usd: signedMaxPerTrade,
       daily_cap_usd: signedDailyCap,
-      allowed_tokens: body.allowed_tokens ?? null,
+      allowed_tokens: allowedTokens,
       auth_signature: body.auth_signature,
       auth_payload: body.auth_payload,
       expires_at: expiresAt,

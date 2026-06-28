@@ -320,7 +320,19 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
       tradeUsd: isSell ? null : sizeUsd,
     });
 
-    if (result.awaitingUserConfirmation) {
+    if (result.success && result.broadcastTxHash && !result.awaitingUserConfirmation) {
+      // Headless session-key auto-execution already broadcast on-chain — mark
+      // the claimed copy-trade row success (not stuck pending), record the hash,
+      // and account the spend so sibling rules in this batch see it.
+      if (inserted) {
+        await admin
+          .from("user_copy_trades")
+          .update({ status: "success", copied_tx_hash: result.broadcastTxHash })
+          .eq("id", (inserted as { id: string }).id);
+      }
+      if (!isSell) spentMap.set(rule.user_id, spentToday + sizeUsd);
+      out.triggered++;
+    } else if (result.awaitingUserConfirmation) {
       if (!isSell) spentMap.set(rule.user_id, spentToday + sizeUsd);
       out.triggered++;
     } else if (result.securityBlocked) {

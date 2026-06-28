@@ -115,27 +115,24 @@ export async function executeWithSessionKey(p: SessionCopyParams): Promise<Sessi
     const key = keys?.[0] as (SessionKeyRow & { encrypted_session_key: string }) | undefined;
     if (!key) return null;
 
-    // 2) Trailing-24h spend from the ledger (daily-cap source of truth).
-    const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-    const { data: spendRows } = await admin
-      .from('session_key_spends')
-      .select('amount_usd')
-      .eq('session_key_id', key.id)
-      .gte('created_at', since);
-    const spentToday = (spendRows ?? []).reduce((s, r) => s + Number((r as { amount_usd: number }).amount_usd ?? 0), 0);
-
-    // 3) Scope gate.
-    const verdict = checkSessionScope(key, { chain: p.chain, tokenAddress: p.toTokenAddress, amountUsd: p.amountUsd }, spentToday, new Date());
+    // 2) Non-cap scope gate (chain / expiry / per-trade / allowlist). The daily
+    //    cap is enforced atomically in step 3 under an advisory lock, so pass 0
+    //    here — this is just an early-out for the static checks.
+    const verdict = checkSessionScope(key, { chain: p.chain, tokenAddress: p.toTokenAddress, amountUsd: p.amountUsd }, 0, new Date());
     if (!verdict.ok) return null;
 
-    // 4) Idempotent claim — UNIQUE(session_key_id, source_tx_hash) guarantees a
-    //    whale tx is auto-copied at most once even across overlapping ticks.
-    const { data: claim, error: claimErr } = await admin
-      .from('session_key_spends')
-      .insert({ session_key_id: key.id, user_id: p.userId, amount_usd: p.amountUsd, source_tx_hash: p.sourceTxHash })
-      .select('id')
-      .single();
-    if (claimErr || !claim) return null; // dup or write failure ⇒ don't double-execute.
+    // 3) Atomic claim — advisory-locked daily-cap re-check + idempotent insert on
+    //    UNIQUE(session_key_id, source_tx_hash). NULL = cap would breach OR this
+    //    whale tx was already claimed, so we must not execute.
+    const { data: claimId, error: claimErr } = await admin.rpc('claim_session_spend', {
+      p_session_key_id: key.id,
+      p_user: p.userId,
+      p_amount: p.amountUsd,
+      p_daily_cap: key.daily_cap_usd ?? null,
+      p_source_tx: p.sourceTxHash,
+    });
+    if (claimErr || !claimId) return null;
+    const claim = { id: claimId as string };
 
     // 5) Execute on-chain from the session EOA.
     // TESTNET-GATE: the route calldata was built from p.amountIn. Confirm the
@@ -157,8 +154,8 @@ export async function executeWithSessionKey(p: SessionCopyParams): Promise<Sessi
       // human-decimal string (e.g. "50.000000"), so we don't parse it to raw
       // units here — use the approve-max-once pattern: if there's no existing
       // allowance, approve MaxUint256 once; subsequent trades skip it.
-      const isNativeIn = p.fromTokenAddress === '0x0000000000000000000000000000000000000000'
-        || p.fromTokenAddress.toLowerCase() === 'native';
+      // Zero-address (any casing) or the 'native' sentinel = native asset in.
+      const isNativeIn = /^0x0+$/.test(p.fromTokenAddress) || p.fromTokenAddress === 'native';
       if (!isNativeIn && swap.allowanceTarget) {
         const erc20 = new ethers.Contract(p.fromTokenAddress, ERC20_ABI, wallet);
         const current: bigint = await erc20.allowance(wallet.address, swap.allowanceTarget);

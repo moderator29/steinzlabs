@@ -54,6 +54,9 @@ export interface TradeResult {
   securityBlocked?: boolean;
   failureReason?: string;
   route?: RouteQuote | null;
+  /** Set when the trade was auto-executed headlessly (session key) — the
+   *  on-chain broadcast hash. Distinguishes an executed trade from a pending one. */
+  broadcastTxHash?: string;
 }
 
 const HONEYPOT_BLOCK_TRUST_FLOOR = 40; // trustScore below this + honeypot = block
@@ -131,18 +134,18 @@ export async function executeTrade(intent: TradeIntent): Promise<TradeResult> {
         route: bestRoute,
       });
       if (auto?.executed) {
-        await notifyPendingTrade({
-          userId: intent.userId,
-          reason: intent.reason,
-          chain: intent.chain,
-          fromTokenSymbol: intent.fromTokenSymbol ?? null,
-          toTokenSymbol: intent.toTokenSymbol ?? null,
-          amountIn: intent.amountIn,
-          expectedAmountOut: bestRoute?.amountOut ?? null,
-          pendingTradeId: auto.broadcastTxHash,
-          expiresAt: new Date().toISOString(),
-        }).catch(() => { /* notify is best-effort */ });
-        return { success: true, awaitingUserConfirmation: false, route: bestRoute };
+        // The trade is already on-chain — do NOT send the pending "tap Confirm
+        // within 10 minutes or it expires" template (nothing to confirm). Write
+        // a correct "executed" notification with the broadcast hash.
+        await getSupabaseAdmin().from("notifications").insert({
+          user_id: intent.userId,
+          type: "copy.executed",
+          title: `🤖 Auto-Copy executed`,
+          body: `Mirrored ${intent.toTokenSymbol ?? "token"} on ${intent.chain}.`,
+          metadata: { broadcast_tx_hash: auto.broadcastTxHash, chain: intent.chain, reason: intent.reason },
+          read: false,
+        }).then(() => {}, () => { /* notify is best-effort */ });
+        return { success: true, awaitingUserConfirmation: false, route: bestRoute, broadcastTxHash: auto.broadcastTxHash };
       }
       // else: no usable session key / out of scope / failed ⇒ manual fallback.
     }
