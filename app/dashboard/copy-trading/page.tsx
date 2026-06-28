@@ -10,6 +10,7 @@ import { Loader2, Power } from "lucide-react";
 import { SecurityBadge } from "@/components/security/SecurityBadge";
 import { toast } from "sonner";
 import NewCopyRuleModal from "./NewCopyRuleModal";
+import { AutoCopySessionModal } from "@/components/copy/AutoCopySessionModal";
 import { useNavState } from "@/lib/nav/useNavState";
 
 type CopyMode = "alerts_only" | "oneclick" | "auto_copy";
@@ -65,6 +66,7 @@ export default function CopyTradingPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"rules" | "trades">("rules");
   const [showNewRule, setShowNewRule] = useState(false);
+  const [showAutoSession, setShowAutoSession] = useState(false);
 
   // #9/#10 — one-click confirm from an alerts-only Telegram deep-link. The
   // matcher links here with action/whale/token/symbol/chain/tx/amount; when
@@ -212,12 +214,21 @@ export default function CopyTradingPage() {
               Three modes: Alerts, One-Click, Auto-Copy. Every trade passes GoPlus + your rules before the relayer touches it.
             </p>
           </div>
-          <button
-            onClick={() => setShowNewRule(true)}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-400 text-white"
-          >
-            <Plus size={13} /> New rule
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setShowAutoSession(true)}
+              className="nl-btn-neon inline-flex items-center gap-1.5 !text-xs font-semibold"
+              title="Enable hands-off 24/7 auto-copy"
+            >
+              <Power size={13} /> 24/7 Auto
+            </button>
+            <button
+              onClick={() => setShowNewRule(true)}
+              className="nl-btn-neon inline-flex items-center gap-1.5 !text-xs font-semibold"
+            >
+              <Plus size={13} /> New rule
+            </button>
+          </div>
         </div>
 
         {stats && (
@@ -363,6 +374,7 @@ export default function CopyTradingPage() {
         </div>
       </div>
 
+      {showAutoSession && <AutoCopySessionModal onClose={() => setShowAutoSession(false)} />}
       {showNewRule && (
         <NewCopyRuleModal onClose={() => setShowNewRule(false)} onSaved={load} />
       )}
