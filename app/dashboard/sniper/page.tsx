@@ -20,6 +20,7 @@ import { NewSniperModal } from './NewSniperModal';
 import { SniperWalletModal } from './SniperWalletModal';
 import { SniperTokenDrawer } from './SniperTokenDrawer';
 import { WalletStatus } from './WalletStatus';
+import { BackgroundSnipingCard } from '@/components/sniper/BackgroundSnipingCard';
 import { LimitOrdersTab, AlertsTab, useAlertSound } from './OrdersAlerts';
 import {
   type DetectedToken, fmtUSD, fmtCompact, timeAgo, shortAddr, useTokenAudit, GuardianBadges, TokenAvatar, sourceMeta,
@@ -316,6 +317,12 @@ export default function SniperPage() {
               <p className="text-red-200 text-xs font-medium">All snipers are killed server-side. No new executions fire until you resume.</p>
             </div>
           )}
+
+          {/* #41 — built-in-wallet background (AA) sniping setup. Renders only
+              when a Naka wallet exists locally; dormant if AA isn't configured. */}
+          <div className="mt-4">
+            <BackgroundSnipingCard />
+          </div>
 
           {/* Stat strip */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mt-4">
