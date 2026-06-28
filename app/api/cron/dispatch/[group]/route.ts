@@ -30,7 +30,7 @@ const GROUPS: Record<string, string[]> = {
   ],
   // Every ~30 minutes.
   'half-hourly': [
-    'whale-activity-poll', 'whale-activity-price', 'dca-executor', 'pending-trades-cleanup',
+    'whale-activity-poll', 'whale-activity-price', 'bitquery-activity-poll', 'dca-executor', 'pending-trades-cleanup',
     'receipt-reconciliation', 'notification-retry', 'telegram-retry-failures',
     'pumpfun-velocity-poll', 'cult-resolve-proposals', 'cult-ape-resolve', 'health-watch',
   ],

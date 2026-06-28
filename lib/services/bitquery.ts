@@ -94,6 +94,90 @@ function num(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+// Solana base/quote mints — when a wallet "buys" one of these it's really an
+// EXIT (sold a token for base), so we don't record it as a token buy.
+const SOLANA_BASE_MINTS = new Set([
+  'So11111111111111111111111111111111111111112',  // wSOL
+  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',  // USDC
+  'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',  // USDT
+]);
+
+export interface WalletBuy {
+  txHash: string;
+  tokenMint: string;
+  tokenSymbol: string | null;
+  amount: number;
+  valueUsd: number | null;
+  timestamp: string;
+}
+
+const SOLANA_WALLET_BUYS_QUERY = `
+  query WalletBuys($address: String, $since: DateTime, $limit: Int) {
+    Solana {
+      DEXTrades(
+        limit: { count: $limit }
+        orderBy: { descending: Block_Time }
+        where: {
+          Block: { Time: { since: $since } }
+          Trade: { Buy: { Account: { Owner: { is: $address } } } }
+        }
+      ) {
+        Block { Time }
+        Transaction { Signature }
+        Trade {
+          Buy { Amount AmountInUSD Currency { Symbol MintAddress } }
+        }
+      }
+    }
+  }`;
+
+/**
+ * Recent token BUYS by a Solana wallet (DEX acquisitions of a non-base token).
+ * We deliberately capture only clear token buys — the highest-value copy signal
+ * — to avoid mislabeling buy/sell on the unverified Solana schema. Bitquery
+ * supplies AmountInUSD so no extra pricing is needed. Fails closed ([]).
+ * VERIFY field paths in ide.bitquery.io for your plan before trusting.
+ */
+export async function getSolanaWalletBuys(
+  address: string,
+  sinceIso: string,
+  limit = 10,
+): Promise<WalletBuy[]> {
+  if (!isBitqueryEnabled() || !address || !sinceIso) return [];
+  try {
+    const json = (await bitqueryPost(SOLANA_WALLET_BUYS_QUERY, {
+      address, since: sinceIso, limit: Math.min(limit, 25),
+    })) as { data?: { Solana?: { DEXTrades?: unknown[] } } } | null;
+    const rows: unknown[] = json?.data?.Solana?.DEXTrades ?? [];
+    if (!Array.isArray(rows)) return [];
+
+    const out: WalletBuy[] = [];
+    for (const r of rows as Array<Record<string, unknown>>) {
+      const block = r.Block as Record<string, unknown> | undefined;
+      const txn = r.Transaction as Record<string, unknown> | undefined;
+      const trade = r.Trade as Record<string, unknown> | undefined;
+      const buy = trade?.Buy as Record<string, unknown> | undefined;
+      const cur = buy?.Currency as Record<string, unknown> | undefined;
+      const mint = String(cur?.MintAddress ?? '').trim();
+      const sig = String(txn?.Signature ?? '').trim();
+      // Must be a real token acquisition (not base) with a tx + valid mint.
+      if (!sig || !mint || SOLANA_BASE_MINTS.has(mint)) continue;
+      if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(mint)) continue;
+      out.push({
+        txHash: sig,
+        tokenMint: mint,
+        tokenSymbol: (cur?.Symbol as string | null) ?? null,
+        amount: num(buy?.Amount),
+        valueUsd: buy?.AmountInUSD != null ? num(buy.AmountInUSD) : null,
+        timestamp: String(block?.Time ?? new Date().toISOString()),
+      });
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Top DEX traders on `chain` since `sinceIso`, by USD volume, with trade count
  * and distinct active-day count so the caller can apply activity filters.
