@@ -154,6 +154,20 @@ export async function sendSecurityAlert(params: {
 
 // ─── Whale Alert ──────────────────────────────────────────────────────────────
 
+/**
+ * Adaptive USD formatter for whale emails. Renders $K/$M/$B by magnitude
+ * (a real $50K move is "$50K", not the misleading "$0.05M" the old fixed
+ * /1e6 format produced) and returns null for a non-finite/non-positive
+ * amount so callers never email a fabricated "$NaNM"/"$0.00M" headline.
+ */
+function fmtWhaleUsd(n: number): string | null {
+  if (!Number.isFinite(n) || n <= 0) return null;
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(1)}K`;
+  return `$${Math.round(n)}`;
+}
+
 export async function sendWhaleAlert(params: {
   to: string;
   symbol: string;
@@ -168,11 +182,15 @@ export async function sendWhaleAlert(params: {
   const directionColor = params.direction === 'buy' ? '#22c55e' :
     params.direction === 'sell' ? '#ef4444' : '#a855f7';
 
+  // Never headline an email with a fabricated number — fall back to the symbol
+  // verb when the move is unpriced (NULL/NaN value_usd) rather than "$0.00M".
+  const amountLabel = fmtWhaleUsd(params.amountUsd);
+
   const html = `
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0f172a;color:#f1f5f9;padding:32px;border-radius:12px">
       <h2 style="color:${directionColor};margin:0 0 16px">${directionLabel}</h2>
       <p style="font-size:32px;font-weight:700;color:#f1f5f9;margin:0 0 4px">
-        $${(params.amountUsd / 1_000_000).toFixed(2)}M
+        ${amountLabel ?? params.symbol}
       </p>
       <p style="color:#94a3b8;margin:0 0 16px">${params.symbol}</p>
       ${params.fromEntity || params.toEntity ? `
@@ -190,7 +208,7 @@ export async function sendWhaleAlert(params: {
 
   return sendBroadcast({
     to: params.to,
-    subject: `${directionLabel}: $${(params.amountUsd / 1_000_000).toFixed(1)}M ${params.symbol}`,
+    subject: `${directionLabel}: ${amountLabel ? `${amountLabel} ` : ''}${params.symbol}`,
     html,
     tags: [{ name: 'type', value: 'whale_alert' }],
   });
