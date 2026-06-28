@@ -132,7 +132,11 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
 
       if (rows.length === 0) return { rows: [], total: 0 };
 
-      const uniqAddrs = Array.from(new Set(rows.map((r) => r.whale_address)));
+      // Look up whales by NORMALIZED address: whale_activity stores whatever
+      // casing the source emitted, but whales.address is canonical-lowercase
+      // (see 2026_06_28_normalize_evm_whale_addresses). Passing raw checksummed
+      // addresses to .in() missed those whales' label/PnL enrichment entirely.
+      const uniqAddrs = Array.from(new Set(rows.map((r) => normalizeAddress(r.whale_address, r.chain))));
       // §whale-tracker-grade — surface pnl_30d_usd / win_rate /
       // avg_hold_hours so the UI can render behavioral badges
       // (Accumulator / Distributor / Sniper / High-win-rate) inline
