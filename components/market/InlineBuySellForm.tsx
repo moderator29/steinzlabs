@@ -201,7 +201,7 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
       return;
     }
     if (amountNum <= 0) return;
-    if (amountNum > available) { setStatus({ kind: 'err', msg: 'Insufficient balance on this chain' }); return; }
+    if (amountNum > available) { setStatus({ kind: 'err', msg: `Insufficient ${mode === 'BUY' ? 'USDC' : symbol} on ${chain}: you have $${available.toFixed(2)}, tried $${amountNum.toFixed(2)}` }); return; }
     const slipNum = parseFloat(slippage);
     if (!Number.isFinite(slipNum) || slipNum <= 0 || slipNum > 50) {
       setStatus({ kind: 'err', msg: 'Slippage must be between 0 and 50%' });
