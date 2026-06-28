@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import { verifyCron, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { isEvmAddress } from "@/lib/utils/addressNormalize";
+import { getTopDexTraders, isBitqueryEnabled } from "@/lib/services/bitquery";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -136,8 +137,48 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Bitquery cross-chain discovery — augments the Alchemy router scan with
+    // top DEX buyers by USD volume. Gated on BITQUERY_API_KEY (no-op until set),
+    // rotates one chain per tick, fails closed (getTopDexTraders returns []).
+    let bitqueryInserted = 0;
+    if (isBitqueryEnabled()) {
+      const bqChains = ["ethereum", "base", "bsc", "arbitrum"];
+      const chain = bqChains[new Date().getUTCHours() % bqChains.length];
+      const sinceIso = new Date(Date.now() - 6 * 3600 * 1000).toISOString();
+      try {
+        const traders = await getTopDexTraders(chain, { sinceIso, minUsd: 10_000, limit: 30 });
+        if (traders.length > 0) {
+          const addrs = traders.map((t) => t.address);
+          const { data: existing } = await supabase.from("whales").select("address").in("address", addrs);
+          const seen = new Set((existing ?? []).map((r) => (r as { address: string }).address.toLowerCase()));
+          const rows = traders
+            .filter((t) => !seen.has(t.address))
+            .map((t) => ({
+              address: t.address,
+              chain: t.chain,
+              label: "Top DEX trader",
+              entity_type: "trader",
+              archetype: "smart_money",
+              whale_score: 72,
+              follower_count: 0,
+              verified: false,
+              is_active: true,
+              first_seen_at: new Date().toISOString(),
+              last_active_at: new Date().toISOString(),
+            }));
+          if (rows.length > 0) {
+            const { data } = await supabase.from("whales").insert(rows).select("id");
+            bitqueryInserted = (data ?? []).length;
+            inserted += bitqueryInserted;
+          }
+        }
+      } catch (err) {
+        Sentry.captureException(err, { tags: { cron: NAME, source: "bitquery" } });
+      }
+    }
+
     await logCronExecution(NAME, "success", Date.now() - startedAt, undefined, inserted);
-    return NextResponse.json({ ok: true, durationMs: Date.now() - startedAt, pairs: pairs.length, inserted });
+    return NextResponse.json({ ok: true, durationMs: Date.now() - startedAt, pairs: pairs.length, inserted, bitqueryInserted });
   } catch (err) {
     Sentry.captureException(err, { tags: { cron: NAME } });
     await logCronExecution(NAME, "failed", Date.now() - startedAt, String(err));
