@@ -711,6 +711,7 @@ export default function ViewProofPage() {
                     swap={swap}
                     walletAddress={walletAddress ?? undefined}
                     onCancel={() => setShowSwapCard(false)}
+                    source="proof"
                   />
                 </div>
               );

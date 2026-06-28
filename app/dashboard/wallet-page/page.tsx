@@ -1007,13 +1007,6 @@ export default function WalletPage() {
     setTimeout(() => setCopiedAddress(false), 2000);
   };
 
-  const getExplorerUrl = (txHash: string, chain?: string) => {
-    if (chain === 'solana') return `https://solscan.io/tx/${txHash}`;
-    if (chain === 'base') return `https://basescan.org/tx/${txHash}`;
-    if (chain === 'arbitrum') return `https://arbiscan.io/tx/${txHash}`;
-    return `https://etherscan.io/tx/${txHash}`;
-  };
-
   const formatTimeAgo = (ts: number) => {
     const diff = Date.now() - ts;
     if (diff < 60000) return 'Just now';
@@ -1591,6 +1584,30 @@ function CreateWalletView({ onBack, onCreated, walletCount = 0 }: { onBack: () =
   const [confirmed, setConfirmed] = useState(false);
   const [creating, setCreating] = useState(false);
   const [phraseCopied, setPhraseCopied] = useState(false);
+  // Seed-backup verification (industry standard: re-pick a few words before the
+  // wallet is finalized, so the user proves they actually wrote it down).
+  const [verifyTargets, setVerifyTargets] = useState<{ index: number; options: string[] }[]>([]);
+  const [verifyPicks, setVerifyPicks] = useState<Record<number, string>>({});
+
+  // Build 3 challenges from 3 distinct random word positions; each offers the
+  // correct word plus 3 decoys drawn from the rest of the phrase, shuffled.
+  const startVerification = () => {
+    const words = mnemonic.split(' ');
+    const shuffle = <T,>(a: T[]) => a.map((v) => ({ v, r: Math.random() })).sort((x, y) => x.r - y.r).map((o) => o.v);
+    const indices = shuffle(words.map((_, i) => i)).slice(0, 3).sort((a, b) => a - b);
+    const targets = indices.map((index) => {
+      const correct = words[index];
+      const decoys = shuffle(words.filter((w) => w !== correct)).slice(0, 3);
+      return { index, options: shuffle([correct, ...decoys]) };
+    });
+    setVerifyTargets(targets);
+    setVerifyPicks({});
+    setStep('confirm');
+  };
+
+  const verifyAllCorrect =
+    verifyTargets.length === 3 &&
+    verifyTargets.every((t) => verifyPicks[t.index] === mnemonic.split(' ')[t.index]);
 
   const createWallet = async () => {
     if (!password || password.length < 8) return;
@@ -1739,9 +1756,53 @@ function CreateWalletView({ onBack, onCreated, walletCount = 0 }: { onBack: () =
               <span className="text-sm text-gray-300">I have saved my recovery phrase securely</span>
             </button>
 
-            <button onClick={confirmAndSave} disabled={!confirmed} className="w-full py-4 bg-[#0066FF] hover:bg-[#0818CC] rounded-xl font-bold text-base disabled:opacity-50 flex items-center justify-center gap-2 transition-colors shadow-lg shadow-[#0066FF]/20">
-              <Check className="w-5 h-5" /> Continue to Wallet
+            <button onClick={startVerification} disabled={!confirmed} className="w-full py-4 bg-[#0066FF] hover:bg-[#0818CC] rounded-xl font-bold text-base disabled:opacity-50 flex items-center justify-center gap-2 transition-colors shadow-lg shadow-[#0066FF]/20">
+              <Check className="w-5 h-5" /> Continue
             </button>
+          </div>
+        )}
+
+        {step === 'confirm' && (
+          <div className="space-y-4">
+            <div className="p-4 bg-[#0066FF]/5 border border-[#0066FF]/15 rounded-xl">
+              <div className="flex items-center gap-2 mb-1">
+                <Shield className="w-4 h-4 text-[#0066FF]" />
+                <span className="text-sm font-bold text-[#0066FF]">Confirm your recovery phrase</span>
+              </div>
+              <p className="text-xs text-gray-400">Select the correct word for each position to prove you saved it. This is the only way to recover your wallet.</p>
+            </div>
+
+            {verifyTargets.map((t) => (
+              <div key={t.index} className="p-3 bg-[#111827] rounded-xl border border-white/5">
+                <p className="text-xs text-gray-400 mb-2 font-medium">Word #{t.index + 1}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {t.options.map((opt) => {
+                    const picked = verifyPicks[t.index] === opt;
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setVerifyPicks((p) => ({ ...p, [t.index]: opt }))}
+                        className={`py-2.5 rounded-lg text-sm font-mono font-semibold border transition-all ${
+                          picked ? 'bg-[#0066FF]/20 border-[#0066FF]/60 text-white' : 'bg-white/[0.03] border-white/10 text-gray-300 hover:border-white/25'
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            <div className="flex gap-2">
+              <button onClick={() => setStep('phrase')} className="px-4 py-3.5 rounded-xl text-sm font-semibold border border-white/10 hover:bg-white/5 text-gray-300 transition-colors">
+                Back
+              </button>
+              <button onClick={confirmAndSave} disabled={!verifyAllCorrect} className="flex-1 py-3.5 bg-[#0066FF] hover:bg-[#0818CC] rounded-xl font-bold text-base disabled:opacity-50 flex items-center justify-center gap-2 transition-colors shadow-lg shadow-[#0066FF]/20">
+                <Check className="w-5 h-5" /> Confirm &amp; Create
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -1914,11 +1975,54 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
   const [gasEstimateEth, setGasEstimateEth] = useState<string | null>(null);
   const [txHash, setTxHash] = useState('');
   const [txNonce, setTxNonce] = useState<number | null>(null);
+  // Live confirmation tracking on the sent screen (was hardcoded "Pending").
+  const [txStatus, setTxStatus] = useState<'pending' | 'confirmed' | 'failed'>('pending');
+  const [confirmations, setConfirmations] = useState(0);
   const [ensAddr, setEnsAddr] = useState<string | null>(null);
   const [ensLoading, setEnsLoading] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [contacts, setContacts] = useState<Array<{ id: string; label: string; address: string; chain: string | null }>>([]);
   const [saved, setSaved] = useState(false);
+
+  // Live tx confirmation polling — once a tx is broadcast, poll the chain until
+  // it confirms or fails so the sent screen shows the real status + confirmation
+  // count instead of a permanent "Pending".
+  useEffect(() => {
+    if (step !== 'sent' || !txHash) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const poll = async () => {
+      try {
+        if (chain.id === 'solana') {
+          const web3 = await import('@solana/web3.js');
+          const conn = new web3.Connection(SOLANA_RPC, 'confirmed');
+          const st = (await conn.getSignatureStatus(txHash)).value;
+          if (st?.err) { if (!cancelled) setTxStatus('failed'); return; }
+          if (st?.confirmationStatus === 'confirmed' || st?.confirmationStatus === 'finalized') {
+            if (!cancelled) { setTxStatus('confirmed'); setConfirmations(1); }
+            return;
+          }
+        } else {
+          const rpc = CHAIN_RPC[chain.id];
+          if (!rpc) return;
+          const ethers = await import('ethers');
+          const provider = new ethers.JsonRpcProvider(rpc);
+          const receipt = await provider.getTransactionReceipt(txHash);
+          if (receipt) {
+            const conf = await receipt.confirmations();
+            if (!cancelled) {
+              setConfirmations(Number(conf));
+              setTxStatus(receipt.status === 1 ? 'confirmed' : 'failed');
+            }
+            if (receipt.status === 0 || Number(conf) >= 2) return; // terminal
+          }
+        }
+      } catch { /* transient RPC error — keep polling */ }
+      if (!cancelled) timer = setTimeout(poll, 4000);
+    };
+    poll();
+    return () => { cancelled = true; if (timer) clearTimeout(timer); };
+  }, [step, txHash, chain.id]);
 
   // Native balance — powers MAX + the >balance guard.
   useEffect(() => {
@@ -2224,11 +2328,16 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
             </div>
             <Card>
               <div className="space-y-2.5 text-sm">
-                <div className="flex justify-between"><span className="text-slate-400">Status</span><span className="font-semibold text-[#F59E0B]">Pending</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Status</span>
+                  <span className={`font-semibold inline-flex items-center gap-1.5 ${txStatus === 'confirmed' ? 'text-[#10B981]' : txStatus === 'failed' ? 'text-[#EF4444]' : 'text-[#F59E0B]'}`}>
+                    {txStatus === 'pending' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    {txStatus === 'confirmed' ? 'Confirmed' : txStatus === 'failed' ? 'Failed' : 'Pending'}
+                  </span>
+                </div>
                 <div className="flex justify-between"><span className="text-slate-400">Recipient</span><span className="font-mono">{shortAddr(recipient)}</span></div>
                 <div className="flex justify-between"><span className="text-slate-400">Network</span><span>{chain.name}</span></div>
                 {gasEstimateEth && <div className="flex justify-between"><span className="text-slate-400">Network fee</span><span className="font-mono">{parseFloat(gasEstimateEth).toFixed(6)} {chain.symbol}</span></div>}
-                <div className="flex justify-between"><span className="text-slate-400">Confirmations</span><span>--</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Confirmations</span><span>{txStatus === 'pending' && confirmations === 0 ? '—' : confirmations}</span></div>
                 {txNonce != null && <div className="flex justify-between"><span className="text-slate-400">Nonce</span><span>{txNonce}</span></div>}
               </div>
             </Card>
@@ -3760,12 +3869,29 @@ function ActivityTab({ address, chain, enabledChains }: { address: string; chain
             if (r.value.upstream_error && !warn) warn = r.value.upstream_error;
           }
         }
+        // Merge the unified app trade ledger (swaps from the swap card, market,
+        // View Proof, VTX; sends) so trades done anywhere in the app surface in
+        // Activity — not just on-chain-decoded transfers. Best-effort.
+        const ledgerResults = await Promise.allSettled(
+          chainsToFetch.map(async (cid) => {
+            const res = await fetch(
+              `/api/trades/list?wallet=${encodeURIComponent(address)}&chain=${cid}&limit=50`,
+              { signal: AbortSignal.timeout(15_000), cache: 'no-store' },
+            );
+            if (!res.ok) return { trades: [] as DecodedTx[] };
+            return (await res.json()) as { trades: DecodedTx[] };
+          }),
+        );
+        if (cancelled) return;
+        for (const r of ledgerResults) {
+          if (r.status === 'fulfilled') { anyOk = true; merged.push(...(r.value.trades ?? [])); }
+        }
         if (!anyOk) throw new Error('Failed to load activity');
-        // Newest first across all chains; de-dupe by hash (a tx can't be on two
-        // chains, but cached + live merges can double up).
+        // Newest first across all chains; de-dupe by hash so a swap that's both
+        // ledger-recorded and on-chain-decoded shows once.
         const seen = new Set<string>();
         merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        const deduped = merged.filter((t) => (seen.has(t.tx_hash) ? false : (seen.add(t.tx_hash), true)));
+        const deduped = merged.filter((t) => (t.tx_hash && seen.has(t.tx_hash) ? false : (t.tx_hash && seen.add(t.tx_hash), true)));
         setTxs(deduped.slice(0, 50));
         if (warn) setUpstreamWarning(warn);
       } catch (err) {

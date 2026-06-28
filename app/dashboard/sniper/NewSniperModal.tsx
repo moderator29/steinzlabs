@@ -74,6 +74,10 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
   const [autoExecute, setAutoExecute] = useState(false);
   const [expiryHours, setExpiryHours] = useState<number | ''>(168);
   const [walletAddresses, setWalletAddresses] = useState<string[]>([]);
+  // Which wallet signs the snipe. 'builtin' = the user's in-app Naka wallet
+  // (manual confirm → password-sign, already wired through pendingSigner);
+  // 'external' = a connected MetaMask/Phantom wallet (session-key authorized).
+  const [walletMode, setWalletMode] = useState<'builtin' | 'external'>('builtin');
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
@@ -168,10 +172,11 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
         stop_loss_pct: sl === '' ? null : Number(sl),
         trailing_stop_pct: trailingStop === '' ? null : Number(trailingStop),
         auto_sell_on_target: autoSellOnTarget,
-        // External EVM wallets that authorized a non-custodial session key sign
-        // as 'metamask'; with no wallet picked we fall back to the built-in.
-        wallet_source: walletAddresses.length > 0 ? 'metamask' : 'builtin',
-        wallet_addresses: walletAddresses,
+        // Explicit wallet choice: 'builtin' = Naka in-app wallet (manual
+        // password-sign), 'metamask' = a connected external wallet that
+        // authorized a non-custodial session key.
+        wallet_source: walletMode === 'external' && walletAddresses.length > 0 ? 'metamask' : 'builtin',
+        wallet_addresses: walletMode === 'external' ? walletAddresses : [],
         expiry_hours: expiryHours === '' ? null : Number(expiryHours),
       };
 
@@ -385,9 +390,33 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
             </Field>
           </div>
 
-          {/* Wallets */}
-          {userWallets.length > 0 && (
-            <Field label="Wallets" hint="Pick which wallets this sniper uses. Empty = primary only.">
+          {/* Wallet source — Naka built-in vs external */}
+          <Field label="Wallet" hint={walletMode === 'builtin'
+            ? 'Your in-app Naka wallet signs each snipe (you confirm with your wallet password).'
+            : 'A connected external wallet (MetaMask / Phantom) signs via its authorized session key.'}>
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { id: 'builtin' as const, label: 'Naka Wallet', sub: 'In-app · you confirm' },
+                { id: 'external' as const, label: 'External Wallet', sub: 'MetaMask / Phantom' },
+              ]).map(opt => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => { setWalletMode(opt.id); if (opt.id === 'builtin') setWalletAddresses([]); }}
+                  className={`px-3 py-2.5 rounded-lg border-2 text-start transition ${
+                    walletMode === opt.id ? 'border-blue-400/60 bg-blue-500/15' : 'border-white/10 bg-white/[0.03] hover:border-white/20'
+                  }`}
+                >
+                  <div className={`text-sm font-semibold ${walletMode === opt.id ? 'text-blue-100' : 'text-white/80'}`}>{opt.label}</div>
+                  <div className="text-[11px] text-white/45">{opt.sub}</div>
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          {/* External wallet picker — only when External is chosen */}
+          {walletMode === 'external' && userWallets.length > 0 && (
+            <Field label="Wallets" hint="Pick which connected wallets this sniper uses. Empty = primary only.">
               <div className="space-y-1.5 max-h-40 overflow-y-auto rounded-lg border border-white/10 p-2 bg-white/[0.02]">
                 {userWallets.map(w => (
                   <label key={w.address} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/[0.04] cursor-pointer">
@@ -447,6 +476,7 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
                 <ReviewRow k="Name" v={name} />
                 <ReviewRow k="Trigger" v={trigger.replace('_', ' ')} />
                 <ReviewRow k="Chains" v={chains.join(', ')} />
+                <ReviewRow k="Wallet" v={walletMode === 'builtin' ? 'Naka Wallet (in-app)' : 'External wallet'} />
                 {trigger === 'whale_buy' && <ReviewRow k="Whale" v={`${whaleAddress.slice(0, 8)}…${whaleAddress.slice(-4)}`} />}
                 {trigger === 'price_target' && <ReviewRow k="Price target" v={`$${priceTarget}`} />}
                 <ReviewRow k="Amount / snipe" v={`$${amountUsd}`} />
