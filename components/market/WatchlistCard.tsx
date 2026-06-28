@@ -22,8 +22,8 @@ export function WatchlistCard({ token, onRemove }: WatchlistCardProps) {
   return (
     <div
       onClick={() => router.push(`/dashboard/market/${resolveTokenChain({ id: token.id, symbol: token.symbol }).chain}/${token.id}`)}
-      className="relative bg-[#0D1117] border border-[#1E2433] rounded-xl p-4 cursor-pointer
-                 hover:border-[#0066FF]/40 hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(0,102,255,0.08)]
+      className="relative nl-glass nl-glass--interactive rounded-xl p-4 cursor-pointer
+                 hover:scale-[1.02]
                  transition-all duration-150"
     >
       <button

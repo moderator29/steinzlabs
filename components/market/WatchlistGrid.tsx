@@ -13,7 +13,7 @@ const shimmer = 'animate-pulse bg-[#1E2433] rounded';
 
 function SkeletonCard() {
   return (
-    <div className="bg-[#0D1117] border border-[#1E2433] rounded-xl p-4 space-y-3">
+    <div className="nl-glass rounded-xl p-4 space-y-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.18)' }}>
       <div className="flex items-center gap-3 pe-6">
         <div className={`w-10 h-10 rounded-full ${shimmer}`} />
         <div className="space-y-1.5 flex-1">

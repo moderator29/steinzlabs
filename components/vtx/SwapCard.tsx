@@ -46,6 +46,9 @@ interface Props {
    * Parents that don't pass this just hide the cancel button.
    */
   onCancel?: () => void;
+  /** Trade-ledger attribution so the swap shows in the wallet Activity tab
+   *  (e.g. 'vtx' for the agent, 'proof' for View Proof). Defaults to 'vtx'. */
+  source?: string;
 }
 
 type Stage = 'quoting' | 'ready' | 'signing' | 'done' | 'error' | 'insufficient';
@@ -80,7 +83,7 @@ function TokenGlyph({ symbol }: { symbol: string }) {
   return <img src={src} alt={symbol} className="w-8 h-8 rounded-full bg-[#141824]" />;
 }
 
-export function SwapCard({ swap, walletAddress, onCancel }: Props) {
+export function SwapCard({ swap, walletAddress, onCancel, source = 'vtx' }: Props) {
   const expertMode = useExpertMode();
   const { open } = useAppKit();
   const { broadcast, unlockRequest, resolveUnlock, cancelUnlock } = useSwapBroadcast();
@@ -233,6 +236,23 @@ export function SwapCard({ swap, walletAddress, onCancel }: Props) {
       });
       setTxHash(hash);
       setStage('done');
+      // Record to the unified trade ledger so it surfaces in the wallet
+      // Activity tab. Fire-and-forget — never block the success UI on logging.
+      void fetch('/api/swap/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress,
+          txHash: hash,
+          chain: quote.chain,
+          fromToken: quote.fromToken,
+          toToken: quote.toToken,
+          fromAmount: parseFloat(quote.fromAmount) || 0,
+          toAmount: parseFloat(quote.toAmount) || 0,
+          status: 'confirmed',
+          source,
+        }),
+      }).catch(() => {});
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Swap failed. Please try again.';
       if (/insufficient|not enough|balance/i.test(msg)) {

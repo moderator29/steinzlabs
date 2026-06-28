@@ -24,7 +24,8 @@ export function TopGainersBar({ tokens, onSelect }: TopGainersBarProps) {
         <button
           key={token.id}
           onClick={() => onSelect(token.id)}
-          className="flex-shrink-0 flex items-center gap-2 px-3 py-2 bg-[#141824] border border-[#1E2433] rounded-lg hover:border-[#0066FF]/50 hover:bg-[#0066FF]/5 transition-all"
+          className="flex-shrink-0 flex items-center gap-2 px-3 py-2 nl-glass rounded-lg hover:-translate-y-px transition-all"
+          style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.2)' }}
         >
           <TokenLogo src={token.image} symbol={token.symbol} size={20} />
           <span className="text-white text-xs font-medium uppercase">{token.symbol}</span>

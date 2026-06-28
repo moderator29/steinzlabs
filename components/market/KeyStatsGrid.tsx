@@ -16,7 +16,7 @@ interface StatCardProps {
 
 function StatCard({ label, value, sub, subColor }: StatCardProps) {
   return (
-    <div className="bg-[#0A0E1A] border border-[#1E2433] rounded-xl p-4">
+    <div className="nl-glass rounded-xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.18)' }}>
       <div className="text-gray-500 text-xs font-medium uppercase tracking-wider mb-1.5">{label}</div>
       <div className="text-white font-semibold text-sm leading-snug truncate">{value}</div>
       {sub && (

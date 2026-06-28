@@ -54,6 +54,9 @@ export async function POST(request: NextRequest) {
       chain,
       status: status === 'failed' ? 'failed' : 'confirmed',
       tx_hash: txHash,
+      // Unified Activity ledger attribution.
+      wallet_address: walletAddress,
+      source: (body as { source?: string }).source ?? 'swap-page',
     });
 
     await recordFeeRevenue(db, {

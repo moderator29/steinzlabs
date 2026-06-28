@@ -50,7 +50,7 @@ export function TradeTerminal({
       {/* Main panel: Order Book + Order Form */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* Order Book */}
-        <div className="bg-[#111827] rounded-xl border border-white/[0.06] p-4">
+        <div className="nl-glass rounded-xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.18)' }}>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-semibold text-white uppercase tracking-wider">Order Book</h3>
             {spread !== undefined && (

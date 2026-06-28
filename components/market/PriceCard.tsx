@@ -80,7 +80,7 @@ export function PriceCard(props: PriceCardProps) {
   };
 
   return (
-    <div className="group relative w-full overflow-hidden rounded-2xl border border-[#1E2433] bg-[#0D1117] p-4 sm:p-5 transition-all duration-300 hover:border-[#0066FF]/40 hover:shadow-[0_0_30px_-8px_rgba(0,102,255,0.25)]">
+    <div className="group relative w-full overflow-hidden rounded-2xl nl-glass p-4 sm:p-5 transition-all duration-300" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.3), 0 0 16px rgba(0,102,255,.15)' }}>
       {/* Aurora glow — soft blue/violet/emerald orbs (Naka brand palette) */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -top-16 -right-12 h-44 w-44 rounded-full bg-[#0066FF]/20 blur-3xl" />

@@ -24,7 +24,7 @@ export function TokenDetailHeader({
   const coingeckoUrl = `https://www.coingecko.com/en/coins/${token.id}`;
 
   return (
-    <div className="bg-[#111827] border border-[#1E2433] rounded-xl px-5 py-5">
+    <div className="nl-glass rounded-xl px-5 py-5" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}>
       {/* Top row: back + coingecko link */}
       <div className="flex items-center justify-between mb-4">
         {onBack ? (
