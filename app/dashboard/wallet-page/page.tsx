@@ -2014,7 +2014,8 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
             const conf = await receipt.confirmations();
             if (!cancelled) {
               setConfirmations(Number(conf));
-              setTxStatus(receipt.status === 1 ? 'confirmed' : 'failed');
+              // status === 0 is a revert; 1 or null (some chains omit it) = mined OK.
+              setTxStatus(receipt.status === 0 ? 'failed' : 'confirmed');
             }
             if (receipt.status === 0 || Number(conf) >= 2) return; // terminal
           }
