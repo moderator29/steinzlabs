@@ -278,7 +278,9 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
       fromTokenSymbol = "USDC";
       toTokenAddress = event.token_address;
       toTokenSymbol = event.token_symbol;
-      amountIn = String(sizeUsd);
+      // Pin to 6 dp (USDC unit) — String(Number) can drop precision (10.50 -> "10.5"),
+      // matching the fix already in /api/copy-trading/execute.
+      amountIn = Number(sizeUsd).toFixed(6);
     }
 
     // #13: atomic per-user cap claim instead of a bare insert + the racy

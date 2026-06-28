@@ -237,7 +237,9 @@ export async function GET(request: NextRequest) {
       fromTokenSymbol = "USDC";
       toTokenAddress = act.token_address!;
       toTokenSymbol = act.token_symbol;
-      amountIn = String(sizeUsd);
+      // Pin to 6 dp (USDC unit) — String(Number) can drop precision (10.50 -> "10.5"),
+      // matching the fix already in /api/copy-trading/execute.
+      amountIn = Number(sizeUsd).toFixed(6);
     }
 
     // #13: atomic per-user cap claim (replaces a bare insert; the cron's
