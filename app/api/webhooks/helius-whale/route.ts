@@ -142,12 +142,19 @@ export async function POST(req: NextRequest) {
   }
   if (addresses.size === 0) return NextResponse.json({ ok: true, inserted: 0 });
 
-  const { data: whales } = await supabase
+  const { data: whales, error: whalesErr } = await supabase
     .from('whales')
     .select('address')
     .eq('is_active', true)
     .eq('chain', 'solana')
     .in('address', Array.from(addresses));
+
+  if (whalesErr) {
+    // Surface lookup failures instead of returning a silent 200/inserted:0
+    // that hides a Solana-ingestion outage.
+    console.error('[webhook.helius-whale] whales lookup failed:', whalesErr);
+    return NextResponse.json({ error: whalesErr.message }, { status: 500 });
+  }
 
   const whaleSet = new Set((whales ?? []).map((w) => w.address));
   if (whaleSet.size === 0) {

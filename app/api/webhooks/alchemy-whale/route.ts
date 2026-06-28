@@ -160,12 +160,19 @@ export async function POST(req: NextRequest) {
   }
   if (addresses.size === 0) return NextResponse.json({ ok: true, inserted: 0 });
 
-  const { data: whales } = await supabase
+  const { data: whales, error: whalesErr } = await supabase
     .from('whales')
     .select('address, chain, label')
     .eq('is_active', true)
+    .eq('chain', chain)
     .in('address', Array.from(addresses));
 
+  if (whalesErr) {
+    // Don't return a silent 200 with inserted:0 on a lookup failure — that
+    // hides ingestion outages. Surface it so the webhook is retried/alerted.
+    console.error('[webhook.alchemy-whale] whales lookup failed:', whalesErr);
+    return NextResponse.json({ error: whalesErr.message }, { status: 500 });
+  }
   if (!whales || whales.length === 0) {
     return NextResponse.json({ ok: true, inserted: 0, matched: 0 });
   }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { verifyCron, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { priceActivityUsd } from "@/lib/whales/priceActivity";
+import { priceActivityUsdBatch } from "@/lib/whales/priceActivity";
 
 export const maxDuration = 60;
 export const runtime = "nodejs";
@@ -39,41 +39,51 @@ export async function GET(request: NextRequest) {
     // visible window, so we never fabricate a historical USD value for an
     // ancient transfer the feed will never show.
     const sinceIso = new Date(Date.now() - BACKFILL_WINDOW_HOURS * 3600 * 1000).toISOString();
+    // Batch pricing (GeckoTerminal multi endpoint) is ~30x cheaper per token,
+    // so we can scan a much larger slice per pass and actually drain the
+    // NULL backlog instead of re-scanning the same newest 200 forever.
     const { data: rows, error } = await sb
       .from("whale_activity")
       .select("id, chain, token_address, token_symbol, amount")
       .or("value_usd.is.null,value_usd.eq.0")
       .gte("timestamp", sinceIso)
       .order("timestamp", { ascending: false })
-      .limit(200);
+      .limit(600);
     if (error) {
       Sentry.captureException(error, { tags: { cron: NAME } });
       await logCronExecution(NAME, "failed", Date.now() - startedAt, error.message, 0);
       return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
     }
 
-    scanned = rows?.length ?? 0;
-    for (const r of (rows ?? []) as Array<{
+    const list = (rows ?? []) as Array<{
       id: string;
       chain: string;
       token_address: string | null;
       token_symbol: string | null;
       amount: number | null;
-    }>) {
-      const value = await priceActivityUsd({
+    }>;
+    scanned = list.length;
+
+    // Price the whole slice in one batch (dedupes per token + bulk GT calls).
+    const values = await priceActivityUsdBatch(
+      list.map((r) => ({
         chain: r.chain,
         token_address: r.token_address,
         token_symbol: r.token_symbol,
         amount: r.amount,
-      });
-      if (value != null && value > 0) {
+      })),
+    );
+    await Promise.all(
+      list.map(async (r, i) => {
+        const value = values[i];
+        if (value == null || value <= 0) return;
         const { error: upErr } = await sb
           .from("whale_activity")
           .update({ value_usd: value })
           .eq("id", r.id);
         if (!upErr) priced++;
-      }
-    }
+      }),
+    );
 
     await logCronExecution(NAME, "success", Date.now() - startedAt, undefined, priced);
     return NextResponse.json({ ok: true, durationMs: Date.now() - startedAt, scanned, priced });
