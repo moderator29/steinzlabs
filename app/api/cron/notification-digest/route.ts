@@ -4,34 +4,12 @@ import { verifyCron, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendTelegramMessage } from "@/lib/telegram/client";
 import { sendAlertDigestEmail } from "@/lib/email";
+import { inQuietHours, type QuietHoursPrefs } from "@/lib/preferences/quietHours";
 
-interface NotificationPrefs {
+interface NotificationPrefs extends QuietHoursPrefs {
   user_id: string;
   email_enabled: boolean | null;
   telegram_enabled: boolean | null;
-  quiet_hours_enabled: boolean | null;
-  quiet_hours_start_minute: number | null;
-  quiet_hours_end_minute: number | null;
-  quiet_hours_timezone: string | null;
-}
-
-function inQuietHours(prefs: NotificationPrefs, now: Date): boolean {
-  if (!prefs.quiet_hours_enabled) return false;
-  const start = prefs.quiet_hours_start_minute;
-  const end = prefs.quiet_hours_end_minute;
-  if (start == null || end == null) return false;
-  // Use the user's configured timezone if valid, otherwise UTC.
-  let local: Date;
-  try {
-    const tz = prefs.quiet_hours_timezone || "UTC";
-    local = new Date(now.toLocaleString(undefined, { timeZone: tz }));
-  } catch {
-    local = now;
-  }
-  const minutes = local.getHours() * 60 + local.getMinutes();
-  return start <= end
-    ? minutes >= start && minutes < end
-    : minutes >= start || minutes < end;
 }
 
 export const maxDuration = 60;
