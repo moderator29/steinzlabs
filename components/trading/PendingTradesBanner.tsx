@@ -102,12 +102,42 @@ export function PendingTradesBanner() {
   }, [load]);
 
   const onConfirm = useCallback(
-    async (trade: PendingTrade) => {
+    async (trade: PendingTrade, opts?: { auto?: boolean }) => {
       setBusyId(trade.id);
       setRowState((prev) => ({ ...prev, [trade.id]: {} }));
       try {
-        const signed = await signAndBroadcast(trade);
-        if (!signed) return;
+        // Atomic server claim BEFORE broadcasting so a remount mid-sign or a
+        // second open tab can't double-broadcast the same trade. A 409 means
+        // another instance already owns it — abort without signing.
+        const claimRes = await fetch(`/api/trading/pending-trades/${trade.id}/claim`, { method: "POST" });
+        if (!claimRes.ok) {
+          if (!opts?.auto) {
+            const b = (await claimRes.json().catch(() => ({}))) as { error?: string };
+            setRowState((prev) => ({ ...prev, [trade.id]: { error: b.error ?? "This trade is already being signed." } }));
+          }
+          return;
+        }
+
+        let signed: InlineSignResult | null;
+        try {
+          signed = await signAndBroadcast(trade);
+        } catch (err) {
+          // Release ONLY on failures that provably happened before any on-chain
+          // broadcast, so the user can retry immediately. Anything ambiguous
+          // keeps the claim (a tx may have gone out) until its TTL — that's the
+          // double-broadcast guard.
+          const msg = err instanceof Error ? err.message : "";
+          if (/password|locked|no wallet keys|can.?t sign|does not match|outdated|not detected|no .*wallet account/i.test(msg)) {
+            await fetch(`/api/trading/pending-trades/${trade.id}/release`, { method: "POST" }).catch(() => {});
+          }
+          throw err;
+        }
+        if (!signed) {
+          // Redirected to the swap page to sign there — release so that path
+          // can re-claim and complete it.
+          await fetch(`/api/trading/pending-trades/${trade.id}/release`, { method: "POST" }).catch(() => {});
+          return;
+        }
         const res = await fetch(`/api/trading/pending-trades/${trade.id}/confirm`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -166,7 +196,7 @@ export function PendingTradesBanner() {
     );
     if (!eligible) return;
     autoAttempted.current.add(eligible.id);
-    void onConfirm(eligible);
+    void onConfirm(eligible, { auto: true });
     // onConfirm is stable; depend on trades + busyId so we re-evaluate as the
     // pending set changes and after each sign completes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
