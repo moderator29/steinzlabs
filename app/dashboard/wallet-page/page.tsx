@@ -2386,6 +2386,18 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
                 View on block explorer <ExternalLink className="w-3.5 h-3.5" />
               </a>
             )}
+            {txStatus === 'failed' && (
+              <div className="rounded-2xl border border-[#EF4444]/30 bg-[#EF4444]/5 p-3 space-y-2.5">
+                <p className="text-xs text-red-200">This transaction reverted on-chain. You can retry it (your password is still unlocked).</p>
+                <button
+                  onClick={() => { setTxHash(''); setTxStatus('pending'); setConfirmations(0); void handleSend(); }}
+                  className="w-full py-2.5 rounded-xl font-bold text-sm text-white"
+                  style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF 60%,#1233AE)', boxShadow: '0 0 14px rgba(0,102,255,.5)' }}
+                >
+                  Retry transaction
+                </button>
+              </div>
+            )}
             {!contacts.some((c) => c.address.toLowerCase() === recipient.toLowerCase()) && (
               <button onClick={() => void saveContact()} disabled={saved} className="w-full py-3 rounded-2xl font-semibold text-[13px] text-[#8FA3FF] nl-glass disabled:opacity-60" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.2)' }}>
                 {saved ? 'Saved to address book ✓' : 'Save recipient to address book'}
