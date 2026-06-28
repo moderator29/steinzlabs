@@ -22,6 +22,7 @@ import { NextRequest } from 'next/server';
 import { verifyCron, cronResponse, logCronExecution } from '../_shared';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { usdcForChain } from '@/lib/trading/usdc';
+import { tryExecuteSnipeViaSessionKey } from '@/lib/trading/sessionKeyExecutor';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -100,7 +101,7 @@ export async function GET(request: NextRequest) {
     .in('id', criteriaIds);
   const criteriaMap = new Map((criteriaRows ?? []).map((c) => [c.id, c]));
 
-  const processed: Array<{ matchId: string; status: 'queued' | 'skipped' | 'error'; reason?: string; pendingTradeId?: string }> = [];
+  const processed: Array<{ matchId: string; status: 'queued' | 'skipped' | 'error' | 'executed'; reason?: string; pendingTradeId?: string; txHash?: string }> = [];
 
   for (const m of matches) {
     const criteria = criteriaMap.get(m.criteria_id) as
@@ -162,6 +163,40 @@ export async function GET(request: NextRequest) {
     if (execErr || !execRow) {
       processed.push({ matchId: m.id, status: 'error', reason: execErr?.message ?? 'execution insert failed' });
       continue;
+    }
+
+    // 1b) #41 — TRUE background execution via an AA session key (Naka built-in
+    //     wallet only). If the user has an active, owner-approved ZeroDev
+    //     session for this chain and AA is configured, broadcast the buy now
+    //     from their kernel account — no open tab, no click. Best-effort: any
+    //     failure (no session, over caps, AA off, quote/bundler error) falls
+    //     through to the one-tap pending_trades path below. entry_price_usd /
+    //     tokens_received are backfilled by the receipt-reconciliation cron.
+    if (criteria.wallet_source === 'builtin' && !dryRun) {
+      let aa: { txHash: string; kernelAddress: string } | null = null;
+      try {
+        aa = await tryExecuteSnipeViaSessionKey({
+          userId: criteria.user_id,
+          chain: m.matched_chain,
+          tokenAddress: m.matched_token_address,
+          amountUsd: criteria.amount_per_snipe_usd,
+          slippageBps: criteria.max_slippage_bps ?? 200,
+        });
+      } catch {
+        aa = null; // fall back to staging
+      }
+      if (aa?.txHash) {
+        await supabase
+          .from('sniper_executions')
+          .update({ status: 'confirmed', tx_hash: aa.txHash, wallet_address: aa.kernelAddress, executed_at: new Date().toISOString() })
+          .eq('id', execRow.id);
+        await supabase
+          .from('sniper_match_events')
+          .update({ decision: 'sniped_executed' })
+          .eq('id', m.id);
+        processed.push({ matchId: m.id, status: 'executed', txHash: aa.txHash });
+        continue;
+      }
     }
 
     // 2) Queue the buy on pending_trades with the VERIFIED live schema
