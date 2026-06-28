@@ -44,7 +44,7 @@ export async function GET(request: Request) {
       supabase.from('positions').select('*', { count: 'exact', head: true }).eq('status', 'ACTIVE'),
       supabase.from('threats').select('*', { count: 'exact', head: true }),
       supabase.from('alerts').select('*', { count: 'exact', head: true }),
-      supabase.from('followed_entities').select('*', { count: 'exact', head: true }),
+      supabase.from('user_whale_follows').select('*', { count: 'exact', head: true }),
     ]);
 
     let engagementTotals = { views: 0, likes: 0, shares: 0 };

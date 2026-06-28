@@ -20,6 +20,7 @@ interface SmartMoneyEntity {
   winRate: number | null;
   description: string;
   address?: string;
+  chain?: string;
 }
 
 const FILTERS = [
@@ -70,6 +71,7 @@ export default function SmartMoneyPage() {
           winRate: typeof w.win_rate === 'number' ? Math.round(w.win_rate) : null,
           description: w.chain ? `${w.chain.toUpperCase()} · score ${w.whale_score ?? '—'}` : `Score ${w.whale_score ?? '—'}`,
           address: w.address ?? undefined,
+          chain: w.chain ?? undefined,
         }));
         setEntities(mapped);
         setTotalTracked(json.total ?? mapped.length);
@@ -88,9 +90,10 @@ export default function SmartMoneyPage() {
       try {
         const res = await fetch('/api/moneyRadar/follow', { signal: AbortSignal.timeout(10_000) });
         if (!res.ok || cancelled) return;
-        const json = (await res.json()) as { followed?: Array<{ entity_id?: string }> };
-        const ids = new Set((json.followed ?? []).map((r) => r.entity_id ?? '').filter(Boolean));
-        if (!cancelled) setFollowed(ids);
+        const json = (await res.json()) as { followed?: Array<{ address?: string }> };
+        // Follows are keyed by whale address (canonical user_whale_follows).
+        const addrs = new Set((json.followed ?? []).map((r) => r.address ?? '').filter(Boolean));
+        if (!cancelled) setFollowed(addrs);
       } catch { /* non-fatal */ }
     })();
     return () => { cancelled = true; };
@@ -105,6 +108,7 @@ export default function SmartMoneyPage() {
   });
 
   const followEntity = async (entity: SmartMoneyEntity) => {
+    if (!entity.address || !entity.chain) return; // can't follow without an on-chain target
     setLoadingFollow(entity.id);
     try {
       const res = await fetch('/api/moneyRadar/follow', {
@@ -115,12 +119,13 @@ export default function SmartMoneyPage() {
           entityName: entity.name,
           entityType: entity.type,
           address: entity.address,
+          chain: entity.chain,
         }),
       });
       if (res.ok) {
         setFollowed((prev) => {
           const next = new Set(prev);
-          next.add(entity.id);
+          next.add(entity.address!);
           return next;
         });
       }
@@ -180,7 +185,7 @@ export default function SmartMoneyPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {filtered.map((entity) => {
-              const isFollowed = followed.has(entity.id);
+              const isFollowed = !!entity.address && followed.has(entity.address);
               return (
                 <div
                   key={entity.id}
@@ -217,7 +222,7 @@ export default function SmartMoneyPage() {
                     </button>
                     <button
                       onClick={() => followEntity(entity)}
-                      disabled={loadingFollow === entity.id || isFollowed}
+                      disabled={loadingFollow === entity.id || isFollowed || !entity.address}
                       className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
                         isFollowed
                           ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
