@@ -34,7 +34,7 @@ export async function GET(_request: NextRequest) {
   const { data, error } = await supabase
     .from("pending_trades")
     .select(
-      "id,source_reason,source_order_id,source_order_table,chain,wallet_source,from_token_address,from_token_symbol,to_token_address,to_token_symbol,amount_in,slippage_bps,expected_amount_out,expected_price_usd,route_provider,security_trust_score,security_is_honeypot,status,expires_at,created_at",
+      "id,source_reason,source_order_id,source_order_table,chain,wallet_source,from_token_address,from_token_symbol,to_token_address,to_token_symbol,amount_in,slippage_bps,expected_amount_out,expected_price_usd,route_provider,security_trust_score,security_is_honeypot,auto_confirm,status,expires_at,created_at",
     )
     .eq("user_id", user.id)
     .eq("status", "pending")

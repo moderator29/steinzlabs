@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getWalletSessionKey } from "@/lib/wallet/walletSession";
 
 interface PendingTrade {
   id: string;
@@ -10,7 +11,8 @@ interface PendingTrade {
     | "stop_loss"
     | "take_profit"
     | "trail_stop"
-    | "copy_trade";
+    | "copy_trade"
+    | "sniper_buy";
   chain: string;
   wallet_source: "external_evm" | "external_solana" | "builtin";
   from_token_address: string;
@@ -23,6 +25,10 @@ interface PendingTrade {
   route_provider: string | null;
   security_trust_score: number | null;
   security_is_honeypot: boolean | null;
+  // Client-armed auto-sign (non-custodial). When true AND the built-in Naka
+  // wallet is unlocked in this tab, the banner signs without a manual click.
+  // Keys never leave the browser; the server still never signs.
+  auto_confirm?: boolean;
   expires_at: string;
 }
 
@@ -33,6 +39,7 @@ const REASON_LABEL: Record<PendingTrade["source_reason"], string> = {
   take_profit: "Take-profit",
   trail_stop: "Trailing stop",
   copy_trade: "Copy trade",
+  sniper_buy: "Sniper buy",
 };
 
 const POLL_INTERVAL_MS = 20_000;
@@ -73,6 +80,9 @@ export function PendingTradesBanner() {
   const [expanded, setExpanded] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rowState, setRowState] = useState<Record<string, RowState>>({});
+  // Trades we've already auto-signed (or attempted) so the 20s poll can't
+  // double-fire the same trade.
+  const autoAttempted = useRef<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     try {
@@ -135,6 +145,32 @@ export function PendingTradesBanner() {
     },
     [],
   );
+
+  // Client-armed auto-sign (#11). For trades flagged auto_confirm by an
+  // auto-execute sniper using the built-in Naka wallet: sign WITHOUT a click,
+  // but only when the wallet is unlocked in this tab and the trade clears the
+  // same safety gates a human would check (no honeypot, not low-trust). Keys
+  // never leave the browser; the server never signs. Falls back to the manual
+  // one-tap card otherwise (external wallets, locked wallet, flagged tokens).
+  useEffect(() => {
+    if (busyId) return;
+    const unlocked = !!getWalletSessionKey();
+    if (!unlocked) return;
+    const eligible = trades.find(
+      (t) =>
+        t.auto_confirm === true &&
+        t.wallet_source === "builtin" &&
+        t.security_is_honeypot !== true &&
+        (t.security_trust_score == null || t.security_trust_score >= 50) &&
+        !autoAttempted.current.has(t.id),
+    );
+    if (!eligible) return;
+    autoAttempted.current.add(eligible.id);
+    void onConfirm(eligible);
+    // onConfirm is stable; depend on trades + busyId so we re-evaluate as the
+    // pending set changes and after each sign completes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trades, busyId]);
 
   const onReject = useCallback(async (trade: PendingTrade) => {
     setBusyId(trade.id);
