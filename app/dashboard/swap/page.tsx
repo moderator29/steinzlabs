@@ -1037,13 +1037,13 @@ export default function SwapPage() {
         // bespoke decrypt assumed a legacy iv-separated format with a raw
         // password-as-key, which never matched the real payload and
         // failed every built-in swap.
-        const storedWallets = safeLocalParse<Array<{ address?: string; encryptedKey?: string }>>('steinz_wallets', []);
+        const storedWallets = safeLocalParse<Array<{ address?: string; encryptedKey?: string; importMethod?: string; derivationPath?: string }>>('steinz_wallets', []);
         const activeAddr = safeLocalGet('steinz_active_wallet_address') || connectedAddress;
         // Solana is case-sensitive — compare via the shared normalizer
         // rather than raw toLowerCase.
         const storedWallet = storedWallets.find(w => w.address && activeAddr && addressesEqual(w.address, activeAddr, 'ethereum'));
-        if (!storedWallet?.encryptedKey) {
-          throw new Error('No Naka wallet keys found on this device. Re-import your wallet from the Wallet page to sign transactions.');
+        if (!storedWallet) {
+          throw new Error('No Naka wallet found on this device. Re-import your wallet from the Wallet page to sign transactions.');
         }
         if (!swapData.transaction) {
           // The built-in signer here is EVM-only; Solana swaps need a
@@ -1053,6 +1053,30 @@ export default function SwapPage() {
               ? 'Swapping on Solana with the built-in Naka wallet isn’t supported yet — connect Phantom for Solana swaps.'
               : 'The router did not return a transaction to sign. Refresh the quote and try again.',
           );
+        }
+        const chainRpcsForLedger: Record<string, string> = {
+          ethereum: 'https://eth.llamarpc.com', base: 'https://mainnet.base.org',
+          arbitrum: 'https://arb1.arbitrum.io/rpc', polygon: 'https://polygon-rpc.com',
+          bsc: 'https://bsc-dataseed.binance.org', avalanche: 'https://api.avax.network/ext/bc/C/rpc',
+          optimism: 'https://mainnet.optimism.io',
+        };
+        // #44 — Ledger hardware wallet: sign the swap on the device (no
+        // stored key to decrypt).
+        if (storedWallet.importMethod === 'ledger') {
+          const { sendLedgerEvmTx } = await import('@/lib/wallet/ledger');
+          hash = await sendLedgerEvmTx({
+            path: storedWallet.derivationPath ?? "44'/60'/0'/0/0",
+            rpcUrl: chainRpcsForLedger[chain] || chainRpcsForLedger.ethereum,
+            tx: {
+              to: swapData.transaction.to,
+              data: swapData.transaction.data,
+              value: swapData.transaction.value ? BigInt(swapData.transaction.value) : undefined,
+            },
+          });
+          // Skip the password/decrypt path below — Ledger already broadcast.
+        } else {
+        if (!storedWallet.encryptedKey) {
+          throw new Error('No Naka wallet keys found on this device. Re-import your wallet from the Wallet page to sign transactions.');
         }
         const { ethers } = await import('ethers');
         const pwd = getWalletSessionKey() || '';
@@ -1092,6 +1116,7 @@ export default function SwapPage() {
         const signer = new ethers.Wallet(pk, provider);
         const tx = await signer.sendTransaction(swapData.transaction);
         hash = tx.hash;
+        } // end non-Ledger built-in signing
       } else {
         throw new Error('Please connect a wallet (MetaMask, Phantom, or built-in) to execute swaps.');
       }
