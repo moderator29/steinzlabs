@@ -198,6 +198,11 @@ async function signBuiltin(trade: PendingTradeForSigning): Promise<InlineSignRes
     if (!wallet.encryptedMnemonic) {
       throw new Error("This built-in wallet can't sign Solana trades — re-import its seed phrase from the Wallet page.");
     }
+    // Require the derived Solana address so the safety guard below is
+    // unconditional — never fall back to the EVM address as a Solana taker.
+    if (!wallet.solanaAddress) {
+      throw new Error("This wallet has no Solana address derived — re-import its seed phrase from the Wallet page.");
+    }
     let mnemonic = "";
     try {
       mnemonic = await decryptPrivateKey(wallet.encryptedMnemonic, pwd);
@@ -205,10 +210,25 @@ async function signBuiltin(trade: PendingTradeForSigning): Promise<InlineSignRes
       throw new Error("Wrong wallet password, or this wallet predates AES-256-GCM (re-import the seed phrase).");
     }
     try {
-      const taker = wallet.solanaAddress ?? wallet.address;
-      const prep = (await prepare(trade.id, taker)) as { quote: { transactionBase64?: string; buyAmount?: string; price?: string | number } };
-      const txB64 = prep.quote.transactionBase64;
-      if (!txB64) throw new Error("Solana prepare returned no transactionBase64");
+      const taker = wallet.solanaAddress;
+      // prepare() returns the route fields; the executable Jupiter tx
+      // comes from /api/swap/quote (mirrors signExternalSolana). The
+      // prior code read a non-existent prep.quote.transactionBase64.
+      const prep = (await prepare(trade.id, taker)) as PrepareResponseSolana;
+      const qs = new URLSearchParams({
+        chain: "solana",
+        sellToken: prep.sellToken,
+        buyToken: prep.buyToken,
+        sellAmount: prep.sellAmount,
+        taker,
+      });
+      const quoteRes = await fetch(`/api/swap/quote?${qs.toString()}`);
+      if (!quoteRes.ok) {
+        const err = (await quoteRes.json().catch(() => ({}))) as { error?: string };
+        throw new Error(err.error ?? "Solana quote failed");
+      }
+      const swapData = (await quoteRes.json()) as { swapTransaction?: string; buyAmount?: string; price?: string | number };
+      if (!swapData.swapTransaction) throw new Error("No Solana transaction returned");
 
       const [{ Connection, VersionedTransaction }, { deriveSolanaKeypair }] = await Promise.all([
         import('@solana/web3.js'),
@@ -218,7 +238,7 @@ async function signBuiltin(trade: PendingTradeForSigning): Promise<InlineSignRes
       const keypair = deriveSolanaKeypair(mnemonic, wallet.accountIndex ?? 0);
       // Funds-safety: the signing key must match the account we're
       // trading from — abort before broadcasting on any mismatch.
-      if (wallet.solanaAddress && keypair.publicKey.toBase58() !== wallet.solanaAddress) {
+      if (keypair.publicKey.toBase58() !== wallet.solanaAddress) {
         throw new Error("Derived signing key does not match this account. Aborted for safety.");
       }
 
@@ -226,13 +246,13 @@ async function signBuiltin(trade: PendingTradeForSigning): Promise<InlineSignRes
         process.env.NEXT_PUBLIC_HELIUS_RPC_URL ?? 'https://api.mainnet-beta.solana.com',
         'confirmed',
       );
-      const tx = VersionedTransaction.deserialize(Buffer.from(txB64, 'base64'));
+      const tx = VersionedTransaction.deserialize(Buffer.from(swapData.swapTransaction, 'base64'));
       tx.sign([keypair]);
       const txHash = await conn.sendRawTransaction(tx.serialize(), { skipPreflight: false, maxRetries: 2 });
       return {
         txHash,
-        clientReportedAmountOut: prep.quote.buyAmount,
-        clientReportedPrice: prep.quote.price ? Number(prep.quote.price) : undefined,
+        clientReportedAmountOut: swapData.buyAmount,
+        clientReportedPrice: swapData.price ? Number(swapData.price) : undefined,
       };
     } finally {
       mnemonic = "";
