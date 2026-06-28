@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { cacheWithFallback } from "@/lib/cache/redis";
 import { withTierGate } from "@/lib/subscriptions/apiTierGate";
+import { normalizeAddress } from "@/lib/utils/addressNormalize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,7 +37,7 @@ export const GET = withTierGate("mini", async (_request: NextRequest) => {
       }>;
       const map = new Map<string, { chain: string; vol: number; count: number }>();
       for (const r of rowsA) {
-        const key = `${r.chain}:${r.whale_address.toLowerCase()}`;
+        const key = `${r.chain}:${normalizeAddress(r.whale_address, r.chain)}`;
         const existing = map.get(key) ?? { chain: r.chain, vol: 0, count: 0 };
         existing.vol += Number(r.value_usd ?? 0);
         existing.count += 1;
@@ -70,13 +71,13 @@ export const GET = withTierGate("mini", async (_request: NextRequest) => {
         entity_type: string | null;
       }>) {
         enriched.set(
-          `${w.chain}:${w.address.toLowerCase()}`,
+          `${w.chain}:${normalizeAddress(w.address, w.chain)}`,
           { label: w.label, entity_type: w.entity_type },
         );
       }
 
       return sorted.map<TopWhaleRow>((s) => {
-        const key = `${s.chain}:${s.address.toLowerCase()}`;
+        const key = `${s.chain}:${normalizeAddress(s.address, s.chain)}`;
         const meta = enriched.get(key) ?? null;
         return {
           whale_address: s.address,

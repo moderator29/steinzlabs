@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { withTierGate } from "@/lib/subscriptions/apiTierGate";
+import { normalizeAddress } from "@/lib/utils/addressNormalize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -79,7 +80,9 @@ export const POST = withTierGate("pro", async (request: NextRequest) => {
   const { error } = await sb.from("user_whale_follows").upsert(
     {
       user_id: user.id,
-      whale_address: a,
+      // Normalize so the onConflict (user_id,whale_address,chain) key is stable:
+      // EVM lowercases (case-insensitive), Solana base58 is preserved.
+      whale_address: normalizeAddress(a, body.chain),
       chain: body.chain,
       label: body.label ?? null,
       alert_enabled: body.alert_enabled ?? true,
@@ -114,7 +117,7 @@ export const PATCH = withTierGate("pro", async (request: NextRequest) => {
     .from("user_whale_follows")
     .update(update)
     .eq("user_id", user.id)
-    .eq("whale_address", body.whale_address)
+    .eq("whale_address", normalizeAddress(body.whale_address, body.chain))
     .eq("chain", body.chain);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
@@ -136,7 +139,7 @@ export const DELETE = withTierGate("pro", async (request: NextRequest) => {
     .from("user_whale_follows")
     .delete()
     .eq("user_id", user.id)
-    .eq("whale_address", address)
+    .eq("whale_address", normalizeAddress(address, chain))
     .eq("chain", chain);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
