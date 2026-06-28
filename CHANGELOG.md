@@ -8,6 +8,23 @@ the top.
 
 ## [Unreleased]
 
+### Whale Tracker revival + feed hardening (June 2026)
+
+- **Whale ingestion restored** — the cost-sweep demand gate had scoped the poll/price crons to *followed* whales only; with near-zero follows, `whale_activity` ingestion went dark ~45 days ago and every `value_usd` was NULL (so every size filter excluded 100% of rows). The poll cron now rotates through **all** active whales (bounded by `WHALE_POLL_BATCH`), polls **both** transfer directions, and **prices `value_usd` at ingest** (CoinGecko/Birdeye, deduped per token). The price cron is now an ungated, recency-bounded safety net (never re-prices the multi-year backlog at today's prices). Webhooks (Alchemy/Helius) also price at ingest in their deferred `after()` block.
+- **Realtime feed** — `whale_activity` was in no realtime publication, so the tracker's `postgres_changes` INSERT subscription never fired. Added it to `supabase_realtime`; the "N new whales" pill now lights up sub-second.
+- **Whale alert dispatcher** — new `whale-alert-dispatcher` cron joins each alert-enabled follow to priced activity past a per-follow watermark, writes a durable in-app notification, and sends the (previously dead) `sendWhaleAlert` email when the follow opted into the email channel.
+- **Tier honesty** — viewing the feed needs `mini` but following needs `pro`; mini users used to see live watch/add/bell controls that 403'd silently. The page is now tier-aware: a branded paywall below `mini`, working feed + Pro upsell for `mini`.
+- **Action honesty** — the feed surfaces Received/Sent (`transfer_in`/`out`) instead of a flat "transfer", and the realtime indicator stopped dropping every transfer (raw-vs-canonical action mismatch). Removed 3 orphaned/duplicate whale component stacks.
+
+### Context Feed + DM hardening (June 2026)
+
+- **Auth** — `getAuthenticatedUser` trusted the `steinz_session` JWT *payload* without verifying the signature (forged-token impersonation across every route). Now verified via Supabase.
+- **AI Market Pulse** — fixed an Anthropic thundering herd (every feed viewer raced to generate); generation is now claimed with one atomic DB update, losers serve the stale pulse, failures serve-stale + retry in ~10 min, empty feeds never call Anthropic.
+- **Smart-money labels** — `applySmartMoneyLabels` hardcoded `'ethereum'` normalization, silently disabling Solana labeling; now chain-correct.
+- **feed-alert-monitor** — 30-min anti-spam floor, trusted-config internal URL (not the Host header), per-alert error isolation, surfaced feed-fetch outages, chain-aware address keys, and metric-aware thresholds.
+- **DMs** — declined-request history is hidden on per-thread read; a network send failure now surfaces an error instead of the message silently vanishing.
+- **Feed alerts** — added a `PATCH` so the `active` toggle is reachable.
+
 ### Data-integrity & honesty fixes (June 2026)
 
 - **Reputation** — `scorePortfolioPerformancePct` queried `swap_logs.pnl_usd`, a column that does not exist; the throw was swallowed and the portfolio axis silently dropped from every score. Now sources realized PnL from the real trade ledgers (`sniper_executions.pnl_usd` / `user_copy_trades.pnl_usd`).

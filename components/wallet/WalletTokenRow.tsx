@@ -55,6 +55,9 @@ export function WalletTokenRow({
   symbol, name, balance, valueUsd, contractAddress, logoUrl, chainLabel, coinGeckoId, hideBalance, onClick,
 }: Props) {
   const [changePct, setChangePct] = useState<number | null>(null);
+  // Real market price from the sparkline's latest point — so the row shows a
+  // live price even on a zero-balance wallet (where value/qty is 0 → '—').
+  const [marketPrice, setMarketPrice] = useState<number | null>(null);
 
   useEffect(() => {
     // Prefer contract-backed DexScreener sparkline when we have a contract
@@ -67,8 +70,11 @@ export function WalletTokenRow({
         : null;
     if (!url) return;
     const cacheKey = url;
+    const lastPoint = (d: SparkData) => (d.points.length ? d.points[d.points.length - 1] : null);
     if (sparkCache.has(cacheKey)) {
-      setChangePct(sparkCache.get(cacheKey)?.changePct ?? null);
+      const cached = sparkCache.get(cacheKey)!;
+      setChangePct(cached.changePct ?? null);
+      setMarketPrice(lastPoint(cached));
       return;
     }
     let cancelled = false;
@@ -78,6 +84,7 @@ export function WalletTokenRow({
         if (cancelled || !d || !Array.isArray(d.points)) return;
         sparkCache.set(cacheKey, d);
         setChangePct(d.changePct);
+        setMarketPrice(lastPoint(d));
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -85,7 +92,9 @@ export function WalletTokenRow({
 
   const qty = parseFloat(balance) || 0;
   const val = parseFloat(valueUsd || '0') || 0;
-  const price = qty > 0 && val > 0 ? val / qty : 0;
+  // Prefer the authoritative value/qty price (stable for held tokens); fall
+  // back to the live market price so an empty wallet still shows a real price.
+  const price = qty > 0 && val > 0 ? val / qty : (marketPrice ?? 0);
   const changeColor = changePct == null ? 'text-slate-500' : changePct >= 0 ? 'text-emerald-400' : 'text-red-400';
   const changeSign = changePct == null ? '' : changePct >= 0 ? '+' : '';
 
@@ -119,30 +128,29 @@ export function WalletTokenRow({
               ? <>ETH <span className="text-slate-400 font-semibold">· {chainLabel}</span></>
               : symbol}
           </span>
-          {chainLabel && !(symbol === 'ETH' && chainLabel !== 'Ethereum') && (
-            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-slate-800/80 text-slate-400 leading-none border border-slate-700/50">
-              {chainLabel}
-            </span>
-          )}
         </div>
+        {/* Sub-line: token name + chain (muted suffix) — cleaner than a boxed
+            chain pill. Price + 24h change sit beneath. */}
+        <div className="text-[11px] text-slate-500 truncate leading-tight">
+          {name}{chainLabel && !(symbol === 'ETH' && chainLabel !== 'Ethereum') ? <span className="text-slate-600"> · {chainLabel}</span> : null}
+        </div>
+        {/* qty held + unit price */}
         <div className="flex items-center gap-1.5 mt-0.5">
-          <span className="text-[12px] text-slate-400 font-mono">{formatPrice(price)}</span>
-          {changePct != null && (
-            <span className={`text-[12px] font-semibold ${changeColor}`}>
-              {changeSign}{changePct.toFixed(2)}%
-            </span>
-          )}
+          <span className="text-[12px] text-slate-400 font-mono">{hideBalance ? '••••' : `${formatQty(qty)} ${symbol}`}</span>
+          <span className="text-[12px] text-slate-500 font-mono">{formatPrice(price)}</span>
         </div>
       </div>
 
-      {/* Right — qty + USD value */}
+      {/* Right — USD value + colored 24h change (Trust/Exodus column). */}
       <div className="text-end shrink-0">
         <div className="text-[15px] font-semibold text-white tabular-nums leading-tight">
-          {hideBalance ? '••••' : formatQty(qty)}
-        </div>
-        <div className="text-[12px] text-slate-400 tabular-nums leading-tight mt-0.5">
           {hideBalance ? '••••' : formatValue(val)}
         </div>
+        {changePct != null && (
+          <div className={`text-[12px] font-semibold tabular-nums leading-tight mt-0.5 ${changeColor}`}>
+            {changeSign}{changePct.toFixed(2)}%
+          </div>
+        )}
       </div>
 
       <ChevronRight className="w-4 h-4 text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />

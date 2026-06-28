@@ -50,11 +50,17 @@ export const APPKIT_NETWORKS = [...APPKIT_EVM_NETWORKS, solana] as const;
 // to the canonical on the server. buildMetadata() is invoked inside getAppKit so
 // the origin is read after hydration, never at module init (no SSR/CSR mismatch).
 function buildMetadata() {
-  // Pin to the CANONICAL origin so WalletConnect Verify always sees a single,
-  // allow-listed domain (register this exact origin — and any www/preview you
-  // test from — in the reown dashboard). Using the live window origin made
-  // Verify fail on www/preview hosts that weren't allow-listed.
-  const origin = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://nakalabs.xyz').replace(/\/$/, '');
+  // metadata.url MUST equal the origin the page is actually served from, or
+  // WalletConnect's Verify API flags an origin mismatch and disables "Open" on
+  // every wallet (the platform-wide "modal opens, can't connect" symptom).
+  // buildMetadata() runs inside getAppKit() on the CLIENT, so window.origin is
+  // the real served host — prefer it. Fall back to the configured site URL,
+  // then the canonical domain, for the (server-side) no-window path.
+  // Whatever origin you serve from (apex and/or www) must be allow-listed in
+  // the Reown dashboard.
+  const winOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+  const envOrigin = (process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '');
+  const origin = (winOrigin || envOrigin || 'https://nakalabs.xyz').replace(/\/$/, '');
   return {
     name: 'Naka Labs',
     description: 'Top-1% on-chain trading terminal',

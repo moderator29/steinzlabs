@@ -180,6 +180,10 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
         return {
           ...r,
           action: canonicalAction(r.action),
+          // Preserve transfer direction (the poll now ingests both sides) so the
+          // card can show Received/Sent instead of a flat "transfer". null when
+          // the row is a real buy/sell (direction is implied by the action).
+          direction: r.action === 'transfer_in' ? 'in' : r.action === 'transfer_out' ? 'out' : null,
           label,
           entity_type,
           whale_label,

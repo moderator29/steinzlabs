@@ -9,6 +9,7 @@ export const runtime = 'nodejs';
  * Per-user Context Feed alerts.
  *   GET    -> list the caller's alerts
  *   POST   -> create one  { label, chain?, kind?, min_volume_usd?, min_price_change_pct? }
+ *   PATCH  -> update one   { id, active?, label?, min_volume_usd?, min_price_change_pct? }
  *   DELETE ?id=<uuid> -> remove one
  *
  * The feed-alert-monitor cron matches active alerts against new feed events and
@@ -63,6 +64,39 @@ export async function POST(req: NextRequest) {
     .select('id, label, chain, kind, min_volume_usd, min_price_change_pct, active, created_at')
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ alert: data });
+}
+
+const PatchBody = z.object({
+  id: z.string().uuid(),
+  active: z.boolean().optional(),
+  label: z.string().min(1).max(80).optional(),
+  min_volume_usd: z.number().nonnegative().max(1e12).nullable().optional(),
+  min_price_change_pct: z.number().min(-100).max(100000).nullable().optional(),
+});
+
+export async function PATCH(req: NextRequest) {
+  const user = await getAuthenticatedUser(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const parsed = PatchBody.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+
+  const { id, ...rest } = parsed.data;
+  const updates = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined));
+  if (Object.keys(updates).length === 0) return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
+
+  const sb = getSupabaseAdmin();
+  // Ownership-scoped: the .eq('user_id', ...) is the actual control (admin
+  // client bypasses RLS), so user A can never patch user B's alert.
+  const { data, error } = await sb
+    .from('feed_alerts')
+    .update(updates)
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .select('id, label, chain, kind, min_volume_usd, min_price_change_pct, active, last_triggered_at, created_at')
+    .maybeSingle();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   return NextResponse.json({ alert: data });
 }
 

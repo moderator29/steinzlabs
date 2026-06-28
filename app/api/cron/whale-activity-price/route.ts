@@ -9,11 +9,20 @@ export const runtime = "nodejs";
 
 const NAME = "whale-activity-price";
 
+// Only backfill rows inside the feed's max visible window. The feed never shows
+// activity older than 7d, and pricing an ancient transfer at *today's* token
+// price would fabricate a historical USD value that was never real. Rows older
+// than this stay null on purpose — they're never displayed, so there's nothing
+// to fabricate. Slight margin (8d) over the 7d feed window for clock skew.
+const BACKFILL_WINDOW_HOURS = 24 * 8;
+
 /**
- * Backfills whale_activity.value_usd for rows the ingest path left unpriced
- * (webhooks insert 0, the poll cron inserts null). The whale feed filters
- * value_usd >= minUsd, so without this the feed is empty. Runs frequently and
- * prices the newest unpriced rows each pass.
+ * Safety-net backfill for whale_activity.value_usd. The poll cron and webhooks
+ * now price at ingest, but a transient price-API failure can still leave a
+ * recent row unpriced (null) or a webhook can land a 0. The feed filters
+ * value_usd >= minUsd, so any unpriced recent row is invisible. This re-prices
+ * the newest unpriced rows inside the feed window each pass (ungated — the feed
+ * is platform-wide, not follow-scoped). Never touches the historical backlog.
  */
 export async function GET(request: NextRequest) {
   const auth = verifyCron(request);
@@ -25,15 +34,16 @@ export async function GET(request: NextRequest) {
   try {
     const sb = getSupabaseAdmin();
 
-    // Price the newest unpriced rows for the WHOLE directory — not just
-    // followed whales. The live feed renders all whale activity to every user
-    // and filters value_usd >= minUsd, so the old followed-only gate left the
-    // feed empty whenever the 4 followed whales had no recent priced moves.
-    // priceActivityUsd caches per token, so a pass of 200 rows is cheap.
+    // Re-price the newest unpriced rows for the WHOLE directory (ungated — the
+    // feed is platform-wide, not follow-scoped) but only inside the feed's
+    // visible window, so we never fabricate a historical USD value for an
+    // ancient transfer the feed will never show.
+    const sinceIso = new Date(Date.now() - BACKFILL_WINDOW_HOURS * 3600 * 1000).toISOString();
     const { data: rows, error } = await sb
       .from("whale_activity")
       .select("id, chain, token_address, token_symbol, amount")
       .or("value_usd.is.null,value_usd.eq.0")
+      .gte("timestamp", sinceIso)
       .order("timestamp", { ascending: false })
       .limit(200);
     if (error) {

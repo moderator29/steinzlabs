@@ -26,8 +26,13 @@ function deriveLpLocked(lpHolders: unknown): number | null {
     if (!Number.isFinite(pct)) continue;
     sawPct = true;
     const isLocked = h.is_locked === 1 || h.is_locked === '1';
-    const addr = String(h.address ?? '').toLowerCase();
-    const isBurn = addr === '0x000000000000000000000000000000000000dead' || addr === '0x0000000000000000000000000000000000000000';
+    // Burn-address check is EVM-only (these are 0x hex constants, case-
+    // insensitive at the protocol level). Only lowercase a 0x-shaped address so
+    // we never fold a case-sensitive Solana base58 LP holder.
+    const raw = String(h.address ?? '');
+    const isBurn = /^0x[0-9a-fA-F]{40}$/.test(raw) &&
+      (raw.toLowerCase() === '0x000000000000000000000000000000000000dead' ||
+        raw.toLowerCase() === '0x0000000000000000000000000000000000000000');
     if (isLocked || isBurn) locked += pct;
   }
   return sawPct ? Math.min(1, locked) : null;

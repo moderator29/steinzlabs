@@ -22,7 +22,23 @@
  *     in memory while the user is in another tab/app).
  */
 
-const SESSION_TTL_MS = 30 * 60 * 1000;
+const DEFAULT_TTL_MS = 15 * 60 * 1000;
+
+// Auto-lock TTL is driven by the user's "Auto-Lock Timer" setting
+// (naka_autolock = minutes; "0" = never). Read fresh each time so changing
+// the setting takes effect immediately.
+function configuredTtlMs(): number {
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem('naka_autolock') : null;
+    if (raw == null) return DEFAULT_TTL_MS;
+    const mins = parseInt(raw, 10);
+    if (!Number.isFinite(mins)) return DEFAULT_TTL_MS;
+    if (mins === 0) return 365 * 24 * 60 * 60 * 1000; // "Never"
+    return mins * 60 * 1000;
+  } catch {
+    return DEFAULT_TTL_MS;
+  }
+}
 
 interface SessionState {
   key: string;
@@ -32,7 +48,7 @@ interface SessionState {
 let _state: SessionState | null = null;
 
 export function setWalletSessionKey(key: string) {
-  _state = { key, expiresAt: Date.now() + SESSION_TTL_MS };
+  _state = { key, expiresAt: Date.now() + configuredTtlMs() };
 }
 
 export function getWalletSessionKey(): string | null {
@@ -41,9 +57,9 @@ export function getWalletSessionKey(): string | null {
     _state = null;
     return null;
   }
-  // Sliding window: every successful access refreshes the TTL. The user
-  // is actively trading, so don't time them out mid-flow.
-  _state.expiresAt = Date.now() + SESSION_TTL_MS;
+  // Sliding window: every successful access refreshes the TTL to the user's
+  // configured auto-lock window so active trading doesn't time out mid-flow.
+  _state.expiresAt = Date.now() + configuredTtlMs();
   return _state.key;
 }
 

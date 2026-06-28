@@ -335,6 +335,11 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
           id: saved.message.id, sender_id: me ?? '', body, created_at: saved.message.created_at ?? new Date().toISOString(), read_at: null,
         }]);
       }
+    } catch {
+      // Network/throw path: the draft was never cleared (we only clear on a 2xx),
+      // so the user's text is intact — just surface the failure instead of the
+      // message silently vanishing.
+      setError('Could not send — check your connection and try again.');
     } finally {
       setSending(false);
     }
@@ -344,7 +349,11 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
   const peerHref = `/u/${peer?.username ?? peerId}`;
 
   return (
-    <div className="flex flex-col h-[100dvh] max-w-2xl mx-auto">
+    // Full-screen fixed overlay so the thread escapes the dashboard chrome
+    // (aurora bg + banners) that was clipping the header at the top and pushing
+    // the composer off the bottom. inset-0 + max-w-2xl + mx-auto centres it on
+    // desktop and fills the viewport on mobile; h-dvh tracks the mobile URL bar.
+    <div className="fixed inset-0 z-[60] mx-auto flex h-[100dvh] max-w-2xl flex-col bg-[#070b14]">
       {/* Header — compact back, peer (links to profile), encryption badge. */}
       <div className="flex items-center gap-2 px-3 sm:px-4 py-2.5 shrink-0 border-b border-[#0066FF]/20" style={{ boxShadow: '0 1px 0 rgba(0,102,255,.12)' }}>
         <button
@@ -387,8 +396,9 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
         </div>
       )}
 
-      {/* Scrollable conversation */}
-      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 space-y-2">
+      {/* Scrollable conversation — min-h-0 lets flex-1 actually scroll inside
+          the fixed column instead of overflowing past the composer. */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-4 space-y-2">
         {messages.length > 0 && hasMoreOlder && (
           <div className="flex justify-center">
             <button
