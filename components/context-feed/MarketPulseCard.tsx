@@ -6,7 +6,8 @@ import type { ContextEvent } from '@/lib/hooks/useContextFeed';
 
 /**
  * MarketPulseCard — an AI "Market Pulse" read on the live feed. Posts the
- * current top events to /api/context-feed/pulse (server-cached 5 min) and
+ * current top events to /api/context-feed/pulse (server-cached ~8h via the
+ * market_pulse singleton DB cap, not 5 min) and
  * renders a glass blue-stride card. Auto-hides until it has a real summary;
  * never shows fabricated text.
  */

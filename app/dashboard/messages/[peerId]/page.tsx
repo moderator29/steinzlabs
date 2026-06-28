@@ -247,18 +247,25 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
       const body = await decodeRow(m, convKey);
       setMessages((prev) => prev.some((p) => p.id === m.id) ? prev : [...prev, { id: m.id, sender_id: m.sender_id, body, created_at: m.created_at, read_at: m.read_at }]);
     };
-    let channel = supabase
-      .channel(`dm:${conversationId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dm_messages', filter: `conversation_id=eq.${conversationId}` }, handleInsert)
-      .subscribe();
+    // #33: read receipts (and soft-deletes) arrive as UPDATEs, not INSERTs —
+    // patch read_at into the matching message so "· Read" updates live instead
+    // of only on reload.
+    const handleUpdate = (payload: { new: ServerMessage }) => {
+      const m = payload.new;
+      setMessages((prev) => prev.map((p) => (p.id === m.id ? { ...p, read_at: m.read_at } : p)));
+    };
+    const subscribe = (suffix: string) =>
+      supabase
+        .channel(`dm:${conversationId}${suffix}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dm_messages', filter: `conversation_id=eq.${conversationId}` }, handleInsert)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'dm_messages', filter: `conversation_id=eq.${conversationId}` }, handleUpdate)
+        .subscribe();
+    let channel = subscribe('');
 
     const onVisibility = () => {
       if (document.visibilityState !== 'visible') return;
       void supabase.removeChannel(channel);
-      channel = supabase
-        .channel(`dm:${conversationId}:${Date.now()}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dm_messages', filter: `conversation_id=eq.${conversationId}` }, handleInsert)
-        .subscribe();
+      channel = subscribe(`:${Date.now()}`);
       void loadHistory();
     };
     document.addEventListener('visibilitychange', onVisibility);
