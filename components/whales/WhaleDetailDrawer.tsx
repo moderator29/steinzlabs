@@ -190,7 +190,7 @@ export default function WhaleDetailDrawer({
         </div>
 
         {/* Address row */}
-        <div className="px-5 py-3 flex items-center gap-2 bg-white/[0.02]">
+        <div className="px-5 py-3 flex items-center gap-2 nl-glass">
           <Wallet className="w-3.5 h-3.5 text-slate-500" />
           <code className="flex-1 text-xs font-mono text-slate-300 truncate">{w.address}</code>
           <button onClick={copyAddress} className="p-1.5 rounded hover:bg-white/5">
@@ -201,17 +201,33 @@ export default function WhaleDetailDrawer({
           </a>
         </div>
 
-        {/* Metrics */}
-        <div className="px-5 py-4 grid grid-cols-2 gap-2">
-          <MetricTile label="Whale Score" value={w.whale_score ? `${w.whale_score}/100` : '—'} big />
-          <MetricTile label="Portfolio" value={fmtUsd(w.portfolio_value_usd)} big />
-          <MetricTile label="PnL 30d" value={fmtUsd(w.pnl_30d_usd)} tone={Number(w.pnl_30d_usd || 0) >= 0 ? 'green' : 'red'} />
-          <MetricTile label="Win Rate" value={w.win_rate ? `${Math.round(Number(w.win_rate))}%` : '—'} />
-          <MetricTile label="Trades 30d" value={w.trade_count_30d ? w.trade_count_30d.toLocaleString() : '—'} />
-          <MetricTile label="Followers" value={(detail?.followerCount ?? w.follower_count ?? 0).toLocaleString()} />
-          <MetricTile label="Last active" value={timeAgo(w.last_active_at)} />
-          <MetricTile label="First seen" value={w.first_seen_at ? timeAgo(w.first_seen_at).replace('ago', 'old') : '—'} />
-        </div>
+        {/* Metrics — for custodial entities (exchanges/bridges) PnL, win-rate
+            and trade count are meaningless, so we omit them rather than show
+            "—" and surface the flow-wallet nature instead. */}
+        {(() => {
+          const custodial = ['exchange', 'cex', 'bridge'].includes((w.entity_type || '').toLowerCase());
+          return (
+            <div className="px-5 py-4 grid grid-cols-2 gap-2">
+              <MetricTile label="Whale Score" value={w.whale_score ? `${w.whale_score}/100` : '—'} big />
+              <MetricTile label="Holdings" value={fmtUsd(w.portfolio_value_usd)} big />
+              {!custodial && (
+                <>
+                  <MetricTile label="PnL 30d" value={fmtUsd(w.pnl_30d_usd)} tone={Number(w.pnl_30d_usd || 0) >= 0 ? 'green' : 'red'} />
+                  <MetricTile label="Win Rate" value={w.win_rate ? `${Math.round(Number(w.win_rate))}%` : '—'} />
+                  <MetricTile label="Trades 30d" value={w.trade_count_30d ? w.trade_count_30d.toLocaleString() : '—'} />
+                </>
+              )}
+              <MetricTile label="Followers" value={(detail?.followerCount ?? w.follower_count ?? 0).toLocaleString()} />
+              <MetricTile label="Last active" value={timeAgo(w.last_active_at)} />
+              <MetricTile label="First seen" value={w.first_seen_at ? timeAgo(w.first_seen_at).replace('ago', 'old') : '—'} />
+              {custodial && (
+                <div className="col-span-2 text-[10px] text-slate-500 px-1">
+                  Custodial / flow wallet — realized PnL and win-rate are not applicable.
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Social / Arkham links */}
         {(w.x_handle || ark?.twitter || w.website || ark?.website) && (
@@ -221,7 +237,7 @@ export default function WhaleDetailDrawer({
                 href={`https://x.com/${(w.x_handle || ark?.twitter || '').replace(/^@/, '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs"
+                className="nl-btn-neon !px-3 !py-1.5 !text-xs flex items-center gap-1.5"
               >
                 <Twitter className="w-3.5 h-3.5" /> @{(w.x_handle || ark?.twitter)?.replace(/^@/, '')}
               </a>
@@ -231,7 +247,7 @@ export default function WhaleDetailDrawer({
                 href={w.website || ark?.website || '#'}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs"
+                className="nl-btn-neon !px-3 !py-1.5 !text-xs flex items-center gap-1.5"
               >
                 <Globe className="w-3.5 h-3.5" /> Website
               </a>
@@ -241,10 +257,7 @@ export default function WhaleDetailDrawer({
 
         {/* Actions */}
         <div className="px-5 pb-4 flex gap-2">
-          <button
-            onClick={onFollow}
-            className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#7C3AED] font-semibold text-sm hover:opacity-95"
-          >
+          <button onClick={onFollow} className="nl-btn-neon flex-1 !py-2.5 !text-sm">
             Follow / Copy Trade
           </button>
         </div>
@@ -315,7 +328,7 @@ function ActivityItem({ row, chain }: { row: ActivityRow; chain: string }) {
       href={txUrl(chain, row.tx_hash)}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-2 p-2.5 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 transition-colors"
+      className="flex items-center gap-2 p-2.5 nl-glass hover:bg-white/[0.04] transition-colors"
     >
       <div className={`w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center ${tone}`}>
         <Arrow className="w-3.5 h-3.5" />

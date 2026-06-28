@@ -71,10 +71,16 @@ export const POST = withTierGate('pro', async (
     // Phase 10 audit fix: DB columns are `chains_allowed` + `max_slippage_bps` (integer),
     // not the field names in the UI. Map here rather than asking the UI to know DB internals.
     const slippagePct = body.copy_rules.slippage_pct ?? null;
+    // CRITICAL: the copy engine keys off user_copy_rules.mode. copy-trade-monitor
+    // skips any rule whose mode is null/off/manual, and the webhook matcher reads
+    // the exact 'oneclick'/'auto_copy' values — so without writing mode here every
+    // rule created from the Follow modal was silently ignored by the live cron.
+    const canonicalMode = mode === 'auto' ? 'auto_copy' : 'oneclick';
     const ruleRow: Record<string, unknown> = {
       user_id: user.id,
       whale_address: address,
       chain: body.chain,
+      mode: canonicalMode,
       max_per_trade_usd: body.copy_rules.max_per_trade_usd ?? null,
       daily_cap_usd: body.copy_rules.daily_cap_usd ?? null,
       max_slippage_bps: slippagePct != null ? Math.round(slippagePct * 100) : null,

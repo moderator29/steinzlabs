@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { cacheWithFallback } from "@/lib/cache/redis";
 import { withTierGate } from "@/lib/subscriptions/apiTierGate";
 import { classifyAddress, entityTypeToLabel, canonicalAction, dbActionsForCanonical, type WhaleLabel } from "@/lib/whales/labels";
+import { normalizeAddress } from "@/lib/utils/addressNormalize";
 
 const VALID_LABELS: ReadonlySet<WhaleLabel> = new Set([
   'cex', 'mm', 'smart_money', 'bot', 'insider', 'whale', 'bridge', 'mev',
@@ -24,6 +25,11 @@ interface FeedRow {
   label: string | null;
   entity_type: string | null;
   whale_label: WhaleLabel;
+  // #8: behavioral metrics the feed actually enriches each row with — typed so
+  // they aren't silently dropped from the contract.
+  pnl_30d_usd?: number | null;
+  win_rate?: number | null;
+  avg_hold_hours?: number | null;
 }
 
 /**
@@ -143,7 +149,7 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
         avg_hold_hours: number | null;
       }>) {
         labels.set(
-          `${w.chain}:${w.address.toLowerCase()}`,
+          `${w.chain}:${normalizeAddress(w.address, w.chain)}`,
           {
             label: w.label,
             entity_type: w.entity_type,
@@ -155,7 +161,7 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
       }
 
       const enriched: FeedRow[] = rows.map((r) => {
-        const meta = labels.get(`${r.chain}:${r.whale_address.toLowerCase()}`) ?? null;
+        const meta = labels.get(`${r.chain}:${normalizeAddress(r.whale_address, r.chain)}`) ?? null;
         const entity_type = meta?.entity_type ?? null;
         let label = meta?.label ?? null;
 

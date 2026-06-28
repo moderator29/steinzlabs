@@ -26,8 +26,9 @@
  *   GET /api/cron/whale-backfill-pnl?dryRun=1&limit=3   (admin preview)
  */
 import { NextRequest } from 'next/server';
-import { verifyCron, cronResponse, logCronExecution, getFollowedWhaleAddresses, ilikeAnyFilter } from '../_shared';
+import { verifyCron, cronResponse, logCronExecution } from '../_shared';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { addressesEqual, normalizeAddress } from '@/lib/utils/addressNormalize';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -75,8 +76,10 @@ type WhaleArchetype = 'accumulator' | 'distributor' | 'sniper' | 'high-win-rate'
  *   - Self-transfers (addr → addr on same wallet) are skipped.
  *   - Transfers without historicalUSD are skipped — can't price them.
  */
-function calculatePnl(whaleAddress: string, transfers: TransferLite[], windowMs: number, now: number): { pnl: number; sells: number; profitableSells: number; holdHoursSum: number; holdHoursCount: number } {
-  const addr = whaleAddress.toLowerCase();
+function calculatePnl(whaleAddress: string, transfers: TransferLite[], windowMs: number, now: number, chain: string): { pnl: number; sells: number; profitableSells: number; holdHoursSum: number; holdHoursCount: number } {
+  // Chain-aware address compares (CLAUDE.md): lowercasing corrupts the 86+
+  // case-sensitive Solana base58 whales, flipping buy/sell direction and
+  // dropping real self-transfer detection.
   const cutoff = now - windowMs;
   const windowTx = transfers.filter((t) => t.timestampMs >= cutoff && t.valueUSD > 0);
 
@@ -84,7 +87,7 @@ function calculatePnl(whaleAddress: string, transfers: TransferLite[], windowMs:
   const byToken = new Map<string, TransferLite[]>();
   for (const t of windowTx) {
     const key = t.tokenAddress || t.tokenSymbol || 'native';
-    if (t.from.toLowerCase() === addr && t.to.toLowerCase() === addr) continue; // self-transfer
+    if (addressesEqual(t.from, whaleAddress, chain) && addressesEqual(t.to, whaleAddress, chain)) continue; // self-transfer
     if (!byToken.has(key)) byToken.set(key, []);
     byToken.get(key)!.push(t);
   }
@@ -103,7 +106,7 @@ function calculatePnl(whaleAddress: string, transfers: TransferLite[], windowMs:
     tokenTx.sort((a, b) => a.timestampMs - b.timestampMs);
     const lots: Array<{ amount: number; pricePerUnit: number; acquiredAt: number }> = [];
     for (const t of tokenTx) {
-      const isBuy = t.to.toLowerCase() === addr;
+      const isBuy = addressesEqual(t.to, whaleAddress, chain);
       const unitPrice = t.tokenAmount > 0 ? t.valueUSD / t.tokenAmount : 0;
       if (unitPrice <= 0) continue;
 
@@ -142,6 +145,30 @@ function calculatePnl(whaleAddress: string, transfers: TransferLite[], windowMs:
   };
 }
 
+/**
+ * Composite whale_score (0..100) derived from the real metrics this cron
+ * already computes. The old whale-score-populator RPC reads whale_activity
+ * (dead/ethereum-only for 45 days), so scores went stale; this rides the
+ * working Arkham-backed data path instead. Returns null when there isn't
+ * enough signal, so a curated/seeded score is never flattened to a default.
+ */
+function computeWhaleScore(
+  m: { win_rate: number | null; pnl_30d_usd: number; trade_count_30d: number },
+  portfolio: number | null,
+): number | null {
+  const hasSignal = m.win_rate != null || (m.trade_count_30d > 0 && m.pnl_30d_usd !== 0);
+  if (!hasSignal) return null;
+  let score = 50;
+  if (m.win_rate != null) score += (m.win_rate - 50) * 0.4; // win_rate is 0..100 → ±20
+  const pnl = m.pnl_30d_usd ?? 0;
+  if (pnl > 0) score += Math.min(20, Math.log10(pnl + 1) * 5);
+  else if (pnl < 0) score -= Math.min(20, Math.log10(-pnl + 1) * 5);
+  score += Math.min(10, (m.trade_count_30d ?? 0) / 5);
+  const port = portfolio ?? 0;
+  if (port > 0) score += Math.min(10, Math.log10(port) * 2);
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
 function deriveArchetype(pnl: number, winRate: number | null, holdHours: number | null): WhaleArchetype | null {
   const wr = winRate ?? 0;
   const hold = holdHours ?? 0;
@@ -170,7 +197,7 @@ async function fetchTransfers(address: string, chain: string): Promise<TransferL
         from: t.from?.address || '',
         to: t.to?.address || '',
         timestampMs: Number.isFinite(ts) ? ts : 0,
-        tokenAddress: (t.token?.address || '').toLowerCase(),
+        tokenAddress: normalizeAddress(t.token?.address || '', chain),
         tokenSymbol: t.token?.symbol || 'NATIVE',
         tokenAmount: parseFloat(t.value || t.token?.amount || '0'),
         valueUSD: parseFloat(t.valueUSD || '0'),
@@ -187,8 +214,8 @@ async function computeMetrics(address: string, chain: string): Promise<PnlMetric
 
   const windowTx30 = transfers.filter((t) => t.timestampMs >= now - THIRTY_D);
 
-  const p30 = calculatePnl(address, transfers, THIRTY_D, now);
-  const p7 = calculatePnl(address, transfers, SEVEN_D, now);
+  const p30 = calculatePnl(address, transfers, THIRTY_D, now, chain);
+  const p7 = calculatePnl(address, transfers, SEVEN_D, now, chain);
 
   const winRate = p30.sells >= 3 ? Math.round((p30.profitableSells / p30.sells) * 100) : null;
   const lastActiveMs = transfers.length > 0 ? Math.max(...transfers.map((t) => t.timestampMs)) : 0;
@@ -240,21 +267,17 @@ export async function GET(request: NextRequest) {
 
   const supabase = getSupabaseAdmin();
 
-  // Demand gate: only backfill PnL (Arkham/Alchemy spend) for whales someone
-  // follows, so cost scales with real demand instead of the seeded whale set.
-  const followed = await getFollowedWhaleAddresses();
-  if (followed.length === 0) {
-    return cronResponse('whale-backfill-pnl', startedAt, { processed: 0, skipped: 'no-followed-whales' });
-  }
-
-  // Prefer whales never backfilled OR stale >24h.
+  // Backfill PnL for ALL active whales, not just followed ones. The directory
+  // and the feed badges render the whole whales table, so the old followed-only
+  // gate (just 4 follows) left ~440 whales permanently showing "—" for
+  // pnl_30d/win_rate. We walk the stalest whales in small batches each tick so
+  // the full set converges without a cost spike.
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data: whales, error } = await supabase
     .from('whales')
     .select('id, address, chain, last_active_at')
     .eq('is_active', true)
     .or(`last_active_at.is.null,last_active_at.lt.${twentyFourHoursAgo}`)
-    .or(ilikeAnyFilter('address', followed))
     .order('last_active_at', { ascending: true, nullsFirst: true })
     .limit(limit);
 
@@ -264,6 +287,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (!whales || whales.length === 0) {
+    await logCronExecution('whale-backfill-pnl', 'success', Date.now() - startedAt, undefined, 0);
     return cronResponse('whale-backfill-pnl', startedAt, { processed: 0, noWork: true });
   }
 
@@ -278,6 +302,7 @@ export async function GET(request: NextRequest) {
         computePortfolioValue(w.address, chain),
       ]);
 
+      const score = computeWhaleScore(metrics, portfolio);
       updates.push({
         id: w.id,
         fields: {
@@ -288,6 +313,9 @@ export async function GET(request: NextRequest) {
           last_active_at: metrics.last_active_at,
           avg_hold_hours: metrics.avg_hold_hours,
           archetype: metrics.archetype,
+          // Refresh whale_score from real metrics (decoupled from the dead
+          // whale_activity RPC); only when there's signal, else leave as-is.
+          ...(score !== null ? { whale_score: score } : {}),
           // Only overwrite portfolio_value_usd if Arkham returned something;
           // otherwise leave existing value alone.
           ...(portfolio !== null ? { portfolio_value_usd: portfolio } : {}),

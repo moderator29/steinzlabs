@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { executeTrade } from "@/lib/trading/relayer";
 import { sizeCopySell } from "@/lib/trading/copyTradeSell";
 import { mapWithConcurrency } from "@/lib/utils/concurrency";
+import { normalizeAddress } from "@/lib/utils/addressNormalize";
 
 // Fan-out concurrency: each match issues GoPlus + multi-aggregator quote +
 // pending_trades insert + notification. 10 is the empirical sweet spot — high
@@ -177,7 +178,7 @@ export async function GET(request: NextRequest) {
       if (rule.chains_allowed && rule.chains_allowed.length > 0 && !rule.chains_allowed.includes(act.chain)) {
         ruleBlocked++; continue;
       }
-      if (rule.tokens_blacklist && rule.tokens_blacklist.map((t) => t.toLowerCase()).includes(act.token_address.toLowerCase())) {
+      if (rule.tokens_blacklist && rule.tokens_blacklist.map((t) => normalizeAddress(t, act.chain)).includes(normalizeAddress(act.token_address, act.chain))) {
         ruleBlocked++; continue;
       }
 
@@ -239,20 +240,24 @@ export async function GET(request: NextRequest) {
       amountIn = String(sizeUsd);
     }
 
-    const { data: inserted } = await admin
-      .from("user_copy_trades")
-      .insert({
-        user_id: follower.user_id,
-        source_whale: act.whale_address,
-        source_tx_hash: act.tx_hash,
-        token_address: act.token_address,
-        token_symbol: act.token_symbol,
-        action: isSell ? "sell" : "buy",
-        amount_usd: isSell ? null : sizeUsd,
-        status: "pending",
-      })
-      .select("id")
-      .single();
+    // #13: atomic per-user cap claim (replaces a bare insert; the cron's
+    // in-tick spentMap can't see concurrent webhook/manual fan-outs).
+    const { data: claimedId } = await admin.rpc("claim_copy_trade", {
+      p_user: follower.user_id,
+      p_daily_cap: rule.daily_cap_usd ?? null,
+      p_amount: isSell ? null : sizeUsd,
+      p_source_whale: act.whale_address,
+      p_source_tx: act.tx_hash,
+      p_chain: act.chain,
+      p_token_address: act.token_address,
+      p_token_symbol: act.token_symbol,
+      p_action: isSell ? "sell" : "buy",
+      p_security_score: null,
+    });
+    if (!claimedId) {
+      return { outcome: "blocked" as const, isSell, userId: follower.user_id, sizeUsd };
+    }
+    const inserted = { id: claimedId as string };
 
     const result = await executeTrade({
       userId: follower.user_id,

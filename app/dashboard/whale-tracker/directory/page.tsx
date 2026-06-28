@@ -108,6 +108,9 @@ const VOLUME_PILLS = [
   { id: 1000000, label: '>$1M' },
 ];
 
+// Custodial entity types where realized PnL / win-rate don't apply.
+const CUSTODIAL_ENTITIES = new Set(['exchange', 'cex', 'bridge']);
+
 function fmtUsd(v: string | number | null): string {
   if (v === null || v === undefined) return '—';
   const n = typeof v === 'number' ? v : parseFloat(v);
@@ -247,18 +250,10 @@ export default function WhaleDirectoryPage() {
             <p className="text-[10px] text-slate-500">On-chain whale intelligence</p>
           </div>
           <div className="ms-auto flex items-center gap-2">
-            <Link
-              href="/dashboard/whale-tracker"
-              className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300"
-            >
+            <Link href="/dashboard/whale-tracker" className="nl-btn-neon !px-3 !py-1.5 !text-[11px]">
               Live Feed
             </Link>
-            {/* Bug §2.12: was full-width "Submit Whale" with gradient — now a
-                small, dark neon-blue pill that just says "Submit". */}
-            <Link
-              href="/dashboard/whale-tracker/submit"
-              className="text-[11px] px-2.5 py-1 rounded-md bg-[#0066FF] hover:bg-[#0052CC] text-white font-semibold shadow-[0_0_8px_rgba(0,102,255,0.4)]"
-            >
+            <Link href="/dashboard/whale-tracker/submit" className="nl-btn-neon !px-3 !py-1.5 !text-[11px]">
               Submit
             </Link>
           </div>
@@ -268,7 +263,7 @@ export default function WhaleDirectoryPage() {
         <div className="max-w-7xl mx-auto px-4 pb-3 space-y-2">
           {/* Search + sort */}
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex-1 min-w-[220px] flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+            <div className="flex-1 min-w-[220px] flex items-center gap-2 nl-glass rounded-lg px-3 py-2">
               <Search className="w-3.5 h-3.5 text-slate-500" />
               <input
                 value={q}
@@ -283,13 +278,13 @@ export default function WhaleDirectoryPage() {
             <select
               value={sort}
               onChange={(e) => { setSort(e.target.value); setOffset(0); }}
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none"
+              className="nl-glass rounded-lg px-3 py-2 text-xs outline-none"
             >
               {SORT_OPTIONS.map((s) => (
                 <option key={s.id} value={s.id} className="bg-[#05081E]">{s.label}</option>
               ))}
             </select>
-            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs">
+            <div className="flex items-center gap-2 nl-glass rounded-lg px-3 py-2 text-xs">
               <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
               <label className="text-slate-400">Min score</label>
               <input
@@ -372,7 +367,7 @@ export default function WhaleDirectoryPage() {
                 <p className="text-slate-500 text-sm mb-3">No whale matches <code className="px-1 py-0.5 rounded bg-slate-900 text-[11px] font-mono">{q.slice(0, 10)}…</code> in our directory.</p>
                 <a
                   href={`/dashboard/whale-tracker/submit?address=${encodeURIComponent(q.trim())}`}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0066FF] hover:bg-[#0066FF]/90 text-white text-xs font-semibold"
+                  className="nl-btn-neon !px-4 !py-2 !text-xs"
                 >
                   Submit this whale
                 </a>
@@ -400,7 +395,7 @@ export default function WhaleDirectoryPage() {
             <button
               disabled={offset === 0}
               onClick={() => setOffset(Math.max(0, offset - 24))}
-              className="px-3 py-1.5 rounded-lg bg-white/5 text-xs disabled:opacity-40"
+              className="nl-btn-neon !px-3 !py-1.5 !text-xs disabled:opacity-40"
             >
               Prev
             </button>
@@ -408,7 +403,7 @@ export default function WhaleDirectoryPage() {
             <button
               disabled={offset + 24 >= total}
               onClick={() => setOffset(offset + 24)}
-              className="px-3 py-1.5 rounded-lg bg-white/5 text-xs disabled:opacity-40"
+              className="nl-btn-neon !px-3 !py-1.5 !text-xs disabled:opacity-40"
             >
               Next
             </button>
@@ -436,7 +431,7 @@ export default function WhaleDirectoryPage() {
 
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-white/[0.02] border border-white/10 rounded-xl p-3">
+    <div className="nl-glass rounded-xl p-3">
       <div className="text-[10px] uppercase tracking-wider text-slate-500">{label}</div>
       <div className="text-base font-bold font-mono mt-0.5">{value}</div>
     </div>
@@ -450,7 +445,7 @@ function WhaleCard({ row, onOpen, onFollow }: { row: WhaleRow; onOpen: () => voi
   const pnlPositive = pnl >= 0;
 
   return (
-    <div className="group bg-white/[0.03] hover:bg-white/[0.05] border border-white/10 hover:border-white/20 rounded-xl p-5 transition-all cursor-pointer" onClick={onOpen}>
+    <div className="group nl-glass nl-glass--interactive rounded-xl p-5 cursor-pointer" onClick={onOpen}>
       <div className="flex items-start gap-3">
         <WhaleAvatar label={row.label} address={row.address} size={40} />
         <div className="flex-1 min-w-0">
@@ -472,32 +467,48 @@ function WhaleCard({ row, onOpen, onFollow }: { row: WhaleRow; onOpen: () => voi
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mt-4">
-        <Metric label="Portfolio" value={fmtUsd(row.portfolio_value_usd)} />
-        <Metric
-          label="PnL 30d"
-          value={fmtUsd(row.pnl_30d_usd)}
-          Icon={pnl !== 0 ? (pnlPositive ? TrendingUp : TrendingDown) : undefined}
-          tone={pnl > 0 ? 'green' : pnl < 0 ? 'red' : 'neutral'}
-        />
-        <Metric label="Win rate" value={row.win_rate ? `${Math.round(Number(row.win_rate))}%` : '—'} />
-      </div>
-
-      <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-white/5">
-        <div className="flex items-center gap-1 text-[10px] text-slate-500 min-w-0">
-          <Users className="w-3 h-3 shrink-0" />
-          <span className="truncate">{row.follower_count || 0} followers</span>
+      {CUSTODIAL_ENTITIES.has((row.entity_type || '').toLowerCase()) ? (
+        // Exchange / bridge / CEX wallets are custodial flow accounts — realized
+        // PnL and win-rate are meaningless for them, so show holdings + an honest
+        // note instead of a row of "—".
+        <div className="mt-4">
+          <Metric label="Holdings" value={fmtUsd(row.portfolio_value_usd)} />
+          <p className="text-[9px] text-slate-500 mt-1.5">Custodial wallet — PnL / win-rate not applicable</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+      ) : (
+        <div className="grid grid-cols-3 gap-2 mt-4">
+          <Metric label="Portfolio" value={fmtUsd(row.portfolio_value_usd)} />
+          <Metric
+            label="PnL 30d"
+            value={fmtUsd(row.pnl_30d_usd)}
+            Icon={pnl !== 0 ? (pnlPositive ? TrendingUp : TrendingDown) : undefined}
+            tone={pnl > 0 ? 'green' : pnl < 0 ? 'red' : 'neutral'}
+          />
+          <Metric label="Win rate" value={row.win_rate ? `${Math.round(Number(row.win_rate))}%` : '—'} />
+        </div>
+      )}
+
+      {/* Footer — followers / Follow / View each in its own contained chip,
+          fixed heights so the Follow button never overlaps View. */}
+      <div className="flex items-center gap-2 mt-4 pt-3 border-t border-white/5">
+        <div className="inline-flex items-center gap-1 h-7 px-2 rounded-md bg-white/[0.04] border border-white/10 text-[10px] text-slate-400 min-w-0">
+          <Users className="w-3 h-3 shrink-0" />
+          <span className="truncate tabular-nums">{(row.follower_count || 0).toLocaleString()}</span>
+        </div>
+        <div className="ms-auto flex items-center gap-2 shrink-0">
           <button
             onClick={(e) => { e.stopPropagation(); onFollow(); }}
-            className="px-2 py-0.5 rounded-md bg-[#0066FF]/15 hover:bg-[#0066FF]/25 text-[#8FA3FF] text-[10px] font-semibold"
+            className="inline-flex items-center justify-center h-7 px-3 rounded-md bg-[#0066FF]/15 hover:bg-[#0066FF]/25 border border-[#0066FF]/35 text-[#8FA3FF] text-[11px] font-semibold transition-colors"
           >
             Follow
           </button>
-          <span className="text-[10px] text-slate-500 group-hover:text-white flex items-center gap-0.5">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onOpen(); }}
+            className="inline-flex items-center justify-center gap-0.5 h-7 px-2.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-[11px] text-slate-300 group-hover:text-white transition-colors"
+          >
             View <ChevronRight className="w-3 h-3" />
-          </span>
+          </button>
         </div>
       </div>
     </div>

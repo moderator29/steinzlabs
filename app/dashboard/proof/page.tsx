@@ -140,20 +140,48 @@ function SecurityPanel({ event }: { event: ProofEvent }) {
   const chain = (event.chain || 'ethereum').toLowerCase();
   const [data, setData] = useState<SecurityData | null>(null);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState(false);
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
     if (!tokenAddress) { setDone(true); return; }
     let cancelled = false;
+    setDone(false); setError(false);
     (async () => {
       try {
         const res = await fetch(`/api/context-feed/security?chain=${encodeURIComponent(chain)}&address=${encodeURIComponent(tokenAddress)}`);
         if (res.ok) { const j = await res.json(); if (!cancelled) setData(j); }
-      } catch { /* silent */ } finally { if (!cancelled) setDone(true); }
+        else if (!cancelled) setError(true);
+      } catch { if (!cancelled) setError(true); } finally { if (!cancelled) setDone(true); }
     })();
     return () => { cancelled = true; };
-  }, [tokenAddress, chain]);
+  }, [tokenAddress, chain, reload]);
 
-  if (!tokenAddress || (done && !data)) return null;
+  if (!tokenAddress) return null;
+  // #26/#39: surface a retry instead of silently disappearing when the scan
+  // fails (GoPlus 429 / unauthorized key / network), like the sibling cards.
+  if (done && !data) {
+    return (
+      <div className="nl-glass rounded-xl p-4 border border-white/10">
+        <div className="flex items-center gap-2">
+          <Shield className="w-4 h-4 text-[#0066FF]" />
+          <h3 className="font-bold text-sm">Shadow Guardian</h3>
+          {error && (
+            <button
+              type="button"
+              onClick={() => setReload((n) => n + 1)}
+              className="ms-auto nl-btn-neon !px-2.5 !py-1 !text-[10px]"
+            >
+              Retry
+            </button>
+          )}
+        </div>
+        <p className="text-[11px] text-gray-500 mt-2">
+          {error ? 'Safety scan unavailable right now.' : 'No safety data for this token.'}
+        </p>
+      </div>
+    );
+  }
 
   const levelColor = (l?: string) => l === 'SAFE' ? '#10B981' : l === 'DANGER' ? '#EF4444' : '#F59E0B';
   const lpPct = data?.lpLockedPct != null ? Math.round(data.lpLockedPct * 100) : null;

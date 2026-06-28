@@ -136,7 +136,7 @@ export default function WhaleActivityChart({ activity, height = 220, className =
   const usable = activity.filter(a => a.timestamp && typeof a.value_usd === 'number');
   if (usable.length < 2) {
     return (
-      <div className={`flex items-center justify-center text-xs text-gray-500 border border-white/10 rounded-xl ${className}`}
+      <div className={`flex items-center justify-center text-xs text-gray-500 nl-glass rounded-xl ${className}`}
            style={{ height }}>
         Not enough activity to chart yet — needs at least 2 trades with USD value.
       </div>
@@ -149,7 +149,7 @@ export default function WhaleActivityChart({ activity, height = 220, className =
     <div
       role="img"
       aria-label={`Cumulative whale activity: $${totalUsd.toFixed(0)} USD across ${usable.length} recent trades`}
-      className={`rounded-xl border border-white/10 overflow-hidden ${className}`}
+      className={`rounded-xl nl-glass overflow-hidden ${className}`}
     >
       <div ref={containerRef} style={{ width: '100%', height }} />
       <div className="px-3 py-1.5 text-[10px] text-gray-500 border-t border-white/10 bg-black/20">

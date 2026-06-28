@@ -66,6 +66,9 @@ export interface TokenSecurityResult {
   creatorIsTopHolder: boolean;
   /** Creator's own holdings as a fraction of supply (0..1). */
   creatorHoldingPct: number;
+  /** LARGEST single holder's share of supply (0..1) — the real concentration
+   *  signal. Distinct from creatorHoldingPct, which is only the dev wallet. */
+  topHolderPct: number;
   holderCount: number;
   lpHolders: any[];
   trustScore: number;
@@ -170,6 +173,7 @@ function parseSolanaTokenSecurity(t: Record<string, unknown>): TokenSecurityResu
     lpHolders: Array.isArray(t.lp_holders) ? t.lp_holders : [],
     creatorIsTopHolder: false,
     creatorHoldingPct: 0,
+    topHolderPct: holders.reduce((m: number, h: Record<string, unknown>) => Math.max(m, parseFloat(String(h.percent ?? '0')) || 0), 0),
     trustScore: score,
     safetyLevel,
     safetyColor,
@@ -282,6 +286,9 @@ function parseTokenSecurity(t: any): TokenSecurityResult {
     ownerAddress: t.owner_address || '',
     creatorIsTopHolder,
     creatorHoldingPct,
+    // Largest single holder's share (0..1) — the true concentration metric,
+    // computed from the full holders list rather than just the creator wallet.
+    topHolderPct: topHolders.reduce((m, h) => Math.max(m, parseFloat(String(h.percent ?? '0')) || 0), 0),
     holderCount: parseInt(t.holder_count || '0'),
     lpHolders: t.lp_holders || [],
     trustScore: score,

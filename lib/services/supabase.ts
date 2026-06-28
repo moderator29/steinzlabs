@@ -267,36 +267,28 @@ export async function updateSniperExecution(
 
 // ─── Whale Watchlist ──────────────────────────────────────────────────────────
 
+// Reads from user_whale_follows — the one canonical follow/watchlist table.
+// (Was a separate whale_watchlist table, now dropped; the two write helpers
+// here had no callers, so the whale-tracker UI's own watchlist API stays the
+// single source of truth.)
 export async function getWhaleWatchlist(userId: string): Promise<WhaleWatchlist[]> {
   const db = getSupabaseAdmin();
   const { data, error } = await db
-    .from('whale_watchlist')
-    .select('*')
+    .from('user_whale_follows')
+    .select('id, user_id, whale_address, chain, label, alert_threshold_usd, created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
   if (error || !data) return [];
-  return data as WhaleWatchlist[];
-}
-
-export async function addToWatchlist(params: Omit<WhaleWatchlist, 'id' | 'created_at'>): Promise<WhaleWatchlist | null> {
-  const db = getSupabaseAdmin();
-  const { data, error } = await db
-    .from('whale_watchlist')
-    .insert({ ...params, created_at: new Date().toISOString() })
-    .select()
-    .single();
-  if (error || !data) return null;
-  return data as WhaleWatchlist;
-}
-
-export async function removeFromWatchlist(userId: string, watchlistId: string): Promise<boolean> {
-  const db = getSupabaseAdmin();
-  const { error } = await db
-    .from('whale_watchlist')
-    .delete()
-    .eq('id', watchlistId)
-    .eq('user_id', userId);
-  return !error;
+  return (data as Array<{ id: string; user_id: string; whale_address: string; chain: string; label: string | null; alert_threshold_usd: number | null; created_at: string }>)
+    .map((r) => ({
+      id: r.id,
+      user_id: r.user_id,
+      address: r.whale_address,
+      chain: r.chain,
+      label: r.label ?? undefined,
+      alert_threshold_usd: Number(r.alert_threshold_usd ?? 0),
+      created_at: r.created_at,
+    }));
 }
 
 // ─── Admin: Fee Revenue ───────────────────────────────────────────────────────

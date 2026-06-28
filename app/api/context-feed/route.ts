@@ -14,7 +14,7 @@ import {
 import { getTokenSecurity } from '@/lib/services/goplus';
 import { getNewEvmPairs } from '@/lib/services/geckoterminal';
 import { getTrendingByVolume as birdeyeTrendingByVolume } from '@/lib/services/birdeye';
-import { normalizeAddress } from '@/lib/utils/addressNormalize';
+import { normalizeAddress, isSolanaAddress } from '@/lib/utils/addressNormalize';
 import { getTrendingTokens as lcTrendingTokens, getSocialVelocity as lcSocialVelocity } from '@/lib/services/lunarcrush';
 
 async function buildPersonalContext(request: Request): Promise<PersonalContext | undefined> {
@@ -472,15 +472,21 @@ async function getKnownWhales(): Promise<Map<string, KnownWhale>> {
 function applySmartMoneyLabels(events: WhaleEvent[], whales: Map<string, KnownWhale>): WhaleEvent[] {
   if (whales.size === 0) return events;
   for (const e of events) {
-    // Normalize by the EVENT's own chain, not a hardcoded 'ethereum'. The whale
-    // keys in `whales` are normalized per their real chain (getKnownWhales), so
-    // lowercasing a Solana event address here would never match a case-sensitive
-    // Solana whale key — silently disabling Solana smart-money labeling.
-    const fromKey = e.from ? normalizeAddress(e.from, e.chain) : '';
-    const toKey = e.to ? normalizeAddress(e.to, e.chain) : '';
-    const hit = (fromKey && whales.get(fromKey)) || (toKey && whales.get(toKey));
-    if (!hit) continue;
-    const isBuy = !!(toKey && whales.get(toKey));
+    // Detect chain from address shape so case-sensitive Solana base58 keys
+    // match the per-chain keys getKnownWhales builds (hardcoding 'ethereum'
+    // lowercased Solana addresses and they could never match — 120 Solana
+    // whales, 27% of the table, were invisible to smart-money labeling).
+    const fromKey = e.from ? normalizeAddress(e.from, isSolanaAddress(e.from) ? 'solana' : 'ethereum') : '';
+    const toKey = e.to ? normalizeAddress(e.to, isSolanaAddress(e.to) ? 'solana' : 'ethereum') : '';
+    const fromHit = fromKey ? whales.get(fromKey) : undefined;
+    const toHit = toKey ? whales.get(toKey) : undefined;
+    if (!fromHit && !toHit) continue;
+    // #20: when BOTH ends are known whales, the label must describe the ACTOR
+    // of the action — a buy (whale on the receiving end) names the receiver, a
+    // sell names the sender. Previously the sender's name was paired with a
+    // "buy" verb whenever both matched.
+    const isBuy = !!toHit;
+    const hit = isBuy ? toHit! : fromHit!;
     e.type = isBuy ? 'smart_money_buy' : 'whale_sell';
     e.platform = 'Smart Money';
     e.trustScore = Math.max(e.trustScore, 90);

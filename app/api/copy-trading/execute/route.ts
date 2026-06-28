@@ -9,6 +9,7 @@ import { sizeCopySell } from "@/lib/trading/copyTradeSell";
 import { checkTierServer } from "@/lib/subscriptions/serverTierCheck";
 import { logAdminAction } from "@/lib/admin/auditLog";
 import { guardRoute } from "@/lib/api/guardRoute";
+import { normalizeAddress } from "@/lib/utils/addressNormalize";
 
 export const runtime = "nodejs";
 
@@ -136,7 +137,7 @@ export async function POST(request: NextRequest) {
       await recordBlocked("blocked_rule", "exceeds_per_trade_cap");
       return NextResponse.json({ error: "Exceeds per-trade cap" }, { status: 403 });
     }
-    if (Array.isArray(rule.tokens_blacklist) && rule.tokens_blacklist.includes(body.token_address.toLowerCase())) {
+    if (Array.isArray(rule.tokens_blacklist) && rule.tokens_blacklist.map((t: string) => normalizeAddress(t, body.chain)).includes(normalizeAddress(body.token_address, body.chain))) {
       await recordBlocked("blocked_rule", "token_blacklisted");
       return NextResponse.json({ error: "Token is blacklisted" }, { status: 403 });
     }
@@ -190,32 +191,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Security check failed", score, reasons }, { status: 403 });
   }
 
-  // 4. Insert pending user_copy_trades row (relayer will link the pending_trade_id
-  //    via source_order_id; receipt-reconciliation cron writes back actuals).
+  // 4. Atomically claim the pending row under the per-user cap lock (#13). This
+  //    replaces a plain insert + the racy app-level cap check: claim_copy_trade
+  //    re-checks the rolling 24h spend while holding an advisory lock, so the
+  //    manual path can't overspend concurrently with the cron / webhook paths.
   const admin = getSupabaseAdmin();
-  const { data: inserted, error: insertErr } = await admin
-    .from("user_copy_trades")
-    .insert({
-      user_id: user.id,
-      source_whale: body.source_whale,
-      source_tx_hash: body.source_tx_hash,
-      chain: body.chain,
-      token_address: body.token_address,
-      token_symbol: body.token_symbol ?? null,
-      action: body.action,
-      amount_usd: body.action === "buy" ? body.amount_usd : null,
-      status: "pending",
-      security_score: score,
-    })
-    .select("id")
-    .single();
-
-  if (insertErr || !inserted) {
-    Sentry.captureException(insertErr ?? new Error("user_copy_trades insert returned no row"), {
-      tags: { module: "copy-trade.execute", user_id: user.id },
-    });
-    return NextResponse.json({ error: insertErr?.message ?? "Could not record trade" }, { status: 500 });
+  const { data: claimedId, error: claimErr } = await admin.rpc("claim_copy_trade", {
+    p_user: user.id,
+    p_daily_cap: rule.daily_cap_usd ?? null,
+    p_amount: body.action === "buy" ? body.amount_usd : null,
+    p_source_whale: body.source_whale,
+    p_source_tx: body.source_tx_hash,
+    p_chain: body.chain,
+    p_token_address: body.token_address,
+    p_token_symbol: body.token_symbol ?? null,
+    p_action: body.action,
+    p_security_score: score,
+  });
+  if (claimErr) {
+    Sentry.captureException(claimErr, { tags: { module: "copy-trade.execute", user_id: user.id } });
+    return NextResponse.json({ error: claimErr.message ?? "Could not record trade" }, { status: 500 });
   }
+  if (!claimedId) {
+    await recordBlocked("blocked_rule", "daily_cap_reached", score);
+    return NextResponse.json({ error: "Daily cap reached" }, { status: 403 });
+  }
+  const inserted = { id: claimedId as string };
 
   // 5. Build trade intent based on action direction.
   const usdcAddr = usdcForChain(body.chain);

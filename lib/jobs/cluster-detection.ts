@@ -119,9 +119,10 @@ export async function runClusterDetectionJob(tokenAddress?: string): Promise<Clu
     const holders = await getBirdeyeHolders(tokenAddress, 50, 'solana');
     addresses = holders.map(h => h.owner).filter(Boolean);
   } else {
-    // Pull known whale wallets from Supabase
+    // Pull known whale wallets from the canonical `whales` table (was
+    // smart_money_wallets, which is 0 rows → cluster detection had no seed).
     const supabase = getSupabase();
-    const { data } = await supabase.from('smart_money_wallets').select('address').limit(50);
+    const { data } = await supabase.from('whales').select('address').eq('is_active', true).limit(50);
     addresses = (data ?? []).map((r: { address: string }) => r.address).filter(Boolean);
   }
 

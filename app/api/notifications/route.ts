@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { getTopTokens, getTrendingTokens } from '@/lib/services/coingecko';
 import { guardRoute } from '@/lib/api/guardRoute';
+import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 
 export interface NotificationItem {
   id: string;
@@ -151,8 +152,12 @@ async function fetchSupabaseNotifications(userId?: string): Promise<Notification
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId') || undefined;
+    // Security (IDOR fix): derive the user from the authenticated session.
+    // Previously this trusted a client-supplied ?userId and read it back with
+    // the service role, so anyone could enumerate any user's notifications.
+    const guard = await guardRoute(req, { rate: 'med', allowAnon: true });
+    if (!guard.ok) return guard.response;
+    const userId = guard.user?.id;
     let supabaseNotifications: NotificationItem[] = [];
     if (userId) supabaseNotifications = await fetchSupabaseNotifications(userId);
 
@@ -161,7 +166,8 @@ export async function GET(req: NextRequest) {
         ? [...supabaseNotifications, ...cache.data].slice(0, 50)
         : cache.data;
       return NextResponse.json({ notifications: merged, source: supabaseNotifications.length > 0 ? 'supabase+market' : 'cache' }, {
-        headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60' },
+        // Per-user data must never sit in a shared cache.
+        headers: { 'Cache-Control': supabaseNotifications.length > 0 ? 'private, no-store' : 'public, s-maxage=30, stale-while-revalidate=60' },
       });
     }
 
@@ -182,7 +188,7 @@ export async function GET(req: NextRequest) {
       : marketNotifications;
 
     return NextResponse.json({ notifications, source: supabaseNotifications.length > 0 ? 'supabase+market' : 'market' }, {
-      headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60' },
+      headers: { 'Cache-Control': supabaseNotifications.length > 0 ? 'private, no-store' : 'public, s-maxage=30, stale-while-revalidate=60' },
     });
   } catch {
     return NextResponse.json({ notifications: [], error: 'Failed to fetch notifications' }, { status: 500 });
@@ -196,7 +202,26 @@ export async function POST(req: NextRequest) {
   if (!guard.ok) return guard.response;
   try {
     const body = await req.json();
-    const { type, title, message, metadata, userEmail, eventId } = body;
+    const { type, metadata, userEmail, eventId } = body;
+    // Security (#40): never trust a client-supplied user_id. A public caller may
+    // only write a notification to its OWN session user; a trusted server caller
+    // (cron/webhook fanout) authenticates with the CRON_SECRET bearer and may
+    // target an explicit userId. Anonymous callers are rejected — previously
+    // anyone could inject a fully-crafted notification into any user's feed.
+    const internalSecret = process.env.CRON_SECRET;
+    const authz = req.headers.get('authorization') || '';
+    const isInternal = !!internalSecret && authz === `Bearer ${internalSecret}`;
+    let targetUserId: string | null;
+    if (isInternal) {
+      targetUserId = body.userId || null;
+    } else {
+      const sessionUser = await getAuthenticatedUser(req);
+      if (!sessionUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      targetUserId = sessionUser.id;
+    }
+    // Clamp attacker-influenced strings so a crafted payload can't bloat the row.
+    const title = typeof body.title === 'string' ? body.title.slice(0, 200) : '';
+    const message = typeof body.message === 'string' ? body.message.slice(0, 1000) : '';
     if (!type || !title || !message) {
       return NextResponse.json({ error: 'Missing required fields: type, title, message' }, { status: 400 });
     }
@@ -214,12 +239,12 @@ export async function POST(req: NextRequest) {
         // Idempotency: if caller passes an eventId, fold it into metadata.event_id
         // and skip insert when the same (user_id, event_id) has been seen in the
         // last hour. Prevents duplicate push/email/telegram fanout on retry.
-        if (eventId && body.userId) {
+        if (eventId && targetUserId) {
           const sinceIso = new Date(Date.now() - 3_600_000).toISOString();
           const { data: existing } = await adminClient
             .from('notifications')
             .select('id')
-            .eq('user_id', body.userId)
+            .eq('user_id', targetUserId)
             .gte('created_at', sinceIso)
             .contains('metadata', { event_id: String(eventId) })
             .limit(1);
@@ -229,7 +254,7 @@ export async function POST(req: NextRequest) {
         }
         const persistedMetadata = eventId ? { ...(metadata || {}), event_id: String(eventId) } : metadata || {};
         const { data, error } = await adminClient.from('notifications')
-          .insert([{ user_id: body.userId || null, type, title, body: message, read: false, created_at: now, metadata: persistedMetadata }])
+          .insert([{ user_id: targetUserId, type, title, body: message, read: false, created_at: now, metadata: persistedMetadata }])
           .select('id').single();
         if (!error && data) { supabaseId = data.id; notification.id = `sb-${data.id}`; }
       }

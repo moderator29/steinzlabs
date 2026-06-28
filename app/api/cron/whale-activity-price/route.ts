@@ -34,6 +34,10 @@ export async function GET(request: NextRequest) {
   try {
     const sb = getSupabaseAdmin();
 
+    // Re-price the newest unpriced rows for the WHOLE directory (ungated — the
+    // feed is platform-wide, not follow-scoped) but only inside the feed's
+    // visible window, so we never fabricate a historical USD value for an
+    // ancient transfer the feed will never show.
     const sinceIso = new Date(Date.now() - BACKFILL_WINDOW_HOURS * 3600 * 1000).toISOString();
     const { data: rows, error } = await sb
       .from("whale_activity")

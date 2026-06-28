@@ -126,13 +126,11 @@ export async function GET(request: Request) {
       addresses = holders.map(h => h.owner).filter(Boolean);
     }
   } else {
-    // No input — try smart_money_wallets, fallback to whale_addresses
-    const { data } = await supabase.from('smart_money_wallets').select('address').limit(40);
+    // No input — seed from the canonical `whales` table. Previously this read
+    // smart_money_wallets then whale_addresses, both of which are 0 rows, so
+    // clustering silently degraded to an empty seed set.
+    const { data } = await supabase.from('whales').select('address').eq('is_active', true).limit(40);
     addresses = (data ?? []).map((r: { address: string }) => r.address).filter(Boolean);
-    if (addresses.length < 3) {
-      const { data: whales } = await supabase.from('whale_addresses').select('address').limit(40);
-      addresses = (whales ?? []).map((r: { address: string }) => r.address).filter(Boolean);
-    }
   }
 
   if (addresses.length < 3) {

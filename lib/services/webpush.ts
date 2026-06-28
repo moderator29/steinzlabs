@@ -115,28 +115,36 @@ function getSupabase(): SupabaseClient {
  */
 export async function sendPushToUser(userId: string, payload: PushPayload): Promise<void> {
   const supabase = getSupabase();
+  // Live push_subscriptions schema stores endpoint/p256dh/auth as flat columns
+  // (no `subscription` blob, no `is_active`). Reconstruct the PushSubscription
+  // from those columns; a 410 Gone means the browser unsubscribed, so we DELETE
+  // the dead row rather than flipping a non-existent flag.
   const { data: subs } = await supabase
     .from('push_subscriptions')
-    .select('id, subscription')
-    .eq('user_id', userId)
-    .eq('is_active', true);
+    .select('id, endpoint, p256dh, auth')
+    .eq('user_id', userId);
 
   if (!subs || subs.length === 0) return;
 
-  for (const row of subs) {
-    const sub = row.subscription as PushSubscription;
+  for (const row of subs as Array<{ id: string; endpoint: string; p256dh: string; auth: string }>) {
+    const sub: PushSubscription = { endpoint: row.endpoint, keys: { p256dh: row.p256dh, auth: row.auth } };
     const result = await sendWebPush(sub, payload);
 
-    if (!result.ok && result.error?.includes('410')) {
-      await supabase.from('push_subscriptions').update({ is_active: false }).eq('id', row.id);
+    const statusMatch = result.error?.match(/(\d{3})/);
+    const statusCode = statusMatch ? parseInt(statusMatch[1], 10) : result.ok ? 201 : null;
+    if (!result.ok && (statusCode === 410 || statusCode === 404)) {
+      await supabase.from('push_subscriptions').delete().eq('id', row.id);
     }
 
+    // push_delivery_log live columns: user_id, subscription_id, title, status,
+    // status_code, error_msg.
     await supabase.from('push_delivery_log').insert({
       user_id: userId,
-      notification_type: payload.tag ?? 'general',
-      payload,
-      delivered: result.ok,
-      error: result.error ?? null,
+      subscription_id: row.id,
+      title: payload.title,
+      status: result.ok ? 'sent' : 'failed',
+      status_code: statusCode,
+      error_msg: result.error ?? null,
     });
   }
 }

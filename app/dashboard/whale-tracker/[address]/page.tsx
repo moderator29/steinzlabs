@@ -256,7 +256,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
           {fetchError !== 'tier' && fetchError !== 'auth' && (
             <Link
               href={`/dashboard/whale-tracker/submit?address=${encodeURIComponent(address)}${chain ? `&chain=${encodeURIComponent(chain)}` : ''}`}
-              className="px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-500 transition text-white"
+              className="nl-btn-neon !px-4 !py-2 !text-sm rounded-lg transition"
             >
               Submit this whale
             </Link>
@@ -316,8 +316,8 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
             <button
               onClick={toggleFollow}
               disabled={followingLoading}
-              className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
-                following ? "bg-slate-800 text-slate-300 hover:bg-slate-700" : "bg-blue-600 hover:bg-blue-500 text-white"
+              className={`rounded-lg text-xs font-semibold transition ${
+                following ? "px-4 py-2 bg-slate-800 text-slate-300 hover:bg-slate-700" : "nl-btn-neon !px-4 !py-2 !text-xs"
               }`}
             >
               {followingLoading ? <Loader2 size={11} className="animate-spin" /> : following ? "Following" : "Follow"}
@@ -346,7 +346,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
                   tabIndex={selected ? 0 : -1}
                   onClick={() => setTab(t)}
                   className={`px-3 py-2 text-xs uppercase tracking-wide transition whitespace-nowrap ${
-                    selected ? "text-blue-300 border-b-2 border-blue-500/60" : "text-slate-500 hover:text-white"
+                    selected ? "text-[#6F7EFF] border-b-2 border-[#0066FF]/60" : "text-slate-500 hover:text-white"
                   }`}
                 >
                   {t === "copy" ? "Copy rules" : t}
@@ -369,7 +369,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
                 actually resolved this address to a labelled entity, so an
                 un-labelled wallet doesn't show an empty card. */}
             {data.arkham && (data.arkham.entity || data.arkham.website || data.arkham.twitter || (data.arkham.labels && data.arkham.labels.length > 0)) && (
-              <div className="mb-6 rounded-xl border border-blue-500/20 bg-blue-500/[0.04] p-4">
+              <div className="mb-6 rounded-xl nl-glass p-4">
                 <div className="flex items-start gap-3">
                   {data.arkham.logo && (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -461,13 +461,13 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
                 <button
                   type="button"
                   onClick={() => downloadActivityCsv(address, chain, data.activity)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10"
+                  className="nl-btn-neon !px-3 !py-1.5 !text-[11px] inline-flex items-center gap-1.5 rounded-lg font-semibold"
                 >
                   <Download size={12} /> Export CSV ({data.activity.length})
                 </button>
               </div>
             )}
-            <div className="rounded-xl border border-slate-800 overflow-hidden">
+            <div className="rounded-xl nl-glass overflow-hidden">
             {data.activity.length === 0 ? (
               <div className="py-12 text-center text-sm text-slate-500">
                 No recorded activity yet. The whale-activity-poll cron populates this as new on-chain events arrive.
@@ -514,7 +514,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
         )}
 
         {tab === "copy" && (
-          <div className="rounded-xl border border-slate-800 p-6 space-y-4">
+          <div className="rounded-xl nl-glass p-6 space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-white mb-1">Copy this whale</h3>
@@ -534,7 +534,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
               <button
                 type="button"
                 onClick={() => setCopyRuleOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-[#0066FF] to-[#7C3AED] text-white text-sm font-semibold hover:scale-[1.02] transition-transform shrink-0"
+                className="nl-btn-neon !px-4 !py-2.5 !text-sm inline-flex items-center gap-2 rounded-lg font-semibold shrink-0"
               >
                 <Repeat2 className="w-4 h-4" />
                 Copy this whale
@@ -609,13 +609,13 @@ function AiSummarySection({ address, chain }: { address: string; chain: string }
   const sentimentColor = data?.sentiment === 'bullish' ? 'text-emerald-400' : data?.sentiment === 'bearish' ? 'text-red-400' : 'text-slate-400';
 
   return (
-    <div className="rounded-xl border border-slate-800/70 bg-slate-900/30 p-4 mb-6">
+    <div className="rounded-xl nl-glass p-4 mb-6">
       <div className="flex items-center gap-2 mb-3">
         <span className="text-[10px] uppercase tracking-wider text-slate-500">AI Analysis</span>
         {state === 'idle' && (
           <button
             onClick={run}
-            className="ms-auto text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#0066FF] hover:bg-[#0066FF]/90 text-white"
+            className="nl-btn-neon !px-3 !py-1.5 !text-xs ms-auto font-semibold rounded-lg"
           >
             Generate
           </button>
@@ -701,7 +701,7 @@ function HoldingsPanel({ address, chain }: { address: string; chain: string }) {
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-slate-800 p-8 text-center text-sm text-slate-500">
+      <div className="rounded-xl nl-glass p-8 text-center text-sm text-slate-500">
         <Loader2 className="w-4 h-4 mx-auto mb-2 animate-spin" />
         Loading on-chain holdings…
       </div>
@@ -716,14 +716,14 @@ function HoldingsPanel({ address, chain }: { address: string; chain: string }) {
   }
   if (!data || (data.holdings.length === 0 && !data.message)) {
     return (
-      <div className="rounded-xl border border-slate-800 p-8 text-center text-sm text-slate-500">
+      <div className="rounded-xl nl-glass p-8 text-center text-sm text-slate-500">
         No holdings found for this wallet on {chain}.
       </div>
     );
   }
   if (data.message) {
     return (
-      <div className="rounded-xl border border-slate-800 p-8 text-center text-sm text-slate-500">
+      <div className="rounded-xl nl-glass p-8 text-center text-sm text-slate-500">
         {data.message}
       </div>
     );
@@ -739,14 +739,14 @@ function HoldingsPanel({ address, chain }: { address: string; chain: string }) {
   }
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 flex items-baseline justify-between">
+      <div className="rounded-xl nl-glass p-4 flex items-baseline justify-between">
         <div>
           <p className="text-[10px] uppercase tracking-wide text-slate-500">Total holdings (priced)</p>
           <p className="text-2xl font-mono font-bold text-white">{fmtUsd(total)}</p>
         </div>
         <span className="text-[10px] text-slate-500">{holdings.length} tokens</span>
       </div>
-      <div className="rounded-xl border border-slate-800 overflow-hidden">
+      <div className="rounded-xl nl-glass overflow-hidden">
         <table className="w-full text-xs">
           <thead className="text-[10px] uppercase tracking-wide text-slate-500 bg-slate-900/30 border-b border-slate-800">
             <tr>
@@ -857,14 +857,14 @@ function CounterpartiesPanel({ activity }: { activity: ActivityRow[] }) {
 
   if (aggregates.length === 0) {
     return (
-      <div className="rounded-xl border border-slate-800 p-8 text-center text-sm text-slate-500">
+      <div className="rounded-xl nl-glass p-8 text-center text-sm text-slate-500">
         No counterparties in the recorded activity yet.
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-slate-800 overflow-hidden">
+    <div className="rounded-xl nl-glass overflow-hidden">
       <table className="w-full text-xs">
         <thead className="text-[10px] uppercase tracking-wide text-slate-500 bg-slate-900/30 border-b border-slate-800">
           <tr>

@@ -66,6 +66,7 @@ export default function SubmitWhalePage() {
         <p className="text-xs text-slate-500 mb-6">
           Propose a public wallet for inclusion in the Naka Labs whale directory. An admin reviews every submission before it goes live.
         </p>
+        <div className="nl-glass rounded-2xl p-5">
         <form onSubmit={submit} className="space-y-4">
           <Field label="Wallet address">
             <input
@@ -123,15 +124,12 @@ export default function SubmitWhalePage() {
               onChange={(e) => setForm({ ...form, evidence_urls: e.target.value })}
             />
           </Field>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-sm font-semibold transition flex items-center justify-center gap-2"
-          >
+          <button type="submit" disabled={submitting} className="nl-btn-neon w-full !py-2.5 !text-sm font-semibold">
             {submitting && <Loader2 size={13} className="animate-spin" />}
             Submit for review
           </button>
         </form>
+        </div>
       </div>
     </div>
   );

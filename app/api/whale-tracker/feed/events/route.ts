@@ -17,7 +17,11 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
-const TICK_MS = 5_000;
+// Align to the underlying feed's 15s Redis cache — polling faster (the old 5s)
+// just re-ran the tier gate + query 3x per cache window for identical data.
+const TICK_MS = 15_000;
+// Cap the dedupe set so a long-lived stream can't leak memory unbounded.
+const SEEN_CAP = 4_000;
 
 interface FeedRow {
   id: string;
@@ -61,12 +65,19 @@ export async function GET(request: NextRequest) {
             return;
           }
           const json = await res.json() as { rows?: FeedRow[] };
+          const rows = json.rows ?? [];
           const fresh: FeedRow[] = [];
-          for (const r of json.rows ?? []) {
+          for (const r of rows) {
             if (r.id && !seen.has(r.id)) {
               seen.add(r.id);
               fresh.push(r);
             }
+          }
+          // Bound the dedupe set: once oversized, re-seed from just the current
+          // window (newest rows) so memory stays flat on long connections.
+          if (seen.size > SEEN_CAP) {
+            seen.clear();
+            for (const r of rows) if (r.id) seen.add(r.id);
           }
           if (fresh.length > 0) send('rows', { rows: fresh });
         } catch (err) {

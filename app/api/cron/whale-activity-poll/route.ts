@@ -3,21 +3,28 @@ import * as Sentry from "@sentry/nextjs";
 import { verifyCron, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { fetchWithRetry } from "@/lib/api/fetchWithRetry";
-import { normalizeAddress, addressesEqual } from "@/lib/utils/addressNormalize";
-import { priceActivityUsdBatch } from "@/lib/whales/priceActivity";
+import { priceActivityUsd } from "@/lib/whales/priceActivity";
+import { addressesEqual } from "@/lib/utils/addressNormalize";
 
 export const maxDuration = 60;
 export const runtime = "nodejs";
 
 const NAME = "whale-activity-poll";
 
-// Whales polled per tick. The whales table holds hundreds of active addresses;
-// polling them ALL every tick would burn Alchemy budget, so we rotate: each
-// tick takes the N least-recently-polled active whales (ordered by
-// last_active_at asc), stamps them, and the next tick picks up where this one
-// left off. With ~360 active whales and a 30-min cadence the whole set is
-// covered roughly every 7 hours. Tune via WHALE_POLL_BATCH.
-const POLL_BATCH = Math.max(1, Math.min(Number(process.env.WHALE_POLL_BATCH ?? 30) || 30, 100));
+// EVM chains reachable on a single Alchemy key. Solana whales are covered by
+// the Helius webhook (app/api/webhooks/helius-whale), not this poll.
+const ALCHEMY_HOSTS: Record<string, string> = {
+  ethereum: "eth-mainnet",
+  base: "base-mainnet",
+  arbitrum: "arb-mainnet",
+  optimism: "opt-mainnet",
+  polygon: "polygon-mainnet",
+};
+
+// Per tick we rotate through the stalest active whales so coverage scales
+// with the whole directory, not just the handful a user happens to follow.
+const WHALES_PER_TICK = 25;
+const POOL = 5;
 
 interface AlchemyAssetTransfer {
   hash: string;
@@ -32,41 +39,34 @@ interface AlchemyAssetTransfer {
 }
 
 /**
- * Pull the most recent asset transfers for a whale in one direction.
- * `direction: 'out'` queries transfers FROM the whale (sells / sends);
- * `direction: 'in'` queries transfers TO the whale (buys / receives). We poll
- * both so the feed and its Buy/Sell/Transfer filter see real two-sided flow
- * instead of the old 100%-transfer_out single-direction data.
+ * Pull the most recent transfers for a whale in one direction (out = the whale
+ * is the sender, in = the whale is the receiver) from the chain's Alchemy RPC.
  */
-async function pollEthereumWhale(
+async function pollTransfers(
+  chain: string,
   address: string,
-  direction: "in" | "out",
+  direction: "out" | "in",
 ): Promise<AlchemyAssetTransfer[]> {
   const key = process.env.ALCHEMY_API_KEY;
-  if (!key) return [];
-  const addrParam = direction === "out" ? { fromAddress: address } : { toAddress: address };
+  const host = ALCHEMY_HOSTS[chain];
+  if (!key || !host) return [];
+  const params: Record<string, unknown> = {
+    category: ["external", "erc20"],
+    maxCount: "0xa",
+    order: "desc",
+    withMetadata: true,
+    excludeZeroValue: true,
+  };
+  if (direction === "out") params.fromAddress = address;
+  else params.toAddress = address;
   try {
-    const res = await fetchWithRetry(`https://eth-mainnet.g.alchemy.com/v2/${key}`, {
+    const res = await fetchWithRetry(`https://${host}.g.alchemy.com/v2/${key}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: 1,
-        jsonrpc: "2.0",
-        method: "alchemy_getAssetTransfers",
-        params: [
-          {
-            ...addrParam,
-            category: ["external", "erc20"],
-            maxCount: "0xa",
-            order: "desc",
-            withMetadata: true,
-            excludeZeroValue: true,
-          },
-        ],
-      }),
-      source: "alchemy-transfers",
+      body: JSON.stringify({ id: 1, jsonrpc: "2.0", method: "alchemy_getAssetTransfers", params: [params] }),
+      source: `alchemy-transfers-${chain}`,
       timeoutMs: 8000,
-      retries: 2,
+      retries: 1,
     });
     if (!res.ok) return [];
     const json = (await res.json()) as { result?: { transfers?: AlchemyAssetTransfer[] } };
@@ -76,149 +76,170 @@ async function pollEthereumWhale(
   }
 }
 
-interface CandidateRow {
+type WhaleRow = { address: string; chain: string };
+
+// Base/quote assets — when a whale swaps one of these for something else, the
+// "something else" is the traded token and the base side tells us buy vs sell.
+const BASE_ASSETS = new Set([
+  "USDC", "USDT", "DAI", "BUSD", "FRAX", "USDC.E", "TUSD", "USDE",
+  "ETH", "WETH", "BNB", "WBNB", "SOL", "WSOL", "MATIC", "WMATIC", "AVAX", "WAVAX",
+]);
+function isBaseAsset(sym: string | null): boolean {
+  return !!sym && BASE_ASSETS.has(sym.toUpperCase());
+}
+
+interface ActivityInsert {
   whale_address: string;
   chain: string;
   tx_hash: string;
-  action: "transfer_in" | "transfer_out";
+  action: string;
   token_address: string | null;
   token_symbol: string | null;
   amount: number | null;
+  value_usd: number | null;
   counterparty: string | null;
-  block_number: number | null;
+  counterparty_label: null;
+  block_number: number;
   timestamp: string;
+}
+
+/**
+ * Turn a whale's raw out/in transfer legs into priced whale_activity rows.
+ * A DEX swap surfaces as opposite-direction legs sharing one tx_hash; we pair
+ * them into a single buy/sell/swap row (token = the non-base side) so the feed
+ * shows real trades and copy-trade-monitor — which only acts on buy/sell/swap —
+ * has something to mirror. Lone legs stay transfer_in/transfer_out.
+ */
+async function buildRows(whale: WhaleRow, legs: AlchemyAssetTransfer[]): Promise<ActivityInsert[]> {
+  const byTx = new Map<string, AlchemyAssetTransfer[]>();
+  for (const t of legs) {
+    const arr = byTx.get(t.hash) ?? [];
+    arr.push(t);
+    byTx.set(t.hash, arr);
+  }
+
+  const price = (t: AlchemyAssetTransfer) =>
+    priceActivityUsd({
+      chain: whale.chain,
+      token_address: t.rawContract?.address ?? null,
+      token_symbol: t.asset,
+      amount: typeof t.value === "number" ? t.value : null,
+    });
+  const largest = (arr: AlchemyAssetTransfer[]) =>
+    arr.reduce((m, t) => ((t.value ?? 0) > (m.value ?? 0) ? t : m), arr[0]);
+
+  const rows: ActivityInsert[] = [];
+  for (const [hash, group] of byTx) {
+    const outLegs = group.filter((t) => addressesEqual(t.from, whale.address, whale.chain));
+    const inLegs = group.filter((t) => !addressesEqual(t.from, whale.address, whale.chain));
+    const ts = group[0].metadata?.blockTimestamp ?? new Date().toISOString();
+    const block = parseInt(group[0].blockNum, 16);
+
+    if (outLegs.length > 0 && inLegs.length > 0) {
+      // Swap: classify by which side is a base asset.
+      const out = largest(outLegs);
+      const inc = largest(inLegs);
+      const outBase = isBaseAsset(out.asset);
+      const incBase = isBaseAsset(inc.asset);
+      let action: "buy" | "sell" | "swap";
+      let traded: AlchemyAssetTransfer;
+      if (outBase && !incBase) { action = "buy"; traded = inc; }
+      else if (!outBase && incBase) { action = "sell"; traded = out; }
+      else { action = "swap"; traded = inc; }
+      const [outUsd, incUsd] = await Promise.all([price(out), price(inc)]);
+      rows.push({
+        whale_address: whale.address,
+        chain: whale.chain,
+        tx_hash: hash,
+        action,
+        token_address: traded.rawContract?.address ?? null,
+        token_symbol: traded.asset,
+        amount: typeof traded.value === "number" ? traded.value : null,
+        value_usd: Math.max(outUsd ?? 0, incUsd ?? 0) || null,
+        counterparty: out.to,
+        counterparty_label: null,
+        block_number: block,
+        timestamp: ts,
+      });
+    } else {
+      // Plain transfer(s) — emit the largest leg for this tx (the upsert key is
+      // tx+whale+chain, so one row per tx is all that survives anyway).
+      const t = largest(group);
+      const isOut = addressesEqual(t.from, whale.address, whale.chain);
+      rows.push({
+        whale_address: whale.address,
+        chain: whale.chain,
+        tx_hash: hash,
+        action: isOut ? "transfer_out" : "transfer_in",
+        token_address: t.rawContract?.address ?? null,
+        token_symbol: t.asset,
+        amount: typeof t.value === "number" ? t.value : null,
+        value_usd: await price(t),
+        counterparty: isOut ? t.to : t.from,
+        counterparty_label: null,
+        block_number: block,
+        timestamp: ts,
+      });
+    }
+  }
+  return rows;
+}
+
+async function ingestWhale(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  whale: WhaleRow,
+): Promise<number> {
+  const [outbound, inbound] = await Promise.all([
+    pollTransfers(whale.chain, whale.address, "out"),
+    pollTransfers(whale.chain, whale.address, "in"),
+  ]);
+  const rows = await buildRows(whale, [...outbound, ...inbound]);
+  let inserted = 0;
+  for (const row of rows) {
+    const { error } = await supabase
+      .from("whale_activity")
+      .upsert(row, { onConflict: "tx_hash,whale_address,chain" });
+    if (!error) inserted++;
+  }
+  await supabase
+    .from("whales")
+    .update({ last_active_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq("address", whale.address)
+    .eq("chain", whale.chain);
+  return inserted;
 }
 
 export async function GET(request: NextRequest) {
   const auth = verifyCron(request);
   if (!auth.ok) return auth.response!;
   const startedAt = Date.now();
-  let polled = 0;
   let inserted = 0;
-  let priced = 0;
   try {
     const supabase = getSupabaseAdmin();
 
-    // Rotate through the GLOBAL active whale set (no follow gate). The whale
-    // feed, Top Today, chart and net-flow are platform-wide intelligence — they
-    // must reflect every tracked whale's moves, not only the handful a user
-    // personally follows. (The follow gate shipped in the cost sweep is exactly
-    // what silently killed ingestion: with near-zero follows the cron polled
-    // nothing.) Cost is bounded by POLL_BATCH rotation instead.
+    // Rotate through the stalest active whales on Alchemy-reachable EVM chains.
+    // NOTE: this used to be demand-gated to followed whales only — but the
+    // live feed shows the WHOLE directory to every user, so gating to the
+    // handful of followed whales left the feed empty. We poll the directory
+    // broadly and let the per-token price cache keep cost bounded.
     const { data: whales } = await supabase
       .from("whales")
       .select("address, chain")
       .eq("is_active", true)
-      .eq("chain", "ethereum")
+      .in("chain", Object.keys(ALCHEMY_HOSTS))
       .order("last_active_at", { ascending: true, nullsFirst: true })
-      .limit(POLL_BATCH);
+      .limit(WHALES_PER_TICK);
 
-    const whaleList = (whales ?? []) as Array<{ address: string; chain: string }>;
-    if (whaleList.length === 0) {
-      await logCronExecution(NAME, "success", Date.now() - startedAt, undefined, 0);
-      return NextResponse.json({ ok: true, polled: 0, inserted: 0, note: "no-active-whales" });
-    }
-
-    // 1. Collect candidate transfers (both directions) across the batch.
-    const candidates: CandidateRow[] = [];
-    for (const whale of whaleList) {
-      const [out, incoming] = await Promise.all([
-        pollEthereumWhale(whale.address, "out"),
-        pollEthereumWhale(whale.address, "in"),
-      ]);
-      polled++;
-      for (const t of [...out, ...incoming]) {
-        if (!t.hash) continue;
-        const value = typeof t.value === "number" ? t.value : null;
-        const isOut = addressesEqual(t.from, whale.address, whale.chain);
-        candidates.push({
-          whale_address: whale.address,
-          chain: whale.chain,
-          tx_hash: t.hash,
-          action: isOut ? "transfer_out" : "transfer_in",
-          token_address: t.rawContract?.address ?? null,
-          token_symbol: t.asset,
-          amount: value,
-          counterparty: isOut ? t.to : t.from,
-          block_number: t.blockNum ? parseInt(t.blockNum, 16) : null,
-          timestamp: t.metadata?.blockTimestamp ?? new Date().toISOString(),
-        });
-      }
-      // Advance the rotation cursor regardless of whether new rows landed.
-      await supabase
-        .from("whales")
-        .update({ last_active_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-        .eq("address", whale.address)
-        .eq("chain", whale.chain);
-    }
-
-    if (candidates.length === 0) {
-      await logCronExecution(NAME, "success", Date.now() - startedAt, undefined, 0);
-      return NextResponse.json({ ok: true, durationMs: Date.now() - startedAt, polled, inserted: 0, priced: 0 });
-    }
-
-    // 2. Dedupe candidates and skip any (tx_hash, whale, chain) already stored,
-    //    so we only PRICE genuinely new rows (pricing hits CoinGecko/Birdeye).
-    const byKey = new Map<string, CandidateRow>();
-    for (const c of candidates) byKey.set(`${c.chain}:${normalizeAddress(c.whale_address, c.chain)}:${c.tx_hash}`, c);
-    const unique = Array.from(byKey.values());
-
-    const hashes = Array.from(new Set(unique.map((c) => c.tx_hash)));
-    const { data: existing } = await supabase
-      .from("whale_activity")
-      .select("tx_hash, whale_address, chain")
-      .in("tx_hash", hashes);
-    const existingKeys = new Set(
-      ((existing ?? []) as Array<{ tx_hash: string; whale_address: string; chain: string }>).map(
-        (e) => `${e.chain}:${normalizeAddress(e.whale_address, e.chain)}:${e.tx_hash}`,
-      ),
-    );
-    const fresh = unique.filter(
-      (c) => !existingKeys.has(`${c.chain}:${normalizeAddress(c.whale_address, c.chain)}:${c.tx_hash}`),
-    );
-
-    // 3. Price at ingest. priceActivityUsdBatch looks up each DISTINCT token's
-    //    unit price once (no per-row herd), then multiplies per row. Rows that
-    //    can't be priced go in as null and the backfill cron retries them.
-    const values = await priceActivityUsdBatch(
-      fresh.map((c) => ({
-        chain: c.chain,
-        token_address: c.token_address,
-        token_symbol: c.token_symbol,
-        amount: c.amount,
-      })),
-    );
-    const rows = fresh.map((c, i) => {
-      const value_usd = values[i];
-      if (value_usd != null) priced++;
-      return {
-        whale_address: c.whale_address,
-        chain: c.chain,
-        tx_hash: c.tx_hash,
-        action: c.action,
-        token_address: c.token_address,
-        token_symbol: c.token_symbol,
-        amount: c.amount,
-        value_usd,
-        counterparty: c.counterparty,
-        counterparty_label: null,
-        block_number: c.block_number,
-        timestamp: c.timestamp,
-      };
-    });
-
-    if (rows.length > 0) {
-      // ignoreDuplicates guards against a concurrent webhook inserting the same
-      // tx between our existence check and this write.
-      const { error, count } = await supabase
-        .from("whale_activity")
-        .upsert(rows, { onConflict: "tx_hash,whale_address,chain", ignoreDuplicates: true, count: "exact" });
-      if (error) throw error;
-      inserted = count ?? rows.length;
+    const queue = (whales ?? []) as WhaleRow[];
+    // Bounded pool so a tick never opens dozens of sockets or blows maxDuration.
+    for (let i = 0; i < queue.length; i += POOL) {
+      const batch = queue.slice(i, i + POOL);
+      const counts = await Promise.all(batch.map((w) => ingestWhale(supabase, w).catch(() => 0)));
+      inserted += counts.reduce((a, b) => a + b, 0);
     }
 
     await logCronExecution(NAME, "success", Date.now() - startedAt, undefined, inserted);
-    return NextResponse.json({ ok: true, durationMs: Date.now() - startedAt, polled, inserted, priced });
+    return NextResponse.json({ ok: true, durationMs: Date.now() - startedAt, polled: queue.length, inserted });
   } catch (err) {
     Sentry.captureException(err, { tags: { cron: NAME } });
     await logCronExecution(NAME, "failed", Date.now() - startedAt, String(err));

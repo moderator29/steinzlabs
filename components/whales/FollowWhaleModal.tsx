@@ -75,7 +75,7 @@ export default function FollowWhaleModal({
   return (
     <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full md:max-w-md border border-white/10 rounded-t-2xl md:rounded-2xl shadow-2xl overflow-hidden">
+      <div className="relative w-full md:max-w-md nl-glass rounded-t-2xl md:rounded-2xl shadow-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-white/10 flex items-center gap-2">
           <h2 className="font-bold">Follow {whale.label || whale.address.slice(0, 8)}</h2>
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 uppercase">{whale.chain}</span>
@@ -152,7 +152,7 @@ export default function FollowWhaleModal({
           <div className="flex items-center gap-2">
             {(['push', 'email', 'telegram'] as const).map((k) => (
               <label key={k} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold cursor-pointer border transition-colors ${
-                channels[k] ? 'bg-[#0066FF]/15 text-[#8FA3FF] border-[#0066FF]/40' : 'bg-white/5 text-slate-400 border-white/10 hover:text-white'
+                channels[k] ? 'bg-[#0066FF]/15 text-[#8FA3FF] border-[#0066FF]/40' : 'bg-white/[0.04] text-slate-400 border border-white/10 hover:text-white'
               }`}>
                 <input
                   type="checkbox"
@@ -200,11 +200,7 @@ export default function FollowWhaleModal({
             </div>
           )}
 
-          <button
-            onClick={submit}
-            disabled={saving}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#7C3AED] font-bold disabled:opacity-60 flex items-center justify-center gap-2"
-          >
+          <button onClick={submit} disabled={saving} className="nl-btn-neon w-full !py-3 !text-sm font-bold">
             {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : 'Confirm Follow'}
           </button>
           {!isPro && (
@@ -236,9 +232,9 @@ function ModeCard({
       onClick={onClick}
       disabled={locked}
       className={`w-full flex items-start gap-3 p-3 rounded-xl border transition-all text-start ${
-        active ? 'bg-[#0066FF]/15 border-[#0066FF]/50'
-        : locked ? 'bg-white/[0.02] border-white/10 opacity-60 cursor-not-allowed'
-        : 'bg-white/[0.03] border-white/10 hover:border-white/20'
+        active ? 'nl-glass !border-[#0066FF]/50 ring-1 ring-[#0066FF]/40 bg-[#0066FF]/15'
+        : locked ? 'nl-glass opacity-60 cursor-not-allowed'
+        : 'nl-glass hover:border-white/20'
       }`}
     >
       <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${active ? 'bg-[#0066FF]/20 text-[#8FA3FF]' : 'bg-white/5 text-slate-400'}`}>
@@ -268,7 +264,7 @@ function NumberRow({ label, value, setValue, step }: { label: string; value: num
         value={value}
         step={step}
         onChange={(e) => setValue(parseInt(e.target.value || '0', 10) || 0)}
-        className="w-28 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs font-mono text-end outline-none focus:border-[#0066FF]/50"
+        className="nl-glass w-28 rounded-lg px-2 py-1 text-xs font-mono text-end outline-none focus:border-[#0066FF]/50"
       />
     </div>
   );
