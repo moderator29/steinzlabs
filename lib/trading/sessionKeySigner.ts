@@ -123,6 +123,11 @@ export async function executeWithSessionKey(p: SessionCopyParams): Promise<Sessi
     if (!chainId || !url) { await releaseClaim(); return null; }
 
     let pk = '';
+    // Once the swap is broadcast the spend is COMMITTED on-chain. From that point
+    // we must never release the claim — doing so would restore daily-cap budget
+    // for already-spent funds AND let a retry re-claim and double-broadcast. This
+    // flag draws that line: the catch only releases for PRE-broadcast failures.
+    let broadcastHash: string | null = null;
     try {
       pk = decryptSessionKey(key.encrypted_session_key);
       const provider = new ethers.JsonRpcProvider(url);
@@ -158,15 +163,21 @@ export async function executeWithSessionKey(p: SessionCopyParams): Promise<Sessi
         data: quote.transaction.data,
         value: BigInt(quote.transaction.value || '0'),
       });
-      const receipt = await tx.wait(1);
-      const hash = receipt?.hash ?? tx.hash;
-      await admin.from('session_key_spends').update({ broadcast_tx_hash: hash }).eq('id', claim.id);
-      return { executed: true, broadcastTxHash: hash };
+      // SPEND COMMITTED. Record the hash (best-effort — can't throw, claim stays
+      // regardless) and treat the confirmation wait as non-fatal: the tx is
+      // already on-chain whether or not we observe the receipt.
+      broadcastHash = tx.hash;
+      await admin.from('session_key_spends')
+        .update({ broadcast_tx_hash: broadcastHash }).eq('id', claim.id)
+        .then(() => {}, () => { /* hash persist is best-effort; never releases */ });
+      try { await tx.wait(1); } catch { /* tx already broadcast; confirmation only */ }
+      return { executed: true, broadcastTxHash: broadcastHash };
     } catch (err) {
-      // On-chain / quote failure: release the claim so a later retry/fallback can act.
-      await releaseClaim();
+      // Release ONLY for pre-broadcast failures (decrypt / quote / approve / the
+      // send call rejecting before submission). Never release post-broadcast.
+      if (!broadcastHash) await releaseClaim();
       Sentry.captureException(err, { tags: { module: 'sessionKeySigner.execute', chain: p.chain } });
-      return null;
+      return broadcastHash ? { executed: true, broadcastTxHash: broadcastHash } : null;
     } finally {
       pk = ''; // best-effort wipe of the plaintext key reference.
     }
