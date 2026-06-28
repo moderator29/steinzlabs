@@ -292,7 +292,7 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
   };
 
   return (
-    <div className="rounded-xl border border-slate-800/70 bg-slate-950/60 p-3 text-xs">
+    <div className="rounded-xl nl-glass p-3 text-xs" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
       {/* Buy/Sell tabs */}
       <div className="grid grid-cols-2 gap-1 p-1 bg-slate-900/60 rounded-lg mb-3">
         <button

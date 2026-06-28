@@ -10,7 +10,7 @@ interface RecentTradesFeedProps {
 
 export function RecentTradesFeed({ trades, symbol = '' }: RecentTradesFeedProps) {
   return (
-    <div className="bg-[#0D1117] border border-[#1E2433] rounded-lg overflow-hidden">
+    <div className="nl-glass rounded-lg overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.18)' }}>
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#1E2433]">
         <span className="text-white text-sm font-medium">Recent Trades</span>
         <span className="flex items-center gap-1.5 text-xs text-gray-500">
