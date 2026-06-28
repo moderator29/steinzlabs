@@ -227,7 +227,14 @@ export function SwapCard({ swap, walletAddress, onCancel, source = 'vtx' }: Prop
         if (/insufficient|not enough|balance/i.test(msg)) {
           setStage('insufficient');
         } else {
-          setError(msg || 'Could not fetch a swap quote. Try again in a moment.');
+          // Tell the user which kind of failure it is so they know what to do.
+          if (/route|no.*pair|not.*found|unsupported|liquidity/i.test(msg)) {
+            setError('No swap route for this pair right now. Try a smaller amount or a different token.');
+          } else if (qres.status === 429 || qres.status >= 500 || /timeout|overload|rate.?limit/i.test(msg)) {
+            setError('Swap provider is busy. Wait ~30s and try again.');
+          } else {
+            setError(msg || 'Could not fetch a swap quote. Try again in a moment.');
+          }
           setStage('error');
         }
         return;
