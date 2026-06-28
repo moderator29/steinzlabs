@@ -263,6 +263,22 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
 
       const verb = mode === 'BUY' ? 'Bought' : 'Sold';
       setStatus({ kind: 'ok', msg: `${verb} ${estTokens.toFixed(4)} ${symbol} · ${hash.slice(0, 6)}…${hash.slice(-4)}` });
+      // Unified trade ledger → shows in the wallet Activity tab. Fire-and-forget.
+      void fetch('/api/swap/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: walletAddr,
+          txHash: hash,
+          chain,
+          fromToken: mode === 'BUY' ? 'USDC' : symbol,
+          toToken: mode === 'BUY' ? symbol : 'USDC',
+          fromAmount: amountNum,
+          toAmount: estTokens,
+          status: 'confirmed',
+          source: 'market',
+        }),
+      }).catch(() => {});
       window.dispatchEvent(new Event('steinz:balance-changed'));
       setAmount('');
     } catch (e: unknown) {

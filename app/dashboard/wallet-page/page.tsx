@@ -3760,12 +3760,29 @@ function ActivityTab({ address, chain, enabledChains }: { address: string; chain
             if (r.value.upstream_error && !warn) warn = r.value.upstream_error;
           }
         }
+        // Merge the unified app trade ledger (swaps from the swap card, market,
+        // View Proof, VTX; sends) so trades done anywhere in the app surface in
+        // Activity — not just on-chain-decoded transfers. Best-effort.
+        const ledgerResults = await Promise.allSettled(
+          chainsToFetch.map(async (cid) => {
+            const res = await fetch(
+              `/api/trades/list?wallet=${encodeURIComponent(address)}&chain=${cid}&limit=50`,
+              { signal: AbortSignal.timeout(15_000), cache: 'no-store' },
+            );
+            if (!res.ok) return { trades: [] as DecodedTx[] };
+            return (await res.json()) as { trades: DecodedTx[] };
+          }),
+        );
+        if (cancelled) return;
+        for (const r of ledgerResults) {
+          if (r.status === 'fulfilled') { anyOk = true; merged.push(...(r.value.trades ?? [])); }
+        }
         if (!anyOk) throw new Error('Failed to load activity');
-        // Newest first across all chains; de-dupe by hash (a tx can't be on two
-        // chains, but cached + live merges can double up).
+        // Newest first across all chains; de-dupe by hash so a swap that's both
+        // ledger-recorded and on-chain-decoded shows once.
         const seen = new Set<string>();
         merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        const deduped = merged.filter((t) => (seen.has(t.tx_hash) ? false : (seen.add(t.tx_hash), true)));
+        const deduped = merged.filter((t) => (t.tx_hash && seen.has(t.tx_hash) ? false : (t.tx_hash && seen.add(t.tx_hash), true)));
         setTxs(deduped.slice(0, 50));
         if (warn) setUpstreamWarning(warn);
       } catch (err) {
