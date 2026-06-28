@@ -15,6 +15,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getAllRoutes, type RouteQuote } from "@/lib/services/swap-aggregator";
 import { getTokenSecurity } from "@/lib/services/goplus";
 import { notifyPendingTrade, type TradeNotificationReason } from "@/lib/trading/notifications";
+import { executeWithSessionKey, sessionKeySignerEnabled } from "@/lib/trading/sessionKeySigner";
 
 export type WalletSource = "external_evm" | "external_solana" | "builtin";
 
@@ -40,6 +41,10 @@ export interface TradeIntent {
    * path. Only set this for builtin-wallet auto_copy rules.
    */
   autoConfirm?: boolean;
+  /** Originating whale tx hash — idempotency key for session-key auto-execution. */
+  sourceTxHash?: string | null;
+  /** USD size of this copy, for session-key daily-cap accounting. */
+  tradeUsd?: number | null;
 }
 
 export interface TradeResult {
@@ -106,6 +111,40 @@ export async function executeTrade(intent: TradeIntent): Promise<TradeResult> {
       if (!bestRoute) {
         return { success: false, failureReason: "No viable swap route found" };
       }
+    }
+
+    // LAYER 2.5 — 24/7 non-custodial auto-execution via a delegated session key.
+    // Gated: only fires for auto_copy intents when SESSION_KEY_SIGNER_ENABLED and
+    // a valid funded session key exists. On success the trade is broadcast now
+    // (no pending row); on null it falls through to the manual pending flow, so
+    // with the flag OFF behavior is exactly as before. Never throws into here.
+    if (intent.autoConfirm && intent.sourceTxHash && sessionKeySignerEnabled()) {
+      const auto = await executeWithSessionKey({
+        userId: intent.userId,
+        chain: intent.chain,
+        fromTokenAddress: intent.fromTokenAddress,
+        toTokenAddress: intent.toTokenAddress,
+        amountIn: intent.amountIn,
+        amountUsd: intent.tradeUsd ?? 0,
+        sourceTxHash: intent.sourceTxHash,
+        slippageBps: intent.slippageBps,
+        route: bestRoute,
+      });
+      if (auto?.executed) {
+        await notifyPendingTrade({
+          userId: intent.userId,
+          reason: intent.reason,
+          chain: intent.chain,
+          fromTokenSymbol: intent.fromTokenSymbol ?? null,
+          toTokenSymbol: intent.toTokenSymbol ?? null,
+          amountIn: intent.amountIn,
+          expectedAmountOut: bestRoute?.amountOut ?? null,
+          pendingTradeId: auto.broadcastTxHash,
+          expiresAt: new Date().toISOString(),
+        }).catch(() => { /* notify is best-effort */ });
+        return { success: true, awaitingUserConfirmation: false, route: bestRoute };
+      }
+      // else: no usable session key / out of scope / failed ⇒ manual fallback.
     }
 
     // LAYER 3 — Record pending trade. Client will fetch a firm quote + sign at

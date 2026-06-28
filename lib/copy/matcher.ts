@@ -313,6 +313,11 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
       reason: "copy_trade",
       sourceOrderId: (inserted as { id: string } | null)?.id ?? null,
       sourceOrderTable: "user_copy_trades",
+      // auto_copy → eligible for 24/7 session-key execution (gated by the signer
+      // flag + a funded session key; falls back to pending otherwise).
+      autoConfirm: rule.mode === "auto_copy",
+      sourceTxHash: event.tx_hash,
+      tradeUsd: isSell ? null : sizeUsd,
     });
 
     if (result.awaitingUserConfirmation) {
