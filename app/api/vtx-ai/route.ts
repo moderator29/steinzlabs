@@ -1049,6 +1049,27 @@ export async function POST(request: NextRequest) {
       // ownership.
     }
 
+    // Wallet-read privacy gate: if a signed-in user has explicitly turned OFF
+    // "Let VTX read my wallet balances" in VTX settings, hide the address so the
+    // agent can't read balances or reference holdings. Unset = current behavior
+    // (visible). This is the privacy control behind the settings toggle.
+    if (body.context.walletAddress && callerUserId) {
+      try {
+        const admin = getSupabaseAdmin();
+        const { data: prefRow } = await admin
+          .from('user_preferences')
+          .select('preferences')
+          .eq('user_id', callerUserId)
+          .maybeSingle();
+        const vtxSettings = (prefRow?.preferences as { vtx_settings?: { wallet_read_enabled?: boolean } } | null)?.vtx_settings;
+        if (vtxSettings && vtxSettings.wallet_read_enabled === false) {
+          body.context.walletAddress = undefined;
+        }
+      } catch {
+        // Non-fatal — default to visible.
+      }
+    }
+
     // ── Rate Limiting ───────────────────────────────────────────────────────
     const headersList = await headers();
     const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim()
