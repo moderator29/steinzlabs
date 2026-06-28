@@ -25,6 +25,18 @@ const NATIVE_CG: Record<string, string> = {
   BTC: 'bitcoin', WBTC: 'wrapped-bitcoin',
 };
 
+// Native asset CoinGecko id keyed by chain. Used only when a row has NO
+// token_address (a native-coin move) and the symbol is missing or non-canonical
+// (e.g. "Ether" instead of "ETH"), which left ~18k native rows unpriced. The
+// chain unambiguously fixes the gas asset — L2s (base/arbitrum/optimism) settle
+// in ETH. Never applied to a token_address row, so an unpriceable ERC-20 can't
+// be mispriced as its chain's native coin.
+const CHAIN_NATIVE_CG: Record<string, string> = {
+  ethereum: 'ethereum', base: 'ethereum', arbitrum: 'ethereum', optimism: 'ethereum',
+  solana: 'solana', bsc: 'binancecoin', polygon: 'matic-network',
+  avalanche: 'avalanche-2', bitcoin: 'bitcoin',
+};
+
 const priceCache = new Map<string, { price: number; at: number }>();
 const TTL = 60_000;
 
@@ -80,9 +92,14 @@ async function tokenPriceUsd(
     } catch { /* fall through to symbol pricing */ }
   }
 
-  // 2. By symbol for native transfers via CoinGecko simple price.
-  if (symbol) {
-    const id = NATIVE_CG[symbol.toUpperCase()];
+  // 2. Native transfers via CoinGecko simple price. Resolve the CoinGecko id
+  //    from the symbol first; if there's no token_address (a native-coin move)
+  //    fall back to the chain's native asset so a missing/odd symbol doesn't
+  //    leave it unpriced. The chain fallback is gated on `!tokenAddress` so a
+  //    token whose contract simply couldn't be priced is never valued as ETH.
+  if (symbol || !tokenAddress) {
+    const id = (symbol ? NATIVE_CG[symbol.toUpperCase()] : undefined)
+      ?? (!tokenAddress ? CHAIN_NATIVE_CG[chain.toLowerCase()] : undefined);
     if (id) {
       const key = `cg:${id}`;
       const cached = priceCache.get(key);
