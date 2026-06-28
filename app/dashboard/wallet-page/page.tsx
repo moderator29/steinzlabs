@@ -64,7 +64,11 @@ interface StoredWallet {
   // How the wallet entered our vault: 'generated' (we made the seed), 'seed'
   // (user imported 12/24-word phrase), or 'private_key' (user imported raw pk).
   // Drives which reveal options the UI surfaces.
-  importMethod?: 'generated' | 'seed' | 'private_key';
+  importMethod?: 'generated' | 'seed' | 'private_key' | 'ledger';
+  // #42 — hardware wallet. For 'ledger' wallets there is NO encryptedKey
+  // (the key lives on the device); signing routes to the Ledger via WebHID at
+  // the stored BIP-44 path. EVM only.
+  derivationPath?: string;
   // Audit B3 / P0 #1 — Solana base58 public key derived from the same
   // BIP-39 seed at Phantom's default path m/44'/501'/0'/0'. Populated
   // at wallet-create or wallet-import time when a mnemonic is present.
@@ -315,6 +319,9 @@ export default function WalletPage() {
   const [addAcctPwd, setAddAcctPwd] = useState('');
   const [addAcctBusy, setAddAcctBusy] = useState(false);
   const [addAcctError, setAddAcctError] = useState<string | null>(null);
+  // #42 — hardware wallet connect status.
+  const [ledgerBusy, setLedgerBusy] = useState(false);
+  const [ledgerError, setLedgerError] = useState<string | null>(null);
   const [assetSearch, setAssetSearch] = useState('');
   const [assetSort, setAssetSort] = useState<'value' | 'change' | 'alpha' | 'recent'>('value');
   const [chainFilter, setChainFilter] = useState('all');
@@ -847,6 +854,41 @@ export default function WalletPage() {
       setAddAcctError(e instanceof Error ? e.message : 'Failed to add account.');
     } finally {
       setAddAcctBusy(false);
+    }
+  };
+
+  // #42 — connect a Ledger as an EVM wallet (key stays on the device).
+  const connectLedgerWallet = async () => {
+    if (wallets.length >= MAX_WALLETS) {
+      setLedgerError(`Max ${MAX_WALLETS} wallets. Remove one to add more.`);
+      return;
+    }
+    setLedgerBusy(true);
+    setLedgerError(null);
+    try {
+      const { connectLedger } = await import('@/lib/wallet/ledger');
+      const { address, path } = await connectLedger();
+      if (wallets.some((w) => addressesEqual(w.address, address, 'ethereum'))) {
+        setLedgerError('That Ledger account is already added.');
+        return;
+      }
+      const lw: StoredWallet = {
+        address,
+        encryptedKey: '',
+        importMethod: 'ledger',
+        derivationPath: path,
+        name: `Ledger ${address.slice(0, 6)}…${address.slice(-4)}`,
+        createdAt: new Date().toISOString(),
+      };
+      const updated = [...wallets, lw];
+      saveWallets(updated);
+      setActiveWallet(lw);
+      notifyWalletImported(lw.name);
+      setView('main');
+    } catch (e) {
+      setLedgerError(e instanceof Error ? e.message : 'Could not connect Ledger. Unlock it and open the Ethereum app.');
+    } finally {
+      setLedgerBusy(false);
     }
   };
 
@@ -1638,6 +1680,19 @@ export default function WalletPage() {
               {wallets.length >= MAX_WALLETS && (
                 <p className="text-xs text-amber-400 mt-2 text-center">Max {MAX_WALLETS} wallets. Remove one to add more.</p>
               )}
+              {/* #42 — hardware wallet (Ledger, EVM). Key never leaves the device. */}
+              <button
+                onClick={() => void connectLedgerWallet()}
+                disabled={ledgerBusy || wallets.length >= MAX_WALLETS}
+                className="w-full mt-2 py-3 nl-glass rounded-xl text-xs font-semibold hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                {ledgerBusy
+                  ? (<><Loader2 className="w-3.5 h-3.5 animate-spin" /> Connecting Ledger…</>)
+                  : (<><Shield className="w-3.5 h-3.5 text-blue-400" /> Connect Ledger (hardware)</>)}
+              </button>
+              {ledgerError && (
+                <p className="text-xs text-amber-400 mt-2 text-center">{ledgerError}</p>
+              )}
             </div>
           </>
         )}
@@ -2340,10 +2395,16 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
   };
 
   const handleSend = async () => {
-    if (!password) { setPwError('Enter your wallet password.'); return; }
+    // #42 — Ledger wallets sign on the device; no password needed.
+    const isLedger = wallet.importMethod === 'ledger';
+    if (!isLedger && !password) { setPwError('Enter your wallet password.'); return; }
     setPwError(''); setStep('processing');
     try {
       if (chain.id === 'solana') {
+        if (isLedger) {
+          setError('Ledger is EVM-only in Naka — switch to an EVM network to send from this wallet.');
+          setStep('confirm'); return;
+        }
         // Native SOL transfer. Needs the seed phrase to derive the signing
         // keypair — raw-private-key imports have no Solana key.
         if (!wallet.encryptedMnemonic) {
@@ -2382,6 +2443,18 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
       const rpc = CHAIN_RPC[chain.id];
       if (!rpc) { setError(`${chain.name} send not supported yet.`); setStep('confirm'); return; }
       const ethers = await import('ethers');
+      // #42 — Ledger: build + sign the native transfer on the device.
+      if (isLedger) {
+        const { sendLedgerEvmTx } = await import('@/lib/wallet/ledger');
+        const hash = await sendLedgerEvmTx({
+          path: wallet.derivationPath ?? "44'/60'/0'/0/0",
+          rpcUrl: rpc,
+          tx: { to: recipient, value: ethers.parseEther(amount) },
+        });
+        setTxHash(hash);
+        setStep('sent');
+        return;
+      }
       const decryptedKey = await decryptPrivateKey(wallet.encryptedKey, password);
       const provider = new ethers.JsonRpcProvider(rpc);
       const signer = new ethers.Wallet(decryptedKey, provider);
@@ -2532,7 +2605,9 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
               </div>
             )}
             {error && <p className="text-xs text-[#EF4444] bg-[#EF4444]/5 p-3 rounded-xl border border-[#EF4444]/10">{error}</p>}
-            <button onClick={() => setStep('password')} style={primaryStyle} className="w-full py-3.5 rounded-2xl font-bold text-sm">Continue</button>
+            <button onClick={() => wallet.importMethod === 'ledger' ? void handleSend() : setStep('password')} style={primaryStyle} className="w-full py-3.5 rounded-2xl font-bold text-sm">
+              {wallet.importMethod === 'ledger' ? 'Confirm on Ledger' : 'Continue'}
+            </button>
           </div>
         )}
 
