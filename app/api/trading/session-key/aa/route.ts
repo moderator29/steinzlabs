@@ -24,6 +24,29 @@ import { encryptServerSecret, vaultConfigured } from '@/lib/wallet/serverKeyVaul
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+const AA_CHAINS = ['ethereum', 'base', 'arbitrum', 'optimism', 'polygon', 'bsc', 'avalanche'];
+
+/**
+ * Config self-check (#41). GET → which prerequisites for background (AA)
+ * sniping are wired, without leaking any secret value. Lets the owner confirm
+ * SESSION_KEY_ENCRYPTION_SECRET + a ZeroDev RPC are set after deploying.
+ *   curl https://<host>/api/trading/session-key/aa
+ */
+export function GET() {
+  const chains: Record<string, boolean> = {};
+  for (const c of AA_CHAINS) chains[c] = !!getZeroDevRpc(c);
+  const anyChain = Object.values(chains).some(Boolean);
+  const vault = vaultConfigured();
+  return NextResponse.json({
+    ready: vault && anyChain,
+    vaultConfigured: vault,
+    chains,
+    note: vault && anyChain
+      ? 'Background sniping is configured.'
+      : 'Set SESSION_KEY_ENCRYPTION_SECRET and at least one ZERODEV_RPC[_CHAIN], then redeploy.',
+  });
+}
+
 async function getSupabase() {
   const cookieStore = await cookies();
   return createServerClient(
