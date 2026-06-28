@@ -1,17 +1,13 @@
 import { NextRequest } from "next/server";
-import * as Sentry from "@sentry/nextjs";
 import { verifyCron, cronResponse, cronHasWork } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { executeTrade } from "@/lib/trading/relayer";
-import { sizeCopySell } from "@/lib/trading/copyTradeSell";
 import { mapWithConcurrency } from "@/lib/utils/concurrency";
-import { normalizeAddress } from "@/lib/utils/addressNormalize";
+import { matchCopyEvent, type CopyEvent } from "@/lib/copy/matcher";
 
-// Fan-out concurrency: each match issues GoPlus + multi-aggregator quote +
-// pending_trades insert + notification. 10 is the empirical sweet spot — high
-// enough to keep cron under maxDuration with hundreds of matches, low enough
-// to not saturate the 0x / Kyber / OpenOcean rate limits.
-const MATCH_CONCURRENCY = 10;
+// Event-level fan-out concurrency. Each matchCopyEvent call does its own
+// per-rule GoPlus + aggregator + pending-trades work; 6 keeps the cron under
+// maxDuration on a busy tick without saturating the aggregator rate limits.
+const EVENT_CONCURRENCY = 6;
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,23 +19,7 @@ interface FollowRow {
   chain: string;
 }
 
-interface CopyRuleRow {
-  user_id: string;
-  whale_address: string;
-  chain: string;
-  max_per_trade_usd: number;
-  daily_cap_usd: number;
-  chains_allowed: string[] | null;
-  tokens_blacklist: string[] | null;
-  min_liquidity_usd: number | null;
-  max_slippage_bps: number | null;
-  enabled: boolean;
-  mode: string | null;
-  paused: boolean | null;
-}
-
 interface WhaleActivityRow {
-  id: string;
   whale_address: string;
   chain: string;
   tx_hash: string;
@@ -52,6 +32,15 @@ interface WhaleActivityRow {
 
 const LOOKBACK_SECONDS = 180; // 3 minutes
 
+/**
+ * copy-trade-monitor — the catch-up safety net for chains/events not delivered
+ * by an Alchemy/Helius webhook. It used to re-implement the copy fan-out (and
+ * had drifted: it executed alerts_only rules, ignored pct_of_whale / cooldown /
+ * auto_copy). It now delegates every recent whale move to the SINGLE source of
+ * truth — lib/copy/matcher.matchCopyEvent — so the cron and webhook paths apply
+ * identical rules, caps, dedup, and modes. matchCopyEvent is idempotent per
+ * (user, source_tx) via claim_copy_trade, so re-processing a move is safe.
+ */
 export async function GET(request: NextRequest) {
   const startedAt = Date.now();
   const auth = verifyCron(request);
@@ -62,35 +51,24 @@ export async function GET(request: NextRequest) {
   }
 
   const admin = getSupabaseAdmin();
-  let considered = 0;
-  let triggered = 0;
-  let ruleBlocked = 0;
-  let failed = 0;
-
   const sinceIso = new Date(Date.now() - LOOKBACK_SECONDS * 1000).toISOString();
 
-  // 1) Fetch ALL whale follows; the active copy mode lives on user_copy_rules
-  // now (was: user_whale_follows.copy_mode, which couldn't be edited from the
-  // UI's mode switcher). Filtering happens against user_copy_rules.mode below.
+  // 1) Followed whales (matchCopyEvent re-checks rules; this just scopes which
+  //    recent activity is worth replaying through it).
   const { data: follows } = await admin
     .from("user_whale_follows")
     .select("user_id,whale_address,chain")
     .returns<FollowRow[]>();
-
   const followRows = follows ?? [];
   if (followRows.length === 0) {
     return cronResponse("copy-trade-monitor", startedAt, { considered: 0, triggered: 0 });
   }
 
-  const whaleKeys = Array.from(
-    new Set(followRows.map((f) => `${f.chain}:${normalizeAddress(f.whale_address, f.chain)}`)),
-  );
-
-  // 2) Fetch recent buy/sell activity for those whales.
+  // 2) Recent actionable moves for those whales.
   const whaleAddrs = Array.from(new Set(followRows.map((f) => f.whale_address)));
   const { data: activity } = await admin
     .from("whale_activity")
-    .select("id,whale_address,chain,tx_hash,action,token_address,token_symbol,value_usd,timestamp")
+    .select("whale_address,chain,tx_hash,action,token_address,token_symbol,value_usd,timestamp")
     .in("whale_address", whaleAddrs)
     .in("action", ["buy", "sell", "swap"])
     .gte("timestamp", sinceIso)
@@ -98,250 +76,44 @@ export async function GET(request: NextRequest) {
     .limit(500)
     .returns<WhaleActivityRow[]>();
 
-  const acts = activity ?? [];
+  const acts = (activity ?? []).filter((a) => a.token_address);
   if (acts.length === 0) {
     return cronResponse("copy-trade-monitor", startedAt, { considered: 0, triggered: 0 });
   }
 
-  // 3) Fetch copy rules for all (user, whale, chain) triples.
-  const { data: rules } = await admin
-    .from("user_copy_rules")
-    .select(
-      "user_id,whale_address,chain,max_per_trade_usd,daily_cap_usd,chains_allowed,tokens_blacklist,min_liquidity_usd,max_slippage_bps,enabled,mode,paused",
-    )
-    .eq("enabled", true)
-    .returns<CopyRuleRow[]>();
-
-  const ruleMap = new Map<string, CopyRuleRow>();
-  for (const r of rules ?? []) {
-    ruleMap.set(`${r.user_id}:${r.chain}:${normalizeAddress(r.whale_address, r.chain)}`, r);
-  }
-
-  // 4) Pre-compute today's per-user spend (for daily_cap_usd).
-  const todayIso = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-  const userIds = Array.from(new Set(followRows.map((f) => f.user_id)));
-  const { data: spendRows } = await admin
-    .from("user_copy_trades")
-    .select("user_id, amount_usd")
-    .in("user_id", userIds)
-    .gte("created_at", todayIso)
-    .in("status", ["pending", "success"]);
-  const spentMap = new Map<string, number>();
-  for (const s of (spendRows ?? []) as { user_id: string; amount_usd: number | null }[]) {
-    spentMap.set(s.user_id, (spentMap.get(s.user_id) ?? 0) + Number(s.amount_usd ?? 0));
-  }
-
-  // 5) Guard against reprocessing the same whale-tx for the same user.
-  const txHashes = Array.from(new Set(acts.map((a) => a.tx_hash)));
-  const { data: already } = await admin
-    .from("user_copy_trades")
-    .select("user_id, source_tx_hash")
-    .in("source_tx_hash", txHashes);
-  const alreadyKey = new Set<string>(
-    (already ?? []).map(
-      (a) => `${(a as { user_id: string }).user_id}:${(a as { source_tx_hash: string }).source_tx_hash}`,
-    ),
-  );
-
-  // 6) Plan phase — fully synchronous (no awaits). Build the work list and
-  // pessimistically claim daily-cap budget against spentMap so the parallel
-  // dispatch in step 7 can't double-spend a user's cap.
-  interface MatchPlan {
-    follower: FollowRow;
-    act: WhaleActivityRow;
-    rule: CopyRuleRow;
-    isSell: boolean;
-    sizeUsd: number;
-    usdcAddr: string;
-  }
-  const plans: MatchPlan[] = [];
-
-  for (const act of acts) {
-    const whaleKey = `${act.chain}:${normalizeAddress(act.whale_address, act.chain)}`;
-    if (!whaleKeys.includes(whaleKey)) continue;
-    if (!act.token_address) continue;
-
-    const followersForThisWhale = followRows.filter(
-      (f) => f.chain === act.chain && normalizeAddress(f.whale_address, f.chain) === normalizeAddress(act.whale_address, act.chain),
-    );
-
-    for (const follower of followersForThisWhale) {
-      considered++;
-      const dedupeKey = `${follower.user_id}:${act.tx_hash}`;
-      if (alreadyKey.has(dedupeKey)) continue;
-
-      const rule = ruleMap.get(`${follower.user_id}:${act.chain}:${normalizeAddress(act.whale_address, act.chain)}`);
-      if (!rule) { ruleBlocked++; continue; }
-
-      const mode = (rule.mode ?? "off").toLowerCase();
-      if (rule.paused === true || mode === "off" || mode === "manual") { ruleBlocked++; continue; }
-      if (rule.chains_allowed && rule.chains_allowed.length > 0 && !rule.chains_allowed.includes(act.chain)) {
-        ruleBlocked++; continue;
-      }
-      if (rule.tokens_blacklist && rule.tokens_blacklist.map((t) => normalizeAddress(t, act.chain)).includes(normalizeAddress(act.token_address, act.chain))) {
-        ruleBlocked++; continue;
-      }
-
-      const spentToday = spentMap.get(follower.user_id) ?? 0;
-      const sizeUsd = Math.min(
-        Number(rule.max_per_trade_usd),
-        Math.max(0, Number(rule.daily_cap_usd) - spentToday),
-      );
-      const isSell = act.action === "sell";
-      if (!isSell && sizeUsd <= 0) { ruleBlocked++; continue; }
-
-      const usdcAddr = usdcForChain(act.chain);
-      if (!usdcAddr) { ruleBlocked++; continue; }
-
-      // Claim budget pessimistically against spentMap so siblings planned in
-      // this same loop see the reduced cap. We unclaim later only on hard
-      // failure paths (parallel section).
-      if (!isSell) spentMap.set(follower.user_id, spentToday + sizeUsd);
-
-      plans.push({ follower, act, rule, isSell, sizeUsd, usdcAddr });
-    }
-  }
-
-  // 7) Dispatch phase — bounded-parallel. Each plan resolves the sell-size
-  // (Supabase read) then issues executeTrade. Failures don't block siblings.
-  type DispatchOutcome =
-    | { outcome: "triggered"; isSell: boolean; userId: string; sizeUsd: number }
-    | { outcome: "blocked"; isSell: boolean; userId: string; sizeUsd: number }
-    | { outcome: "failed"; isSell: boolean; userId: string; sizeUsd: number; reason: string };
-  const settled = await mapWithConcurrency<MatchPlan, DispatchOutcome>(plans, MATCH_CONCURRENCY, async (plan) => {
-    const { follower, act, rule, isSell, sizeUsd, usdcAddr } = plan;
-
-    const walletSource: "external_evm" | "external_solana" =
-      act.chain.toLowerCase() === "solana" ? "external_solana" : "external_evm";
-
-    let fromTokenAddress: string;
-    let fromTokenSymbol: string | null;
-    let toTokenAddress: string;
-    let toTokenSymbol: string | null;
-    let amountIn: string;
-
-    if (isSell) {
-      const sizing = await sizeCopySell({
-        userId: follower.user_id,
-        chain: act.chain,
-        tokenAddress: act.token_address!,
-      });
-      if (!sizing) return { outcome: "blocked" as const, isSell, userId: follower.user_id, sizeUsd };
-      fromTokenAddress = act.token_address!;
-      fromTokenSymbol = act.token_symbol;
-      toTokenAddress = usdcAddr;
-      toTokenSymbol = "USDC";
-      amountIn = sizing.amountInRaw;
-    } else {
-      fromTokenAddress = usdcAddr;
-      fromTokenSymbol = "USDC";
-      toTokenAddress = act.token_address!;
-      toTokenSymbol = act.token_symbol;
-      // Pin to 6 dp (USDC unit) — String(Number) can drop precision (10.50 -> "10.5"),
-      // matching the fix already in /api/copy-trading/execute.
-      amountIn = Number(sizeUsd).toFixed(6);
-    }
-
-    // #13: atomic per-user cap claim (replaces a bare insert; the cron's
-    // in-tick spentMap can't see concurrent webhook/manual fan-outs).
-    const { data: claimedId } = await admin.rpc("claim_copy_trade", {
-      p_user: follower.user_id,
-      p_daily_cap: rule.daily_cap_usd ?? null,
-      p_amount: isSell ? null : sizeUsd,
-      p_source_whale: act.whale_address,
-      p_source_tx: act.tx_hash,
-      p_chain: act.chain,
-      p_token_address: act.token_address,
-      p_token_symbol: act.token_symbol,
-      p_action: isSell ? "sell" : "buy",
-      p_security_score: null,
+  // 3) Dedup to one event per (chain, whale, tx) — matchCopyEvent fans out to
+  //    every matching rule itself, so we only need each distinct move once.
+  const seen = new Set<string>();
+  const events: CopyEvent[] = [];
+  for (const a of acts) {
+    const key = `${a.chain}:${a.whale_address}:${a.tx_hash}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const action = a.action === "buy" || a.action === "sell" || a.action === "swap" ? a.action : "swap";
+    events.push({
+      whale_address: a.whale_address,
+      chain: a.chain,
+      tx_hash: a.tx_hash,
+      action,
+      token_address: a.token_address,
+      token_symbol: a.token_symbol,
+      value_usd: a.value_usd,
+      timestamp: a.timestamp,
     });
-    if (!claimedId) {
-      return { outcome: "blocked" as const, isSell, userId: follower.user_id, sizeUsd };
-    }
-    const inserted = { id: claimedId as string };
+  }
 
-    const result = await executeTrade({
-      userId: follower.user_id,
-      chain: act.chain,
-      walletSource,
-      fromTokenAddress,
-      fromTokenSymbol,
-      toTokenAddress,
-      toTokenSymbol,
-      amountIn,
-      slippageBps: rule.max_slippage_bps ?? 200,
-      reason: "copy_trade",
-      sourceOrderId: (inserted as { id: string } | null)?.id ?? null,
-      sourceOrderTable: "user_copy_trades",
-    });
+  // 4) Replay each move through the canonical matcher (bounded concurrency).
+  const settled = await mapWithConcurrency(events, EVENT_CONCURRENCY, (ev) => matchCopyEvent(ev));
 
-    if (result.awaitingUserConfirmation) {
-      return { outcome: "triggered" as const, isSell, userId: follower.user_id, sizeUsd };
-    }
-    if (result.securityBlocked) {
-      if (inserted) {
-        await admin
-          .from("user_copy_trades")
-          .update({ status: "failed", failure_reason: result.failureReason })
-          .eq("id", (inserted as { id: string }).id);
-      }
-      return { outcome: "failed" as const, isSell, userId: follower.user_id, sizeUsd, reason: result.failureReason ?? "securityBlocked" };
-    }
-    Sentry.captureMessage(`copy-trade failed: ${result.failureReason}`, {
-      tags: { user_id: follower.user_id, whale: act.whale_address },
-    });
-    return { outcome: "failed" as const, isSell, userId: follower.user_id, sizeUsd, reason: result.failureReason ?? "unknown" };
-  });
-
-  // 8) Tally + unclaim budget for failed/blocked buys so a later cron tick can
-  // retry within the user's cap.
+  let considered = 0, triggered = 0, alerted = 0, blocked = 0, failed = 0;
   for (const r of settled) {
     if (r.status !== "fulfilled") { failed++; continue; }
-    const v = r.value;
-    if (v.outcome === "triggered") {
-      triggered++;
-    } else if (v.outcome === "blocked") {
-      ruleBlocked++;
-      if (!v.isSell) spentMap.set(v.userId, (spentMap.get(v.userId) ?? 0) - v.sizeUsd);
-    } else {
-      failed++;
-      if (!v.isSell) spentMap.set(v.userId, (spentMap.get(v.userId) ?? 0) - v.sizeUsd);
-    }
+    considered += r.value.considered;
+    triggered += r.value.triggered;
+    alerted += r.value.alerted;
+    blocked += r.value.blocked;
+    failed += r.value.failed;
   }
 
-  return cronResponse("copy-trade-monitor", startedAt, {
-    considered,
-    triggered,
-    ruleBlocked,
-    failed,
-  });
-}
-
-function usdcForChain(chain: string): string | null {
-  const c = chain.toLowerCase();
-  switch (c) {
-    case "ethereum":
-    case "eth":
-      return "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
-    case "base":
-      return "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
-    case "polygon":
-    case "matic":
-      return "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359";
-    case "arbitrum":
-    case "arb":
-      return "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
-    case "optimism":
-    case "op":
-      return "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85";
-    case "bsc":
-    case "bnb":
-      return "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
-    case "solana":
-    case "sol":
-      return "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
-    default:
-      return null;
-  }
+  return cronResponse("copy-trade-monitor", startedAt, { considered, triggered, alerted, blocked, failed });
 }
