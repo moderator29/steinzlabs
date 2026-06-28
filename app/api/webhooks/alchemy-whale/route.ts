@@ -28,6 +28,7 @@ import { matchCopyEvent } from '@/lib/copy/matcher';
 import { priceAndPersistWhaleRows } from '@/lib/whales/priceActivity';
 import { mapWithConcurrency } from '@/lib/utils/concurrency';
 import { checkWebhookRateLimit, getWebhookClientIp } from '@/lib/security/webhookRateLimit';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 // Per-webhook matcher fan-out concurrency. One slow GoPlus / aggregator
 // quote inside matchCopyEvent must not stall siblings; 8 keeps the GoPlus
@@ -101,10 +102,11 @@ function verifySignature(rawBody: string, signature: string | null): boolean {
   return false;
 }
 
-function classifyAction(event: AlchemyActivityEvent, whaleAddress: string): 'buy' | 'sell' | 'transfer_in' | 'transfer_out' {
-  const whale = whaleAddress.toLowerCase();
-  const from = (event.fromAddress ?? '').toLowerCase();
-  const to = (event.toAddress ?? '').toLowerCase();
+function classifyAction(event: AlchemyActivityEvent, whaleAddress: string, chain: string): 'buy' | 'sell' | 'transfer_in' | 'transfer_out' {
+  // Solana-safe comparison: normalizeAddress lowercases EVM, preserves base58.
+  const whale = normalizeAddress(whaleAddress, chain);
+  const from = normalizeAddress(event.fromAddress ?? '', chain);
+  const to = normalizeAddress(event.toAddress ?? '', chain);
   if (to === whale) {
     // Receiving tokens — heuristic: ERC20 incoming is a buy; native-ETH
     // incoming is a transfer_in (someone sent ETH, not a swap).
@@ -153,8 +155,8 @@ export async function POST(req: NextRequest) {
   // N queries for N transfers).
   const addresses = new Set<string>();
   for (const a of activity) {
-    if (a.fromAddress) addresses.add(a.fromAddress.toLowerCase());
-    if (a.toAddress) addresses.add(a.toAddress.toLowerCase());
+    if (a.fromAddress) addresses.add(normalizeAddress(a.fromAddress, chain));
+    if (a.toAddress) addresses.add(normalizeAddress(a.toAddress, chain));
   }
   if (addresses.size === 0) return NextResponse.json({ ok: true, inserted: 0 });
 
@@ -170,7 +172,7 @@ export async function POST(req: NextRequest) {
 
   const whaleSet = new Map<string, { label: string | null; chain: string }>();
   for (const w of whales) {
-    whaleSet.set(`${w.chain}:${w.address.toLowerCase()}`, { label: w.label, chain: w.chain });
+    whaleSet.set(`${w.chain}:${normalizeAddress(w.address, w.chain)}`, { label: w.label, chain: w.chain });
   }
 
   // Map each activity event to zero, one, or two whale_activity rows
@@ -180,7 +182,7 @@ export async function POST(req: NextRequest) {
     for (const role of ['from', 'to'] as const) {
       const addr = role === 'from' ? ev.fromAddress : ev.toAddress;
       if (!addr) continue;
-      const match = whaleSet.get(`${chain}:${addr.toLowerCase()}`);
+      const match = whaleSet.get(`${chain}:${normalizeAddress(addr, chain)}`);
       if (!match) continue;
 
       const valueNum = typeof ev.value === 'string' ? parseFloat(ev.value) : (ev.value ?? 0);
@@ -190,7 +192,7 @@ export async function POST(req: NextRequest) {
         whale_address: addr,
         chain,
         tx_hash: ev.hash ?? '',
-        action: classifyAction(ev, addr),
+        action: classifyAction(ev, addr, chain),
         token_address: ev.rawContract?.address ?? null,
         token_symbol: ev.asset ?? null,
         amount: valueNum,
