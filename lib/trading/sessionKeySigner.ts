@@ -138,6 +138,10 @@ export async function executeWithSessionKey(p: SessionCopyParams): Promise<Sessi
     if (claimErr || !claim) return null; // dup or write failure ⇒ don't double-execute.
 
     // 5) Execute on-chain from the session EOA.
+    // TESTNET-GATE: the route calldata was built from p.amountIn. Confirm the
+    // aggregator was quoted with RAW token units (not the human-decimal string)
+    // so the swap moves the intended size — verify on testnet before enabling
+    // SESSION_KEY_SIGNER_ENABLED on mainnet (see design doc Phase 2/3).
     const swap = extractSwapTx(p.route);
     if (!swap) { await admin.from('session_key_spends').delete().eq('id', claim.id); return null; }
     const url = rpcUrl(p.chain);
@@ -149,13 +153,16 @@ export async function executeWithSessionKey(p: SessionCopyParams): Promise<Sessi
       const provider = new ethers.JsonRpcProvider(url);
       const wallet = new ethers.Wallet(pk, provider);
 
-      // ERC-20 approve when the swap spends a token (not native).
+      // ERC-20 approve when the swap spends a token (not native). amountIn is a
+      // human-decimal string (e.g. "50.000000"), so we don't parse it to raw
+      // units here — use the approve-max-once pattern: if there's no existing
+      // allowance, approve MaxUint256 once; subsequent trades skip it.
       const isNativeIn = p.fromTokenAddress === '0x0000000000000000000000000000000000000000'
         || p.fromTokenAddress.toLowerCase() === 'native';
       if (!isNativeIn && swap.allowanceTarget) {
         const erc20 = new ethers.Contract(p.fromTokenAddress, ERC20_ABI, wallet);
         const current: bigint = await erc20.allowance(wallet.address, swap.allowanceTarget);
-        if (current < BigInt(p.amountIn)) {
+        if (current === BigInt(0)) {
           const approveTx = await erc20.approve(swap.allowanceTarget, ethers.MaxUint256);
           await approveTx.wait(1);
         }

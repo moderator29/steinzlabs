@@ -37,7 +37,10 @@ export function checkSessionScope(
   if (key.revoked_at) return { ok: false, reason: 'session key revoked' };
   if (new Date(key.expires_at).getTime() <= now.getTime()) return { ok: false, reason: 'session key expired' };
 
-  if (normalizeAddress(key.chain) !== normalizeAddress(proposed.chain)) {
+  // Chain slugs are names, not addresses — compare case-insensitively directly
+  // (normalizeAddress only lowercases address-shaped input, so it would treat
+  // "Base" and "base" as different chains).
+  if (String(key.chain).toLowerCase() !== String(proposed.chain).toLowerCase()) {
     return { ok: false, reason: 'chain not in session scope' };
   }
 
