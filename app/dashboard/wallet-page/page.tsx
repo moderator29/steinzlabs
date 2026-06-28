@@ -29,6 +29,7 @@ import { BiometricUnlockRow } from '@/components/wallet/BiometricUnlockRow';
 import { encryptPrivateKey, decryptPrivateKey, verifyWalletPassword } from '@/lib/wallet/encryption';
 import { normalizeAddress, isEvmChain, isSolanaAddress, addressesEqual } from '@/lib/utils/addressNormalize';
 import { getOnrampUrl } from '@/lib/wallet/onramp';
+import { DappConnect } from '@/components/wallet/DappConnect';
 
 interface TokenBalance {
   symbol: string;
@@ -1654,6 +1655,8 @@ export default function WalletPage() {
             {/* ── ADVANCED ─────────────────────────────────── */}
             <div className="mb-6">
               <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Advanced</h2>
+              {/* #43 — connect this wallet to external dApps (WalletConnect). */}
+              <DappConnect />
               <button
                 onClick={() => setView('analytics')}
                 className="w-full mb-2 py-3 nl-glass rounded-xl text-xs font-semibold hover:-translate-y-px flex items-center justify-center gap-1.5 transition-all"
