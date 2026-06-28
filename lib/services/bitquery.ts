@@ -131,6 +131,80 @@ const SOLANA_WALLET_BUYS_QUERY = `
     }
   }`;
 
+// EVM base/quote token SYMBOLS — a "buy" of one of these is really an exit.
+const EVM_BASE_SYMBOLS = new Set([
+  'WETH', 'ETH', 'USDC', 'USDC.E', 'USDT', 'DAI', 'WBNB', 'BNB',
+  'WBTC', 'WMATIC', 'MATIC', 'WAVAX', 'AVAX', 'FRAX', 'BUSD',
+]);
+
+const EVM_WALLET_BUYS_QUERY = `
+  query EvmWalletBuys($network: evm_network, $address: String, $since: DateTime, $limit: Int) {
+    EVM(network: $network) {
+      DEXTrades(
+        limit: { count: $limit }
+        orderBy: { descending: Block_Time }
+        where: {
+          Block: { Time: { since: $since } }
+          Trade: { Buy: { Buyer: { is: $address } } }
+        }
+      ) {
+        Block { Time }
+        Transaction { Hash }
+        Trade {
+          Buy { Amount AmountInUSD Currency { Symbol SmartContract } }
+        }
+      }
+    }
+  }`;
+
+/**
+ * Recent token BUYS by an EVM wallet (DEX acquisitions of a non-base token).
+ * Mirrors getSolanaWalletBuys; token address comes from Currency.SmartContract,
+ * base tokens excluded by symbol. Fails closed ([]). Verify in ide.bitquery.io.
+ */
+export async function getEvmWalletBuys(
+  chain: string,
+  address: string,
+  sinceIso: string,
+  limit = 10,
+): Promise<WalletBuy[]> {
+  const network = EVM_NETWORK_BY_CHAIN[chain.toLowerCase()];
+  if (!isBitqueryEnabled() || !network || !address || !sinceIso) return [];
+  if (!/^0x[a-fA-F0-9]{40}$/.test(address)) return [];
+  try {
+    const json = (await bitqueryPost(EVM_WALLET_BUYS_QUERY, {
+      network, address, since: sinceIso, limit: Math.min(limit, 25),
+    })) as { data?: { EVM?: { DEXTrades?: unknown[] } } } | null;
+    const rows: unknown[] = json?.data?.EVM?.DEXTrades ?? [];
+    if (!Array.isArray(rows)) return [];
+
+    const out: WalletBuy[] = [];
+    for (const r of rows as Array<Record<string, unknown>>) {
+      const block = r.Block as Record<string, unknown> | undefined;
+      const txn = r.Transaction as Record<string, unknown> | undefined;
+      const trade = r.Trade as Record<string, unknown> | undefined;
+      const buy = trade?.Buy as Record<string, unknown> | undefined;
+      const cur = buy?.Currency as Record<string, unknown> | undefined;
+      const token = String(cur?.SmartContract ?? '').trim().toLowerCase();
+      const symbol = (cur?.Symbol as string | null) ?? null;
+      const hash = String(txn?.Hash ?? '').trim();
+      if (!hash || !/^0x[a-fA-F0-9]{40}$/.test(token)) continue;
+      if (symbol && EVM_BASE_SYMBOLS.has(symbol.toUpperCase())) continue;
+      out.push({
+        txHash: hash,
+        tokenMint: token,
+        tokenSymbol: symbol,
+        amount: num(buy?.Amount),
+        valueUsd: buy?.AmountInUSD != null ? num(buy.AmountInUSD) : null,
+        timestamp: String(block?.Time ?? new Date().toISOString()),
+      });
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Recent token BUYS by a Solana wallet (DEX acquisitions of a non-base token).
  * We deliberately capture only clear token buys — the highest-value copy signal
