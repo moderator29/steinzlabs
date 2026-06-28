@@ -285,7 +285,7 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
 
     // #13: atomic per-user cap claim instead of a bare insert + the racy
     // app-level cap reduce(). Null = the buy would breach daily_cap_usd.
-    const { data: claimedId } = await admin.rpc("claim_copy_trade", {
+    const { data: claimedId, error: claimErr } = await admin.rpc("claim_copy_trade", {
       p_user: rule.user_id,
       p_daily_cap: rule.daily_cap_usd ?? null,
       p_amount: isSell ? null : sizeUsd,
@@ -297,7 +297,19 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
       p_action: isSell ? "sell" : "buy",
       p_security_score: null,
     });
-    if (!claimedId) { out.blocked++; continue; }
+    if (!claimedId) {
+      // NULL = cap breach or duplicate (fail-closed). A non-null error here is a
+      // genuine RPC failure (e.g. lock timeout) — surface it instead of silently
+      // counting it as a normal block, so transient DB issues are observable.
+      if (claimErr) {
+        out.reasons.push(`claim_copy_trade error: ${claimErr.message}`);
+        Sentry.captureMessage(`claim_copy_trade failed: ${claimErr.message}`, {
+          tags: { user_id: rule.user_id, whale: event.whale_address },
+        });
+      }
+      out.blocked++;
+      continue;
+    }
     const inserted = { id: claimedId as string };
 
     const result = await executeTrade({
