@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { cacheWithFallback } from "@/lib/cache/redis";
 import { withTierGate } from "@/lib/subscriptions/apiTierGate";
+import { normalizeAddress } from "@/lib/utils/addressNormalize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,7 +37,7 @@ export const GET = withTierGate("mini", async (_request: NextRequest) => {
       }>;
       const map = new Map<string, { chain: string; vol: number; count: number }>();
       for (const r of rowsA) {
-        const key = `${r.chain}:${r.whale_address.toLowerCase()}`;
+        const key = `${r.chain}:${normalizeAddress(r.whale_address, r.chain)}`;
         const existing = map.get(key) ?? { chain: r.chain, vol: 0, count: 0 };
         existing.vol += Number(r.value_usd ?? 0);
         existing.count += 1;
@@ -47,7 +48,12 @@ export const GET = withTierGate("mini", async (_request: NextRequest) => {
           const address = key.split(":")[1];
           return { address, chain: v.chain, volume_usd: v.vol, move_count: v.count };
         })
-        .sort((a, b) => b.volume_usd - a.volume_usd)
+        // Rank by 24h volume, tie-broken by move_count. The tiebreak matters
+        // while pricing is catching up: if a window's rows are still unpriced
+        // (volume 0), ordering by real move_count surfaces the genuinely most
+        // active whales instead of arbitrary insertion order — no fabricated
+        // numbers, just a secondary real signal.
+        .sort((a, b) => b.volume_usd - a.volume_usd || b.move_count - a.move_count)
         .slice(0, 10);
 
       // No real 24h activity volume → honest empty state. We do NOT
@@ -70,13 +76,13 @@ export const GET = withTierGate("mini", async (_request: NextRequest) => {
         entity_type: string | null;
       }>) {
         enriched.set(
-          `${w.chain}:${w.address.toLowerCase()}`,
+          `${w.chain}:${normalizeAddress(w.address, w.chain)}`,
           { label: w.label, entity_type: w.entity_type },
         );
       }
 
       return sorted.map<TopWhaleRow>((s) => {
-        const key = `${s.chain}:${s.address.toLowerCase()}`;
+        const key = `${s.chain}:${normalizeAddress(s.address, s.chain)}`;
         const meta = enriched.get(key) ?? null;
         return {
           whale_address: s.address,

@@ -10,6 +10,8 @@
  *   caller's watchlist / follows, add a boost to surface it first.
  */
 
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
+
 export interface FilterableEvent {
   id: string;
   type: string;
@@ -96,10 +98,13 @@ export function scoreEvent(event: FilterableEvent, personal?: PersonalContext): 
     if (event.tokenSymbol && personal.watchlistSymbols.has(event.tokenSymbol.toUpperCase())) {
       personalBoost += 40;
     }
-    if (event.from && personal.followedAddresses.has(event.from.toLowerCase())) {
+    // normalizeAddress (shape-based): lowercases EVM, preserves Solana base58 —
+    // matches how followedAddresses is keyed so a followed Solana whale's events
+    // get boosted too, without folding a case-sensitive base58 address.
+    if (event.from && personal.followedAddresses.has(normalizeAddress(event.from))) {
       personalBoost += 35;
     }
-    if (event.to && personal.followedAddresses.has(event.to.toLowerCase())) {
+    if (event.to && personal.followedAddresses.has(normalizeAddress(event.to))) {
       personalBoost += 35;
     }
   }

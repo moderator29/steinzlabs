@@ -1,6 +1,6 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
-import { getTokenSecurity } from '@/lib/services/goplus';
+import { getTokenSecurity, SecurityRateLimitError } from '@/lib/services/goplus';
 
 export const runtime = 'nodejs';
 
@@ -20,11 +20,13 @@ const SOL_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 function deriveLpLocked(lpHolders: unknown): number | null {
   if (!Array.isArray(lpHolders) || lpHolders.length === 0) return null;
   let locked = 0;
+  let total = 0;
   let sawPct = false;
   for (const h of lpHolders as Array<Record<string, unknown>>) {
     const pct = parseFloat(String(h.percent ?? '0'));
     if (!Number.isFinite(pct)) continue;
     sawPct = true;
+    total += pct;
     const isLocked = h.is_locked === 1 || h.is_locked === '1';
     // Burn-address check is EVM-only (these are 0x hex constants, case-
     // insensitive at the protocol level). Only lowercase a 0x-shaped address so
@@ -35,7 +37,11 @@ function deriveLpLocked(lpHolders: unknown): number | null {
         raw.toLowerCase() === '0x0000000000000000000000000000000000000000');
     if (isLocked || isBurn) locked += pct;
   }
-  return sawPct ? Math.min(1, locked) : null;
+  // #27: if the lp_holders list doesn't account for most of the LP supply
+  // (sums well under 1), the data is partial — a precise-looking locked% off
+  // incomplete holders is misleading, so report Unknown (null) instead.
+  if (!sawPct || total < 0.9) return null;
+  return Math.min(1, locked);
 }
 
 export async function GET(req: NextRequest) {
@@ -63,7 +69,16 @@ export async function GET(req: NextRequest) {
       creatorHoldingPct: sec.creatorHoldingPct ? parseFloat((sec.creatorHoldingPct * 100).toFixed(1)) : null,
       lpLockedPct: deriveLpLocked(sec.lpHolders),
     }, { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' } });
-  } catch {
+  } catch (err) {
+    // #39: a provider 429 is transient — surface it as a retryable 503 with a
+    // Retry-After hint so the client can back off, distinct from a generic 502
+    // "provider unavailable" which signals a harder failure.
+    if (err instanceof SecurityRateLimitError) {
+      return NextResponse.json(
+        { error: 'rate_limited' },
+        { status: 503, headers: { 'Retry-After': '30' } },
+      );
+    }
     return NextResponse.json({ error: 'unavailable' }, { status: 502 });
   }
 }

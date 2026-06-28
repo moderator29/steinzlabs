@@ -18,6 +18,7 @@ import {
   ArrowDownLeft,
   ArrowLeftRight,
   Telescope,
+  Zap,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -581,6 +582,7 @@ export default function WhaleTrackerPage() {
                     key={row.id}
                     row={row}
                     watched={isWatched(row.whale_address, row.chain)}
+                    canCopy={canFollow}
                     onToggleWatch={() => toggleWatch(row.whale_address, row.chain)}
                     onOpenWhale={() =>
                       router.push(`/dashboard/whale-tracker/${row.whale_address}?chain=${row.chain}`)
@@ -589,6 +591,20 @@ export default function WhaleTrackerPage() {
                       if (row.token_address) {
                         router.push(`/dashboard/market/${row.chain}/${row.token_address}`);
                       }
+                    }}
+                    onCopy={() => {
+                      // Deep-link into the copy-trading confirm flow for this exact
+                      // tx — the page renders a confirm card and POSTs execute.
+                      const q = new URLSearchParams({
+                        action: canonicalAction(row.action),
+                        whale: row.whale_address,
+                        token: row.token_address ?? "",
+                        symbol: row.token_symbol ?? "",
+                        chain: row.chain,
+                        tx: row.tx_hash,
+                        amount: String(Math.round(Number(row.value_usd ?? 0))),
+                      });
+                      router.push(`/dashboard/copy-trading?${q.toString()}`);
                     }}
                   />
                 ))}
@@ -665,15 +681,19 @@ export default function WhaleTrackerPage() {
 function FeedCard({
   row,
   watched,
+  canCopy,
   onToggleWatch,
   onOpenWhale,
   onOpenToken,
+  onCopy,
 }: {
   row: FeedRow;
   watched: boolean;
+  canCopy: boolean;
   onToggleWatch: () => void;
   onOpenWhale: () => void;
   onOpenToken: () => void;
+  onCopy: () => void;
 }) {
   const action = row.action.toLowerCase();
   // For transfers, surface direction (Received / Sent) so the feed is honest
@@ -752,6 +772,22 @@ function FeedCard({
           )}
         </div>
         <div className="flex items-center gap-1">
+          {/* One-click copy — only on actionable buy/sell rows with a token.
+              Opens the copy-trading confirm page for THIS transaction, which
+              runs the tier/security/cap checks and hands off to the wallet. */}
+          {canCopy && (action === "buy" || action === "sell") && row.token_address && (
+            <button
+              type="button"
+              title="Copy this trade"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCopy();
+              }}
+              className="p-2 rounded-lg text-[#8FA3FF] hover:bg-[#0066FF]/15 hover:text-white transition-colors"
+            >
+              <Zap size={14} />
+            </button>
+          )}
           <button
             type="button"
             title={watched ? "Unwatch" : "Watch"}

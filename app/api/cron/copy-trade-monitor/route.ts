@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
   }
 
   const whaleKeys = Array.from(
-    new Set(followRows.map((f) => `${f.chain}:${f.whale_address.toLowerCase()}`)),
+    new Set(followRows.map((f) => `${f.chain}:${normalizeAddress(f.whale_address, f.chain)}`)),
   );
 
   // 2) Fetch recent buy/sell activity for those whales.
@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
 
   const ruleMap = new Map<string, CopyRuleRow>();
   for (const r of rules ?? []) {
-    ruleMap.set(`${r.user_id}:${r.chain}:${r.whale_address.toLowerCase()}`, r);
+    ruleMap.set(`${r.user_id}:${r.chain}:${normalizeAddress(r.whale_address, r.chain)}`, r);
   }
 
   // 4) Pre-compute today's per-user spend (for daily_cap_usd).
@@ -157,12 +157,12 @@ export async function GET(request: NextRequest) {
   const plans: MatchPlan[] = [];
 
   for (const act of acts) {
-    const whaleKey = `${act.chain}:${act.whale_address.toLowerCase()}`;
+    const whaleKey = `${act.chain}:${normalizeAddress(act.whale_address, act.chain)}`;
     if (!whaleKeys.includes(whaleKey)) continue;
     if (!act.token_address) continue;
 
     const followersForThisWhale = followRows.filter(
-      (f) => f.chain === act.chain && f.whale_address.toLowerCase() === act.whale_address.toLowerCase(),
+      (f) => f.chain === act.chain && normalizeAddress(f.whale_address, f.chain) === normalizeAddress(act.whale_address, act.chain),
     );
 
     for (const follower of followersForThisWhale) {
@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
       const dedupeKey = `${follower.user_id}:${act.tx_hash}`;
       if (alreadyKey.has(dedupeKey)) continue;
 
-      const rule = ruleMap.get(`${follower.user_id}:${act.chain}:${act.whale_address.toLowerCase()}`);
+      const rule = ruleMap.get(`${follower.user_id}:${act.chain}:${normalizeAddress(act.whale_address, act.chain)}`);
       if (!rule) { ruleBlocked++; continue; }
 
       const mode = (rule.mode ?? "off").toLowerCase();
@@ -237,7 +237,9 @@ export async function GET(request: NextRequest) {
       fromTokenSymbol = "USDC";
       toTokenAddress = act.token_address!;
       toTokenSymbol = act.token_symbol;
-      amountIn = String(sizeUsd);
+      // Pin to 6 dp (USDC unit) — String(Number) can drop precision (10.50 -> "10.5"),
+      // matching the fix already in /api/copy-trading/execute.
+      amountIn = Number(sizeUsd).toFixed(6);
     }
 
     // #13: atomic per-user cap claim (replaces a bare insert; the cron's

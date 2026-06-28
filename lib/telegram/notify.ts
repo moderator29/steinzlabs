@@ -2,6 +2,7 @@ import 'server-only';
 import * as Sentry from '@sentry/nextjs';
 import { sendTelegramMessage } from '@/lib/telegram/client';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { inQuietHours, type QuietHoursPrefs } from '@/lib/preferences/quietHours';
 
 // Outbound notification dispatcher. Called server-side whenever the
 // platform creates a notification that should also be pushed to the
@@ -70,7 +71,7 @@ export async function sendTelegramNotification(input: PushInput): Promise<boolea
 
   let chatId: number | null = null;
   try {
-    const [{ data: link }, { data: prefRow }] = await Promise.all([
+    const [{ data: link }, { data: prefRow }, { data: settingsRow }] = await Promise.all([
       admin
         .from('user_telegram_links')
         .select('telegram_chat_id')
@@ -79,6 +80,11 @@ export async function sendTelegramNotification(input: PushInput): Promise<boolea
       admin
         .from('user_preferences')
         .select('preferences')
+        .eq('user_id', input.userId)
+        .maybeSingle(),
+      admin
+        .from('notification_settings')
+        .select('quiet_hours_enabled, quiet_hours_start_minute, quiet_hours_end_minute, quiet_hours_timezone')
         .eq('user_id', input.userId)
         .maybeSingle(),
     ]);
@@ -90,6 +96,15 @@ export async function sendTelegramNotification(input: PushInput): Promise<boolea
     if (prefs.telegram_notifications === false) return false;
     const perKindKey = `telegram_${input.kind}` as const;
     if (prefs[perKindKey] === false) return false;
+
+    // Honor Do Not Disturb the same way the digest cron does — but let security
+    // alerts pierce quiet hours (a security event is exactly what you want to
+    // know at 3am). The durable in-app notification is still written by the
+    // caller, and the digest batches what was held, so suppressing here only
+    // silences the loud real-time ping, not the information.
+    if (input.kind !== 'security' && settingsRow) {
+      if (inQuietHours(settingsRow as QuietHoursPrefs, new Date())) return false;
+    }
   } catch (err) {
     Sentry.captureException(err, { tags: { source: 'telegram/notify', stage: 'preflight' } });
     return false;

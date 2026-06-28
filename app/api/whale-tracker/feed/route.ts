@@ -56,6 +56,13 @@ const TIME_WINDOW_SECONDS: Record<string, number> = {
   "7d": 7 * 24 * 3600,
 };
 
+// Label pills (Smart Money / CEX / Bot …) resolve on the *enriched* row
+// (whales.entity_type + curated registry), which the DB can't filter on. So a
+// label query scans a bounded recent window and paginates in memory; the cap
+// keeps it cheap while covering far more than a single page so page math and
+// totals stay correct instead of being computed off one DB page.
+const LABEL_SCAN_CAP = 500;
+
 export const GET = withTierGate("mini", async (request: NextRequest) => {
   const sp = request.nextUrl.searchParams;
   const chainsParam = sp.get("chains");
@@ -86,6 +93,7 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
 
   try {
     const data = await cacheWithFallback<{ rows: FeedRow[]; total: number }>(cacheKey, 15, async () => {
+      const labelFilter = requestedLabels.length > 0;
       const admin = getSupabaseAdmin();
       let q = admin
         .from("whale_activity")
@@ -95,8 +103,7 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
         )
         .gte("timestamp", since)
         .gte("value_usd", minUsd)
-        .order("timestamp", { ascending: false })
-        .range(offset, offset + limit - 1);
+        .order("timestamp", { ascending: false });
 
       if (chains.length > 0) q = q.in("chain", chains);
       // The DB stores raw actions (transfer_out/transfer_in/buy/sell/...); the
@@ -104,6 +111,9 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
       // "Transfer" matches the real transfer_out rows instead of zero rows.
       if (actionFilter) q = q.in("action", dbActionsForCanonical(actionFilter));
       if (tokenSearch) q = q.ilike("token_symbol", `%${tokenSearch}%`);
+      // DB-paginate when no label filter; for a label filter scan a bounded
+      // window and slice after enrichment (the pill can't be expressed in SQL).
+      q = labelFilter ? q.limit(LABEL_SCAN_CAP) : q.range(offset, offset + limit - 1);
 
       const { data: rowsData, error, count } = await q;
       if (error) throw error;
@@ -122,7 +132,11 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
 
       if (rows.length === 0) return { rows: [], total: 0 };
 
-      const uniqAddrs = Array.from(new Set(rows.map((r) => r.whale_address)));
+      // Look up whales by NORMALIZED address: whale_activity stores whatever
+      // casing the source emitted, but whales.address is canonical-lowercase
+      // (see 2026_06_28_normalize_evm_whale_addresses). Passing raw checksummed
+      // addresses to .in() missed those whales' label/PnL enrichment entirely.
+      const uniqAddrs = Array.from(new Set(rows.map((r) => normalizeAddress(r.whale_address, r.chain))));
       // §whale-tracker-grade — surface pnl_30d_usd / win_rate /
       // avg_hold_hours so the UI can render behavioral badges
       // (Accumulator / Distributor / Sniper / High-win-rate) inline
@@ -193,14 +207,17 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
         };
       });
 
-      // Apply label filter after enrichment on the resolved WhaleLabel so both
-      // whales-table rows and registry-classified rows are respected by the
-      // Smart Money / CEX / Bot pills.
-      const filtered = requestedLabels.length > 0
-        ? enriched.filter((r) => requestedLabels.includes(r.whale_label))
-        : enriched;
+      // No label filter: rows are already the DB page; total is the exact count.
+      if (!labelFilter) {
+        return { rows: enriched, total: count ?? enriched.length };
+      }
 
-      return { rows: filtered, total: requestedLabels.length > 0 ? filtered.length : (count ?? enriched.length) };
+      // Label filter: enriched holds the bounded scan window. Filter on the
+      // resolved WhaleLabel (covers both whales-table and registry-classified
+      // rows), then paginate in memory so total + page math are correct instead
+      // of being derived from a single pre-filter DB page.
+      const matched = enriched.filter((r) => requestedLabels.includes(r.whale_label));
+      return { rows: matched.slice(offset, offset + limit), total: matched.length };
     });
 
     return NextResponse.json(data);

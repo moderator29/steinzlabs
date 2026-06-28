@@ -6,8 +6,8 @@
 // `withTierGate('pro')` on /api/whales/[address]/follow mirrors that.
 // Persists to user_whale_follows + user_copy_rules.
 
-import { useState } from 'react';
-import { X, Bell, Zap, Cpu, Loader2, Check, AlertTriangle, Lock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Bell, Zap, Cpu, Loader2, Check, AlertTriangle, Lock, Send } from 'lucide-react';
 import { useTier } from '@/lib/hooks/useTier';
 
 type Mode = 'alerts' | 'one_click' | 'auto';
@@ -37,6 +37,18 @@ export default function FollowWhaleModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // Telegram can only be a real delivery channel once the user has linked their
+  // account. null = still checking, false = not linked, true = linked.
+  const [telegramLinked, setTelegramLinked] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/telegram/link-code', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : { linked: false }))
+      .then((d) => { if (alive) setTelegramLinked(!!d.linked); })
+      .catch(() => { if (alive) setTelegramLinked(false); });
+    return () => { alive = false; };
+  }, []);
 
   const submit = async () => {
     if (!isPro) { setError('Whale tracking requires Pro. Upgrade to follow whales.'); return; }
@@ -50,7 +62,11 @@ export default function FollowWhaleModal({
           chain: whale.chain,
           mode,
           alert_threshold_usd: threshold,
-          alert_channels: Object.entries(channels).filter(([, v]) => v).map(([k]) => k),
+          // Never persist telegram as a channel if the account isn't linked —
+          // it would silently drop every telegram alert downstream.
+          alert_channels: Object.entries(channels)
+            .filter(([k, v]) => v && !(k === 'telegram' && telegramLinked === false))
+            .map(([k]) => k),
           copy_rules: mode !== 'alerts' ? {
             max_per_trade_usd: maxPerTrade,
             daily_cap_usd: dailyCap,
@@ -103,7 +119,7 @@ export default function FollowWhaleModal({
                   onClick={() => { if (isPro) setMode('alerts'); }}
                   Icon={Bell}
                   title="Alerts only"
-                  description="Get notified when this whale trades. Requires Pro."
+                  description="Get notified the moment this whale trades."
                   locked={!isPro}
                   requiredTier="Pro"
                   currentTier={tier}
@@ -113,7 +129,7 @@ export default function FollowWhaleModal({
                   onClick={() => { if (isPro) setMode('one_click'); }}
                   Icon={Zap}
                   title="One-Click Copy"
-                  description="Review each trade, copy with one tap. Requires Pro."
+                  description="Review each trade and copy it with a single tap."
                   locked={!isPro}
                   requiredTier="Pro"
                   currentTier={tier}
@@ -123,7 +139,7 @@ export default function FollowWhaleModal({
                   onClick={() => { if (isMax) setMode('auto'); }}
                   Icon={Cpu}
                   title="Auto-Copy"
-                  description="Mirror every trade automatically with your rules. Requires Max."
+                  description="Mirror every trade automatically with your rules."
                   locked={!isMax}
                   requiredTier="Max"
                   currentTier={tier}
@@ -150,20 +166,43 @@ export default function FollowWhaleModal({
             <p className="text-[10px] text-slate-500 mt-1">Only notify on trades ≥ this USD value.</p>
           </div>
           <div className="flex items-center gap-2">
-            {(['push', 'email', 'telegram'] as const).map((k) => (
-              <label key={k} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold cursor-pointer border transition-colors ${
-                channels[k] ? 'bg-[#0066FF]/15 text-[#8FA3FF] border-[#0066FF]/40' : 'bg-white/[0.04] text-slate-400 border border-white/10 hover:text-white'
-              }`}>
-                <input
-                  type="checkbox"
-                  checked={channels[k]}
-                  onChange={(e) => setChannels({ ...channels, [k]: e.target.checked })}
-                  className="hidden"
-                />
-                {k.charAt(0).toUpperCase() + k.slice(1)}
-              </label>
-            ))}
+            {(['push', 'email', 'telegram'] as const).map((k) => {
+              // Telegram is only a usable channel once the account is linked.
+              // Until then the toggle is disabled and routes the user to connect.
+              const tgDisabled = k === 'telegram' && telegramLinked === false;
+              return (
+                <label
+                  key={k}
+                  aria-disabled={tgDisabled}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold border transition-colors ${
+                    tgDisabled
+                      ? 'bg-white/[0.02] text-slate-600 border-white/5 cursor-not-allowed'
+                      : channels[k]
+                        ? 'bg-[#0066FF]/15 text-[#8FA3FF] border-[#0066FF]/40 cursor-pointer'
+                        : 'bg-white/[0.04] text-slate-400 border-white/10 hover:text-white cursor-pointer'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={channels[k] && !tgDisabled}
+                    disabled={tgDisabled}
+                    onChange={(e) => setChannels({ ...channels, [k]: e.target.checked })}
+                    className="hidden"
+                  />
+                  {k.charAt(0).toUpperCase() + k.slice(1)}
+                </label>
+              );
+            })}
           </div>
+          {telegramLinked === false && channels.telegram === false && (
+            <a
+              href="/dashboard/profile#telegram"
+              className="flex items-center justify-center gap-1.5 text-[11px] text-[#8FA3FF] hover:text-white -mt-2"
+            >
+              <Send className="w-3 h-3" aria-hidden="true" />
+              Connect your Telegram to receive instant pushes →
+            </a>
+          )}
 
           {/* Copy rules (only for copy modes) */}
           {mode !== 'alerts' && (

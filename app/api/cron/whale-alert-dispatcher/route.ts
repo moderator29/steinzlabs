@@ -4,6 +4,8 @@ import { verifyCron, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { canonicalAction } from "@/lib/whales/labels";
 import { sendWhaleAlert } from "@/lib/services/resend";
+import { sendTelegramNotification } from "@/lib/telegram/notify";
+import { sendPushToUser } from "@/lib/services/webpush";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,6 +68,8 @@ export async function GET(request: NextRequest) {
   const startedAt = Date.now();
   let notified = 0;
   let emailed = 0;
+  let telegrammed = 0;
+  let pushed = 0;
 
   try {
     const sb = getSupabaseAdmin();
@@ -118,6 +122,8 @@ export async function GET(request: NextRequest) {
 
       const channels = (f.alert_channels ?? []) as string[];
       const wantsEmail = channels.includes("email");
+      const wantsTelegram = channels.includes("telegram");
+      const wantsPush = channels.includes("push");
       const userEmail = wantsEmail ? await resolveEmail(f.user_id) : null;
       const whaleName = f.label || `${f.whale_address.slice(0, 6)}…${f.whale_address.slice(-4)}`;
 
@@ -128,18 +134,26 @@ export async function GET(request: NextRequest) {
         const usd = Number(a.value_usd ?? 0);
         const verb = dir === "buy" ? "bought" : dir === "sell" ? "sold" : "moved";
         const sym = a.token_symbol ? `$${a.token_symbol}` : "tokens";
+        const title = `🐋 ${whaleName} ${verb} ${fmtUsd(usd)}`;
+        const bodyText = `${whaleName} ${verb} ${fmtUsd(usd)} of ${sym} on ${a.chain}.`;
+        const url = `/dashboard/whale-tracker/${a.whale_address}?chain=${a.chain}`;
 
+        // In-app bell (always — durable, drives the realtime notifications feed).
         await sb.from("notifications").insert({
           user_id: f.user_id,
           type: "whale.alert",
-          title: `🐋 ${whaleName} ${verb} ${fmtUsd(usd)}`,
-          body: `${whaleName} ${verb} ${fmtUsd(usd)} of ${sym} on ${a.chain}.`,
-          url: `/dashboard/whale-tracker/${a.whale_address}?chain=${a.chain}`,
+          title,
+          body: bodyText,
+          url,
           metadata: { follow_id: f.id, tx_hash: a.tx_hash, value_usd: usd, action: a.action, chain: a.chain },
           read: false,
         });
         notified++;
 
+        // Fan out to every channel the follow opted into. Each is best-effort
+        // and independent so one slow/failed provider can't block the others or
+        // the watermark advance. Telegram self-checks link + quiet hours; push
+        // self-checks subscriptions; email needs a resolved address.
         if (wantsEmail && userEmail) {
           const res = await sendWhaleAlert({
             to: userEmail,
@@ -151,6 +165,18 @@ export async function GET(request: NextRequest) {
             txHash: a.tx_hash,
           });
           if (res.ok) emailed++;
+        }
+        if (wantsTelegram) {
+          try {
+            const ok = await sendTelegramNotification({ userId: f.user_id, kind: "whale", title, body: bodyText, url });
+            if (ok) telegrammed++;
+          } catch { /* delivery failure already logged in notify.ts */ }
+        }
+        if (wantsPush) {
+          try {
+            await sendPushToUser(f.user_id, { title, body: bodyText, url, tag: `whale-${a.whale_address}` });
+            pushed++;
+          } catch { /* push best-effort */ }
         }
       }
 
@@ -166,7 +192,7 @@ export async function GET(request: NextRequest) {
     }
 
     await logCronExecution(NAME, "success", Date.now() - startedAt, undefined, notified);
-    return NextResponse.json({ ok: true, follows: list.length, notified, emailed });
+    return NextResponse.json({ ok: true, follows: list.length, notified, emailed, telegrammed, pushed });
   } catch (err) {
     Sentry.captureException(err, { tags: { cron: NAME } });
     await logCronExecution(NAME, "failed", Date.now() - startedAt, String(err));

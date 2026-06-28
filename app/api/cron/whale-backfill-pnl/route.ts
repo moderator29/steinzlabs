@@ -272,13 +272,17 @@ export async function GET(request: NextRequest) {
   // gate (just 4 follows) left ~440 whales permanently showing "—" for
   // pnl_30d/win_rate. We walk the stalest whales in small batches each tick so
   // the full set converges without a cost spike.
+  // Select/order by metrics_refreshed_at — the dedicated refresh cursor — NOT
+  // last_active_at (which the cron overwrites with the on-chain timestamp).
+  // This rotates through whales by how stale their METRICS are, so the whole
+  // set converges and a recently-active whale still gets its PnL refreshed.
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data: whales, error } = await supabase
     .from('whales')
     .select('id, address, chain, last_active_at')
     .eq('is_active', true)
-    .or(`last_active_at.is.null,last_active_at.lt.${twentyFourHoursAgo}`)
-    .order('last_active_at', { ascending: true, nullsFirst: true })
+    .or(`metrics_refreshed_at.is.null,metrics_refreshed_at.lt.${twentyFourHoursAgo}`)
+    .order('metrics_refreshed_at', { ascending: true, nullsFirst: true })
     .limit(limit);
 
   if (error) {
@@ -311,6 +315,9 @@ export async function GET(request: NextRequest) {
           win_rate: metrics.win_rate,
           trade_count_30d: metrics.trade_count_30d,
           last_active_at: metrics.last_active_at,
+          // Stamp the dedicated refresh cursor so this whale rotates to the back
+          // of the staleness queue (last_active_at stays a pure on-chain value).
+          metrics_refreshed_at: new Date().toISOString(),
           avg_hold_hours: metrics.avg_hold_hours,
           archetype: metrics.archetype,
           // Refresh whale_score from real metrics (decoupled from the dead

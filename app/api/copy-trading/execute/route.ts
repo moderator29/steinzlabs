@@ -130,6 +130,12 @@ export async function POST(request: NextRequest) {
     await recordBlocked("blocked_rule", rule ? "rule_disabled" : "no_rule");
     return NextResponse.json({ error: "No active copy rule" }, { status: 403 });
   }
+  // #5: a paused rule must not execute even on an explicit manual click — the
+  // cron/matcher already honor `paused`, so the manual path must too.
+  if (rule.paused) {
+    await recordBlocked("blocked_rule", "rule_paused");
+    return NextResponse.json({ error: "Copy rule is paused" }, { status: 403 });
+  }
 
   // 2. Rule guards (only meaningful for buys; sells always exit a held position)
   if (body.action === "buy") {

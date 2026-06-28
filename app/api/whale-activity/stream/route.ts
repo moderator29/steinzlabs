@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { normalizeAddress } from "@/lib/utils/addressNormalize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,10 +23,13 @@ export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams;
   const followedRaw = sp.get("followed");
   const minUsd = Math.max(0, parseFloat(sp.get("min_usd") ?? "50000"));
+  // Shape-based normalize (no per-address chain here): lowercases EVM-shaped
+  // addresses, preserves case-sensitive Solana base58 — so .in() below matches
+  // stored whale_address values for both chains instead of dropping Solana.
   const followed = followedRaw
     ? followedRaw
         .split(",")
-        .map((a) => a.trim().toLowerCase())
+        .map((a) => normalizeAddress(a))
         .filter(Boolean)
     : null;
 
