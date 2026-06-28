@@ -4051,6 +4051,9 @@ function ActivityTab({ address, chain, enabledChains }: { address: string; chain
   const [txs, setTxs] = useState<DecodedTx[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [upstreamWarning, setUpstreamWarning] = useState<string | null>(null);
+  // #39 — transaction-detail expansion: clicking a row opens a modal
+  // with the full breakdown + copyable hash + explorer link.
+  const [selectedTx, setSelectedTx] = useState<DecodedTx | null>(null);
   // Chains we can actually decode activity for (transactions API support).
   const scopeChains = useMemo(
     () => enabledChains.filter((c) => LIVE_CHAINS.includes(c)),
@@ -4189,7 +4192,14 @@ function ActivityTab({ address, chain, enabledChains }: { address: string; chain
           const txChainName = SUPPORTED_CHAINS.find((c) => c.id === txChainId)?.name ?? txChainId;
           const explorerTxHref = explorerTxUrl(txChainId, tx.tx_hash);
           return (
-            <div key={`${txChainId}:${tx.tx_hash}`} className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-white/5 transition-colors">
+            <div
+              key={`${txChainId}:${tx.tx_hash}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => setSelectedTx(tx)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedTx(tx); } }}
+              className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer focus:outline-none focus:bg-white/5"
+            >
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isSwap ? 'bg-[#0066FF]/10' : 'bg-[#F59E0B]/10'}`}>
                 <Icon className={`w-4 h-4 ${isSwap ? 'text-[#0066FF]' : 'text-[#F59E0B]'}`} aria-hidden />
               </div>
@@ -4216,6 +4226,7 @@ function ActivityTab({ address, chain, enabledChains }: { address: string; chain
                   href={explorerTxHref}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
                   className="text-[9px] text-[#0066FF] hover:underline"
                 >
                   View ↗
@@ -4232,6 +4243,118 @@ function ActivityTab({ address, chain, enabledChains }: { address: string; chain
     <div>
       {scopeToggle}
       {body}
+      {selectedTx && (
+        <TxDetailModal tx={selectedTx} fallbackChainId={chain.id} onClose={() => setSelectedTx(null)} />
+      )}
+    </div>
+  );
+}
+
+/**
+ * TxDetailModal — #39. Expands an activity row into a full-detail sheet:
+ * type, full timestamp, network, per-leg amounts, USD value, the
+ * complete (copyable) transaction hash, and a block-explorer link.
+ * Renders only the fields the decoder/ledger actually returned — no
+ * fabricated status or fee values.
+ */
+function TxDetailModal({
+  tx,
+  fallbackChainId,
+  onClose,
+}: {
+  tx: DecodedTx;
+  fallbackChainId: string;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const txChainId = tx.chain || fallbackChainId;
+  const chainInfo = SUPPORTED_CHAINS.find((c) => c.id === txChainId);
+  const chainName = chainInfo?.name ?? txChainId;
+  const explorerName = txChainId === 'solana' ? 'SolScan' : (chainInfo?.explorerName ?? 'Explorer');
+  const explorerHref = explorerTxUrl(txChainId, tx.tx_hash);
+  const isSwap = tx.tx_type === 'swap';
+  const isSend = tx.tx_type === 'send' || (tx.amount_out !== null && tx.amount_in === null);
+  const Icon = isSwap ? Repeat : ArrowUpRight;
+  const date = new Date(tx.timestamp);
+  const title = isSwap
+    ? `Swap ${tx.token_out ?? ''} → ${tx.token_in ?? ''}`.trim()
+    : isSend
+      ? `Send ${tx.token_out ?? ''}`.trim()
+      : `${tx.tx_type} ${tx.token_in ?? tx.token_out ?? ''}`.trim();
+
+  const copyHash = async () => {
+    try {
+      await navigator.clipboard.writeText(tx.tx_hash);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* clipboard unavailable */ }
+  };
+
+  const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
+    <div className="flex items-start justify-between gap-3 py-2.5 border-b border-white/5 last:border-0">
+      <span className="text-[11px] text-slate-400 shrink-0">{label}</span>
+      <span className="text-xs text-white text-end break-all">{value}</span>
+    </div>
+  );
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Transaction details"
+    >
+      <div
+        className="w-full max-w-[440px] bg-[#0a0f1a] border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isSwap ? 'bg-[#0066FF]/10' : 'bg-[#F59E0B]/10'}`}>
+              <Icon className={`w-4 h-4 ${isSwap ? 'text-[#0066FF]' : 'text-[#F59E0B]'}`} aria-hidden />
+            </div>
+            <h2 className="text-base font-bold text-white capitalize truncate">{title}</h2>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5 shrink-0" aria-label="Close">
+            <X className="w-4 h-4 text-gray-400" />
+          </button>
+        </div>
+
+        <div className="rounded-2xl nl-glass px-4 py-1" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.18)' }}>
+          <Row label="Type" value={<span className="capitalize">{tx.tx_type}</span>} />
+          <Row label="Network" value={chainName} />
+          <Row label="Date" value={date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })} />
+          {tx.amount_out !== null && (
+            <Row label="Sent" value={<span className="font-mono">-{tx.amount_out.toLocaleString(undefined, { maximumFractionDigits: 8 })} {tx.token_out ?? ''}</span>} />
+          )}
+          {tx.amount_in !== null && (
+            <Row label="Received" value={<span className="font-mono text-[#10B981]">+{tx.amount_in.toLocaleString(undefined, { maximumFractionDigits: 8 })} {tx.token_in ?? ''}</span>} />
+          )}
+          {tx.usd_value !== null && tx.usd_value > 0 && (
+            <Row label="Value" value={`$${tx.usd_value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`} />
+          )}
+          <Row
+            label="Tx hash"
+            value={
+              <button onClick={() => void copyHash()} className="inline-flex items-center gap-1.5 font-mono text-[#8FA3FF] hover:text-white transition-colors" title="Copy transaction hash">
+                <span>{tx.tx_hash.slice(0, 10)}…{tx.tx_hash.slice(-8)}</span>
+                {copied ? <Check className="w-3.5 h-3.5 text-[#10B981]" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
+            }
+          />
+        </div>
+
+        <a
+          href={explorerHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="nl-glass flex items-center justify-center gap-1.5 py-3 rounded-2xl text-[#8FA3FF] text-sm font-semibold hover:-translate-y-px transition-transform"
+          style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.3)' }}
+        >
+          View on {explorerName} <ExternalLink className="w-3.5 h-3.5" />
+        </a>
+      </div>
     </div>
   );
 }
