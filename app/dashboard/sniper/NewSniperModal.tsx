@@ -342,7 +342,7 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
           {/* Auto-execute */}
           <Toggle
             label="Auto-Execute"
-            hint="Auto-stage a buy for one-tap approval on match (you sign). Off = alert only."
+            hint="On a match: the Naka wallet auto-buys while it's unlocked and Naka is open (non-custodial — keys stay in your browser); otherwise it's staged for one-tap approval. External wallets always need your one-tap sign. Off = alert only."
             value={autoExecute}
             onChange={setAutoExecute}
             icon={Zap}

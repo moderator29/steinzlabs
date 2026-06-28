@@ -23,6 +23,7 @@ import { getAccount } from '@wagmi/core';
 import { ProviderController } from '@reown/appkit-controllers';
 import { getWalletSessionKey } from '@/lib/wallet/walletSession';
 import { normalizeAddress } from '@/lib/utils/addressNormalize';
+import { decryptPrivateKey } from '@/lib/wallet/encryption';
 import { wagmiAdapter } from '@/lib/wallet/appkit';
 
 /** Minimal EIP-1193 surface we use for EVM signing. */
@@ -218,7 +219,7 @@ export function useSwapBroadcast() {
       if (!quote.transaction) {
         throw new Error('No transaction data to sign. Re-fetch the quote and try again.');
       }
-      const storedWallets = safeLocalParse<Array<{ address?: string; encryptedKey?: string; iv?: string }>>('steinz_wallets', []);
+      const storedWallets = safeLocalParse<Array<{ address?: string; encryptedKey?: string }>>('steinz_wallets', []);
       const activeAddr = safeLocalGet('steinz_active_wallet_address') || address;
       const storedWallet = storedWallets.find(
         (w) => w.address && activeAddr && normalizeAddress(w.address) === normalizeAddress(activeAddr),
@@ -239,22 +240,15 @@ export function useSwapBroadcast() {
       }
       if (!pwd) throw new Error('Wallet session expired. Please unlock your wallet.');
 
+      // Decrypt via the shared AES-256-GCM/PBKDF2 helper — the same format
+      // the Wallet page wrote with encryptPrivateKey. The previous bespoke
+      // decrypt assumed a legacy iv-separated payload + raw password key,
+      // which never matched and broke every built-in swap.
       let pk: string;
       try {
-        if (!storedWallet.iv) {
-          throw new Error(
-            'This wallet uses an outdated encryption format. Please re-import the seed phrase from the Wallet page to upgrade to AES-256-GCM.',
-          );
-        }
-        const keyMaterial = new TextEncoder().encode(pwd.padEnd(32).slice(0, 32));
-        const cryptoKey = await crypto.subtle.importKey('raw', keyMaterial, 'AES-GCM', false, ['decrypt']);
-        const iv = Uint8Array.from(atob(storedWallet.iv), (c) => c.charCodeAt(0));
-        const encrypted = Uint8Array.from(atob(storedWallet.encryptedKey), (c) => c.charCodeAt(0));
-        const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, cryptoKey, encrypted);
-        pk = new TextDecoder().decode(decrypted);
-      } catch (err) {
-        if (err instanceof Error && err.message.includes('outdated encryption format')) throw err;
-        throw new Error('Failed to decrypt wallet key. Wrong password or corrupted data.');
+        pk = await decryptPrivateKey(storedWallet.encryptedKey, pwd);
+      } catch {
+        throw new Error('Failed to decrypt wallet key — wrong password, or this wallet predates AES-256-GCM (re-import the seed phrase from the Wallet page).');
       }
 
       const { ethers } = await import('ethers');

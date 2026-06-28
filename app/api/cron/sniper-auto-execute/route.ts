@@ -193,6 +193,11 @@ export async function GET(request: NextRequest) {
         source_order_table: 'sniper_executions',
         status: 'pending',
         route_data: {},
+        // Client-armed auto-sign: only the built-in Naka wallet can sign in
+        // the browser without the user's external wallet app. When the wallet
+        // is unlocked and the tab is open, the PendingTradesBanner auto-signs
+        // this snipe (non-custodial); otherwise it stays a one-tap card.
+        auto_confirm: walletSource === 'builtin',
         expires_at: expiresAt,
       })
       .select('id')

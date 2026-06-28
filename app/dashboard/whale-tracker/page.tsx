@@ -125,7 +125,10 @@ export default function WhaleTrackerPage() {
   const canFollow = hasTierAccess(user, 'pro');
   const goUpgrade = useCallback(() => router.push('/dashboard/pricing'), [router]);
   const [selectedChains, setSelectedChains] = useState<string[]>(["all"]);
-  const [size, setSize] = useState<Size>("100k");
+  // Default to 50k, not 100k: at 100k the first-load feed was a trickle
+  // (most real whale moves + freshly-priced rows sit below $100k), which
+  // read as "tracker shows nothing". 50k still filters to genuine size.
+  const [size, setSize] = useState<Size>("50k");
   const [timeRange, setTimeRange] = useState<TimeRange>("24h");
   const [actionFilter, setActionFilter] = useState<Action>(null);
   const [tokenSearch, setTokenSearch] = useState("");

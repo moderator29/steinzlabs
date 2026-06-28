@@ -67,6 +67,46 @@ async function geckoTerminalPrice(chain: string, tokenAddress: string): Promise<
   }
 }
 
+// GeckoTerminal accepts up to 30 comma-separated addresses per request. Pricing
+// the backlog one token at a time blew the ~30 req/min free limit and left a
+// permanent NULL backlog; batching prices a whole chain's distinct tokens in a
+// couple of requests. Returns a map keyed by the REQUESTED address (handles the
+// API lowercasing EVM keys) → unit USD price.
+const GT_MAX_PER_REQUEST = 30;
+
+async function geckoTerminalPriceMany(
+  chain: string,
+  addresses: string[],
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  const network = GT_NETWORK[chain.toLowerCase()];
+  if (!network || addresses.length === 0) return out;
+  for (let i = 0; i < addresses.length; i += GT_MAX_PER_REQUEST) {
+    const chunk = addresses.slice(i, i + GT_MAX_PER_REQUEST);
+    try {
+      const res = await fetch(
+        `https://api.geckoterminal.com/api/v2/simple/networks/${network}/token_price/${chunk.join(',')}`,
+        { headers: { accept: 'application/json' }, next: { revalidate: 60 } },
+      );
+      if (!res.ok) continue;
+      const json = (await res.json()) as { data?: { attributes?: { token_prices?: Record<string, string> } } };
+      const prices = json.data?.attributes?.token_prices ?? {};
+      // Build a lowercased view once so EVM (lowercased by GT) and Solana
+      // (case-preserved) both resolve.
+      const lower: Record<string, string> = {};
+      for (const [k, v] of Object.entries(prices)) lower[k.toLowerCase()] = v;
+      for (const addr of chunk) {
+        const raw = prices[addr] ?? lower[addr.toLowerCase()];
+        const price = raw != null ? parseFloat(raw) : NaN;
+        if (Number.isFinite(price) && price > 0) out.set(addr, price);
+      }
+    } catch {
+      /* skip this chunk; misses fall back to per-token pricing */
+    }
+  }
+  return out;
+}
+
 async function tokenPriceUsd(
   chain: string,
   tokenAddress: string | null,
@@ -160,11 +200,40 @@ export async function priceActivityUsdBatch(items: ActivityToPrice[]): Promise<(
     if (!uniq.has(k)) uniq.set(k, a);
   }
   const unit = new Map<string, number | null>();
-  // Sequential over DISTINCT tokens (usually a handful per batch) so we never
-  // duplicate a lookup; the per-token call still benefits from the module cache.
+
+  // 1. Bulk-price token-address rows via GeckoTerminal's multi endpoint,
+  //    grouped by chain (≤30 addresses/request). This is the throttle fix:
+  //    a batch full of distinct ERC-20s now costs ~1 request per 30 tokens
+  //    instead of one per token, so the backlog actually drains.
+  const byChain = new Map<string, { key: string; address: string }[]>();
   for (const [k, a] of uniq) {
+    if (a.token_address) {
+      const list = byChain.get(a.chain) ?? [];
+      list.push({ key: k, address: a.token_address });
+      byChain.set(a.chain, list);
+    }
+  }
+  for (const [chain, list] of byChain) {
+    const priced = await geckoTerminalPriceMany(chain, list.map((x) => x.address));
+    for (const { key, address } of list) {
+      const p = priced.get(address);
+      if (p != null) {
+        unit.set(key, p);
+        // Warm the per-token cache so inline poll/webhook pricing reuses it.
+        const a = uniq.get(key)!;
+        if (a.token_address) priceCache.set(`tok:${chain}:${normalizeAddress(a.token_address, chain)}`, { price: p, at: Date.now() });
+      }
+    }
+  }
+
+  // 2. Per-token fallback (Birdeye / CoinGecko / native) for anything the
+  //    bulk call didn't resolve — natives with no token_address, or tokens
+  //    GeckoTerminal doesn't list.
+  for (const [k, a] of uniq) {
+    if (unit.get(k) != null) continue;
     unit.set(k, await tokenPriceUsd(a.chain, a.token_address, a.token_symbol));
   }
+
   return items.map((a) => {
     if (a.amount == null || a.amount <= 0) return null;
     const p = unit.get(tokenKey(a));
