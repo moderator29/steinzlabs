@@ -167,7 +167,12 @@ export async function GET(request: NextRequest) {
               last_active_at: new Date().toISOString(),
             }));
           if (rows.length > 0) {
-            const { data } = await supabase.from("whales").insert(rows).select("id");
+            // upsert/ignoreDuplicates so a concurrent insert of the same
+            // (address,chain) can't throw a unique violation and fail the batch.
+            const { data } = await supabase
+              .from("whales")
+              .upsert(rows, { onConflict: "address,chain", ignoreDuplicates: true })
+              .select("id");
             bitqueryInserted = (data ?? []).length;
             inserted += bitqueryInserted;
           }

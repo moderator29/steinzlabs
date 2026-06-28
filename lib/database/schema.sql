@@ -89,22 +89,9 @@ CREATE INDEX idx_threats_severity ON threats(severity);
 CREATE INDEX idx_threats_acknowledged ON threats(acknowledged);
 
 -- =====================================================
--- FOLLOWED ENTITIES TABLE (Money Radar)
--- =====================================================
-CREATE TABLE followed_entities (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  entity_id TEXT NOT NULL,
-  entity_name TEXT NOT NULL,
-  entity_type TEXT, -- Market Maker, VC, Whale
-  wallets TEXT[], -- Array of wallet addresses
-  created_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(user_id, entity_id)
-);
-
-CREATE INDEX idx_followed_user ON followed_entities(user_id);
-CREATE INDEX idx_followed_entity ON followed_entities(entity_id);
-
+-- Money Radar follows now live on the canonical user_whale_follows table; the
+-- old followed_entities table was retired (see migration
+-- 2026_06_28_drop_followed_entities.sql).
 -- =====================================================
 -- ALERTS TABLE
 -- =====================================================
