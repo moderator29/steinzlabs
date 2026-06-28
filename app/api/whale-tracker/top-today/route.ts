@@ -48,7 +48,12 @@ export const GET = withTierGate("mini", async (_request: NextRequest) => {
           const address = key.split(":")[1];
           return { address, chain: v.chain, volume_usd: v.vol, move_count: v.count };
         })
-        .sort((a, b) => b.volume_usd - a.volume_usd)
+        // Rank by 24h volume, tie-broken by move_count. The tiebreak matters
+        // while pricing is catching up: if a window's rows are still unpriced
+        // (volume 0), ordering by real move_count surfaces the genuinely most
+        // active whales instead of arbitrary insertion order — no fabricated
+        // numbers, just a secondary real signal.
+        .sort((a, b) => b.volume_usd - a.volume_usd || b.move_count - a.move_count)
         .slice(0, 10);
 
       // No real 24h activity volume → honest empty state. We do NOT
