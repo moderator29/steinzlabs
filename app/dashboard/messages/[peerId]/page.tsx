@@ -331,7 +331,10 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
       });
       if (!res.ok) {
         const j = await res.json().catch(() => null);
-        setError(j?.error ?? 'Could not send');
+        // Make the common failures actionable rather than terse.
+        if (res.status === 429) setError("You're sending too fast — wait a few seconds and try again.");
+        else if (res.status === 403) setError(j?.error ?? 'You can\'t message this user (blocked or messages disabled).');
+        else setError(j?.error ?? 'Could not send.');
         return;
       }
       setDraft('');

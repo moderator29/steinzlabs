@@ -20,11 +20,13 @@ interface ShadowGuardianScanProps {
 export function ShadowGuardianScan({ tokenAddress, onComplete }: ShadowGuardianScanProps) {
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function runScan() {
     try {
       setScanning(true);
       setResult(null);
+      setError(null);
 
       const response = await fetch('/api/security/scan-trade', {
         method: 'POST',
@@ -32,12 +34,23 @@ export function ShadowGuardianScan({ tokenAddress, onComplete }: ShadowGuardianS
         body: JSON.stringify({ tokenAddress, amount: 100 }),
       });
 
-      const data = await response.json();
-      setResult(data);
+      const data = await response.json().catch(() => null);
+      // Fail CLOSED on a security check: if the scan didn't return a
+      // well-formed verdict, never let the UI fall through to a "safe to
+      // trade" state — show an explicit error so the user doesn't trade
+      // blind.
+      if (!response.ok || !data || typeof data.allowed !== 'boolean') {
+        const reason = (data && typeof data.error === 'string' && data.error)
+          || (data && typeof data.message === 'string' && data.message)
+          || `Scanner returned ${response.status}`;
+        setError(reason);
+        return;
+      }
 
+      setResult(data);
       if (onComplete) onComplete(data);
-    } catch (error) {
-      console.error('Scan failed:', error);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not reach the security scanner.');
     } finally {
       setScanning(false);
     }
@@ -51,6 +64,28 @@ export function ShadowGuardianScan({ tokenAddress, onComplete }: ShadowGuardianS
         <p className="text-sm text-gray-500 mt-2">
           Checking for scammers, mixers, and suspicious activity
         </p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-500/10 border-2 border-red-500 rounded-lg p-5">
+        <div className="flex items-center gap-3 mb-2">
+          <AlertTriangle className="text-red-500 shrink-0" size={28} />
+          <h3 className="text-base font-bold text-red-500">Scan didn&rsquo;t complete</h3>
+        </div>
+        <p className="text-sm text-gray-200 mb-1">{error}</p>
+        <p className="text-xs text-red-300 mb-4">
+          Shadow Guardian couldn&rsquo;t verify this token. Do not trade until the scan succeeds.
+        </p>
+        <button
+          onClick={runScan}
+          className="w-full bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+        >
+          <Shield size={18} />
+          Retry scan
+        </button>
       </div>
     );
   }

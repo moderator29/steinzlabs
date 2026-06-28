@@ -49,6 +49,7 @@ export default function UnlockWalletModal({
   const [show, setShow] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [wrongAttempts, setWrongAttempts] = useState(0);
   const [passkeyAvailable, setPasskeyAvailable] = useState(false);
   const [hasRegisteredPasskey, setHasRegisteredPasskey] = useState(false);
   const [passkeyBusy, setPasskeyBusy] = useState<'register' | 'auth' | null>(null);
@@ -137,7 +138,13 @@ export default function UnlockWalletModal({
     try {
       const ok = await verifyWalletPassword(encryptedKey, password);
       if (!ok) {
-        setError('Wrong password. Try again.');
+        const n = wrongAttempts + 1;
+        setWrongAttempts(n);
+        // No hard local lockout (decryption is client-side), so don't fake a
+        // countdown — after a few misses, point the user at recovery.
+        setError(n >= 3
+          ? `Wrong password (attempt ${n}). Forgot it? Re-import this wallet with your recovery phrase.`
+          : 'Wrong password. Try again.');
         return;
       }
       setWalletSessionKey(password);

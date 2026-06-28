@@ -1050,10 +1050,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Wallet-read privacy gate: if a signed-in user has explicitly turned OFF
-    // "Let VTX read my wallet balances" in VTX settings, hide the address so the
-    // agent can't read balances or reference holdings. Unset = current behavior
-    // (visible). This is the privacy control behind the settings toggle.
-    if (body.context.walletAddress && callerUserId) {
+    // "Let VTX read my wallet balances" in VTX settings, hide BOTH the wallet
+    // address AND the injected portfolio summary so the agent can't read or
+    // reference holdings. Unset = current behavior (visible).
+    let walletReadDisabled = false;
+    if (callerUserId) {
       try {
         const admin = getSupabaseAdmin();
         const { data: prefRow } = await admin
@@ -1062,12 +1063,13 @@ export async function POST(request: NextRequest) {
           .eq('user_id', callerUserId)
           .maybeSingle();
         const vtxSettings = (prefRow?.preferences as { vtx_settings?: { wallet_read_enabled?: boolean } } | null)?.vtx_settings;
-        if (vtxSettings && vtxSettings.wallet_read_enabled === false) {
-          body.context.walletAddress = undefined;
-        }
+        if (vtxSettings && vtxSettings.wallet_read_enabled === false) walletReadDisabled = true;
       } catch {
         // Non-fatal — default to visible.
       }
+    }
+    if (walletReadDisabled && body.context.walletAddress) {
+      body.context.walletAddress = undefined;
     }
 
     // ── Rate Limiting ───────────────────────────────────────────────────────
@@ -1212,7 +1214,7 @@ export async function POST(request: NextRequest) {
     // questions without a separate tool roundtrip. Falls back silently when
     // the query fails or the user has nothing — never blocks the response.
     let portfolioContextStr = '';
-    if (callerUserId) {
+    if (callerUserId && !walletReadDisabled) {
       try {
         const admin = getSupabaseAdmin();
         const { data: pos } = await admin

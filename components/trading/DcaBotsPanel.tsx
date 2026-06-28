@@ -45,6 +45,11 @@ export function DcaBotsPanel() {
     load();
   }, []);
 
+  async function failReason(res: Response, fallback: string): Promise<string> {
+    try { const b = await res.json(); if (b?.error) return String(b.error); } catch { /* non-JSON */ }
+    return `${fallback} (${res.status})`;
+  }
+
   async function patch(id: string, body: Record<string, unknown>) {
     const res = await fetch(`/api/trading/dca-bots/${id}`, {
       method: "PATCH",
@@ -53,7 +58,7 @@ export function DcaBotsPanel() {
       credentials: "include",
     });
     if (res.ok) load();
-    else toast.error("Update failed");
+    else toast.error(await failReason(res, "Couldn't update this DCA bot"));
   }
 
   async function cancel(id: string) {
@@ -61,6 +66,10 @@ export function DcaBotsPanel() {
     if (res.ok) {
       toast.success("Bot cancelled");
       load();
+    } else {
+      // A bot that fails to cancel keeps buying on schedule with the
+      // user's money — make the failure explicit.
+      toast.error(await failReason(res, "Couldn't cancel DCA bot — it may still run"));
     }
   }
 
