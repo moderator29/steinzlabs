@@ -67,12 +67,14 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ group: stri
   if (!paths) return NextResponse.json({ error: 'unknown_group', group }, { status: 404 });
 
   const secret = process.env.CRON_SECRET ?? '';
-  // Vercel Deployment Protection intercepts same-origin self-fetches with an SSO
-  // challenge page that returns 200 OK — so the dispatcher previously logged
-  // every handler as "2xx success" while NONE of them actually ran, masking a
-  // 45-day platform-wide cron outage as green. Send the automation bypass
-  // header so the request reaches the real handler, and assert the response is
-  // genuine handler JSON ({ ok: ... }) rather than the HTML challenge page.
+  // Vercel Deployment Protection (Vercel Authentication / password) challenges
+  // every request to the deployment URL — INCLUDING this dispatcher's own
+  // server-to-server fetches to /api/cron/<name>. The scheduler's invocation of
+  // the dispatcher is exempt, but our fan-out fetches are not, so without a
+  // bypass they receive a 200 HTML auth page and the real handler never runs —
+  // which is exactly how every handler sat frozen while the dispatcher logged
+  // "success". Sending the automation bypass secret lets the sub-requests
+  // through. Harmless no-op when protection is disabled / the secret is unset.
   const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET ?? '';
   const proto = req.headers.get('x-forwarded-proto') ?? 'https';
   const host = req.headers.get('host') ?? process.env.VERCEL_URL ?? '';
@@ -90,21 +92,20 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ group: stri
           const headers: Record<string, string> = { authorization: `Bearer ${secret}` };
           if (bypass) {
             headers['x-vercel-protection-bypass'] = bypass;
-            headers['x-vercel-set-bypass-cookie'] = 'true';
+            headers['x-vercel-set-bypass-cookie'] = 'false';
           }
           const r = await fetch(`${base}/api/cron/${name}`, {
             headers,
             signal: AbortSignal.timeout(60_000),
           });
-          // A 2xx that isn't JSON is the Deployment-Protection challenge page,
-          // not a real handler result — record it as a protection failure so
-          // the outage is visible instead of falsely green.
-          const ct = r.headers.get('content-type') ?? '';
-          if (r.ok && !ct.includes('application/json')) {
-            results[name] = 'protected_non_json';
-          } else {
-            results[name] = r.status;
-          }
+          // A real cron handler always replies JSON. If a 2xx comes back as
+          // HTML it's the Deployment-Protection wall, not the handler — record
+          // it as a distinct failure marker so it counts as failed and surfaces
+          // in the error summary instead of masquerading as success.
+          const contentType = r.headers.get('content-type') ?? '';
+          results[name] = r.ok && !contentType.includes('application/json')
+            ? `blocked-${r.status}`
+            : r.status;
         } catch (err) {
           results[name] = err instanceof Error ? err.name : 'error';
           Sentry.captureException(err, { tags: { cron: 'dispatch', group, target: name } });
