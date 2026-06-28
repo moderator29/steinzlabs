@@ -32,6 +32,14 @@ export interface TradeIntent {
   sourceOrderId?: string | null;
   sourceOrderTable?: "limit_orders" | "dca_bots" | "stop_loss_orders" | "user_copy_trades" | null;
   expectedPriceUsd?: number | null;
+  /**
+   * Auto-Copy (client-armed, non-custodial): when true, the in-browser
+   * PendingTradesBanner may sign + broadcast this trade WITHOUT a manual click,
+   * but only while the app is open and the built-in wallet is unlocked. The
+   * server still never signs. Defaults false (manual confirm) for every other
+   * path. Only set this for builtin-wallet auto_copy rules.
+   */
+  autoConfirm?: boolean;
 }
 
 export interface TradeResult {
@@ -126,6 +134,8 @@ export async function executeTrade(intent: TradeIntent): Promise<TradeResult> {
         security_trust_score: trustScore,
         security_is_honeypot: isHoneypot,
         status: "pending",
+        // Only honored client-side for builtin wallets; the server never signs.
+        auto_confirm: intent.autoConfirm === true && intent.walletSource === "builtin",
       })
       .select("id, expires_at")
       .single();
