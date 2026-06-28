@@ -124,18 +124,23 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
   return (
     <div className="min-h-screen p-4 sm:p-6 max-w-4xl mx-auto">
       {/* Cover banner — shows the user's uploaded cover, else a 2030 aurora
-          gradient. Back button (top-left) + More menu (top-right) float over it. */}
-      <div className="relative rounded-2xl overflow-hidden h-32 sm:h-44 mb-[-2.5rem] nl-glass">
-        {p.cover_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={p.cover_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
-        ) : (
-          <div className="absolute inset-0" style={{ background: 'radial-gradient(120% 140% at 0% 0%, #0066FF55 0%, transparent 55%), radial-gradient(120% 140% at 100% 0%, #7C3AED55 0%, transparent 55%), linear-gradient(135deg, #0a0d18, #0d1424)' }} />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-[#070b14]" />
-        <div className="absolute top-3 left-3 z-10"><BackButton /></div>
+          gradient. The art is clipped in an inner layer; the Back button
+          (top-left) and More menu (top-right) float in a SEPARATE non-clipped
+          overlay so the "⋯" sits cleanly in the top-right and its dropdown is
+          never cut off by the banner's overflow. */}
+      <div className="relative h-32 sm:h-44 mb-[-2.5rem]">
+        <div className="absolute inset-0 rounded-2xl overflow-hidden nl-glass">
+          {p.cover_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={p.cover_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          ) : (
+            <div className="absolute inset-0" style={{ background: 'radial-gradient(120% 140% at 0% 0%, #0066FF55 0%, transparent 55%), radial-gradient(120% 140% at 100% 0%, #7C3AED55 0%, transparent 55%), linear-gradient(135deg, #0a0d18, #0d1424)' }} />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-[#070b14]" />
+        </div>
+        <div className="absolute top-3 left-3 z-20"><BackButton /></div>
         {rel && (
-          <div className="absolute top-3 right-3 z-10">
+          <div className="absolute top-3 right-3 z-20">
             <MoreMenu
               targetId={p.id}
               targetUsername={p.username}
