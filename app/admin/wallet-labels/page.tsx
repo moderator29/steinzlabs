@@ -134,14 +134,14 @@ export default function WalletLabelsPage() {
         </div>
         <button
           onClick={() => { setShowForm(true); setEditing(null); setForm({ ...BLANK }); }}
-          className="flex items-center gap-2 text-xs bg-[#0066FF] hover:bg-[#0818CC] text-white px-3 py-2 rounded-lg font-medium transition-colors"
+          className="nl-btn-neon flex items-center gap-2 text-xs px-3 py-2 rounded-lg font-medium"
         >
           <Plus className="w-3.5 h-3.5" /> Add Label
         </button>
       </div>
 
       {showForm && (
-        <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 mb-4 space-y-3">
+        <div className="nl-glass rounded-xl p-4 mb-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-white">{editing ? 'Edit Label' : 'New Wallet Label'}</h3>
             <button onClick={() => { setShowForm(false); setEditing(null); }} className="text-gray-500 hover:text-white">
@@ -153,25 +153,25 @@ export default function WalletLabelsPage() {
               value={form.address}
               onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
               placeholder="Wallet address"
-              className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40"
+              className="nl-glass rounded-lg px-3 py-2.5 text-sm text-white font-mono placeholder-gray-500 outline-none focus:border-[#0066FF]/50"
             />
             <input
               value={form.label}
               onChange={e => setForm(f => ({ ...f, label: e.target.value }))}
               placeholder="Entity label (e.g. Binance Hot Wallet)"
-              className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40"
+              className="nl-glass rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:border-[#0066FF]/50"
             />
             <select
               value={form.chain}
               onChange={e => setForm(f => ({ ...f, chain: e.target.value }))}
-              className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
+              className="nl-glass rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#0066FF]/50"
             >
               {['ETH', 'SOL', 'BASE', 'ARB', 'BSC'].map(c => <option key={c}>{c}</option>)}
             </select>
             <select
               value={form.category}
               onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-              className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
+              className="nl-glass rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#0066FF]/50"
             >
               {CATEGORIES.map(c => <option key={c}>{c}</option>)}
             </select>
@@ -180,7 +180,7 @@ export default function WalletLabelsPage() {
             value={form.notes ?? ''}
             onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
             placeholder="Notes (optional)"
-            className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40"
+            className="w-full nl-glass rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:border-[#0066FF]/50"
           />
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -196,7 +196,7 @@ export default function WalletLabelsPage() {
             <button
               onClick={save}
               disabled={saving}
-              className="flex items-center gap-2 bg-[#0066FF] hover:bg-[#0818CC] disabled:opacity-60 text-white text-xs px-4 py-2 rounded-lg font-medium transition-colors"
+              className="nl-btn-neon flex items-center gap-2 text-xs px-4 py-2 rounded-lg font-medium"
             >
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
               {saving ? 'Saving…' : 'Save'}
@@ -205,7 +205,7 @@ export default function WalletLabelsPage() {
         </div>
       )}
 
-      <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden overflow-x-auto">
+      <div className="nl-glass rounded-xl overflow-hidden overflow-x-auto">
         <div className="p-3 border-b border-[#1E2433]">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
@@ -213,7 +213,7 @@ export default function WalletLabelsPage() {
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search by address, label, or category..."
-              className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-9 pe-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40"
+              className="w-full nl-glass rounded-lg ps-9 pe-4 py-2 text-xs text-white placeholder-gray-500 outline-none focus:border-[#0066FF]/50"
             />
           </div>
         </div>
@@ -238,7 +238,7 @@ export default function WalletLabelsPage() {
             </thead>
             <tbody>
               {filtered.map(l => (
-                <tr key={l.id} className="border-b border-[#1E2433] last:border-0 hover:bg-[#1E2433]/30">
+                <tr key={l.id} className="border-b border-[#1E2433] last:border-0 hover:bg-white/[0.04]">
                   <td className="px-4 py-3 font-mono text-gray-300">{l.address}</td>
                   <td className="px-4 py-3">
                     <span className="px-2 py-0.5 bg-[#1E2433] rounded text-[10px] font-mono text-gray-300">{l.chain}</span>
