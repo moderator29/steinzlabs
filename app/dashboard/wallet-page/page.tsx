@@ -1591,6 +1591,30 @@ function CreateWalletView({ onBack, onCreated, walletCount = 0 }: { onBack: () =
   const [confirmed, setConfirmed] = useState(false);
   const [creating, setCreating] = useState(false);
   const [phraseCopied, setPhraseCopied] = useState(false);
+  // Seed-backup verification (industry standard: re-pick a few words before the
+  // wallet is finalized, so the user proves they actually wrote it down).
+  const [verifyTargets, setVerifyTargets] = useState<{ index: number; options: string[] }[]>([]);
+  const [verifyPicks, setVerifyPicks] = useState<Record<number, string>>({});
+
+  // Build 3 challenges from 3 distinct random word positions; each offers the
+  // correct word plus 3 decoys drawn from the rest of the phrase, shuffled.
+  const startVerification = () => {
+    const words = mnemonic.split(' ');
+    const shuffle = <T,>(a: T[]) => a.map((v) => ({ v, r: Math.random() })).sort((x, y) => x.r - y.r).map((o) => o.v);
+    const indices = shuffle(words.map((_, i) => i)).slice(0, 3).sort((a, b) => a - b);
+    const targets = indices.map((index) => {
+      const correct = words[index];
+      const decoys = shuffle(words.filter((w) => w !== correct)).slice(0, 3);
+      return { index, options: shuffle([correct, ...decoys]) };
+    });
+    setVerifyTargets(targets);
+    setVerifyPicks({});
+    setStep('confirm');
+  };
+
+  const verifyAllCorrect =
+    verifyTargets.length === 3 &&
+    verifyTargets.every((t) => verifyPicks[t.index] === mnemonic.split(' ')[t.index]);
 
   const createWallet = async () => {
     if (!password || password.length < 8) return;
@@ -1739,9 +1763,53 @@ function CreateWalletView({ onBack, onCreated, walletCount = 0 }: { onBack: () =
               <span className="text-sm text-gray-300">I have saved my recovery phrase securely</span>
             </button>
 
-            <button onClick={confirmAndSave} disabled={!confirmed} className="w-full py-4 bg-[#0066FF] hover:bg-[#0818CC] rounded-xl font-bold text-base disabled:opacity-50 flex items-center justify-center gap-2 transition-colors shadow-lg shadow-[#0066FF]/20">
-              <Check className="w-5 h-5" /> Continue to Wallet
+            <button onClick={startVerification} disabled={!confirmed} className="w-full py-4 bg-[#0066FF] hover:bg-[#0818CC] rounded-xl font-bold text-base disabled:opacity-50 flex items-center justify-center gap-2 transition-colors shadow-lg shadow-[#0066FF]/20">
+              <Check className="w-5 h-5" /> Continue
             </button>
+          </div>
+        )}
+
+        {step === 'confirm' && (
+          <div className="space-y-4">
+            <div className="p-4 bg-[#0066FF]/5 border border-[#0066FF]/15 rounded-xl">
+              <div className="flex items-center gap-2 mb-1">
+                <Shield className="w-4 h-4 text-[#0066FF]" />
+                <span className="text-sm font-bold text-[#0066FF]">Confirm your recovery phrase</span>
+              </div>
+              <p className="text-xs text-gray-400">Select the correct word for each position to prove you saved it. This is the only way to recover your wallet.</p>
+            </div>
+
+            {verifyTargets.map((t) => (
+              <div key={t.index} className="p-3 bg-[#111827] rounded-xl border border-white/5">
+                <p className="text-xs text-gray-400 mb-2 font-medium">Word #{t.index + 1}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {t.options.map((opt) => {
+                    const picked = verifyPicks[t.index] === opt;
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setVerifyPicks((p) => ({ ...p, [t.index]: opt }))}
+                        className={`py-2.5 rounded-lg text-sm font-mono font-semibold border transition-all ${
+                          picked ? 'bg-[#0066FF]/20 border-[#0066FF]/60 text-white' : 'bg-white/[0.03] border-white/10 text-gray-300 hover:border-white/25'
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            <div className="flex gap-2">
+              <button onClick={() => setStep('phrase')} className="px-4 py-3.5 rounded-xl text-sm font-semibold border border-white/10 hover:bg-white/5 text-gray-300 transition-colors">
+                Back
+              </button>
+              <button onClick={confirmAndSave} disabled={!verifyAllCorrect} className="flex-1 py-3.5 bg-[#0066FF] hover:bg-[#0818CC] rounded-xl font-bold text-base disabled:opacity-50 flex items-center justify-center gap-2 transition-colors shadow-lg shadow-[#0066FF]/20">
+                <Check className="w-5 h-5" /> Confirm &amp; Create
+              </button>
+            </div>
           </div>
         )}
       </div>
