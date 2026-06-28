@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import {
   X, Globe, Brain, Shield, TrendingUp, Image as ImageIcon, Repeat, ChevronDown,
-  Save, Check, Loader2, Trash2,
+  Save, Check, Loader2, Trash2, Wallet,
 } from 'lucide-react';
 import { useFocusTrap } from '@/lib/a11y/useFocusTrap';
 
@@ -18,6 +18,11 @@ interface VtxSettings {
   show_token_cards: boolean;
   show_swap_cards: boolean;
   auto_trending_refresh: boolean;
+  // Wallet access — when enabled + a wallet is connected, VTX may READ balances
+  // and talk about them, and PREPARE swaps. It never auto-signs: execution still
+  // requires the user clicking Confirm on the SwapCard. Off by default.
+  wallet_read_enabled: boolean;
+  wallet_provider: 'naka' | 'external';
 }
 
 const DEFAULTS: VtxSettings = {
@@ -28,6 +33,8 @@ const DEFAULTS: VtxSettings = {
   show_token_cards: true,
   show_swap_cards: true,
   auto_trending_refresh: true,
+  wallet_read_enabled: false,
+  wallet_provider: 'naka',
 };
 
 const LANGUAGES = ['English', 'Spanish', 'French', 'Portuguese', 'German', 'Italian', 'Russian', 'Chinese', 'Japanese', 'Korean', 'Arabic', 'Hindi', 'Turkish', 'Vietnamese', 'Indonesian'];
@@ -169,6 +176,40 @@ export function VtxSettingsDrawer({ open, onClose, onClearChats }: Props) {
                     <option value="avalanche">Avalanche</option>
                   </select>
                 </Field>
+              </Section>
+
+              <Section title="Wallet access" icon={Wallet}>
+                <Toggle
+                  label="Let VTX read my wallet balances"
+                  desc="VTX can see your connected wallet's coins and talk about them, and prepare swaps. It never signs — you always confirm on the swap card."
+                  value={settings.wallet_read_enabled}
+                  onChange={(v) => setSettings({ ...settings, wallet_read_enabled: v })}
+                />
+                {settings.wallet_read_enabled && (
+                  <Field label="Wallet to use" icon={Wallet}>
+                    <div className="grid grid-cols-2 gap-2">
+                      {([
+                        { id: 'naka' as const, label: 'Naka Wallet', sub: 'In-app' },
+                        { id: 'external' as const, label: 'External', sub: 'WalletConnect' },
+                      ]).map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setSettings({ ...settings, wallet_provider: opt.id })}
+                          className={`px-3 py-2.5 rounded-lg border-2 text-start transition ${
+                            settings.wallet_provider === opt.id ? 'border-blue-400/60 bg-blue-500/15' : 'border-white/10 bg-white/[0.03] hover:border-white/25'
+                          }`}
+                        >
+                          <div className={`text-sm font-semibold ${settings.wallet_provider === opt.id ? 'text-blue-100' : 'text-white/80'}`}>{opt.label}</div>
+                          <div className="text-[11px] text-white/45">{opt.sub}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </Field>
+                )}
+                <p className="text-[11px] text-white/40 leading-relaxed">
+                  VTX is read + prepare only. It can never move funds without you clicking Confirm and signing in your wallet.
+                </p>
               </Section>
 
               <Section title="Inline cards" icon={ImageIcon}>
