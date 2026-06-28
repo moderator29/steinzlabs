@@ -1978,6 +1978,8 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
   // Live confirmation tracking on the sent screen (was hardcoded "Pending").
   const [txStatus, setTxStatus] = useState<'pending' | 'confirmed' | 'failed'>('pending');
   const [confirmations, setConfirmations] = useState(0);
+  // Gas speed — scales the EIP-1559 fee (or legacy gasPrice) for EVM sends.
+  const [feeSpeed, setFeeSpeed] = useState<'slow' | 'standard' | 'fast'>('standard');
   const [ensAddr, setEnsAddr] = useState<string | null>(null);
   const [ensLoading, setEnsLoading] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
@@ -2178,7 +2180,19 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
       const provider = new ethers.JsonRpcProvider(rpc);
       const signer = new ethers.Wallet(decryptedKey, provider);
       const value = ethers.parseEther(amount);
-      const tx = await signer.sendTransaction({ to: recipient, value, gasLimit: BigInt(21000) });
+      // Apply the chosen gas speed: scale the network's suggested fee. Prefer
+      // EIP-1559 (maxFeePerGas/maxPriorityFeePerGas), fall back to legacy gasPrice.
+      const mult = feeSpeed === 'slow' ? BigInt(85) : feeSpeed === 'fast' ? BigInt(130) : BigInt(100);
+      const hundred = BigInt(100);
+      const feeData = await provider.getFeeData();
+      const txReq: Record<string, unknown> = { to: recipient, value, gasLimit: BigInt(21000) };
+      if (feeData.maxFeePerGas && feeData.maxPriorityFeePerGas) {
+        txReq.maxFeePerGas = (feeData.maxFeePerGas * mult) / hundred;
+        txReq.maxPriorityFeePerGas = (feeData.maxPriorityFeePerGas * mult) / hundred;
+      } else if (feeData.gasPrice) {
+        txReq.gasPrice = (feeData.gasPrice * mult) / hundred;
+      }
+      const tx = await signer.sendTransaction(txReq);
       setTxHash(tx.hash);
       setTxNonce(tx.nonce);
       setStep('sent');
@@ -2282,9 +2296,35 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
                 <div className="flex justify-between"><span className="text-slate-400">From</span><span className="font-mono">{shortAddr(wallet.address)}</span></div>
                 <div className="flex justify-between"><span className="text-slate-400">To</span><span className="font-mono">{shortAddr(recipient)}</span></div>
                 <div className="flex justify-between"><span className="text-slate-400">Network</span><span>{chain.name}</span></div>
-                {gasEstimateEth && <div className="flex justify-between"><span className="text-slate-400">Network fee</span><span className="font-mono">{parseFloat(gasEstimateEth).toFixed(6)} {chain.symbol}</span></div>}
+                {gasEstimateEth && (() => {
+                  const mult = feeSpeed === 'slow' ? 0.85 : feeSpeed === 'fast' ? 1.3 : 1;
+                  return <div className="flex justify-between"><span className="text-slate-400">Network fee</span><span className="font-mono">≈{(parseFloat(gasEstimateEth) * mult).toFixed(6)} {chain.symbol}</span></div>;
+                })()}
               </div>
             </Card>
+            {/* Gas speed — EVM only (Solana/BTC fees aren't user-tunable here). */}
+            {chain.id !== 'solana' && chain.id !== 'bitcoin' && (
+              <div>
+                <p className="text-[11px] text-slate-400 mb-1.5 font-medium">Transaction speed</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { id: 'slow' as const, label: 'Slow', sub: 'Cheaper' },
+                    { id: 'standard' as const, label: 'Standard', sub: 'Recommended' },
+                    { id: 'fast' as const, label: 'Fast', sub: 'Priority' },
+                  ]).map((o) => (
+                    <button
+                      key={o.id}
+                      type="button"
+                      onClick={() => setFeeSpeed(o.id)}
+                      className={`py-2 rounded-xl border-2 text-center transition ${feeSpeed === o.id ? 'border-blue-400/60 bg-blue-500/15' : 'border-white/10 bg-white/[0.03] hover:border-white/25'}`}
+                    >
+                      <div className={`text-xs font-semibold ${feeSpeed === o.id ? 'text-blue-100' : 'text-white/80'}`}>{o.label}</div>
+                      <div className="text-[10px] text-white/45">{o.sub}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {error && <p className="text-xs text-[#EF4444] bg-[#EF4444]/5 p-3 rounded-xl border border-[#EF4444]/10">{error}</p>}
             <button onClick={() => setStep('password')} style={primaryStyle} className="w-full py-3.5 rounded-2xl font-bold text-sm">Continue</button>
           </div>
