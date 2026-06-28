@@ -19,9 +19,13 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
   // PnL like the panel name promises.
   const sortBy = (sp.get("sort") ?? "score").toLowerCase();
   const minPnl = Math.max(0, parseInt(sp.get("min_pnl") ?? "0", 10) || 0);
-  const orderColumn = sortBy === "pnl" ? "pnl_30d_usd" : "whale_score";
+  // Active-trader rosters rank by 7d DEX volume; PnL leaderboard by realised
+  // PnL; everything else by composite score.
+  const orderColumn = sortBy === "pnl" ? "pnl_30d_usd" : sortBy === "volume" ? "volume_7d_usd" : "whale_score";
+  // Optional: only wallets active on >= N of the last 7 days (daily traders).
+  const minActiveDays = Math.max(0, parseInt(sp.get("min_active_days") ?? "0", 10) || 0);
 
-  const cacheKey = `whales:list:${chain ?? "all"}:${entityType ?? "all"}:${q ?? ""}:${sortBy}:${minPnl}:${offset}:${limit}`;
+  const cacheKey = `whales:list:${chain ?? "all"}:${entityType ?? "all"}:${q ?? ""}:${sortBy}:${minPnl}:${minActiveDays}:${offset}:${limit}`;
 
   try {
     const data = await cacheWithFallback(cacheKey, 30, async () => {
@@ -31,12 +35,13 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
         // §whale-tracker-grade — added avg_hold_hours so the PnL leaderboard
         // can derive Accumulator / Distributor / Sniper badges from
         // existing columns the backfill cron already populates.
-        .select("id, address, chain, label, entity_type, portfolio_value_usd, pnl_30d_usd, win_rate, avg_hold_hours, whale_score, follower_count, x_handle, verified, last_active_at", { count: "exact" })
+        .select("id, address, chain, label, entity_type, archetype, portfolio_value_usd, pnl_30d_usd, win_rate, avg_hold_hours, whale_score, volume_7d_usd, active_days_7d, follower_count, x_handle, verified, last_active_at", { count: "exact" })
         .eq("is_active", true)
         .order(orderColumn, { ascending: false, nullsFirst: false })
         .range(offset, offset + limit - 1);
 
       if (minPnl > 0) query = query.gte("pnl_30d_usd", minPnl);
+      if (minActiveDays > 0) query = query.gte("active_days_7d", minActiveDays);
 
       if (chain) query = query.eq("chain", chain);
       if (entityType) query = query.eq("entity_type", entityType);
