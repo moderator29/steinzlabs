@@ -1,8 +1,11 @@
 import 'server-only';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { withTierGate } from '@/lib/subscriptions/apiTierGate';
+import { sendTelegramNotification } from '@/lib/telegram/notify';
+import { sendPushToUser } from '@/lib/services/webpush';
+import { sendBroadcast } from '@/lib/services/resend';
 
 // Phase 6 — rich follow payload (alert threshold + channels, copy-trade rules).
 // Persists both the follow row and, when mode ≠ 'alerts', a copy-rules row.
@@ -23,6 +26,50 @@ async function getSupabase() {
       },
     },
   );
+}
+
+/**
+ * Fire a real-time "you're now following X" confirmation across the channels
+ * the user just opted into, so they get immediate proof the channel works
+ * (especially Telegram, right after linking). Best-effort and fully detached
+ * via after() — never blocks or fails the follow response. Telegram/push
+ * self-check link + subscription state internally.
+ */
+async function sendFollowConfirmation(opts: {
+  userId: string;
+  email: string | null;
+  whaleName: string;
+  chain: string;
+  thresholdUsd: number | null;
+  channels: string[];
+}): Promise<void> {
+  const { userId, email, whaleName, chain, thresholdUsd, channels } = opts;
+  const thresholdLabel = thresholdUsd ? `$${thresholdUsd.toLocaleString()}` : 'any size';
+  const title = `🐋 Now following ${whaleName}`;
+  const body = `You'll get alerts when ${whaleName} trades ${thresholdLabel}+ on ${chain}.`;
+  const url = '/dashboard/whale-tracker';
+
+  if (channels.includes('telegram')) {
+    try { await sendTelegramNotification({ userId, kind: 'whale', title, body, url }); } catch { /* logged in notify */ }
+  }
+  if (channels.includes('push')) {
+    try { await sendPushToUser(userId, { title, body, url, tag: 'whale-follow' }); } catch { /* best-effort */ }
+  }
+  if (channels.includes('email') && email) {
+    try {
+      await sendBroadcast({
+        to: email,
+        subject: title,
+        html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0f172a;color:#f1f5f9;padding:32px;border-radius:12px">
+          <h2 style="margin:0 0 12px">${title}</h2>
+          <p style="color:#94a3b8;margin:0 0 16px">${body}</p>
+          <hr style="border:none;border-top:1px solid #1e293b;margin:20px 0"/>
+          <p style="font-size:12px;color:#475569">Naka Labs Whale Alerts</p>
+        </div>`,
+        tags: [{ name: 'type', value: 'whale_follow_confirmation' }],
+      });
+    } catch { /* best-effort */ }
+  }
 }
 
 export const POST = withTierGate('pro', async (
@@ -65,6 +112,18 @@ export const POST = withTierGate('pro', async (
     .from('user_whale_follows')
     .upsert(followRow, { onConflict: 'user_id,whale_address,chain' });
   if (followErr) return NextResponse.json({ error: followErr.message }, { status: 500 });
+
+  // Real-time confirmation across the chosen channels (detached — never blocks).
+  const confirmChannels = body.alert_channels ?? ['push'];
+  const whaleName = address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address;
+  after(() => sendFollowConfirmation({
+    userId: user.id,
+    email: user.email ?? null,
+    whaleName,
+    chain: body.chain!,
+    thresholdUsd: body.alert_threshold_usd ?? null,
+    channels: confirmChannels,
+  }));
 
   // 2) Copy rules (if applicable)
   if (mode !== 'alerts' && body.copy_rules) {
