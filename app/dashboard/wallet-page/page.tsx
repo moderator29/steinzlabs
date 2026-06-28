@@ -1007,13 +1007,6 @@ export default function WalletPage() {
     setTimeout(() => setCopiedAddress(false), 2000);
   };
 
-  const getExplorerUrl = (txHash: string, chain?: string) => {
-    if (chain === 'solana') return `https://solscan.io/tx/${txHash}`;
-    if (chain === 'base') return `https://basescan.org/tx/${txHash}`;
-    if (chain === 'arbitrum') return `https://arbiscan.io/tx/${txHash}`;
-    return `https://etherscan.io/tx/${txHash}`;
-  };
-
   const formatTimeAgo = (ts: number) => {
     const diff = Date.now() - ts;
     if (diff < 60000) return 'Just now';
@@ -1982,11 +1975,54 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
   const [gasEstimateEth, setGasEstimateEth] = useState<string | null>(null);
   const [txHash, setTxHash] = useState('');
   const [txNonce, setTxNonce] = useState<number | null>(null);
+  // Live confirmation tracking on the sent screen (was hardcoded "Pending").
+  const [txStatus, setTxStatus] = useState<'pending' | 'confirmed' | 'failed'>('pending');
+  const [confirmations, setConfirmations] = useState(0);
   const [ensAddr, setEnsAddr] = useState<string | null>(null);
   const [ensLoading, setEnsLoading] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [contacts, setContacts] = useState<Array<{ id: string; label: string; address: string; chain: string | null }>>([]);
   const [saved, setSaved] = useState(false);
+
+  // Live tx confirmation polling — once a tx is broadcast, poll the chain until
+  // it confirms or fails so the sent screen shows the real status + confirmation
+  // count instead of a permanent "Pending".
+  useEffect(() => {
+    if (step !== 'sent' || !txHash) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const poll = async () => {
+      try {
+        if (chain.id === 'solana') {
+          const web3 = await import('@solana/web3.js');
+          const conn = new web3.Connection(SOLANA_RPC, 'confirmed');
+          const st = (await conn.getSignatureStatus(txHash)).value;
+          if (st?.err) { if (!cancelled) setTxStatus('failed'); return; }
+          if (st?.confirmationStatus === 'confirmed' || st?.confirmationStatus === 'finalized') {
+            if (!cancelled) { setTxStatus('confirmed'); setConfirmations(1); }
+            return;
+          }
+        } else {
+          const rpc = CHAIN_RPC[chain.id];
+          if (!rpc) return;
+          const ethers = await import('ethers');
+          const provider = new ethers.JsonRpcProvider(rpc);
+          const receipt = await provider.getTransactionReceipt(txHash);
+          if (receipt) {
+            const conf = await receipt.confirmations();
+            if (!cancelled) {
+              setConfirmations(Number(conf));
+              setTxStatus(receipt.status === 1 ? 'confirmed' : 'failed');
+            }
+            if (receipt.status === 0 || Number(conf) >= 2) return; // terminal
+          }
+        }
+      } catch { /* transient RPC error — keep polling */ }
+      if (!cancelled) timer = setTimeout(poll, 4000);
+    };
+    poll();
+    return () => { cancelled = true; if (timer) clearTimeout(timer); };
+  }, [step, txHash, chain.id]);
 
   // Native balance — powers MAX + the >balance guard.
   useEffect(() => {
@@ -2292,11 +2328,16 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
             </div>
             <Card>
               <div className="space-y-2.5 text-sm">
-                <div className="flex justify-between"><span className="text-slate-400">Status</span><span className="font-semibold text-[#F59E0B]">Pending</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Status</span>
+                  <span className={`font-semibold inline-flex items-center gap-1.5 ${txStatus === 'confirmed' ? 'text-[#10B981]' : txStatus === 'failed' ? 'text-[#EF4444]' : 'text-[#F59E0B]'}`}>
+                    {txStatus === 'pending' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    {txStatus === 'confirmed' ? 'Confirmed' : txStatus === 'failed' ? 'Failed' : 'Pending'}
+                  </span>
+                </div>
                 <div className="flex justify-between"><span className="text-slate-400">Recipient</span><span className="font-mono">{shortAddr(recipient)}</span></div>
                 <div className="flex justify-between"><span className="text-slate-400">Network</span><span>{chain.name}</span></div>
                 {gasEstimateEth && <div className="flex justify-between"><span className="text-slate-400">Network fee</span><span className="font-mono">{parseFloat(gasEstimateEth).toFixed(6)} {chain.symbol}</span></div>}
-                <div className="flex justify-between"><span className="text-slate-400">Confirmations</span><span>--</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Confirmations</span><span>{txStatus === 'pending' && confirmations === 0 ? '—' : confirmations}</span></div>
                 {txNonce != null && <div className="flex justify-between"><span className="text-slate-400">Nonce</span><span>{txNonce}</span></div>}
               </div>
             </Card>
