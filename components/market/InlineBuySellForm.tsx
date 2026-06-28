@@ -92,8 +92,11 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
   const [mode, setMode] = useState<'BUY' | 'SELL'>('BUY');
   // Order type — Market executes now; Limit stages a trigger order (existing
   // /api/trading/limit-orders backend + limit-order-monitor cron).
-  const [orderType, setOrderType] = useState<'MARKET' | 'LIMIT'>('MARKET');
+  const [orderType, setOrderType] = useState<'MARKET' | 'LIMIT' | 'STOP'>('MARKET');
   const [limitPrice, setLimitPrice] = useState('');
+  // Stop-loss / take-profit (protect a held position; sells to USDC on trigger).
+  const [slPct, setSlPct] = useState('');
+  const [tpPct, setTpPct] = useState('');
   const [amount, setAmount] = useState('');
   const [executing, setExecuting] = useState(false);
   const [status, setStatus] = useState<{ kind: 'ok' | 'err'; msg: string } | null>(null);
@@ -256,6 +259,50 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
     }
   };
 
+  // Stage a stop-loss / take-profit on a held position (sells the token to USDC
+  // when price hits the SL or TP level). Executes via stop-loss-monitor cron.
+  const submitStop = async () => {
+    if (!walletAddr) { setStatus({ kind: 'err', msg: 'Connect a wallet first' }); return; }
+    if (chainMismatch) { setStatus({ kind: 'err', msg: `Switch your wallet to ${chain}` }); return; }
+    if (amountNum <= 0) { setStatus({ kind: 'err', msg: 'Enter the position size (USD) to protect' }); return; }
+    const sl = parseFloat(slPct);
+    const tp = parseFloat(tpPct);
+    if (!(sl > 0) && !(tp > 0)) { setStatus({ kind: 'err', msg: 'Set a stop-loss % and/or take-profit %' }); return; }
+    if (priceUSD <= 0) { setStatus({ kind: 'err', msg: 'No live price for this token yet' }); return; }
+    const usdc = resolveTokenAddress('USDC', chain);
+    if (!usdc) { setStatus({ kind: 'err', msg: `Stop orders aren't supported on ${chain} yet` }); return; }
+    const slipNum = parseFloat(slippage);
+    setExecuting(true);
+    setStatus(null);
+    try {
+      const res = await fetch('/api/trading/stop-loss', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chain,
+          token_address: tokenAddress,
+          token_symbol: symbol,
+          position_amount: amountNum / priceUSD, // USD → token qty
+          entry_price_usd: priceUSD,
+          stop_loss_pct: sl > 0 ? -Math.abs(sl) : null,  // SL is a downside %
+          take_profit_pct: tp > 0 ? Math.abs(tp) : null,
+          exit_to_token_address: usdc,
+          exit_to_token_symbol: 'USDC',
+          slippage_bps: Math.round((Number.isFinite(slipNum) && slipNum > 0 ? slipNum : 0.5) * 100),
+          wallet_source: chain === 'solana' ? 'external_solana' : 'external_evm',
+        }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) { setStatus({ kind: 'err', msg: j?.error || 'Could not create stop order' }); return; }
+      setStatus({ kind: 'ok', msg: `Protection set${sl > 0 ? ` · SL -${sl}%` : ''}${tp > 0 ? ` · TP +${tp}%` : ''} — monitoring` });
+      setAmount(''); setSlPct(''); setTpPct('');
+    } catch (e) {
+      setStatus({ kind: 'err', msg: e instanceof Error ? e.message : 'Failed to create order' });
+    } finally {
+      setExecuting(false);
+    }
+  };
+
   const execute = async (slipNum: number) => {
     if (!walletAddr) { setStatus({ kind: 'err', msg: 'Connect a wallet first' }); return; }
     setExecuting(true);
@@ -343,16 +390,16 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
 
   return (
     <div className="rounded-xl nl-glass p-3 text-xs" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
-      {/* Order type: Market vs Limit */}
+      {/* Order type: Market / Limit / Stop */}
       <div className="flex items-center gap-3 mb-2.5 text-[11px]">
-        {(['MARKET', 'LIMIT'] as const).map((t) => (
+        {(['MARKET', 'LIMIT', 'STOP'] as const).map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => { setOrderType(t); setStatus(null); if (t === 'LIMIT' && !limitPrice && priceUSD > 0) setLimitPrice(String(priceUSD)); }}
             className={`font-semibold uppercase tracking-wide transition-colors ${orderType === t ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
           >
-            {t === 'MARKET' ? 'Market' : 'Limit'}
+            {t === 'MARKET' ? 'Market' : t === 'LIMIT' ? 'Limit' : 'Stop / TP'}
             {orderType === t && <span className="block h-0.5 mt-0.5 rounded-full" style={{ background: 'linear-gradient(90deg,#1E90FF,#0066FF)' }} />}
           </button>
         ))}
@@ -427,6 +474,29 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
           {priceUSD > 0 && (
             <div className="text-[10px] text-slate-500 mt-1">Current: {formatPrice(priceUSD)}</div>
           )}
+        </div>
+      )}
+
+      {/* Stop-loss / take-profit (Stop orders only) */}
+      {orderType === 'STOP' && (
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          <div className="rounded-lg nl-glass px-3 py-2">
+            <div className="text-[10px] uppercase text-red-300/80 font-semibold mb-0.5">Stop loss %</div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-slate-500 text-sm">-</span>
+              <input type="number" value={slPct} onChange={(e) => setSlPct(e.target.value)} placeholder="20" className="flex-1 bg-transparent outline-none text-base font-mono tabular-nums w-full" />
+              <span className="text-[10px] text-slate-400">%</span>
+            </div>
+          </div>
+          <div className="rounded-lg nl-glass px-3 py-2">
+            <div className="text-[10px] uppercase text-emerald-300/80 font-semibold mb-0.5">Take profit %</div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-slate-500 text-sm">+</span>
+              <input type="number" value={tpPct} onChange={(e) => setTpPct(e.target.value)} placeholder="100" className="flex-1 bg-transparent outline-none text-base font-mono tabular-nums w-full" />
+              <span className="text-[10px] text-slate-400">%</span>
+            </div>
+          </div>
+          <p className="col-span-2 text-[10px] text-slate-500">Sells {symbol} → USDC automatically when price hits your stop or target. Amount above = position size to protect.</p>
         </div>
       )}
 
@@ -563,17 +633,23 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
       {/* Primary action */}
       <button
         type="button"
-        onClick={orderType === 'LIMIT' ? submitLimit : submit}
-        disabled={executing || !amount || amountNum <= 0 || chainMismatch || (orderType === 'LIMIT' && !(parseFloat(limitPrice) > 0))}
+        onClick={orderType === 'STOP' ? submitStop : orderType === 'LIMIT' ? submitLimit : submit}
+        disabled={
+          executing || !amount || amountNum <= 0 || chainMismatch
+          || (orderType === 'LIMIT' && !(parseFloat(limitPrice) > 0))
+          || (orderType === 'STOP' && !(parseFloat(slPct) > 0) && !(parseFloat(tpPct) > 0))
+        }
         className={`w-full py-2.5 rounded-lg font-bold text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-          mode === 'BUY' ? 'bg-emerald-500 hover:bg-emerald-400' : 'bg-red-500 hover:bg-red-400'
+          orderType === 'STOP' ? 'bg-[#0066FF] hover:bg-[#1E90FF]' : mode === 'BUY' ? 'bg-emerald-500 hover:bg-emerald-400' : 'bg-red-500 hover:bg-red-400'
         }`}
       >
         {executing
-          ? (orderType === 'LIMIT' ? 'Placing…' : 'Executing…')
-          : orderType === 'LIMIT'
-            ? `${mode === 'BUY' ? 'Buy' : 'Sell'} ${symbol} limit`
-            : `${mode === 'BUY' ? 'Buy' : 'Sell'} ${symbol}`}
+          ? (orderType === 'MARKET' ? 'Executing…' : 'Placing…')
+          : orderType === 'STOP'
+            ? `Protect ${symbol} position`
+            : orderType === 'LIMIT'
+              ? `${mode === 'BUY' ? 'Buy' : 'Sell'} ${symbol} limit`
+              : `${mode === 'BUY' ? 'Buy' : 'Sell'} ${symbol}`}
       </button>
 
       {status && (
