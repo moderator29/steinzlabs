@@ -252,6 +252,170 @@ export async function getSolanaWalletBuys(
   }
 }
 
+const SOLANA_WALLET_SELLS_QUERY = `
+  query WalletSells($address: String, $since: DateTime, $limit: Int) {
+    Solana {
+      DEXTrades(
+        limit: { count: $limit }
+        orderBy: { descending: Block_Time }
+        where: {
+          Block: { Time: { since: $since } }
+          Trade: { Sell: { Account: { Owner: { is: $address } } } }
+        }
+      ) {
+        Block { Time }
+        Transaction { Signature }
+        Trade {
+          Sell { Amount AmountInUSD Currency { Symbol MintAddress } }
+        }
+      }
+    }
+  }`;
+
+const EVM_WALLET_SELLS_QUERY = `
+  query EvmWalletSells($network: evm_network, $address: String, $since: DateTime, $limit: Int) {
+    EVM(network: $network) {
+      DEXTrades(
+        limit: { count: $limit }
+        orderBy: { descending: Block_Time }
+        where: {
+          Block: { Time: { since: $since } }
+          Trade: { Sell: { Seller: { is: $address } } }
+        }
+      ) {
+        Block { Time }
+        Transaction { Hash }
+        Trade {
+          Sell { Amount AmountInUSD Currency { Symbol SmartContract } }
+        }
+      }
+    }
+  }`;
+
+/**
+ * Recent token SELLS by a Solana wallet (DEX disposals of a non-base token —
+ * the whale-EXIT signal that complements getSolanaWalletBuys). Reads the Sell
+ * leg; excludes selling a base mint (that's really a buy of the other side).
+ * Fails closed ([]).
+ */
+export async function getSolanaWalletSells(
+  address: string,
+  sinceIso: string,
+  limit = 10,
+): Promise<WalletBuy[]> {
+  if (!isBitqueryEnabled() || !address || !sinceIso) return [];
+  try {
+    const json = (await bitqueryPost(SOLANA_WALLET_SELLS_QUERY, {
+      address, since: sinceIso, limit: Math.min(limit, 25),
+    })) as { data?: { Solana?: { DEXTrades?: unknown[] } } } | null;
+    const rows: unknown[] = json?.data?.Solana?.DEXTrades ?? [];
+    if (!Array.isArray(rows)) return [];
+
+    const out: WalletBuy[] = [];
+    for (const r of rows as Array<Record<string, unknown>>) {
+      const block = r.Block as Record<string, unknown> | undefined;
+      const txn = r.Transaction as Record<string, unknown> | undefined;
+      const trade = r.Trade as Record<string, unknown> | undefined;
+      const sell = trade?.Sell as Record<string, unknown> | undefined;
+      const cur = sell?.Currency as Record<string, unknown> | undefined;
+      const mint = String(cur?.MintAddress ?? '').trim();
+      const sig = String(txn?.Signature ?? '').trim();
+      if (!sig || !mint || SOLANA_BASE_MINTS.has(mint)) continue;
+      if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(mint)) continue;
+      out.push({
+        txHash: sig,
+        tokenMint: mint,
+        tokenSymbol: (cur?.Symbol as string | null) ?? null,
+        amount: num(sell?.Amount),
+        valueUsd: sell?.AmountInUSD != null ? num(sell.AmountInUSD) : null,
+        timestamp: String(block?.Time ?? new Date().toISOString()),
+      });
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Recent token SELLS by an EVM wallet (DEX disposals of a non-base token).
+ * Mirrors getSolanaWalletSells on the Sell leg. Fails closed ([]).
+ */
+export async function getEvmWalletSells(
+  chain: string,
+  address: string,
+  sinceIso: string,
+  limit = 10,
+): Promise<WalletBuy[]> {
+  const network = EVM_NETWORK_BY_CHAIN[chain.toLowerCase()];
+  if (!isBitqueryEnabled() || !network || !address || !sinceIso) return [];
+  if (!/^0x[a-fA-F0-9]{40}$/.test(address)) return [];
+  try {
+    const json = (await bitqueryPost(EVM_WALLET_SELLS_QUERY, {
+      network, address, since: sinceIso, limit: Math.min(limit, 25),
+    })) as { data?: { EVM?: { DEXTrades?: unknown[] } } } | null;
+    const rows: unknown[] = json?.data?.EVM?.DEXTrades ?? [];
+    if (!Array.isArray(rows)) return [];
+
+    const out: WalletBuy[] = [];
+    for (const r of rows as Array<Record<string, unknown>>) {
+      const block = r.Block as Record<string, unknown> | undefined;
+      const txn = r.Transaction as Record<string, unknown> | undefined;
+      const trade = r.Trade as Record<string, unknown> | undefined;
+      const sell = trade?.Sell as Record<string, unknown> | undefined;
+      const cur = sell?.Currency as Record<string, unknown> | undefined;
+      const token = String(cur?.SmartContract ?? '').trim().toLowerCase();
+      const symbol = (cur?.Symbol as string | null) ?? null;
+      const hash = String(txn?.Hash ?? '').trim();
+      if (!hash || !/^0x[a-fA-F0-9]{40}$/.test(token)) continue;
+      if (symbol && EVM_BASE_SYMBOLS.has(symbol.toUpperCase())) continue;
+      out.push({
+        txHash: hash,
+        tokenMint: token,
+        tokenSymbol: symbol,
+        amount: num(sell?.Amount),
+        valueUsd: sell?.AmountInUSD != null ? num(sell.AmountInUSD) : null,
+        timestamp: String(block?.Time ?? new Date().toISOString()),
+      });
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Diagnostic probe for the admin verification endpoint ONLY. Unlike the
+ * fail-closed production helpers, this SURFACES the HTTP status and any GraphQL
+ * `errors` so a misnamed field (the most likely cause of an empty-but-keyed
+ * result) is visible instead of silently swallowed. Never used in the hot path.
+ */
+export async function bitqueryDiagnostic(
+  query: string,
+  variables: Record<string, unknown>,
+): Promise<{ ok: boolean; status: number; errors?: string[]; dataKeys?: string[]; rowCount?: number }> {
+  const apiKey = process.env.BITQUERY_API_KEY;
+  if (!apiKey) return { ok: false, status: 0, errors: ['BITQUERY_API_KEY not set'] };
+  try {
+    const res = await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({ query, variables }),
+      signal: AbortSignal.timeout(25_000),
+    });
+    const json = (await res.json().catch(() => null)) as
+      | { data?: Record<string, unknown>; errors?: Array<{ message?: string }> }
+      | null;
+    const errors = json?.errors?.map((e) => e.message ?? 'unknown').filter(Boolean);
+    const dataKeys = json?.data ? Object.keys(json.data) : undefined;
+    return { ok: res.ok && !errors?.length, status: res.status, errors, dataKeys };
+  } catch (e) {
+    return { ok: false, status: 0, errors: [e instanceof Error ? e.message : 'fetch failed'] };
+  }
+}
+
+export { SOLANA_QUERY, EVM_QUERY };
+
 /**
  * Top DEX traders on `chain` since `sinceIso`, by USD volume, with trade count
  * and distinct active-day count so the caller can apply activity filters.

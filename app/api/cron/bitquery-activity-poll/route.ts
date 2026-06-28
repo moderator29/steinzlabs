@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { verifyCron, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { getSolanaWalletBuys, getEvmWalletBuys, isBitqueryEnabled } from "@/lib/services/bitquery";
+import {
+  getSolanaWalletBuys, getEvmWalletBuys,
+  getSolanaWalletSells, getEvmWalletSells,
+  isBitqueryEnabled,
+} from "@/lib/services/bitquery";
 import { mapWithConcurrency } from "@/lib/utils/concurrency";
 
 export const runtime = "nodejs";
@@ -88,16 +92,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ ok: true, polled: 0, inserted: 0 });
     }
 
-    // 3) Poll each whale's recent token buys (right query per chain), map → rows.
+    // 3) Poll each whale's recent token buys AND sells (right query per chain),
+    //    map → rows. Both directions drive alerts/copy: buys are the entry
+    //    signal, sells the exit signal. Buy/sell are queried in parallel.
     const settled = await mapWithConcurrency(refs, POLL_CONCURRENCY, async (ref) => {
-      const buys = ref.chain === "solana"
-        ? await getSolanaWalletBuys(ref.address, sinceIso, 10)
-        : await getEvmWalletBuys(ref.chain, ref.address, sinceIso, 10);
-      return buys.map((b) => ({
+      const isSol = ref.chain === "solana";
+      const [buys, sells] = await Promise.all([
+        isSol ? getSolanaWalletBuys(ref.address, sinceIso, 10) : getEvmWalletBuys(ref.chain, ref.address, sinceIso, 10),
+        isSol ? getSolanaWalletSells(ref.address, sinceIso, 10) : getEvmWalletSells(ref.chain, ref.address, sinceIso, 10),
+      ]);
+      const toRow = (b: { txHash: string; tokenMint: string; tokenSymbol: string | null; amount: number; valueUsd: number | null; timestamp: string }, action: "buy" | "sell") => ({
         whale_address: ref.address,       // EVM lowercase / Solana base58 — as stored
         chain: ref.chain,
         tx_hash: b.txHash,
-        action: "buy",
+        action,
         token_address: b.tokenMint,
         token_symbol: b.tokenSymbol,
         amount: b.amount,
@@ -106,7 +114,8 @@ export async function GET(request: NextRequest) {
         counterparty_label: null,
         block_number: null,
         timestamp: b.timestamp,
-      }));
+      });
+      return [...buys.map((b) => toRow(b, "buy")), ...sells.map((s) => toRow(s, "sell"))];
     });
 
     const rows = settled.flatMap((r) => (r.status === "fulfilled" ? r.value : []));

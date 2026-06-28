@@ -16,6 +16,8 @@ import { getAllRoutes, type RouteQuote } from "@/lib/services/swap-aggregator";
 import { getTokenSecurity } from "@/lib/services/goplus";
 import { notifyPendingTrade, type TradeNotificationReason } from "@/lib/trading/notifications";
 import { executeWithSessionKey, sessionKeySignerEnabled } from "@/lib/trading/sessionKeySigner";
+import { executeSolanaWithSessionKey, solanaSessionKeySignerEnabled } from "@/lib/trading/solanaSessionKeySigner";
+import { isEvmChain } from "@/lib/utils/addressNormalize";
 
 export type WalletSource = "external_evm" | "external_solana" | "builtin";
 
@@ -124,8 +126,9 @@ export async function executeTrade(intent: TradeIntent): Promise<TradeResult> {
     // a valid funded session key exists. On success the trade is broadcast now
     // (no pending row); on null it falls through to the manual pending flow, so
     // with the flag OFF behavior is exactly as before. Never throws into here.
-    if (intent.autoConfirm && intent.sourceTxHash && intent.amountInRaw && sessionKeySignerEnabled()) {
-      const auto = await executeWithSessionKey({
+    const signerReady = isEvmChain(intent.chain) ? sessionKeySignerEnabled() : solanaSessionKeySignerEnabled();
+    if (intent.autoConfirm && intent.sourceTxHash && intent.amountInRaw && signerReady) {
+      const signParams = {
         userId: intent.userId,
         chain: intent.chain,
         fromTokenAddress: intent.fromTokenAddress,
@@ -134,7 +137,13 @@ export async function executeTrade(intent: TradeIntent): Promise<TradeResult> {
         amountUsd: intent.tradeUsd ?? 0,
         sourceTxHash: intent.sourceTxHash,
         slippageBps: intent.slippageBps,
-      });
+      };
+      // EVM signs via 0x calldata + ethers; Solana via Jupiter + a signed
+      // VersionedTransaction. Both share the scope/atomic-cap/never-release
+      // guarantees and both return null to fall back to the pending flow.
+      const auto = isEvmChain(intent.chain)
+        ? await executeWithSessionKey(signParams)
+        : await executeSolanaWithSessionKey(signParams);
       if (auto?.executed) {
         // The trade is already on-chain — do NOT send the pending "tap Confirm
         // within 10 minutes or it expires" template (nothing to confirm). Write
