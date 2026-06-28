@@ -252,7 +252,10 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true, inserted: rows.length, queued: rows.length });
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // #29: this setup helper returns the full curated Solana whale list — gate it
+  // behind the same secret as POST so it isn't an unauthenticated data dump.
+  if (!authOk(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from('whales')
