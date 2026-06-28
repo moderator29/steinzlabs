@@ -43,7 +43,7 @@ async function buildPersonalContext(request: Request): Promise<PersonalContext |
       });
       const followedAddresses = new Set<string>();
       (followsR.data ?? []).forEach((f: { whale_address: string | null }) => {
-        if (f.whale_address) followedAddresses.add(f.whale_address.toLowerCase());
+        if (f.whale_address) followedAddresses.add(normalizeAddress(f.whale_address));
       });
       const mutedSources = new Set<string>();
       const muted = (prefsR.data as { preferences?: { muted_feed_sources?: unknown } } | null)
