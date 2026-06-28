@@ -13,6 +13,7 @@ import { decryptPrivateKey } from '@/lib/wallet/encryption';
 import { addressesEqual } from '@/lib/utils/addressNormalize';
 import UnlockWalletModal from '@/components/wallet/UnlockWalletModal';
 import { NakaLogo, WalletConnectLogo } from '@/components/wallet/WalletLogo';
+import { WalletConnectHealthPanel } from '@/components/wallet/WalletConnectHealthPanel';
 import { SelectMenu } from '@/components/ui/SelectMenu';
 import { SwapSecurityWarnings, shouldBlockSwap } from '@/components/swap/SwapSecurityWarnings';
 import { useAppKit, useAppKitAccount } from '@reown/appkit/react';
@@ -1255,10 +1256,13 @@ export default function SwapPage() {
 
           {/* Wallet selector — Naka Wallet (built-in) + WalletConnect only. */}
           {walletConnectError && (
-            <div className="mb-3 flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">
-              <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
-              <span className="text-xs text-red-400">{walletConnectError}</span>
-              <button onClick={() => setWalletConnectError('')} aria-label="Dismiss wallet error" className="ms-auto text-red-400 hover:text-red-300"><X className="w-3.5 h-3.5" aria-hidden="true" /></button>
+            <div className="mb-3 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                <span className="text-xs text-red-400">{walletConnectError}</span>
+                <button onClick={() => setWalletConnectError('')} aria-label="Dismiss wallet error" className="ms-auto text-red-400 hover:text-red-300"><X className="w-3.5 h-3.5" aria-hidden="true" /></button>
+              </div>
+              <WalletConnectHealthPanel />
             </div>
           )}
           <div className="flex items-center gap-2 mb-4 flex-wrap">
