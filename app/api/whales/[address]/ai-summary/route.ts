@@ -141,6 +141,18 @@ async function handler(req: NextRequest, ctx: RouteCtx) {
 
 export const GET = withTierGate('pro', handler);
 
+/**
+ * Neutralize attacker-controlled on-chain strings before they enter the LLM
+ * prompt. token_symbol (and to a lesser extent label) originate from on-chain
+ * token metadata ingested via webhooks/poll, so anyone can mint a token whose
+ * "symbol" is a prompt-injection payload. Strip newlines / backticks / braces
+ * and cap length so such values can't break out of the prompt structure.
+ */
+function sanitizeForPrompt(s: unknown, maxLen = 40): string {
+  if (typeof s !== 'string') return '';
+  return s.replace(/[\r\n`{}]+/g, ' ').replace(/\s+/g, ' ').slice(0, maxLen).trim();
+}
+
 function buildPrompt(
   address: string,
   chain: string,
@@ -148,14 +160,14 @@ function buildPrompt(
   activity: any[],
 ): string {
   const activityLines = activity.slice(0, 10).map((a) =>
-    `  - ${new Date(a.timestamp).toISOString().slice(0, 10)} · ${a.action} ${a.token_symbol ?? '?'} · $${Math.round(a.value_usd ?? 0).toLocaleString()}`,
+    `  - ${new Date(a.timestamp).toISOString().slice(0, 10)} · ${a.action} ${sanitizeForPrompt(a.token_symbol) || '?'} · $${Math.round(a.value_usd ?? 0).toLocaleString()}`,
   ).join('\n') || '  (no recent activity indexed)';
 
   return `You are analyzing an on-chain whale wallet. Produce a risk + performance summary as strict JSON.
 
 Wallet: ${address} on ${chain}
-Label: ${whale.label ?? 'unlabeled'}
-Entity type: ${whale.entity_type ?? 'unknown'}
+Label: ${sanitizeForPrompt(whale.label, 60) || 'unlabeled'}
+Entity type: ${sanitizeForPrompt(whale.entity_type) || 'unknown'}
 Portfolio USD: ${whale.portfolio_value_usd ?? 'unknown'}
 30d PnL USD: ${whale.pnl_30d_usd ?? 'unknown'}
 7d PnL USD: ${whale.pnl_7d_usd ?? 'unknown'}
