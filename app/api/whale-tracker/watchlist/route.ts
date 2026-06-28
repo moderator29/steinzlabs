@@ -88,7 +88,10 @@ export const POST = withTierGate("pro", async (request: NextRequest) => {
       alert_enabled: body.alert_enabled ?? true,
       alert_threshold_usd: body.alert_threshold_usd ?? 50000,
       alert_channels: body.channels ?? ["push"],
-      copy_mode: "alerts",
+      // Intentionally omit copy_mode: the column defaults to 'alerts' on a new
+      // follow, and leaving it out of the upsert preserves an existing row's
+      // mode (e.g. a user's 'oneclick'/'auto_copy' copy-trade setting) instead
+      // of clobbering it back to alerts-only every time the watchlist is edited.
     },
     { onConflict: "user_id,whale_address,chain" },
   );
