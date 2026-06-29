@@ -113,7 +113,8 @@ function ArticleCard({
     return (
       <button
         onClick={onClick}
-        className="w-full text-start rounded-2xl border border-white/[0.06] overflow-hidden hover:border-[#0066FF]/30 hover:shadow-[0_0_24px_rgba(0,102,255,0.08)] transition-all duration-200 group"
+        className="nl-glass w-full text-start rounded-2xl overflow-hidden hover:border-[#0066FF]/30 hover:shadow-[0_0_24px_rgba(0,102,255,0.08)] transition-all duration-200 group"
+        style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
       >
         {post.image_url ? (
           <div className="h-44 w-full overflow-hidden">
@@ -170,7 +171,8 @@ function ArticleCard({
   return (
     <button
       onClick={onClick}
-      className="w-full text-start rounded-xl border border-white/[0.06] overflow-hidden hover:border-[#0066FF]/20 hover:shadow-[0_0_16px_rgba(0,102,255,0.06)] transition-all duration-200 group flex"
+      className="nl-glass w-full text-start rounded-xl overflow-hidden hover:border-[#0066FF]/20 hover:shadow-[0_0_16px_rgba(0,102,255,0.06)] transition-all duration-200 group flex"
+      style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
     >
       {post.image_url ? (
         <div className="w-20 flex-shrink-0 overflow-hidden" style={{ minHeight: '88px' }}>
@@ -412,7 +414,7 @@ export default function ResearchPage() {
 
         {/* ── Filter/Sort Panel ── */}
         {showFilters && (
-          <div className="mb-5 rounded-xl border border-white/[0.06] p-4 space-y-4">
+          <div className="nl-glass mb-5 rounded-xl p-4 space-y-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-gray-300 uppercase tracking-wider">Filters</span>
               <button onClick={() => setShowFilters(false)}>

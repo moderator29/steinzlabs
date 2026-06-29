@@ -15,8 +15,8 @@
  *
  *   [  Send  ] [ Receive ] [  Swap  ]     ← fixed bottom
  *
- * Send + Receive deep-link to the existing wallet flows. Swap shows
- * a Coming Soon modal — the in-wallet swap pipeline is queued.
+ * Send + Receive deep-link to the existing wallet flows. Swap opens
+ * the in-wallet LiteSwapModal.
  * Buy + Sell removed (fiat on/off-ramp ships with Yellowcard later).
  */
 
@@ -54,7 +54,6 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
 
   const [tab, setTab] = useState<Tab>('position');
   const [timeframe, setTimeframe] = useState<Timeframe>('1D');
-  const [comingSoonOpen, setComingSoonOpen] = useState<string | null>(null);
   const [swapOpen, setSwapOpen] = useState(false);
   const [chartPoints, setChartPoints] = useState<number[]>([]);
   const [chartCandles, setChartCandles] = useState<Array<{ time: number; open: number; high: number; low: number; close: number }>>([]);
@@ -175,12 +174,12 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
         ) : chartError && chartData.length === 0 ? (
           // §S6.12 — explicit error + retry state. Previously the row collapsed
           // silently on a 5xx, so users saw a half-rendered page with no chart.
-          <div className="h-48 rounded-lg bg-slate-900/40 flex flex-col items-center justify-center gap-2 text-xs text-slate-500">
+          <div className="h-48 rounded-lg nl-glass flex flex-col items-center justify-center gap-2 text-xs text-slate-500">
             <span>Couldn&apos;t load chart.</span>
             <button
               type="button"
               onClick={() => setChartReloadKey((n) => n + 1)}
-              className="px-3 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold"
+              className="nl-button px-3 py-1 text-[11px]"
             >
               Retry
             </button>
@@ -192,7 +191,7 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
           // 7d sparkline fallback is empty (e.g. CoinGecko has no chart for
           // a freshly listed token), keep showing the chart container with a
           // clear empty state instead of rendering a blank Sparkline.
-          <div className="h-48 rounded-xl nl-glass/50 flex items-center justify-center text-sm text-slate-500">
+          <div className="h-48 rounded-xl nl-glass flex items-center justify-center text-sm text-slate-500">
             Chart data unavailable for this timeframe.
           </div>
         )}
@@ -250,7 +249,7 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
         )}
         {tab === 'activity' && (
           txLoading ? (
-            <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-12 rounded-xl bg-slate-900/40 animate-pulse" />)}</div>
+            <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-12 rounded-xl nl-glass animate-pulse" />)}</div>
           ) : txs && txs.length > 0 ? (
             <div className="space-y-1.5">
               {txs.map((t) => {
@@ -299,28 +298,6 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
         chain={chain}
         takerAddress={takerAddress}
       />
-
-      {/* Coming Soon modal — retained for future surface stubs. */}
-      {comingSoonOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-[#0D1117] border border-slate-800 rounded-2xl p-6 w-full max-w-xs text-center">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[#0066FF]/15 flex items-center justify-center">
-              <Repeat className="w-5 h-5 text-[#0066FF]" />
-            </div>
-            <h3 className="text-base font-bold mb-1">{comingSoonOpen} — Coming Soon</h3>
-            <p className="text-xs text-slate-400 mb-4">
-              In-wallet {comingSoonOpen.toLowerCase()} is launching shortly. For now you can trade via the <span className="text-white">Market</span>.
-            </p>
-            <button
-              type="button"
-              onClick={() => setComingSoonOpen(null)}
-              className="w-full py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm font-semibold"
-            >
-              Got it
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -355,7 +332,7 @@ function Sparkline({ data, negative, loading }: { data: number[]; negative: bool
 
   if (!data || data.length < 2) {
     return (
-      <div className="h-48 rounded-lg bg-slate-900/40 flex items-center justify-center text-xs text-slate-500">
+      <div className="h-48 rounded-lg nl-glass flex items-center justify-center text-xs text-slate-500">
         {loading || !measured ? 'Loading chart…' : 'Chart data unavailable'}
       </div>
     );

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Users, TrendingUp, Star, Plus, Eye, Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { useRouter } from 'next/navigation';
 
 /**
@@ -139,7 +140,8 @@ export default function SmartMoneyPage() {
     : null;
 
   return (
-    <div className="min-h-screen bg-[var(--nl-canvas-base)] p-6">
+    <AuroraBackground fullHeight>
+    <div className="min-h-screen p-6">
       <div className="max-w-6xl mx-auto">
         <PageHeader
           title="Smart Money"
@@ -160,8 +162,8 @@ export default function SmartMoneyPage() {
               onClick={() => setActiveFilter(key)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 activeFilter === key
-                  ? 'bg-[var(--nl-blue,#0066FF)] text-white'
-                  : 'bg-[var(--nl-canvas-slightly-elev,#141824)] text-slate-300 hover:text-white border border-[var(--nl-border-dark,#1E2433)]'
+                  ? 'nl-button'
+                  : 'nl-button--ghost'
               }`}
             >
               {label}
@@ -184,7 +186,8 @@ export default function SmartMoneyPage() {
               return (
                 <div
                   key={entity.id}
-                  className="bg-[var(--nl-canvas-slightly-elev,#141824)] rounded-lg p-5 border border-[var(--nl-border-dark,#1E2433)] hover:border-[var(--nl-blue,#0066FF)]/50 transition-all"
+                  className="nl-glass rounded-lg p-5 hover:border-[var(--nl-blue,#0066FF)]/50 transition-all"
+                  style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3 min-w-0">
@@ -209,7 +212,7 @@ export default function SmartMoneyPage() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => router.push(`/dashboard/whale-tracker?address=${entity.address ?? entity.id}`)}
-                      className="flex-1 bg-[var(--nl-canvas-base,#0A0E1A)] hover:bg-[var(--nl-border-dark,#1E2433)] text-slate-300 hover:text-white border border-[var(--nl-border-dark,#1E2433)] px-4 py-2 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 nl-card text-slate-300 hover:text-white px-4 py-2 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
                       aria-label={`View ${entity.name}`}
                     >
                       <Eye size={14} />
@@ -221,7 +224,7 @@ export default function SmartMoneyPage() {
                       className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
                         isFollowed
                           ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                          : 'bg-[var(--nl-blue,#0066FF)] hover:bg-[var(--nl-blue-strong,#0052CC)] text-white'
+                          : 'nl-btn-neon'
                       }`}
                       aria-label={isFollowed ? `Following ${entity.name}` : `Follow ${entity.name}`}
                     >
@@ -251,12 +254,16 @@ export default function SmartMoneyPage() {
         )}
       </div>
     </div>
+    </AuroraBackground>
   );
 }
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="bg-[var(--nl-canvas-slightly-elev,#141824)] rounded-lg p-4 border border-[var(--nl-border-dark,#1E2433)]">
+    <div
+      className="nl-glass rounded-lg p-4"
+      style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
+    >
       <div className="text-slate-400 text-sm">{label}</div>
       <div className="text-white text-2xl font-bold mt-1 tabular-nums">{value}</div>
       {hint ? <div className="text-slate-500 text-xs mt-1">{hint}</div> : null}

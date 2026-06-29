@@ -120,7 +120,7 @@ export default function BuilderNetworkPage() {
 
   return (
     <div className="min-h-screen text-white pb-20">
-      <div className="sticky top-0 z-40 glass backdrop-blur-xl border-b border-white/10">
+      <div className="sticky top-0 z-40 nl-glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
           <Building2 className="w-5 h-5 text-[#0066FF]" />
@@ -131,15 +131,15 @@ export default function BuilderNetworkPage() {
 
       <div className="p-4 space-y-4">
         <div className="grid grid-cols-3 gap-2">
-          <div className="glass rounded-xl p-3 border border-white/10 text-center">
+          <div className="nl-glass rounded-xl p-3 border border-white/10 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="text-lg font-bold text-[#10B981]">{builders.filter(b => b.verified).length}</div>
             <div className="text-[10px] text-gray-500">Verified</div>
           </div>
-          <div className="glass rounded-xl p-3 border border-white/10 text-center">
+          <div className="nl-glass rounded-xl p-3 border border-white/10 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="text-lg font-bold text-[#0066FF]">{builders.reduce((s, b) => s + b.completedProjects, 0)}</div>
             <div className="text-[10px] text-gray-500">Projects</div>
           </div>
-          <div className="glass rounded-xl p-3 border border-white/10 text-center">
+          <div className="nl-glass rounded-xl p-3 border border-white/10 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="text-lg font-bold text-[#7C3AED]">{builders.reduce((s, b) => s + b.endorsements, 0)}</div>
             <div className="text-[10px] text-gray-500">Endorsements</div>
           </div>
@@ -148,25 +148,25 @@ export default function BuilderNetworkPage() {
         {!applied && (
           <button
             onClick={() => setShowApply(true)}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#7C3AED] font-semibold text-sm flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
+            className="nl-btn-neon w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
           >
             <Plus className="w-4 h-4" /> Apply as Builder
           </button>
         )}
         {applied && (
-          <div className="glass rounded-xl p-3 border border-[#10B981]/30 bg-[#10B981]/5 text-center">
+          <div className="nl-glass rounded-xl p-3 border border-[#10B981]/30 bg-[#10B981]/5 text-center">
             <p className="text-xs text-[#10B981] font-semibold">Application submitted! Under review (48h).</p>
           </div>
         )}
 
-        <div className="flex items-center gap-2 bg-[#111827] border border-white/10 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2 nl-card rounded-lg px-3 py-2">
           <Search className="w-4 h-4 text-gray-500" />
           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search builders..." className="bg-transparent focus:outline-none text-xs w-full text-gray-300 placeholder-gray-500" />
         </div>
 
         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
           {['All', 'Verified', 'Available', 'Developers', 'Auditors', 'Designers'].map((f) => (
-            <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${filter === f ? 'bg-gradient-to-r from-[#0066FF] to-[#7C3AED] text-white' : 'bg-[#111827] text-gray-400'}`}>
+            <button key={f} onClick={() => setFilter(f)} className={`nl-button px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${filter === f ? '' : 'nl-button--ghost text-gray-400'}`}>
               {f}
             </button>
           ))}
@@ -180,7 +180,7 @@ export default function BuilderNetworkPage() {
         ) : (
           <div className="space-y-3">
             {filtered.map((builder) => (
-              <div key={builder.id} className="glass rounded-xl p-4 border border-white/10 hover:border-white/20 transition-all cursor-pointer" onClick={() => setSelectedBuilder(builder)}>
+              <div key={builder.id} className="nl-glass rounded-xl p-4 border border-white/10 hover:border-white/20 transition-all cursor-pointer" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }} onClick={() => setSelectedBuilder(builder)}>
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center text-xs font-bold relative">
@@ -206,7 +206,7 @@ export default function BuilderNetworkPage() {
                 <p className="text-[11px] text-gray-400 mb-2 line-clamp-2">{builder.bio}</p>
                 <div className="flex flex-wrap gap-1 mb-2">
                   {builder.skills.slice(0, 4).map((skill) => (
-                    <span key={skill} className="px-1.5 py-0.5 bg-[#111827] rounded text-[9px] text-gray-400">{skill}</span>
+                    <span key={skill} className="px-1.5 py-0.5 nl-card rounded text-[9px] text-gray-400">{skill}</span>
                   ))}
                   {builder.skills.length > 4 && <span className="text-[9px] text-gray-500">+{builder.skills.length - 4}</span>}
                 </div>
@@ -223,7 +223,7 @@ export default function BuilderNetworkPage() {
 
       {showApply && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={() => setShowApply(false)}>
-          <div className="w-full max-w-md max-h-[85vh] rounded-t-2xl sm:rounded-2xl border border-white/10 overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="nl-glass w-full max-w-md max-h-[85vh] rounded-t-2xl sm:rounded-2xl border border-white/10 overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="sticky top-0 border-b border-white/10 p-4 flex items-center justify-between">
               <h2 className="text-sm font-bold">Apply as Builder</h2>
               <button onClick={() => setShowApply(false)} aria-label="Close builder application" className="p-1 hover:bg-white/10 rounded-lg"><X className="w-5 h-5" aria-hidden="true" /></button>
@@ -231,11 +231,11 @@ export default function BuilderNetworkPage() {
             <div className="p-4 space-y-3">
               <div>
                 <label className="text-[10px] text-gray-500 mb-1 block">Full Name *</label>
-                <input value={form.name} onChange={e => setForm(p => ({...p, name: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066FF]/50" placeholder="Your full name" />
+                <input value={form.name} onChange={e => setForm(p => ({...p, name: e.target.value}))} className="w-full nl-card rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066FF]/50" placeholder="Your full name" />
               </div>
               <div>
                 <label className="text-[10px] text-gray-500 mb-1 block">Role *</label>
-                <select value={form.role} onChange={e => setForm(p => ({...p, role: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066FF]/50">
+                <select value={form.role} onChange={e => setForm(p => ({...p, role: e.target.value}))} className="w-full nl-card rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066FF]/50">
                   <option value="">Select role</option>
                   <option>Full-Stack Developer</option>
                   <option>Smart Contract Developer</option>
@@ -250,37 +250,37 @@ export default function BuilderNetworkPage() {
               </div>
               <div>
                 <label className="text-[10px] text-gray-500 mb-1 block">Skills (comma separated) *</label>
-                <input value={form.skills} onChange={e => setForm(p => ({...p, skills: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066FF]/50" placeholder="Solidity, React, Rust..." />
+                <input value={form.skills} onChange={e => setForm(p => ({...p, skills: e.target.value}))} className="w-full nl-card rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066FF]/50" placeholder="Solidity, React, Rust..." />
               </div>
               <div>
                 <label className="text-[10px] text-gray-500 mb-1 block">Bio *</label>
-                <textarea value={form.bio} onChange={e => setForm(p => ({...p, bio: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066FF]/50 min-h-[60px]" placeholder="Tell us about yourself and your experience..." />
+                <textarea value={form.bio} onChange={e => setForm(p => ({...p, bio: e.target.value}))} className="w-full nl-card rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066FF]/50 min-h-[60px]" placeholder="Tell us about yourself and your experience..." />
               </div>
               <div>
                 <label className="text-[10px] text-gray-500 mb-1 block">Experience</label>
-                <input value={form.experience} onChange={e => setForm(p => ({...p, experience: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066FF]/50" placeholder="3 years blockchain, 5 years total" />
+                <input value={form.experience} onChange={e => setForm(p => ({...p, experience: e.target.value}))} className="w-full nl-card rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066FF]/50" placeholder="3 years blockchain, 5 years total" />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10px] text-gray-500 mb-1 block">GitHub</label>
-                  <input value={form.github} onChange={e => setForm(p => ({...p, github: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066FF]/50" placeholder="username" />
+                  <input value={form.github} onChange={e => setForm(p => ({...p, github: e.target.value}))} className="w-full nl-card rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066FF]/50" placeholder="username" />
                 </div>
                 <div>
                   <label className="text-[10px] text-gray-500 mb-1 block">Twitter</label>
-                  <input value={form.twitter} onChange={e => setForm(p => ({...p, twitter: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066FF]/50" placeholder="@handle" />
+                  <input value={form.twitter} onChange={e => setForm(p => ({...p, twitter: e.target.value}))} className="w-full nl-card rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066FF]/50" placeholder="@handle" />
                 </div>
               </div>
               <div>
                 <label className="text-[10px] text-gray-500 mb-1 block">Portfolio URL</label>
-                <input value={form.portfolio} onChange={e => setForm(p => ({...p, portfolio: e.target.value}))} className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066FF]/50" placeholder="https://yoursite.com" />
+                <input value={form.portfolio} onChange={e => setForm(p => ({...p, portfolio: e.target.value}))} className="w-full nl-card rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066FF]/50" placeholder="https://yoursite.com" />
               </div>
               {walletAddress && (
-                <div className="glass rounded-lg p-2 border border-[#10B981]/20">
+                <div className="nl-card rounded-lg p-2 border border-[#10B981]/20">
                   <p className="text-[10px] text-gray-500">Connected Wallet</p>
                   <p className="text-xs font-mono text-[#10B981]">{walletAddress.slice(0, 10)}...{walletAddress.slice(-8)}</p>
                 </div>
               )}
-              <button onClick={handleApply} disabled={applying || !form.name || !form.role || !form.bio} className="w-full py-3 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#7C3AED] font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2">
+              <button onClick={handleApply} disabled={applying || !form.name || !form.role || !form.bio} className="nl-btn-neon w-full py-3 rounded-xl font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2">
                 {applying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4" />}
                 {applying ? 'Submitting...' : 'Submit Application'}
               </button>
@@ -292,7 +292,7 @@ export default function BuilderNetworkPage() {
 
       {selectedBuilder && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={() => setSelectedBuilder(null)}>
-          <div className="w-full max-w-md max-h-[85vh] rounded-t-2xl sm:rounded-2xl border border-white/10 overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="nl-glass w-full max-w-md max-h-[85vh] rounded-t-2xl sm:rounded-2xl border border-white/10 overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="sticky top-0 border-b border-white/10 p-4 flex items-center justify-between">
               <h2 className="text-sm font-bold">Builder Profile</h2>
               <button onClick={() => setSelectedBuilder(null)} aria-label="Close builder profile" className="p-1 hover:bg-white/10 rounded-lg"><X className="w-5 h-5" aria-hidden="true" /></button>
@@ -313,15 +313,15 @@ export default function BuilderNetworkPage() {
               </div>
 
               <div className="grid grid-cols-3 gap-2">
-                <div className="glass rounded-lg p-2 border border-white/10 text-center">
+                <div className="nl-card rounded-lg p-2 border border-white/10 text-center">
                   <div className="text-sm font-bold" style={{ color: getScoreColor(selectedBuilder.reputationScore) }}>{selectedBuilder.reputationScore}</div>
                   <div className="text-[9px] text-gray-500">Reputation</div>
                 </div>
-                <div className="glass rounded-lg p-2 border border-white/10 text-center">
+                <div className="nl-card rounded-lg p-2 border border-white/10 text-center">
                   <div className="text-sm font-bold text-[#0066FF]">{selectedBuilder.completedProjects}</div>
                   <div className="text-[9px] text-gray-500">Projects</div>
                 </div>
-                <div className="glass rounded-lg p-2 border border-white/10 text-center">
+                <div className="nl-card rounded-lg p-2 border border-white/10 text-center">
                   <div className="text-sm font-bold text-[#F59E0B]">{selectedBuilder.endorsements}</div>
                   <div className="text-[9px] text-gray-500">Endorsements</div>
                 </div>
@@ -336,20 +336,20 @@ export default function BuilderNetworkPage() {
                 <h4 className="text-xs font-semibold mb-2">Skills</h4>
                 <div className="flex flex-wrap gap-1.5">
                   {selectedBuilder.skills.map(skill => (
-                    <span key={skill} className="px-2 py-1 bg-[#111827] rounded-lg text-[10px] text-gray-300">{skill}</span>
+                    <span key={skill} className="px-2 py-1 nl-card rounded-lg text-[10px] text-gray-300">{skill}</span>
                   ))}
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-2 text-[10px]">
                 {selectedBuilder.github && (
-                  <a href={`https://github.com/${selectedBuilder.github}`} target="_blank" rel="noopener noreferrer" className="px-2 py-1 bg-[#111827] rounded text-gray-400 hover:text-white transition-colors">GitHub</a>
+                  <a href={`https://github.com/${selectedBuilder.github}`} target="_blank" rel="noopener noreferrer" className="px-2 py-1 nl-card rounded text-gray-400 hover:text-white transition-colors">GitHub</a>
                 )}
                 {selectedBuilder.twitter && (
-                  <a href={`https://twitter.com/${selectedBuilder.twitter.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="px-2 py-1 bg-[#111827] rounded text-gray-400 hover:text-white transition-colors">Twitter</a>
+                  <a href={`https://twitter.com/${selectedBuilder.twitter.replace('@', '')}`} target="_blank" rel="noopener noreferrer" className="px-2 py-1 nl-card rounded text-gray-400 hover:text-white transition-colors">Twitter</a>
                 )}
                 {selectedBuilder.website && (
-                  <a href={selectedBuilder.website} target="_blank" rel="noopener noreferrer" className="px-2 py-1 bg-[#111827] rounded text-gray-400 hover:text-white transition-colors">Website</a>
+                  <a href={selectedBuilder.website} target="_blank" rel="noopener noreferrer" className="px-2 py-1 nl-card rounded text-gray-400 hover:text-white transition-colors">Website</a>
                 )}
               </div>
 
@@ -366,7 +366,7 @@ export default function BuilderNetworkPage() {
                   <Star className="w-3.5 h-3.5" />
                   {endorsed.includes(selectedBuilder.id) ? 'Endorsed' : 'Endorse'}
                 </button>
-                <button className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#0066FF] to-[#7C3AED] text-xs font-semibold flex items-center justify-center gap-1.5">
+                <button className="nl-btn-neon flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5">
                   <MessageSquare className="w-3.5 h-3.5" /> Contact
                 </button>
               </div>

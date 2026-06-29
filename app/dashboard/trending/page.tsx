@@ -84,7 +84,7 @@ export default function TrendingPage() {
         </div>
       </div>
 
-      <div className="space-y-0 rounded-xl overflow-hidden border border-white/[0.06] bg-[#111827]">
+      <div className="nl-glass space-y-0 rounded-xl overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         {loading && rows.length === 0 ? (
           Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="h-16 bg-white/[0.02] animate-pulse border-b border-white/[0.04] last:border-b-0" />

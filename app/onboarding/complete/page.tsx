@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import { CheckCircle, Wallet, MessageCircle, BookOpen, ArrowRight } from 'lucide-react';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 
 export default function OnboardingCompletePage() {
   return (
-    <div className="min-h-screen bg-[#060A12] text-white flex items-center justify-center px-4 py-10">
+    <AuroraBackground fullHeight>
+    <div className="min-h-screen text-white flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-lg">
         <div className="flex flex-col items-center text-center mb-8">
           <div className="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/40 flex items-center justify-center mb-4">
@@ -46,7 +48,7 @@ export default function OnboardingCompletePage() {
 
         <Link
           href="/dashboard"
-          className="block w-full text-center bg-gradient-to-r from-[#0066FF] to-[#7C3AED] py-3 rounded-xl text-sm font-bold"
+          className="nl-btn-neon block w-full text-center py-3 rounded-xl text-sm font-bold"
         >
           Go to dashboard <ArrowRight className="inline w-4 h-4 ms-1" />
         </Link>
@@ -56,6 +58,7 @@ export default function OnboardingCompletePage() {
         </p>
       </div>
     </div>
+    </AuroraBackground>
   );
 }
 
@@ -76,7 +79,10 @@ function FunnelStep({
 }) {
   const linkProps = external ? { target: '_blank', rel: 'noopener noreferrer' } : {};
   return (
-    <div className="flex items-start gap-3 p-4 rounded-xl border border-white/10 bg-white/[0.02]">
+    <div
+      className="flex items-start gap-3 p-4 rounded-xl nl-glass"
+      style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
+    >
       <div className="w-9 h-9 rounded-lg bg-[#0066FF]/15 border border-[#0066FF]/30 flex items-center justify-center shrink-0">
         <Icon className="w-4 h-4 text-[#8FA3FF]" />
       </div>

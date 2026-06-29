@@ -270,7 +270,7 @@ export default function SmartMoneyPage() {
 
         {/* Convergence Banner */}
         {convergence.length > 0 && (
-          <div className="bg-[#F59E0B]/10 border border-[#F59E0B]/30 rounded-2xl p-4">
+          <div className="nl-glass border border-[#F59E0B]/30 rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />
               <span className="text-xs font-bold text-[#F59E0B]">Smart Money Convergence Detected</span>
@@ -303,7 +303,7 @@ export default function SmartMoneyPage() {
                 const colors = ['#F59E0B', '#9CA3AF', '#CD7F32'];
                 return (
                   <div key={w.id} className="nl-glass rounded-xl p-3 text-center"
-                    style={{ borderColor: colors[i] + '30' }}>
+                    style={{ borderColor: colors[i] + '30', boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                     <div className="w-8 h-8 rounded-full mx-auto mb-1 flex items-center justify-center" style={{ background: colors[i] + '20' }}>
                       <RankIcon className="w-4 h-4" style={{ color: colors[i] }} />
                     </div>
@@ -355,7 +355,7 @@ export default function SmartMoneyPage() {
           <SortAsc className="w-3.5 h-3.5 text-gray-600 flex-shrink-0" />
           {(['rank', 'winRate', 'pnlChange', 'totalVolume', 'trades'] as SortKey[]).map(k => (
             <button key={k} onClick={() => setSortKey(k)}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-colors ${sortKey === k ? 'bg-[#0066FF]/20 text-[#0066FF] border border-[#0066FF]/30' : 'bg-white/[0.03] text-gray-500 border border-white/[0.05]'}`}>
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-colors ${sortKey === k ? 'nl-button' : 'nl-button--ghost text-gray-500'}`}>
               {k === 'pnlChange' ? 'PnL%' : k === 'totalVolume' ? 'Volume' : k === 'winRate' ? 'Win Rate' : k.charAt(0).toUpperCase() + k.slice(1)}
             </button>
           ))}
@@ -665,7 +665,7 @@ export default function SmartMoneyPage() {
               <div className="space-y-1.5">
                 <div className="text-[10px] text-gray-500 font-semibold uppercase">Simulated Allocation</div>
                 {['$100', '$500', '$1,000'].map(amt => (
-                  <button key={amt} className="w-full flex items-center justify-between px-3 py-2 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] rounded-xl text-xs transition-colors">
+                  <button key={amt} className="nl-button--ghost w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors">
                     <span className="text-gray-300">{amt} simulated capital</span>
                     <span className="text-[#10B981] font-semibold">
                       +{(parseFloat(amt.replace(/[^0-9]/g, '')) * (paperTrade.winRate / 100) * 0.05).toFixed(2)} est.

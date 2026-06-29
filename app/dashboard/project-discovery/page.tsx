@@ -115,7 +115,7 @@ export default function ProjectDiscoveryPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowListingForm(true)}
-              className="px-3 py-1.5 bg-gradient-to-r from-[#0066FF] to-[#7C3AED] rounded-lg text-[11px] font-bold flex items-center gap-1 hover:opacity-90 transition-opacity"
+              className="nl-btn-neon px-3 py-1.5 rounded-lg text-[11px] font-bold flex items-center gap-1 hover:opacity-90 transition-opacity"
             >
               <Plus className="w-3 h-3" /> List Token
             </button>
@@ -134,10 +134,10 @@ export default function ProjectDiscoveryPage() {
             <button
               key={c.id}
               onClick={() => setActiveChain(c.id)}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold whitespace-nowrap transition-colors ${
+              className={`nl-button px-3 py-1.5 rounded-lg text-[10px] font-semibold whitespace-nowrap transition-colors ${
                 activeChain === c.id
-                  ? 'bg-gradient-to-r from-[#0066FF] to-[#7C3AED] text-white'
-                  : 'bg-[#111827] text-gray-400 hover:text-white border border-white/5'
+                  ? ''
+                  : 'nl-button--ghost text-gray-400 hover:text-white'
               }`}
             >
               {c.label}
@@ -145,7 +145,7 @@ export default function ProjectDiscoveryPage() {
           ))}
         </div>
 
-        <div className="flex items-center gap-2 bg-[#111827] border border-white/10 rounded-lg px-3 py-2 mb-3">
+        <div className="flex items-center gap-2 nl-card rounded-lg px-3 py-2 mb-3">
           <Search className="w-4 h-4 text-gray-500" />
           <input
             type="text"
@@ -161,10 +161,10 @@ export default function ProjectDiscoveryPage() {
             <button
               key={f}
               onClick={() => setActiveFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors ${
+              className={`nl-button px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors ${
                 activeFilter === f
-                  ? 'bg-gradient-to-r from-[#0066FF] to-[#7C3AED] text-white'
-                  : 'bg-[#111827] text-gray-400 hover:text-white'
+                  ? ''
+                  : 'nl-button--ghost text-gray-400 hover:text-white'
               }`}
             >
               {f}
@@ -200,11 +200,14 @@ function ProjectCard({ project }: { project: Project }) {
   const isPositive = changeNum > 0;
 
   return (
-    <div className={`glass rounded-xl p-4 border transition-all hover:scale-[1.02] ${
-      project.pinned
-        ? 'border-[#FFD700]/30 bg-gradient-to-br from-[#FFD700]/5 to-transparent shadow-[0_0_20px_rgba(255,215,0,0.08)]'
-        : 'border-white/10 hover:border-[#0066FF]/30'
-    }`}>
+    <div
+      className={`nl-glass rounded-xl p-4 border transition-all hover:scale-[1.02] ${
+        project.pinned
+          ? 'border-[#FFD700]/30 bg-gradient-to-br from-[#FFD700]/5 to-transparent shadow-[0_0_20px_rgba(255,215,0,0.08)]'
+          : 'border-white/10 hover:border-[#0066FF]/30'
+      }`}
+      style={project.pinned ? undefined : { boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
+    >
       {project.pinned && (
         <div className="flex items-center gap-1 mb-2">
           <Star className="w-3 h-3 text-[#FFD700] fill-[#FFD700]" />
@@ -212,7 +215,7 @@ function ProjectCard({ project }: { project: Project }) {
         </div>
       )}
       <div className="flex items-start gap-3 mb-3">
-        <div className="w-10 h-10 bg-[#111827] rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+        <div className="w-10 h-10 nl-card rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
           {project.thumb ? (
             <img src={project.thumb} alt="" className="w-8 h-8 rounded-full object-cover" />
           ) : (
@@ -254,15 +257,15 @@ function ProjectCard({ project }: { project: Project }) {
       </div>
 
       <div className="grid grid-cols-3 gap-2 mb-3 text-[10px]">
-        <div className="bg-[#111827]/50 rounded-lg px-2 py-1.5 text-center">
+        <div className="nl-card rounded-lg px-2 py-1.5 text-center">
           <div className="text-gray-500">MCap</div>
           <div className="text-gray-300 font-semibold">{project.marketCap}</div>
         </div>
-        <div className="bg-[#111827]/50 rounded-lg px-2 py-1.5 text-center">
+        <div className="nl-card rounded-lg px-2 py-1.5 text-center">
           <div className="text-gray-500">Volume</div>
           <div className="text-gray-300 font-semibold">{project.volume24h}</div>
         </div>
-        <div className="bg-[#111827]/50 rounded-lg px-2 py-1.5 text-center">
+        <div className="nl-card rounded-lg px-2 py-1.5 text-center">
           <div className="text-gray-500">Liquidity</div>
           <div className="text-gray-300 font-semibold">{project.liquidity}</div>
         </div>
@@ -311,7 +314,7 @@ function ListingFormModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-[#111827] border border-white/10 rounded-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+      <div className="nl-glass rounded-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-heading font-bold">List Your Token</h2>
           <button onClick={onClose} aria-label="Close list-token dialog" className="p-1.5 hover:bg-white/10 rounded-lg"><X className="w-4 h-4" aria-hidden="true" /></button>
@@ -325,12 +328,12 @@ function ListingFormModal({ onClose }: { onClose: () => void }) {
             <h3 className="text-lg font-bold mb-2">Submitted!</h3>
             <p className="text-gray-400 text-sm mb-3">Your token listing has been submitted for review. You will receive an email at <span className="text-white">{form.email}</span> once approved.</p>
             {previewUrl && (
-              <a href={previewUrl} className="inline-flex items-center gap-2 px-4 py-2 bg-[#1A2235] border border-[#0066FF]/30 rounded-lg text-xs text-[#0066FF] hover:bg-[#0066FF]/10 transition-colors mb-3">
+              <a href={previewUrl} className="inline-flex items-center gap-2 px-4 py-2 nl-card border-[#0066FF]/30 rounded-lg text-xs text-[#0066FF] hover:bg-[#0066FF]/10 transition-colors mb-3">
                 <ExternalLink className="w-3 h-3" /> View Your Token Preview
               </a>
             )}
             <p className="text-gray-500 text-[10px] mb-4">Share this preview link to see how your token will appear on NAKA Discovery. Once approved, you will receive payment instructions via email.</p>
-            <button onClick={onClose} className="px-6 py-2 bg-gradient-to-r from-[#0066FF] to-[#7C3AED] rounded-lg text-sm font-semibold">Close</button>
+            <button onClick={onClose} className="nl-btn-neon px-6 py-2 rounded-lg text-sm font-semibold">Close</button>
           </div>
         ) : (
           <div className="space-y-3">
@@ -338,20 +341,20 @@ function ListingFormModal({ onClose }: { onClose: () => void }) {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[10px] text-gray-400 uppercase mb-1 block">Token Name *</label>
-                <input value={form.tokenName} onChange={e => setForm({...form, tokenName: e.target.value})} className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50" placeholder="e.g. Bitcoin" />
+                <input value={form.tokenName} onChange={e => setForm({...form, tokenName: e.target.value})} className="w-full nl-card rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50" placeholder="e.g. Bitcoin" />
               </div>
               <div>
                 <label className="text-[10px] text-gray-400 uppercase mb-1 block">Symbol *</label>
-                <input value={form.symbol} onChange={e => setForm({...form, symbol: e.target.value})} className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50" placeholder="e.g. BTC" />
+                <input value={form.symbol} onChange={e => setForm({...form, symbol: e.target.value})} className="w-full nl-card rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50" placeholder="e.g. BTC" />
               </div>
             </div>
             <div>
               <label className="text-[10px] text-gray-400 uppercase mb-1 block">Contract Address *</label>
-              <input value={form.contractAddress} onChange={e => setForm({...form, contractAddress: e.target.value})} className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#0066FF]/50" placeholder="0x..." />
+              <input value={form.contractAddress} onChange={e => setForm({...form, contractAddress: e.target.value})} className="w-full nl-card rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#0066FF]/50" placeholder="0x..." />
             </div>
             <div>
               <label className="text-[10px] text-gray-400 uppercase mb-1 block">Chain *</label>
-              <select value={form.chain} onChange={e => setForm({...form, chain: e.target.value})} className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50">
+              <select value={form.chain} onChange={e => setForm({...form, chain: e.target.value})} className="w-full nl-card rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50">
                 <option value="ethereum">Ethereum</option>
                 <option value="solana">Solana</option>
                 <option value="bsc">BSC</option>
@@ -363,35 +366,35 @@ function ListingFormModal({ onClose }: { onClose: () => void }) {
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="text-[10px] text-gray-400 uppercase mb-1 flex items-center gap-1"><Globe className="w-2.5 h-2.5" /> Website</label>
-                <input value={form.website} onChange={e => setForm({...form, website: e.target.value})} className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50" placeholder="https://" />
+                <input value={form.website} onChange={e => setForm({...form, website: e.target.value})} className="w-full nl-card rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50" placeholder="https://" />
               </div>
               <div>
                 <label className="text-[10px] text-gray-400 uppercase mb-1 flex items-center gap-1"><MessageCircle className="w-2.5 h-2.5" /> Telegram</label>
-                <input value={form.telegram} onChange={e => setForm({...form, telegram: e.target.value})} className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50" placeholder="@group" />
+                <input value={form.telegram} onChange={e => setForm({...form, telegram: e.target.value})} className="w-full nl-card rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50" placeholder="@group" />
               </div>
               <div>
                 <label className="text-[10px] text-gray-400 uppercase mb-1 block">Twitter</label>
-                <input value={form.twitter} onChange={e => setForm({...form, twitter: e.target.value})} className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50" placeholder="@handle" />
+                <input value={form.twitter} onChange={e => setForm({...form, twitter: e.target.value})} className="w-full nl-card rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50" placeholder="@handle" />
               </div>
             </div>
             <div>
               <label className="text-[10px] text-gray-400 uppercase mb-1 block">Description</label>
-              <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} rows={3} className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50 resize-none" placeholder="Brief description of your token project..." />
+              <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} rows={3} className="w-full nl-card rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50 resize-none" placeholder="Brief description of your token project..." />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[10px] text-gray-400 uppercase mb-1 block">Logo URL</label>
-                <input value={form.logoUrl} onChange={e => setForm({...form, logoUrl: e.target.value})} className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50" placeholder="https://..." />
+                <input value={form.logoUrl} onChange={e => setForm({...form, logoUrl: e.target.value})} className="w-full nl-card rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50" placeholder="https://..." />
               </div>
               <div>
                 <label className="text-[10px] text-gray-400 uppercase mb-1 block">Email *</label>
-                <input value={form.email} onChange={e => setForm({...form, email: e.target.value})} type="email" className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50" placeholder="team@project.com" />
+                <input value={form.email} onChange={e => setForm({...form, email: e.target.value})} type="email" className="w-full nl-card rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/50" placeholder="team@project.com" />
               </div>
             </div>
             <button
               onClick={handleSubmit}
               disabled={submitting || !form.tokenName || !form.symbol || !form.contractAddress || !form.email}
-              className="w-full py-2.5 bg-gradient-to-r from-[#0066FF] to-[#7C3AED] rounded-lg text-sm font-bold disabled:opacity-50 hover:opacity-90 transition-opacity"
+              className="nl-btn-neon w-full py-2.5 rounded-lg text-sm font-bold disabled:opacity-50 hover:opacity-90 transition-opacity"
             >
               {submitting ? 'Submitting...' : 'Submit for Review'}
             </button>

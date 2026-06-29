@@ -141,7 +141,7 @@ export default function PortfolioRiskPage() {
             <SummaryStat label="Warning" value={summary.warning} tone="warning" />
             <SummaryStat label="Danger" value={summary.danger} tone="danger" />
           </div>
-          <div className={`rounded-2xl p-4 border ${
+          <div className={`nl-glass rounded-2xl p-4 border ${
             summary.portfolioRisk === 'critical' ? 'border-red-500/40 bg-red-500/[0.05]'
             : summary.portfolioRisk === 'high' ? 'border-orange-500/40 bg-orange-500/[0.05]'
             : summary.portfolioRisk === 'moderate' ? 'border-yellow-500/40 bg-yellow-500/[0.05]'

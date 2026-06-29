@@ -100,7 +100,7 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen text-white pb-24">
-      <div className="sticky top-0 z-10 bg-[#0A0E27]/95 backdrop-blur-xl border-b border-white/[0.06] px-4 h-14 flex items-center gap-3">
+      <div className="sticky top-0 z-10 bg-black/40 backdrop-blur-xl border-b border-white/[0.06] px-4 h-14 flex items-center gap-3">
         <BackButton />
         <span className="text-white font-semibold">Pricing</span>
       </div>
@@ -117,9 +117,8 @@ export default function PricingPage() {
             return (
               <div
                 key={tier.id}
-                className={`relative bg-[#141824] rounded-2xl border p-5 flex flex-col ${
-                  tier.popular ? 'border-[#0066FF] shadow-lg shadow-[#0066FF]/10' : 'border-[#1E2433]'
-                }`}
+                className="relative nl-glass rounded-2xl p-5 flex flex-col"
+                style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
               >
                 {tier.popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[#0066FF] text-white text-xs font-bold px-3 py-1 rounded-full">
@@ -161,9 +160,9 @@ export default function PricingPage() {
                     isCurrent
                       ? 'bg-green-500/20 text-green-400 border border-green-500/30 cursor-default'
                       : tier.id === 'free'
-                      ? 'bg-[#1E2433] text-gray-500 cursor-default'
+                      ? 'nl-card text-gray-500 cursor-default'
                       : tier.popular
-                      ? 'bg-[#0066FF] hover:bg-[#0052CC] text-white'
+                      ? 'nl-btn-neon'
                       : 'border text-white hover:bg-white/5 transition-colors'
                   }`}
                   style={!isCurrent && tier.id !== 'free' && !tier.popular ? { borderColor: tier.accent, color: tier.accent } : {}}
@@ -194,7 +193,7 @@ export default function PricingPage() {
 
           <div className="grid grid-cols-1 max-w-md mx-auto">
             {/* Founder Pass → Max on the platform */}
-            <div className="bg-[#141824] rounded-2xl border border-[#F59E0B]/40 shadow-lg shadow-[#F59E0B]/10 p-6 flex flex-col">
+            <div className="nl-glass rounded-2xl border border-[#F59E0B]/40 shadow-lg shadow-[#F59E0B]/10 p-6 flex flex-col">
               <div className="flex items-baseline justify-between mb-1">
                 <span className="text-[#F59E0B] font-bold text-sm tracking-wide">FOUNDER PASS</span>
                 <div className="flex items-baseline gap-1">
@@ -234,7 +233,7 @@ export default function PricingPage() {
           </div>
         </div>
 
-        <div className="mt-12 bg-[#141824] rounded-2xl border border-[#1E2433] p-6">
+        <div className="mt-12 nl-glass rounded-2xl p-6" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           <h2 className="text-white font-bold text-xl mb-4">All plans include</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {[

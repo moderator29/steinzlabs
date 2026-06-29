@@ -42,7 +42,7 @@ export default function WalletAnalysisPage() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && runScan()}
             placeholder="0x… or Solana address"
-            className="flex-1 bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/30"
+            className="flex-1 nl-glass rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/30"
           />
           <button
             type="button"

@@ -363,7 +363,7 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
     // (aurora bg + banners) that was clipping the header at the top and pushing
     // the composer off the bottom. inset-0 + max-w-2xl + mx-auto centres it on
     // desktop and fills the viewport on mobile; h-dvh tracks the mobile URL bar.
-    <div className="fixed inset-0 z-[60] mx-auto flex h-[100dvh] max-w-2xl flex-col bg-[#070b14]">
+    <div className="fixed inset-0 z-[60] mx-auto flex h-[100dvh] max-w-2xl flex-col">
       {/* Header — compact back, peer (links to profile), encryption badge. */}
       <div className="flex items-center gap-2 px-3 sm:px-4 py-2.5 shrink-0 border-b border-[#0066FF]/20" style={{ boxShadow: '0 1px 0 rgba(0,102,255,.12)' }}>
         <button

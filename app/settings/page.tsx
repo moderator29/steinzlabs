@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/common/PageHeader';
 import { Toggle } from '@/components/ui/Toggle';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 
 const PREFS_KEY = 'steinz_user_preferences';
 
@@ -210,21 +211,22 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] p-4 sm:p-6">
+    <AuroraBackground fullHeight>
+    <div className="min-h-screen p-4 sm:p-6">
       <div className="max-w-5xl mx-auto">
         <PageHeader title="Settings" description="Manage your account, security, and trading preferences" />
 
         <div className="flex flex-col md:flex-row gap-4 md:gap-6">
           {/* Sidebar Nav — horizontal scroll chips on mobile, vertical on md+ */}
           <div className="w-full md:w-48 md:flex-shrink-0">
-            <div className="bg-[#141824] rounded-lg p-2 border border-[#1E2433] flex md:block gap-1 md:gap-0 overflow-x-auto md:overflow-visible">
+            <div className="nl-glass rounded-lg p-2 flex md:block gap-1 md:gap-0 overflow-x-auto md:overflow-visible" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               {sections.map((section) => (
                 <button
                   key={section.id}
                   onClick={() => setActiveSection(section.id)}
                   className={`flex-shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-3 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                     activeSection === section.id
-                      ? 'bg-[#0066FF] text-white'
+                      ? 'nl-btn-neon'
                       : 'text-gray-400 hover:bg-[#1E2433] hover:text-white'
                   }`}
                 >
@@ -238,7 +240,7 @@ export default function SettingsPage() {
           {/* Content */}
           <div className="flex-1 min-w-0">
             {activeSection === 'profile' && (
-              <div className="bg-[#141824] rounded-lg p-6 border border-[#1E2433]">
+              <div className="nl-glass rounded-lg p-6" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <h3 className="text-white font-bold text-lg mb-6">Profile Settings</h3>
                 <div className="space-y-4">
                   <div>
@@ -335,7 +337,7 @@ export default function SettingsPage() {
                   <button
                     onClick={handleSaveProfile}
                     disabled={profileLoading}
-                    className="bg-[#0066FF] hover:bg-[#0052CC] disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors"
+                    className="nl-btn-neon disabled:opacity-50 font-medium px-6 py-2 rounded-lg"
                   >
                     {profileLoading ? 'Saving...' : 'Save Changes'}
                   </button>
@@ -346,7 +348,7 @@ export default function SettingsPage() {
             {activeSection === 'security' && (
               <div className="space-y-4">
                 {/* Change Password */}
-                <div className="bg-[#141824] rounded-lg p-6 border border-[#1E2433]">
+                <div className="nl-glass rounded-lg p-6" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                   <h3 className="text-white font-bold text-lg mb-4">Change Password</h3>
                   <div className="space-y-3">
                     <div>
@@ -377,7 +379,7 @@ export default function SettingsPage() {
                     <button
                       onClick={handleChangePassword}
                       disabled={passwordLoading || !newPassword}
-                      className="flex items-center gap-2 bg-[#0066FF] hover:bg-[#0052CC] disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors"
+                      className="flex items-center gap-2 nl-btn-neon disabled:opacity-50 font-medium px-6 py-2 rounded-lg"
                     >
                       {passwordLoading && <Loader2 size={14} className="animate-spin" />}
                       Update Password
@@ -386,7 +388,7 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Delete Account */}
-                <div className="bg-[#141824] rounded-lg p-6 border border-red-900/40">
+                <div className="nl-glass nl-glass--crimson rounded-lg p-6 border border-red-900/40">
                   <div className="flex items-center gap-2 mb-1">
                     <AlertTriangle className="w-4 h-4 text-red-400" />
                     <h3 className="text-red-400 font-bold text-lg">Delete Account</h3>
@@ -400,7 +402,7 @@ export default function SettingsPage() {
                         value={deleteConfirm}
                         onChange={e => setDeleteConfirm(e.target.value)}
                         placeholder="DELETE"
-                        className="w-full bg-[#0A0E1A] border border-red-900/40 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-500/60"
+                        className="w-full nl-card border border-red-900/40 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-500/60"
                       />
                     </div>
                     <button
@@ -417,7 +419,7 @@ export default function SettingsPage() {
             )}
 
             {activeSection === 'notifications' && (
-              <div className="bg-[#141824] rounded-lg p-6 border border-[#1E2433]">
+              <div className="nl-glass rounded-lg p-6" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <h3 className="text-white font-bold text-lg mb-6">Notification Preferences</h3>
                 <div className="space-y-3">
                   {/* Browser push notifications */}
@@ -465,7 +467,7 @@ export default function SettingsPage() {
             )}
 
             {activeSection === 'trading' && (
-              <div className="bg-[#141824] rounded-lg p-6 border border-[#1E2433]">
+              <div className="nl-glass rounded-lg p-6" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <h3 className="text-white font-bold text-lg mb-6">Trading Preferences</h3>
                 <div className="space-y-4">
                   <div>
@@ -477,8 +479,8 @@ export default function SettingsPage() {
                           onClick={() => setSlippage(s)}
                           className={`px-4 py-2 rounded-lg text-sm transition-colors ${
                             slippage === s
-                              ? 'bg-[#0066FF] text-white'
-                              : 'bg-[#0A0E1A] text-gray-400 border border-[#1E2433]'
+                              ? 'nl-btn-neon'
+                              : 'nl-card text-gray-400'
                           }`}
                         >
                           {s}%
@@ -511,6 +513,7 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+    </AuroraBackground>
   );
 }
 
@@ -561,26 +564,26 @@ function AccountActionsCard() {
 
   return (
     <>
-      <div className="bg-[#141824] rounded-lg p-6 border border-[#1E2433]">
+      <div className="nl-glass rounded-lg p-6" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         <h3 className="text-white font-bold text-lg mb-2">Replay onboarding</h3>
         <p className="text-gray-300 text-sm mb-4">Run the 10-card onboarding flow again to revisit security, wallet, and notification setup.</p>
         <button
           onClick={handleReplay}
           disabled={replaying}
-          className="flex items-center gap-2 bg-[#0066FF] hover:bg-[#0052CC] disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors"
+          className="flex items-center gap-2 nl-btn-neon disabled:opacity-50 font-medium px-6 py-2 rounded-lg"
         >
           {replaying ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <RotateCcw size={14} aria-hidden />}
           Replay onboarding
         </button>
       </div>
 
-      <div className="bg-[#141824] rounded-lg p-6 border border-[#1E2433]">
+      <div className="nl-glass rounded-lg p-6" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         <h3 className="text-white font-bold text-lg mb-2">Download my data</h3>
         <p className="text-gray-300 text-sm mb-4">GDPR-compliant export of your profile, watchlists, trades, copy rules, notifications, and preferences as a single JSON file.</p>
         <button
           onClick={handleExport}
           disabled={exporting}
-          className="flex items-center gap-2 bg-[#0066FF] hover:bg-[#0052CC] disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg transition-colors"
+          className="flex items-center gap-2 nl-btn-neon disabled:opacity-50 font-medium px-6 py-2 rounded-lg"
         >
           {exporting ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Download size={14} aria-hidden />}
           Download my data

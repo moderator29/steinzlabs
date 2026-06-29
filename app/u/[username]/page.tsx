@@ -9,6 +9,7 @@ import { MoreMenu } from '@/components/social/MoreMenu';
 import { UserListRow } from '@/components/social/UserListRow';
 import { TierBadge } from '@/components/ui/TierBadge';
 import { GlassCard } from '@/components/ui/GlassCard';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 
 /**
  * /u/[username] — public profile.
@@ -87,12 +88,13 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
     }
   };
 
-  if (error) return <div className="min-h-screen flex items-center justify-center text-slate-400">{error}</div>;
+  if (error) return <AuroraBackground fullHeight><div className="min-h-screen flex items-center justify-center text-slate-400">{error}</div></AuroraBackground>;
 
   // Caller has blocked this user — show a blocked state with an Unblock action
   // instead of the full profile (industry-standard).
   if (blocked) {
     return (
+      <AuroraBackground fullHeight>
       <div className="min-h-screen p-4 sm:p-6 max-w-md mx-auto">
         <div className="mb-4"><BackButton /></div>
         <GlassCard className="p-8 text-center">
@@ -101,16 +103,17 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
           <button
             onClick={unblock}
             disabled={unblocking}
-            className="mt-5 px-4 py-2 rounded-lg bg-[var(--nl-blue,#0066FF)] text-white text-sm font-semibold disabled:opacity-50"
+            className="nl-btn-neon mt-5 px-4 py-2 rounded-lg text-white text-sm font-semibold disabled:opacity-50"
           >
             {unblocking ? 'Unblocking…' : 'Unblock'}
           </button>
         </GlassCard>
       </div>
+      </AuroraBackground>
     );
   }
 
-  if (!data) return <div className="min-h-screen flex items-center justify-center text-slate-400">Loading…</div>;
+  if (!data) return <AuroraBackground fullHeight><div className="min-h-screen flex items-center justify-center text-slate-400">Loading…</div></AuroraBackground>;
 
   const p = data.profile;
   const rel = data.relationship;
@@ -122,6 +125,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
   const dmPermissionView: 'allowed' | 'blocked' = rel?.i_blocked ? 'blocked' : 'allowed';
 
   return (
+    <AuroraBackground fullHeight>
     <div className="min-h-screen p-4 sm:p-6 max-w-4xl mx-auto">
       {/* Cover banner — shows the user's uploaded cover, else a 2030 aurora
           gradient. Back button (top-left) + More menu (top-right) float over it. */}
@@ -239,6 +243,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
         {tab === 'followers' && <FollowListInline kind="followers" userId={p.id} />}
       </div>
     </div>
+    </AuroraBackground>
   );
 }
 

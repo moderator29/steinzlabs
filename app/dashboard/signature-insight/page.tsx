@@ -102,7 +102,7 @@ export default function SignatureInsightPage() {
 
       <div className="p-4 space-y-4">
         {/* Info Banner */}
-        <div className="bg-[#7C3AED]/5 border border-[#7C3AED]/20 rounded-2xl p-3 flex items-start gap-3">
+        <div className="nl-glass border border-[#7C3AED]/20 rounded-2xl p-3 flex items-start gap-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           <Info className="w-4 h-4 text-[#7C3AED] mt-0.5 flex-shrink-0" />
           <p className="text-[11px] text-gray-400 leading-relaxed">
             Paste any transaction calldata or signature to decode what it does in plain English.
@@ -116,9 +116,9 @@ export default function SignatureInsightPage() {
             <button
               key={c.id}
               onClick={() => setChain(c.id)}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
                 chain === c.id
-                  ? 'bg-[#7C3AED]/10 border-[#7C3AED]/30 text-[#7C3AED]'
+                  ? 'nl-btn-neon'
                   : 'nl-button--ghost text-gray-500 hover:text-gray-300'
               }`}
             >
@@ -188,7 +188,7 @@ export default function SignatureInsightPage() {
         {result && config && !decoding && (
           <>
             {/* Risk verdict */}
-            <div className={`rounded-2xl p-4 border ${config.border} ${config.bg}`}>
+            <div className={`nl-glass rounded-2xl p-4 border ${config.border} ${config.bg}`} style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <div className="flex items-start gap-3">
                 <config.icon className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: config.color }} />
                 <div>

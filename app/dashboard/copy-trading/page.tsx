@@ -228,7 +228,7 @@ export default function CopyTradingPage() {
           </div>
           <button
             onClick={() => setShowNewRule(true)}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-400 text-white"
+            className="nl-btn-neon inline-flex items-center gap-1.5 text-xs font-semibold !px-3 !py-1.5"
           >
             <Plus size={13} /> New rule
           </button>
@@ -327,9 +327,9 @@ export default function CopyTradingPage() {
         ) : trades.length === 0 ? (
           <div className="py-12 text-center text-sm text-slate-500">No copy trades yet</div>
         ) : (
-          <div className="rounded-xl border border-slate-800 overflow-x-auto">
+          <div className="rounded-xl nl-glass overflow-x-auto">
             <table className="w-full min-w-[520px] text-xs">
-              <thead className="text-[10px] uppercase tracking-wide text-slate-500 bg-slate-900/30 border-b border-slate-800">
+              <thead className="text-[10px] uppercase tracking-wide text-slate-500 nl-glass border-b border-slate-800">
                 <tr>
                   <th className="text-start px-3 py-2">When</th>
                   <th className="text-start px-3 py-2">Whale</th>
@@ -368,7 +368,7 @@ export default function CopyTradingPage() {
           </div>
         )}
 
-        <div className="mt-8 p-4 rounded-xl bg-blue-500/5 border border-blue-500/20 flex items-start gap-3">
+        <div className="mt-8 p-4 rounded-xl nl-glass border border-blue-500/20 flex items-start gap-3">
           <Shield size={14} className="text-blue-300 flex-shrink-0 mt-0.5" />
           <div className="text-[11px] text-blue-200/80 leading-relaxed">
             <p className="font-semibold text-blue-200 mb-1">Non-custodial by design.</p>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Search, AlertTriangle } from 'lucide-react';
 import { VerifiedBadge } from '@/components/icons/VerifiedBadge';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 
@@ -48,13 +48,13 @@ export default function DNAAnalyzerPage() {
                 onChange={(e) => setWalletAddress(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && analyzeWallet()}
                 placeholder="Enter wallet address..."
-                className="w-full bg-[#141824] border border-[#1E2433] rounded-lg ps-10 pe-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF] font-mono"
+                className="w-full nl-card rounded-lg ps-10 pe-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF] font-mono"
               />
             </div>
             <button
               onClick={analyzeWallet}
               disabled={analyzing || !walletAddress}
-              className="bg-[#0066FF] hover:bg-[#0052CC] disabled:bg-gray-700 text-white font-medium px-6 py-3 rounded-lg transition-colors"
+              className="nl-btn-neon disabled:opacity-50 font-medium px-6 py-3 rounded-lg"
             >
               {analyzing ? 'Analyzing...' : 'Analyze'}
             </button>
@@ -63,7 +63,7 @@ export default function DNAAnalyzerPage() {
 
         {/* Results - Verified Entity */}
         {result?.arkhamEntity?.verified && (
-          <div className="bg-[#141824] rounded-lg p-6">
+          <div className="nl-glass rounded-lg p-6" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="flex items-start gap-4 mb-6">
               {result.arkhamEntity.logo && (
                 <img
@@ -84,68 +84,42 @@ export default function DNAAnalyzerPage() {
             </div>
 
             <div className="grid grid-cols-3 gap-4 mb-6">
-              <div className="bg-[#0A0E1A] rounded p-4">
-                <div className="text-sm text-gray-400 mb-1">Win Rate</div>
-                <div className="text-2xl font-bold text-green-500">89%</div>
-                <div className="text-xs text-gray-500 mt-1">Top 1% globally</div>
+              <div className="nl-card rounded p-4">
+                <div className="text-sm text-gray-400 mb-1">Total Transactions</div>
+                <div className="text-2xl font-bold text-white">
+                  {typeof result.transactionCount === 'number' ? result.transactionCount.toLocaleString() : '—'}
+                </div>
               </div>
-              <div className="bg-[#0A0E1A] rounded p-4">
-                <div className="text-sm text-gray-400 mb-1">Avg Hold Time</div>
-                <div className="text-2xl font-bold text-white">5.2d</div>
+              <div className="nl-card rounded p-4">
+                <div className="text-sm text-gray-400 mb-1">Total Volume</div>
+                <div className="text-2xl font-bold text-white">{result.totalVolume ?? '—'}</div>
               </div>
-              <div className="bg-[#0A0E1A] rounded p-4">
-                <div className="text-sm text-gray-400 mb-1">Total Trades</div>
-                <div className="text-2xl font-bold text-white">1,247</div>
+              <div className="nl-card rounded p-4">
+                <div className="text-sm text-gray-400 mb-1">Chain</div>
+                <div className="text-2xl font-bold text-white uppercase">{result.chain ?? '—'}</div>
               </div>
             </div>
 
-            {/* Current Positions */}
-            <div className="mb-6">
-              <h3 className="text-white font-medium mb-3">Current Positions</h3>
-              <div className="space-y-2">
-                <div className="bg-[#0A0E1A] rounded p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-white font-medium">ETH</div>
-                      <div className="text-sm text-gray-400">$420M (18%)</div>
-                    </div>
-                    <div className="text-end">
-                      <div className="text-white font-mono">HOLDING</div>
-                    </div>
-                  </div>
+            {/* Activity window */}
+            <div className="mb-2">
+              <h3 className="text-white font-medium mb-3">Activity</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="nl-card rounded p-3">
+                  <div className="text-sm text-gray-400 mb-1">First Seen</div>
+                  <div className="text-white font-mono text-sm">{result.firstSeen ?? '—'}</div>
                 </div>
-                <div className="bg-[#0A0E1A] rounded p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-white font-medium">BONK</div>
-                      <div className="text-sm text-gray-400">$2.4M</div>
-                    </div>
-                    <div className="text-end">
-                      <div className="flex items-center gap-1">
-                        <TrendingUp size={14} className="text-green-500" />
-                        <div className="text-green-500 font-mono">ACCUMULATING</div>
-                      </div>
-                    </div>
-                  </div>
+                <div className="nl-card rounded p-3">
+                  <div className="text-sm text-gray-400 mb-1">Last Seen</div>
+                  <div className="text-white font-mono text-sm">{result.lastSeen ?? '—'}</div>
                 </div>
               </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3">
-              <button className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium py-3 rounded-lg">
-                Follow Entity
-              </button>
-              <button className="flex-1 bg-[#141824] hover:bg-[#1E2433] border border-[#1E2433] text-white font-medium py-3 rounded-lg">
-                Copy Trades
-              </button>
             </div>
           </div>
         )}
 
         {/* Results - Scammer */}
         {result?.labels?.includes('scammer') && (
-          <div className="bg-red-500/10 border-2 border-red-500 rounded-lg p-6">
+          <div className="nl-glass nl-glass--crimson border-2 border-red-500 rounded-lg p-6">
             <div className="flex items-center gap-3 mb-4">
               <AlertTriangle className="text-red-500" size={32} />
               <div>
@@ -156,23 +130,31 @@ export default function DNAAnalyzerPage() {
               </div>
             </div>
 
-            <div className="bg-[#0A0E1A] rounded p-4 mb-4">
-              <h3 className="text-white font-medium mb-3">Scam History</h3>
-              <div className="grid grid-cols-3 gap-4 text-sm">
-                <div>
-                  <div className="text-gray-400">Total Rug Pulls</div>
-                  <div className="text-xl font-bold text-red-500">5</div>
-                </div>
-                <div>
-                  <div className="text-gray-400">Total Stolen</div>
-                  <div className="text-xl font-bold text-red-500">$3.2M</div>
-                </div>
-                <div>
-                  <div className="text-gray-400">Victims</div>
-                  <div className="text-xl font-bold text-red-500">4,123</div>
+            {result.scamHistory ? (
+              <div className="nl-card rounded p-4 mb-4">
+                <h3 className="text-white font-medium mb-3">Scam History</h3>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <div className="text-gray-400">Total Rug Pulls</div>
+                    <div className="text-xl font-bold text-red-500">{result.scamHistory.totalRugs ?? '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-400">Total Stolen</div>
+                    <div className="text-xl font-bold text-red-500">{result.scamHistory.totalStolen ?? '—'}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-400">Victims</div>
+                    <div className="text-xl font-bold text-red-500">
+                      {typeof result.scamHistory.victims === 'number' ? result.scamHistory.victims.toLocaleString() : '—'}
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="nl-card rounded p-4 mb-4 text-sm text-gray-400">
+                Detailed scam history is unavailable for this wallet.
+              </div>
+            )}
 
             <div className="p-4 bg-red-500/20 rounded text-sm text-red-300">
               WARNING: DO NOT INTERACT WITH THIS WALLET. Shadow Guardian will block all trades.
@@ -182,17 +164,34 @@ export default function DNAAnalyzerPage() {
 
         {/* Results - Unknown Wallet */}
         {result && !result.arkhamEntity?.verified && !result.labels?.includes('scammer') && (
-          <div className="bg-[#141824] rounded-lg p-6">
+          <div className="nl-glass rounded-lg p-6" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <h2 className="text-xl font-bold text-white mb-4">Unknown Wallet</h2>
             <p className="text-gray-400 mb-4">
               This wallet has no verified entity label on record.
             </p>
 
-            <div className="bg-[#0A0E1A] rounded p-4">
-              <div className="text-sm text-gray-400 mb-2">Reputation Score</div>
-              <div className="text-2xl font-bold text-yellow-500">50/100</div>
-              <div className="text-sm text-gray-500 mt-1">Neutral (Unknown)</div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="nl-card rounded p-4">
+                <div className="text-sm text-gray-400 mb-1">Total Transactions</div>
+                <div className="text-2xl font-bold text-white">
+                  {typeof result.transactionCount === 'number' ? result.transactionCount.toLocaleString() : '—'}
+                </div>
+              </div>
+              <div className="nl-card rounded p-4">
+                <div className="text-sm text-gray-400 mb-1">Total Volume</div>
+                <div className="text-2xl font-bold text-white">{result.totalVolume ?? '—'}</div>
+              </div>
             </div>
+
+            {Array.isArray(result.labels) && result.labels.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {result.labels.map((label: string) => (
+                  <span key={label} className="nl-card rounded-full px-3 py-1 text-xs text-gray-300">
+                    {label}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

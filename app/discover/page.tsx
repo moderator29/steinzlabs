@@ -9,6 +9,7 @@ import { SearchBox } from '@/components/social/SearchBox';
 import { UserListRow } from '@/components/social/UserListRow';
 import BackButton from '@/components/ui/BackButton';
 import { GlassCard } from '@/components/ui/GlassCard';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { useFeatureUsageLog } from '@/lib/hooks/useFeatureUsageLog';
 
 /**
@@ -27,21 +28,23 @@ function DiscoverInner() {
   const q = sp.get('q')?.trim() ?? '';
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 max-w-6xl mx-auto">
-      <div className="flex items-center gap-3 mb-4">
-        <BackButton />
-        <div className="flex items-center gap-2">
-          <Compass className="w-5 h-5 text-[var(--nl-blue,#0066FF)]" />
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Discover users</h1>
+    <AuroraBackground fullHeight>
+      <div className="min-h-screen p-4 sm:p-6 max-w-6xl mx-auto">
+        <div className="flex items-center gap-3 mb-4">
+          <BackButton />
+          <div className="flex items-center gap-2">
+            <Compass className="w-5 h-5 text-[var(--nl-blue,#0066FF)]" />
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Discover users</h1>
+          </div>
         </div>
-      </div>
 
-      <div className="mb-5">
-        <SearchBox autoFocus={!q} />
-      </div>
+        <div className="mb-5">
+          <SearchBox autoFocus={!q} />
+        </div>
 
-      {q ? <SearchResults q={q} /> : <DiscoverHub />}
-    </div>
+        {q ? <SearchResults q={q} /> : <DiscoverHub />}
+      </div>
+    </AuroraBackground>
   );
 }
 
