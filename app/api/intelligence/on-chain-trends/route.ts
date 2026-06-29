@@ -1,6 +1,7 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
 import { getDLChains, getDLChainTvl, getDLGlobalTvl, getDLStablecoins } from '@/lib/services/defillama';
+import { isBitqueryEnabled, getChainDexMetrics } from '@/lib/services/bitquery';
 
 export interface TrendSparkpoint { t: number; v: number }
 
@@ -118,6 +119,39 @@ export async function GET(request: Request) {
           ts: Date.now(),
         });
       }
+    }
+
+    // Real 24h DEX volume + unique active traders per chain (Bitquery). No-op
+    // when BITQUERY_API_KEY is unset; each card carries real data or is omitted.
+    if (isBitqueryEnabled()) {
+      const since24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+      const DL_TO_SLUG: Record<string, string> = {
+        ethereum: 'ethereum', solana: 'solana', bsc: 'bsc', arbitrum: 'arbitrum',
+        base: 'base', polygon: 'polygon', optimism: 'optimism',
+      };
+      const metricChains = topChains.slice(0, 5)
+        .map(c => ({ name: c.name, slug: DL_TO_SLUG[c.name.toLowerCase()] }))
+        .filter((c): c is { name: string; slug: string } => !!c.slug);
+      const metrics = await Promise.allSettled(metricChains.map(c => getChainDexMetrics(c.slug, since24h)));
+      metricChains.forEach((c, i) => {
+        const r = metrics[i];
+        const m = r.status === 'fulfilled' ? r.value : null;
+        if (!m) return;
+        if (m.volumeUsd > 0) {
+          cards.push({
+            id: `vol-${c.slug}`, chain: c.name, metric: 'Volume',
+            value: fmtBig(m.volumeUsd), rawValue: m.volumeUsd,
+            change24h: 0, change7d: 0, sparkline: [], direction: 'flat', hot: false,
+          });
+        }
+        if (m.activeAddresses > 0) {
+          cards.push({
+            id: `addr-${c.slug}`, chain: c.name, metric: 'Addresses',
+            value: m.activeAddresses.toLocaleString(), rawValue: m.activeAddresses,
+            change24h: 0, change7d: 0, sparkline: [], direction: 'flat', hot: false,
+          });
+        }
+      });
     }
 
     // Stablecoin marketcap card
