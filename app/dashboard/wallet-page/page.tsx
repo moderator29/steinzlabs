@@ -1509,7 +1509,7 @@ export default function WalletPage() {
                 aria-labelledby="wallet-tab-nfts"
                 className="mb-6 rounded-xl nl-glass/40 overflow-hidden"
               >
-                <NftTab address={activeWallet.address} chain={activeChain.id} />
+                <NftTab evmAddress={activeWallet.address} solanaAddress={activeWallet.solanaAddress} />
               </div>
             )}
 
