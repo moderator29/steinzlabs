@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { withTierGate } from "@/lib/subscriptions/apiTierGate";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { normalizeAddress } from "@/lib/utils/addressNormalize";
 
 export const runtime = "nodejs";
@@ -54,7 +55,33 @@ export const GET = withTierGate("pro", async (_request: NextRequest) => {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ watchlist: data ?? [] });
+
+  const follows = data ?? [];
+  // Enrich each follow with the whale's directory stats (score, volume,
+  // active days, entity_type, …) so the watchlist renders the SAME rich trader
+  // card as the directory/live feed instead of a bare address. One batched
+  // lookup, not N+1.
+  let enriched = follows as Array<Record<string, unknown>>;
+  if (follows.length > 0) {
+    const addrs = Array.from(new Set(follows.map((f) => f.whale_address)));
+    const admin = getSupabaseAdmin();
+    const { data: whales } = await admin
+      .from("whales")
+      .select(
+        "address,chain,label,entity_type,archetype,whale_score,portfolio_value_usd,pnl_30d_usd,win_rate,volume_7d_usd,active_days_7d,follower_count,verified,last_active_at",
+      )
+      .in("address", addrs);
+    const byKey = new Map<string, Record<string, unknown>>();
+    for (const w of whales ?? []) byKey.set(`${String(w.chain).toLowerCase()}:${w.address}`, w);
+    enriched = follows.map((f) => {
+      const w = byKey.get(`${f.chain.toLowerCase()}:${f.whale_address}`);
+      return {
+        ...f,
+        whale: w ?? null,
+      };
+    });
+  }
+  return NextResponse.json({ watchlist: enriched });
 });
 
 export const POST = withTierGate("pro", async (request: NextRequest) => {

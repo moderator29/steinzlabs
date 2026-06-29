@@ -323,14 +323,13 @@ export default function WhaleDirectoryPage() {
             <h1 className="text-sm font-semibold tracking-tight font-sans">Whale Directory</h1>
             <p className="text-[10px] text-slate-500">On-chain whale intelligence</p>
           </div>
-          <div className="ms-auto flex items-center gap-2">
-            <Link href="/dashboard/whale-tracker" className="nl-btn-neon !px-3 !py-1.5 !text-[11px]">
-              Live Feed
-            </Link>
-            <Link href="/dashboard/whale-tracker/submit" className="nl-btn-neon !px-3 !py-1.5 !text-[11px]">
-              Submit
-            </Link>
-          </div>
+          <nav className="ms-auto flex items-center gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1">
+            <Link href="/dashboard/whale-tracker" className="shrink-0 px-3 py-1.5 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-white bg-white/[0.04] border border-white/10 hover:border-white/20 transition-colors">Live Feed</Link>
+            <span className="shrink-0 nl-btn-neon !px-3 !py-1.5 !text-[11px] !border-[#0066FF]/90 cursor-default">Directory</span>
+            <Link href="/dashboard/whale-tracker/watchlist" className="shrink-0 px-3 py-1.5 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-white bg-white/[0.04] border border-white/10 hover:border-white/20 transition-colors">Watchlist</Link>
+            <Link href="/dashboard/copy-trading" className="shrink-0 px-3 py-1.5 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-white bg-white/[0.04] border border-white/10 hover:border-white/20 transition-colors">Copy Trade</Link>
+            <Link href="/dashboard/whale-tracker/submit" className="shrink-0 px-3 py-1.5 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-white bg-white/[0.04] border border-white/10 hover:border-white/20 transition-colors">Submit</Link>
+          </nav>
         </div>
 
         {/* Filters */}

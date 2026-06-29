@@ -372,45 +372,15 @@ export default function WhaleTrackerPage() {
       <div className="sticky top-0 z-30 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/50">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
           <BackButton href="/dashboard" compact />
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg md:text-xl font-bold">Whale Tracker</h1>
-            {(() => {
-              // Honest status pill: only claim "Live" (pulsing) when the newest
-              // feed row is genuinely recent. Otherwise show how stale the feed
-              // is instead of a permanent fake-live pulse over empty/old data.
-              const newestMs = feed.length > 0 ? new Date(feed[0].timestamp).getTime() : 0;
-              const ageMs = newestMs ? Date.now() - newestMs : Infinity;
-              const isLive = ageMs < 10 * 60 * 1000;
-              if (isLive) {
-                return (
-                  <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-emerald-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live
-                  </span>
-                );
-              }
-              return (
-                <span
-                  className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-slate-500"
-                  title={newestMs ? `Newest activity ${timeAgo(feed[0].timestamp)}` : 'No recent activity'}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-500" /> {newestMs ? 'Delayed' : 'Idle'}
-                </span>
-              );
-            })()}
-            <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-[#0066FF]/15 text-[#6F7EFF] border border-[#0066FF]/30">
-              PRO
-            </span>
-          </div>
-          <div className="ms-auto flex items-center gap-2">
-            {/* Directory + Submit — matched, compact neon-blue stride pills,
-                same scale as the PRO chip. "Submit" (not "Submit whale"). */}
-            <Link href="/dashboard/whale-tracker/directory" className="nl-btn-neon !px-3 !py-1.5 !text-[11px]">
-              Directory
-            </Link>
-            <Link href="/dashboard/whale-tracker/submit" className="nl-btn-neon !px-3 !py-1.5 !text-[11px]">
-              Submit
-            </Link>
-          </div>
+          {/* Tab bar replaces the old "Whale Tracker / Live / PRO" cluster —
+              one clean row of section tabs. Live Feed is the current page. */}
+          <nav className="flex items-center gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1">
+            <span className="shrink-0 nl-btn-neon !px-3 !py-1.5 !text-[11px] !border-[#0066FF]/90 cursor-default">Live Feed</span>
+            <Link href="/dashboard/whale-tracker/directory" className="shrink-0 px-3 py-1.5 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-white bg-white/[0.04] border border-white/10 hover:border-white/20 transition-colors">Directory</Link>
+            <Link href="/dashboard/whale-tracker/watchlist" className="shrink-0 px-3 py-1.5 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-white bg-white/[0.04] border border-white/10 hover:border-white/20 transition-colors">Watchlist</Link>
+            <Link href="/dashboard/copy-trading" className="shrink-0 px-3 py-1.5 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-white bg-white/[0.04] border border-white/10 hover:border-white/20 transition-colors">Copy Trade</Link>
+            <Link href="/dashboard/whale-tracker/submit" className="shrink-0 px-3 py-1.5 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-white bg-white/[0.04] border border-white/10 hover:border-white/20 transition-colors">Submit</Link>
+          </nav>
         </div>
 
         {/* Filters */}
