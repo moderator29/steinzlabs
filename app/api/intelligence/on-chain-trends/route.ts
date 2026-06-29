@@ -126,7 +126,11 @@ export async function GET(request: Request) {
       id: 'stablecoins', chain: 'All Chains', metric: 'Stablecoins',
       value: fmtBig(totalStable), rawValue: totalStable,
       change24h: 0, change7d: 0,
-      sparkline: buildSparkline(globalHistory.slice(-14).map((p, i) => ({ date: p.date, tvl: totalStable * (0.98 + i * 0.002) }))),
+      // No fabricated series: we don't have a real stablecoin-marketcap history
+      // feed here, so the sparkline is empty rather than synthetic (the previous
+      // `totalStable * (0.98 + i*0.002)` was mock data — forbidden). The card
+      // still shows the real current total.
+      sparkline: [],
       direction: 'flat', hot: false,
     });
 
