@@ -12,7 +12,7 @@ import {
 } from '@/components/icons/brand';
 import {
   ArrowLeft, RotateCcw, Key, Globe, Layers, ArrowUpRight, ArrowDownLeft,
-  Repeat, DollarSign, QrCode, ShoppingCart, Zap, Loader2, BarChart3,
+  Repeat, DollarSign, QrCode, ShoppingCart, Zap, Loader2, BarChart3, Info,
 } from 'lucide-react';
 import Link from 'next/link';
 import BackButton from '@/components/ui/BackButton';
@@ -3170,32 +3170,12 @@ function ReceiveView({
           </div>
         </div>
 
-        {/* Bug §1 — inline chain picker. Lets the user fix a wrong-chain
-            deep link (e.g. when the market detail page passed a chain
-            that wasn't enabled, or when the user wants to switch chain
-            without backing out of the flow). Mirrors the wallet-home
-            pill row so the visual idiom is the same. */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-5 scrollbar-hide">
-          {availableChains.map((c) => {
-            const active = c.id === chain.id;
-            return (
-              <button
-                key={c.id}
-                onClick={() => onChangeChain(c)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap border transition-colors ${
-                  active
-                    ? 'text-white border-transparent'
-                    : 'text-slate-400 bg-slate-900/40 border-slate-800 hover:bg-slate-900 hover:text-slate-200'
-                }`}
-                style={active ? { backgroundColor: `${c.color}20`, borderColor: `${c.color}55`, color: c.color } : undefined}
-                aria-pressed={active}
-              >
-                <ChainLogo chain={c} size={14} />
-                {c.name}
-              </button>
-            );
-          })}
-        </div>
+        {/* Receive shows only the active coin's network (chain-picker chips
+            removed per product direction) — you receive the coin you opened
+            Receive for; switch coins from the wallet home / coin page. The
+            void below keeps the (still-passed) props from tripping lint. */}
+        {void availableChains}
+        {void onChangeChain}
 
         {/* Bug §1 — when the active chain isn't compatible with the
             stored wallet address (e.g. Solana / Bitcoin requested while
@@ -3238,14 +3218,12 @@ function ReceiveView({
           </div>
         ) : (
         <>
-        {/* TRUST WALLET-STYLE warning bar — placed ABOVE the QR / address so the
-            user reads it before they ever copy or share. The exact phrasing
-            ("lost forever") matches what funds-handling apps use to make sure
-            users do not send wrong-chain assets. Mandatory on every chain. */}
-        <div className="mb-5 flex items-start gap-3 rounded-xl border border-[#F59E0B]/30 bg-[#F59E0B]/10 p-4">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0 text-[#F59E0B] mt-0.5" />
-          <p className="text-xs leading-relaxed text-amber-100">
-            <span className="font-semibold">Only send {chain.name} ({chain.symbol}) assets to this address.</span> Other assets sent on a different network will be{' '}
+        {/* Compact per-chain red info bar — read before copy/share. Exact
+            wording per product direction; mandatory on every chain. */}
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-[#EF4444]/30 bg-[#EF4444]/10 px-3 py-2">
+          <Info className="w-3.5 h-3.5 flex-shrink-0 text-[#EF4444]" />
+          <p className="text-[11px] leading-snug text-red-100">
+            <span className="font-semibold">Only send {chain.name} ({chain.symbol}) assets to this address.</span> Other assets will be{' '}
             <span className="font-bold underline">lost forever</span>.
           </p>
         </div>
@@ -3270,7 +3248,7 @@ function ReceiveView({
             )}
           </div>
 
-          <p className="text-gray-400 text-xs mb-3">Send {chain.symbol} or tokens to this address:</p>
+          <p className="text-gray-400 text-xs mb-3">Your {chain.name} address</p>
 
           <div className="nl-glass rounded-xl p-4 mb-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.3)' }}>
             <p className="text-xs font-mono break-all text-[#8FA3FF]">{address}</p>
