@@ -241,7 +241,7 @@ export default function WhaleDirectoryPage() {
       {/* Top bar */}
       <div className="sticky top-0 z-30 bg-[#05081E]/90 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
-          <BackButton />
+          <BackButton compact />
           <div>
             {/* Bug §2.13: header was text-lg with default font; user wanted
                 smaller, cleaner. text-sm + tracking-tight + font-sans keeps

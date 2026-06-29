@@ -71,6 +71,17 @@ interface WhaleDetail {
   followerCount: number;
 }
 
+/**
+ * Safe date label — returns '' for null/invalid input instead of throwing.
+ * `new Date(bad).toLocaleDateString()` throws "Invalid Date" in some engines,
+ * which is what was crashing the whole whale page into the error boundary.
+ */
+function safeDateLabel(iso: unknown): string {
+  if (!iso || typeof iso !== 'string') return '';
+  const t = new Date(iso).getTime();
+  return Number.isFinite(t) ? new Date(t).toLocaleDateString() : '';
+}
+
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   if (!isFinite(diff) || diff < 0) return "—";
@@ -82,7 +93,7 @@ function relativeTime(iso: string): string {
   if (h < 24) return `${h}h ago`;
   const d = Math.floor(h / 24);
   if (d < 30) return `${d}d ago`;
-  return new Date(iso).toLocaleDateString();
+  return safeDateLabel(iso) || "—";
 }
 
 function fmtUsd(n: number | null): string {
@@ -272,7 +283,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
     <div className="min-h-screen text-white pb-20">
       <div className="sticky top-0 z-30 bg-[#0A0E27]/95 backdrop-blur-xl border-b border-slate-800">
         <div className="max-w-5xl mx-auto px-4 py-4">
-          <div className="mb-3"><BackButton href="/dashboard/whale-tracker" label="Whale tracker" /></div>
+          <div className="mb-3"><BackButton href="/dashboard/whale-tracker" label="Whale tracker" compact /></div>
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0 flex items-start gap-3">
               {/* §4.2 Whale avatar — uses the cached logo_url from
@@ -440,7 +451,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
               <StatCard label="Followers" value={(data.followerCount ?? 0).toLocaleString()} />
               <StatCard label="Entity" value={w.entity_type ?? "unknown"} />
               <StatCard label="Score" value={w.whale_score.toString()} />
-              <StatCard label="First seen" value={w.first_seen_at ? new Date(w.first_seen_at).toLocaleDateString() : "—"} />
+              <StatCard label="First seen" value={safeDateLabel(w.first_seen_at) || "—"} />
               <StatCard label="Last active" value={w.last_active_at ? relativeTime(w.last_active_at) : "—"} />
             </div>
             <AiSummarySection address={w.address} chain={w.chain} />
@@ -495,7 +506,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
                       {/* Deep-dive crash fix — a.timestamp can be null on
                           live Alchemy/Helius rows; new Date(null) is Invalid
                           Date and .toLocaleString() throws on that. */}
-                      <td className="px-3 py-2 text-slate-500">{a.timestamp ? new Date(a.timestamp).toLocaleString() : '—'}</td>
+                      <td className="px-3 py-2 text-slate-500">{(() => { const t = a.timestamp ? new Date(a.timestamp).getTime() : NaN; return Number.isFinite(t) ? new Date(t).toLocaleString() : '—'; })()}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -625,8 +636,8 @@ function AiSummarySection({ address, chain }: { address: string; chain: string }
             <Loader2 className="w-3 h-3 animate-spin" /> Analyzing…
           </span>
         )}
-        {state === 'ok' && data?.cached && (
-          <span className="ms-auto text-[10px] text-slate-500">cached · {new Date(data.generatedAt).toLocaleDateString()}</span>
+        {state === 'ok' && data?.cached && safeDateLabel(data.generatedAt) && (
+          <span className="ms-auto text-[10px] text-slate-500">cached · {safeDateLabel(data.generatedAt)}</span>
         )}
       </div>
 
