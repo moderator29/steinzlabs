@@ -31,7 +31,9 @@ interface SparkData {
 const sparkCache = new Map<string, SparkData>();
 
 function formatPrice(p: number): string {
-  if (!p || !isFinite(p)) return '—';
+  // No price yet → render nothing (the stray '—' read as gibberish next to
+  // '0 BNB' / '0 MATIC').
+  if (!p || !isFinite(p)) return '';
   if (p >= 1000) return `$${p.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   if (p >= 1)    return `$${p.toFixed(2)}`;
   if (p >= 0.01) return `$${p.toFixed(4)}`;
