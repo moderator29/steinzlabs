@@ -767,7 +767,18 @@ function FeedCard({
                 : row.direction === "in" ? "Received"
                 : row.direction === "out" ? "Sent"
                 : "Transferred"}{" "}
-              <span className="font-semibold text-white">{row.token_symbol}</span>
+              {row.token_address ? (
+                <button
+                  type="button"
+                  title="Open token chart"
+                  onClick={(e) => { e.stopPropagation(); onOpenToken(); }}
+                  className="font-semibold text-white hover:text-[#8FA3FF] underline-offset-2 hover:underline transition-colors"
+                >
+                  {row.token_symbol}
+                </button>
+              ) : (
+                <span className="font-semibold text-white">{row.token_symbol}</span>
+              )}
             </div>
           )}
         </div>
@@ -803,19 +814,20 @@ function FeedCard({
               <BellOff size={14} />
             )}
           </button>
-          {row.token_address && (
-            <button
-              type="button"
-              title="Open token terminal"
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenToken();
-              }}
-              className="p-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
-            >
-              <ChevronRight size={14} />
-            </button>
-          )}
+          {/* Chevron opens the WHALE PROFILE (last active, first seen, score,
+              recent activity) — not the token chart. The token chart is reached
+              by tapping the token symbol above. */}
+          <button
+            type="button"
+            title="View whale profile"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenWhale();
+            }}
+            className="p-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+          >
+            <ChevronRight size={14} />
+          </button>
         </div>
       </div>
     </motion.div>
