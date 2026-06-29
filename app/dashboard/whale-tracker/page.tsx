@@ -129,7 +129,10 @@ export default function WhaleTrackerPage() {
   // Primary view: ranked active TRADERS (default — what the live feed is for) vs
   // the raw ACTIVITY tape. Traders = copy-tradeable wallets by 7d DEX volume.
   const [feedView, setFeedView] = useState<'traders' | 'activity'>('traders');
-  const [size, setSize] = useState<Size>("100k");
+  // Default to 50k, not 100k: at 100k the first-load feed was a trickle
+  // (most real whale moves + freshly-priced rows sit below $100k), which
+  // read as "tracker shows nothing". 50k still filters to genuine size.
+  const [size, setSize] = useState<Size>("50k");
   const [timeRange, setTimeRange] = useState<TimeRange>("24h");
   const [actionFilter, setActionFilter] = useState<Action>(null);
   const [tokenSearch, setTokenSearch] = useState("");

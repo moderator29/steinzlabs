@@ -21,8 +21,25 @@
 import * as bip39 from 'bip39';
 import { derivePath } from 'ed25519-hd-key';
 import { Keypair } from '@solana/web3.js';
+import { HDNodeWallet } from 'ethers';
 
-const SOL_DERIVATION_PATH = "m/44'/501'/0'/0'";
+// BIP-44 derivation paths. The account index slots in differently per
+// chain to stay wallet-compatible:
+//   EVM (MetaMask/Rabby):  m/44'/60'/0'/0/<index>   ← index is the
+//                          address_index (last component)
+//   Solana (Phantom):      m/44'/501'/<index>'/0'   ← index is the
+//                          account' (hardened) component
+// Index 0 reproduces the historical single-account paths exactly, so
+// existing wallets keep deriving the same addresses.
+const EVM_DERIVATION_BASE = "m/44'/60'/0'/0";
+const solDerivationPath = (index: number): string => `m/44'/501'/${index}'/0'`;
+
+/** Guard: account index must be a non-negative safe integer. */
+function assertIndex(index: number): void {
+  if (!Number.isInteger(index) || index < 0) {
+    throw new Error(`Invalid HD account index: ${index}`);
+  }
+}
 
 export interface DerivedAddresses {
   // EVM address (already produced upstream by ethers' HDNodeWallet from
@@ -49,40 +66,58 @@ export function isValidMnemonic(mnemonic: string): boolean {
 }
 
 /**
- * Derive the Solana keypair from a BIP-39 mnemonic at Phantom's default
- * path (m/44'/501'/0'/0'). Returns the base58 public key as a string.
+ * Derive the Solana keypair from a BIP-39 mnemonic at Phantom's path
+ * m/44'/501'/<index>'/0'. Returns the base58 public key as a string.
+ * `index` defaults to 0 (the historical single-account address).
  *
  * Throws if the mnemonic is invalid — callers should guard with
  * isValidMnemonic first when they want graceful UX.
  */
-export function deriveSolanaPublicKey(mnemonic: string): string {
-  const trimmed = mnemonic.trim();
-  if (!bip39.validateMnemonic(trimmed)) {
-    throw new Error('Invalid BIP-39 mnemonic');
-  }
-  // bip39 produces a 64-byte seed; ed25519-hd-key takes that as a hex
-  // string per its API contract.
-  const seedHex = bip39.mnemonicToSeedSync(trimmed).toString('hex');
-  const { key } = derivePath(SOL_DERIVATION_PATH, seedHex);
-  // Solana's Keypair.fromSeed expects a 32-byte secret; ed25519-hd-key
-  // returns exactly that.
-  const keypair = Keypair.fromSeed(key);
-  return keypair.publicKey.toBase58();
+export function deriveSolanaPublicKey(mnemonic: string, index = 0): string {
+  return deriveSolanaKeypair(mnemonic, index).publicKey.toBase58();
 }
 
 /**
  * Derive the full Solana Keypair (for signing transactions) from a BIP-39
- * mnemonic at Phantom's default path. Same derivation as deriveSolanaPublicKey
- * so the signing key matches the displayed address. Throws on invalid mnemonic.
+ * mnemonic at Phantom's path m/44'/501'/<index>'/0'. Same derivation as
+ * deriveSolanaPublicKey so the signing key matches the displayed address.
+ * `index` defaults to 0. Throws on invalid mnemonic or bad index.
  */
-export function deriveSolanaKeypair(mnemonic: string): Keypair {
+export function deriveSolanaKeypair(mnemonic: string, index = 0): Keypair {
   const trimmed = mnemonic.trim();
   if (!bip39.validateMnemonic(trimmed)) {
     throw new Error('Invalid BIP-39 mnemonic');
   }
+  assertIndex(index);
+  // bip39 produces a 64-byte seed; ed25519-hd-key takes that as a hex
+  // string per its API contract.
   const seedHex = bip39.mnemonicToSeedSync(trimmed).toString('hex');
-  const { key } = derivePath(SOL_DERIVATION_PATH, seedHex);
+  const { key } = derivePath(solDerivationPath(index), seedHex);
+  // Solana's Keypair.fromSeed expects a 32-byte secret; ed25519-hd-key
+  // returns exactly that.
   return Keypair.fromSeed(key);
+}
+
+/**
+ * Derive an EVM account (secp256k1) from a BIP-39 mnemonic at
+ * m/44'/60'/0'/0/<index> — the MetaMask/Rabby-compatible scheme.
+ * `index` 0 reproduces ethers' `Wallet.fromPhrase` default path, so the
+ * primary account's address is unchanged. Returns the checksummed
+ * address and the private key for encryption + storage.
+ *
+ * Throws on invalid mnemonic or bad index.
+ */
+export function deriveEvmAccount(
+  mnemonic: string,
+  index = 0,
+): { address: string; privateKey: string } {
+  const trimmed = mnemonic.trim();
+  if (!bip39.validateMnemonic(trimmed)) {
+    throw new Error('Invalid BIP-39 mnemonic');
+  }
+  assertIndex(index);
+  const node = HDNodeWallet.fromPhrase(trimmed, undefined, `${EVM_DERIVATION_BASE}/${index}`);
+  return { address: node.address, privateKey: node.privateKey };
 }
 
 /**
@@ -94,11 +129,11 @@ export function deriveSolanaKeypair(mnemonic: string): Keypair {
  * upstream callers already have it from ethers' HDNodeWallet — passing
  * it through avoids re-deriving secp256k1 in two places.
  */
-export function deriveAllFromMnemonic(mnemonic: string, evmAddress?: string): DerivedAddresses {
+export function deriveAllFromMnemonic(mnemonic: string, evmAddress?: string, index = 0): DerivedAddresses {
   const out: DerivedAddresses = {};
   if (evmAddress) out.evm = evmAddress;
   try {
-    out.solana = deriveSolanaPublicKey(mnemonic);
+    out.solana = deriveSolanaPublicKey(mnemonic, index);
   } catch {
     // Mnemonic was invalid for ed25519 derivation — leave solana
     // undefined so the Receive panel can render its honest

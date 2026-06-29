@@ -26,8 +26,9 @@ import { BiometricUnlockRow } from '@/components/wallet/BiometricUnlockRow';
 // Audit B4 — shared AES-GCM crypto, lifted from this file so the new
 // UnlockWalletModal can verify a typed password without duplicating
 // the Web Crypto plumbing. Original inline definitions removed below.
-import { encryptPrivateKey, decryptPrivateKey } from '@/lib/wallet/encryption';
-import { normalizeAddress, isEvmChain, isSolanaAddress } from '@/lib/utils/addressNormalize';
+import { encryptPrivateKey, decryptPrivateKey, verifyWalletPassword } from '@/lib/wallet/encryption';
+import { normalizeAddress, isEvmChain, isSolanaAddress, addressesEqual } from '@/lib/utils/addressNormalize';
+import { getOnrampUrl } from '@/lib/wallet/onramp';
 
 interface TokenBalance {
   symbol: string;
@@ -70,6 +71,12 @@ interface StoredWallet {
   // Wallets imported via raw private key never get this; the Receive
   // view falls back to its "no SOL address" panel for those.
   solanaAddress?: string;
+  // BIP-44 account index this wallet was derived at (#38). The first
+  // wallet from a seed is index 0 (EVM m/44'/60'/0'/0/0, Solana
+  // m/44'/501'/0'/0'); "Add account" derives the next free index from
+  // the SAME seed so one phrase backs many accounts, MetaMask/Phantom-
+  // style. Absent on legacy records → treated as 0.
+  accountIndex?: number;
 }
 
 interface ChainInfo {
@@ -303,6 +310,11 @@ export default function WalletPage() {
   const [defaultWalletAddress, setDefaultWalletAddress] = useState<string>('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [walletToDelete, setWalletToDelete] = useState<string>('');
+  // #38 — "Add account" (derive next BIP-44 index from the active seed).
+  const [showAddAccount, setShowAddAccount] = useState(false);
+  const [addAcctPwd, setAddAcctPwd] = useState('');
+  const [addAcctBusy, setAddAcctBusy] = useState(false);
+  const [addAcctError, setAddAcctError] = useState<string | null>(null);
   const [assetSearch, setAssetSearch] = useState('');
   const [assetSort, setAssetSort] = useState<'value' | 'change' | 'alpha' | 'recent'>('value');
   const [chainFilter, setChainFilter] = useState('all');
@@ -747,6 +759,97 @@ export default function WalletPage() {
     notifySeedBackupReminder(`${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}`);
   };
 
+  // #38 — the seed we derive new accounts from. Prefer the active wallet
+  // if it's HD-seed-backed (so "Add account" grows the seed you're
+  // looking at); otherwise the first seed-backed wallet. Private-key
+  // imports have no mnemonic, so they can't spawn derived accounts.
+  const isHdWallet = (w: StoredWallet) =>
+    !!w.encryptedMnemonic && w.importMethod !== 'private_key';
+  const seedSource = useMemo<StoredWallet | null>(() => {
+    if (activeWallet && isHdWallet(activeWallet)) return activeWallet;
+    return wallets.find(isHdWallet) ?? null;
+  }, [activeWallet, wallets]);
+
+  const openAddAccount = () => {
+    setAddAcctPwd('');
+    setAddAcctError(null);
+    // No seed-backed wallet yet (or only private-key imports) → fall back
+    // to the full create-a-new-seed flow.
+    if (!seedSource) { setView('create'); return; }
+    setShowAddAccount(true);
+  };
+
+  /**
+   * Derive the next free BIP-44 account from the active seed and persist
+   * it. Verifies the password against the source wallet, decrypts the
+   * shared mnemonic, then scans indices until it finds one whose EVM
+   * address collides with no existing wallet (collision-proof even if a
+   * seed was imported more than once).
+   */
+  const addDerivedAccount = async () => {
+    if (!seedSource?.encryptedMnemonic) return;
+    if (wallets.length >= MAX_WALLETS) {
+      setAddAcctError(`Max ${MAX_WALLETS} wallets. Remove one to add more.`);
+      return;
+    }
+    if (!addAcctPwd) { setAddAcctError('Enter your wallet password.'); return; }
+    setAddAcctBusy(true);
+    setAddAcctError(null);
+    try {
+      const okPwd = await verifyWalletPassword(seedSource.encryptedKey, addAcctPwd);
+      if (!okPwd) {
+        setAddAcctError('Wrong password for this wallet. Try again.');
+        return;
+      }
+      const mnemonic = await decryptPrivateKey(seedSource.encryptedMnemonic, addAcctPwd);
+      const { deriveEvmAccount, deriveSolanaPublicKey, isValidMnemonic } = await import('@/lib/wallet/derive');
+      if (!isValidMnemonic(mnemonic)) {
+        setAddAcctError('Stored seed phrase is invalid; cannot derive a new account.');
+        return;
+      }
+      // Find the first index not already represented by an existing wallet.
+      let chosen: { idx: number; address: string; privateKey: string } | null = null;
+      for (let idx = 0; idx < 50; idx++) {
+        const acct = deriveEvmAccount(mnemonic, idx);
+        const taken = wallets.some((w) => addressesEqual(w.address, acct.address, 'ethereum'));
+        if (!taken) { chosen = { idx, ...acct }; break; }
+      }
+      if (!chosen) {
+        setAddAcctError('No free account slot found for this seed.');
+        return;
+      }
+      const encryptedKey = await encryptPrivateKey(chosen.privateKey, addAcctPwd);
+      let solanaAddress: string | undefined;
+      try {
+        solanaAddress = deriveSolanaPublicKey(mnemonic, chosen.idx);
+      } catch (err) {
+        console.warn('[wallet] Solana derivation failed for derived account:', err);
+      }
+      const newWallet: StoredWallet = {
+        address: chosen.address,
+        encryptedKey,
+        // Same seed as the source — copy the ciphertext so the whole
+        // group shares one phrase (and one backup).
+        encryptedMnemonic: seedSource.encryptedMnemonic,
+        importMethod: 'generated',
+        accountIndex: chosen.idx,
+        name: `Account ${chosen.idx + 1}`,
+        createdAt: new Date().toISOString(),
+        solanaAddress,
+      };
+      const updated = [...wallets, newWallet];
+      saveWallets(updated);
+      setActiveWallet(newWallet);
+      setShowAddAccount(false);
+      setAddAcctPwd('');
+      notifyWalletCreated(newWallet.name);
+    } catch (e) {
+      setAddAcctError(e instanceof Error ? e.message : 'Failed to add account.');
+    } finally {
+      setAddAcctBusy(false);
+    }
+  };
+
   const handleWalletImported = (wallet: StoredWallet) => {
     if (wallets.length >= MAX_WALLETS) return;
     const updated = [...wallets, wallet];
@@ -1035,18 +1138,52 @@ export default function WalletPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-28">
-      {buyComingSoon && (
-        <div className="fixed inset-0 z-[70] bg-black/70 flex items-end sm:items-center justify-center p-4" onClick={() => setBuyComingSoon(false)}>
-          <div className="w-full max-w-sm nl-glass rounded-2xl p-6 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 26px rgba(0,102,255,.25)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="w-14 h-14 mx-auto mb-3 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF 60%,#1233AE)', boxShadow: '0 0 18px rgba(0,102,255,.5)' }}>
-              <ShoppingCart className="w-7 h-7 text-white" />
+      {buyComingSoon && (() => {
+        // #30 — real fiat on-ramp when a provider is configured (env-gated),
+        // else an honest "coming soon" state. Delivers to the address on the
+        // active chain's correct network (Solana uses the derived SOL address).
+        const onrampAddress = activeChain.id === 'solana' ? (activeWallet?.solanaAddress ?? '') : (activeWallet?.address ?? '');
+        const onrampUrl = onrampAddress ? getOnrampUrl({ address: onrampAddress, chain: activeChain.id }) : null;
+        return (
+          <div className="fixed inset-0 z-[70] bg-black/70 flex items-end sm:items-center justify-center p-4" onClick={() => setBuyComingSoon(false)}>
+            <div className="w-full max-w-sm nl-glass rounded-2xl p-6 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 26px rgba(0,102,255,.25)' }} onClick={(e) => e.stopPropagation()}>
+              <div className="w-14 h-14 mx-auto mb-3 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF 60%,#1233AE)', boxShadow: '0 0 18px rgba(0,102,255,.5)' }}>
+                <ShoppingCart className="w-7 h-7 text-white" />
+              </div>
+              {onrampUrl ? (
+                <>
+                  <h3 className="text-lg font-bold text-white mb-1">Buy crypto with card</h3>
+                  <p className="text-sm text-slate-400 mb-2">
+                    You&apos;ll be taken to our payment partner to buy {activeChain.symbol} with a card or bank transfer, delivered straight to this wallet on {activeChain.name}.
+                  </p>
+                  <p className="text-[11px] font-mono text-slate-500 mb-5 break-all">{onrampAddress.slice(0, 8)}…{onrampAddress.slice(-6)}</p>
+                  <a
+                    href={onrampUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setBuyComingSoon(false)}
+                    className="block w-full py-3 rounded-xl font-bold text-white text-sm mb-2"
+                    style={{ background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 18px rgba(0,102,255,.5)' }}
+                  >
+                    Continue to payment ↗
+                  </a>
+                  <button onClick={() => setBuyComingSoon(false)} className="w-full py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white">Cancel</button>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-bold text-white mb-1">Buy with card — Coming soon</h3>
+                  <p className="text-sm text-slate-400 mb-5">
+                    {onrampAddress
+                      ? `Card / bank on-ramp isn't available for ${activeChain.name} yet. It's launching shortly, delivered straight to your wallet.`
+                      : 'Fiat on-ramp is launching shortly. You’ll be able to buy crypto with a card or bank transfer, delivered straight to your wallet.'}
+                  </p>
+                  <button onClick={() => setBuyComingSoon(false)} className="w-full py-3 rounded-xl font-bold text-white text-sm" style={{ background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 18px rgba(0,102,255,.5)' }}>Got it</button>
+                </>
+              )}
             </div>
-            <h3 className="text-lg font-bold text-white mb-1">Buy with card — Coming soon</h3>
-            <p className="text-sm text-slate-400 mb-5">Fiat on-ramp is launching shortly. You&apos;ll be able to buy crypto with a card or bank transfer, delivered straight to your wallet.</p>
-            <button onClick={() => setBuyComingSoon(false)} className="w-full py-3 rounded-xl font-bold text-white text-sm" style={{ background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 18px rgba(0,102,255,.5)' }}>Got it</button>
           </div>
-        </div>
-      )}
+        );
+      })()}
       {/* Ambient glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-blue-600/[0.04] rounded-full blur-[120px]" />
@@ -1484,7 +1621,7 @@ export default function WalletPage() {
               </button>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setView('create')}
+                  onClick={openAddAccount}
                   disabled={wallets.length >= MAX_WALLETS}
                   className="flex-1 py-3 nl-glass rounded-xl text-xs font-semibold hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                 >
@@ -1505,6 +1642,56 @@ export default function WalletPage() {
           </>
         )}
       </div>
+
+      {/* ── ADD ACCOUNT (DERIVE NEXT SEED INDEX) MODAL ───── */}
+      {showAddAccount && seedSource && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => { if (!addAcctBusy) setShowAddAccount(false); }} />
+          <div className="relative w-full max-w-[360px] mx-4 nl-glass rounded-2xl p-5 shadow-2xl">
+            <div className="flex items-center gap-2.5 mb-3">
+              <div className="w-9 h-9 rounded-xl bg-[#0066FF]/10 border border-[#0066FF]/30 flex items-center justify-center">
+                <Plus className="w-4 h-4 text-[#0066FF]" />
+              </div>
+              <h3 className="text-sm font-bold text-white">Add account</h3>
+            </div>
+            <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+              Derives the next account from <span className="text-slate-300 font-medium">{seedSource.name}</span>&rsquo;s
+              seed phrase — one backup covers every account. Enter that
+              wallet&rsquo;s password to continue.
+            </p>
+            <input
+              type="password"
+              value={addAcctPwd}
+              onChange={(e) => { setAddAcctPwd(e.target.value); if (addAcctError) setAddAcctError(null); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !addAcctBusy) void addDerivedAccount(); }}
+              autoComplete="current-password"
+              placeholder="Wallet password"
+              className="w-full bg-[#111827] border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0066FF]/50"
+            />
+            {addAcctError && (
+              <p className="text-[11px] text-[#EF4444] mt-2 bg-[#EF4444]/5 px-3 py-2 rounded-lg border border-[#EF4444]/15" role="alert">
+                {addAcctError}
+              </p>
+            )}
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => setShowAddAccount(false)}
+                disabled={addAcctBusy}
+                className="flex-1 py-2.5 bg-slate-800 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-700 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void addDerivedAccount()}
+                disabled={addAcctBusy || !addAcctPwd}
+                className="flex-1 py-2.5 bg-[#0066FF] hover:bg-[#0818CC] rounded-xl text-xs font-semibold text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1.5"
+              >
+                {addAcctBusy ? (<><Loader2 className="w-3.5 h-3.5 animate-spin" /> Deriving…</>) : 'Add account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── DELETE CONFIRM MODAL ─────────────────────────── */}
       {showDeleteConfirm && (
@@ -1650,6 +1837,7 @@ function CreateWalletView({ onBack, onCreated, walletCount = 0 }: { onBack: () =
       encryptedKey: encrypted,
       encryptedMnemonic,
       importMethod: 'generated',
+      accountIndex: 0,
       name: walletName,
       createdAt: new Date().toISOString(),
       solanaAddress,
@@ -1861,6 +2049,10 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
         encryptedKey: encrypted,
         encryptedMnemonic,
         importMethod: method === 'phrase' ? 'seed' : 'private_key',
+        // Seed imports land at BIP-44 index 0 (ethers' default path), so
+        // "Add account" derives index 1+ from here. Private-key imports
+        // have no seed and stay index-less.
+        accountIndex: method === 'phrase' ? 0 : undefined,
         name: walletName,
         createdAt: new Date().toISOString(),
         solanaAddress,
@@ -2014,7 +2206,8 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
             const conf = await receipt.confirmations();
             if (!cancelled) {
               setConfirmations(Number(conf));
-              setTxStatus(receipt.status === 1 ? 'confirmed' : 'failed');
+              // status === 0 is a revert; 1 or null (some chains omit it) = mined OK.
+              setTxStatus(receipt.status === 0 ? 'failed' : 'confirmed');
             }
             if (receipt.status === 0 || Number(conf) >= 2) return; // terminal
           }
@@ -2120,7 +2313,9 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
       const provider = new ethers.JsonRpcProvider(rpc);
       const feeData = await provider.getFeeData();
       const gasPrice = feeData.gasPrice || feeData.maxFeePerGas || BigInt(0);
-      const reserved = gasPrice * BigInt(21000);
+      // Reserve gas at the FAST rate (130%) so a MAX send still clears even if
+      // the user bumps speed to Fast on the next step.
+      const reserved = (gasPrice * BigInt(130) / BigInt(100)) * BigInt(21000);
       const bal = ethers.parseEther(nativeBalance || '0');
       const max = bal > reserved ? bal - reserved : BigInt(0);
       setAmount(ethers.formatEther(max));
@@ -2160,7 +2355,18 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
         let mnemonic: string;
         try { mnemonic = await decryptPrivateKey(wallet.encryptedMnemonic, password); }
         catch { setPwError('Wrong wallet password.'); setStep('password'); return; }
-        const keypair = deriveSolanaKeypair(mnemonic);
+        // #38 — derive at THIS account's BIP-44 index, not always 0, so
+        // derived accounts sign with their own key.
+        const keypair = deriveSolanaKeypair(mnemonic, wallet.accountIndex ?? 0);
+        // Funds-safety guard: the signing key must match the address we
+        // display/send from. A mismatch means a wrong-index derivation —
+        // abort before broadcasting rather than move funds from the wrong
+        // account.
+        if (wallet.solanaAddress && keypair.publicKey.toBase58() !== wallet.solanaAddress) {
+          setPwError('Derived signing key does not match this account. Aborted for safety.');
+          setStep('password');
+          return;
+        }
         const conn = new web3.Connection(SOLANA_RPC, 'confirmed');
         const lamports = Math.round(parseFloat(amount) * web3.LAMPORTS_PER_SOL);
         const tx = new web3.Transaction().add(web3.SystemProgram.transfer({
@@ -2199,7 +2405,11 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
     } catch (e: any) {
       const msg = (e?.shortMessage || e?.message || 'Transaction failed') as string;
       if (/decrypt|password|bad key/i.test(msg)) { setPwError('Wrong wallet password.'); setStep('password'); return; }
-      if (/insufficient/i.test(msg)) setError('Insufficient balance for amount + gas.');
+      // Translate common RPC failures into something the user can act on.
+      if (/insufficient/i.test(msg)) setError(`Insufficient ${chain.symbol} for amount + gas. Lower the amount or top up.`);
+      else if (/nonce/i.test(msg)) setError('You have a pending transaction on this wallet. Wait for it to confirm, then retry.');
+      else if (/gas|underpriced|fee too low/i.test(msg)) setError('Network fee too low right now. Try again with Fast speed.');
+      else if (/network|timeout|could not detect|failed to fetch|connection/i.test(msg)) setError('Network error reaching the chain. Check your connection and retry.');
       else setError(msg.slice(0, 200));
       setStep('confirm');
     }
@@ -2275,7 +2485,7 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
               <input type="number" value={amount} onChange={e => setAmount(e.target.value)} step="0.001" className={`${fieldCls} font-mono`} style={fieldStyle} placeholder="0.01" />
               <div className="flex items-center justify-between mt-1.5">
                 <span className="text-[11px] text-slate-500">{usdValue != null ? `≈ $${usdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : ''}</span>
-                {overBalance && <span className="text-[11px] font-semibold text-[#EF4444]">Amount exceeds your balance</span>}
+                {overBalance && <span className="text-[11px] font-semibold text-[#EF4444]">Insufficient {chain.symbol}: you have {balNum.toFixed(4)}, tried {amtNum.toFixed(4)}</span>}
               </div>
             </div>
             <button onClick={goConfirm} disabled={!canProceed} style={canProceed ? primaryStyle : undefined} className="w-full py-3.5 rounded-2xl font-bold text-sm disabled:opacity-40 disabled:bg-white/[0.05]">
@@ -3880,6 +4090,9 @@ function ActivityTab({ address, chain, enabledChains }: { address: string; chain
   const [txs, setTxs] = useState<DecodedTx[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [upstreamWarning, setUpstreamWarning] = useState<string | null>(null);
+  // #39 — transaction-detail expansion: clicking a row opens a modal
+  // with the full breakdown + copyable hash + explorer link.
+  const [selectedTx, setSelectedTx] = useState<DecodedTx | null>(null);
   // Chains we can actually decode activity for (transactions API support).
   const scopeChains = useMemo(
     () => enabledChains.filter((c) => LIVE_CHAINS.includes(c)),
@@ -4018,7 +4231,14 @@ function ActivityTab({ address, chain, enabledChains }: { address: string; chain
           const txChainName = SUPPORTED_CHAINS.find((c) => c.id === txChainId)?.name ?? txChainId;
           const explorerTxHref = explorerTxUrl(txChainId, tx.tx_hash);
           return (
-            <div key={`${txChainId}:${tx.tx_hash}`} className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-white/5 transition-colors">
+            <div
+              key={`${txChainId}:${tx.tx_hash}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => setSelectedTx(tx)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedTx(tx); } }}
+              className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer focus:outline-none focus:bg-white/5"
+            >
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isSwap ? 'bg-[#0066FF]/10' : 'bg-[#F59E0B]/10'}`}>
                 <Icon className={`w-4 h-4 ${isSwap ? 'text-[#0066FF]' : 'text-[#F59E0B]'}`} aria-hidden />
               </div>
@@ -4045,6 +4265,7 @@ function ActivityTab({ address, chain, enabledChains }: { address: string; chain
                   href={explorerTxHref}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
                   className="text-[9px] text-[#0066FF] hover:underline"
                 >
                   View ↗
@@ -4061,6 +4282,118 @@ function ActivityTab({ address, chain, enabledChains }: { address: string; chain
     <div>
       {scopeToggle}
       {body}
+      {selectedTx && (
+        <TxDetailModal tx={selectedTx} fallbackChainId={chain.id} onClose={() => setSelectedTx(null)} />
+      )}
+    </div>
+  );
+}
+
+/**
+ * TxDetailModal — #39. Expands an activity row into a full-detail sheet:
+ * type, full timestamp, network, per-leg amounts, USD value, the
+ * complete (copyable) transaction hash, and a block-explorer link.
+ * Renders only the fields the decoder/ledger actually returned — no
+ * fabricated status or fee values.
+ */
+function TxDetailModal({
+  tx,
+  fallbackChainId,
+  onClose,
+}: {
+  tx: DecodedTx;
+  fallbackChainId: string;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const txChainId = tx.chain || fallbackChainId;
+  const chainInfo = SUPPORTED_CHAINS.find((c) => c.id === txChainId);
+  const chainName = chainInfo?.name ?? txChainId;
+  const explorerName = txChainId === 'solana' ? 'SolScan' : (chainInfo?.explorerName ?? 'Explorer');
+  const explorerHref = explorerTxUrl(txChainId, tx.tx_hash);
+  const isSwap = tx.tx_type === 'swap';
+  const isSend = tx.tx_type === 'send' || (tx.amount_out !== null && tx.amount_in === null);
+  const Icon = isSwap ? Repeat : ArrowUpRight;
+  const date = new Date(tx.timestamp);
+  const title = isSwap
+    ? `Swap ${tx.token_out ?? ''} → ${tx.token_in ?? ''}`.trim()
+    : isSend
+      ? `Send ${tx.token_out ?? ''}`.trim()
+      : `${tx.tx_type} ${tx.token_in ?? tx.token_out ?? ''}`.trim();
+
+  const copyHash = async () => {
+    try {
+      await navigator.clipboard.writeText(tx.tx_hash);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* clipboard unavailable */ }
+  };
+
+  const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
+    <div className="flex items-start justify-between gap-3 py-2.5 border-b border-white/5 last:border-0">
+      <span className="text-[11px] text-slate-400 shrink-0">{label}</span>
+      <span className="text-xs text-white text-end break-all">{value}</span>
+    </div>
+  );
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Transaction details"
+    >
+      <div
+        className="w-full max-w-[440px] bg-[#0a0f1a] border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isSwap ? 'bg-[#0066FF]/10' : 'bg-[#F59E0B]/10'}`}>
+              <Icon className={`w-4 h-4 ${isSwap ? 'text-[#0066FF]' : 'text-[#F59E0B]'}`} aria-hidden />
+            </div>
+            <h2 className="text-base font-bold text-white capitalize truncate">{title}</h2>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5 shrink-0" aria-label="Close">
+            <X className="w-4 h-4 text-gray-400" />
+          </button>
+        </div>
+
+        <div className="rounded-2xl nl-glass px-4 py-1" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.18)' }}>
+          <Row label="Type" value={<span className="capitalize">{tx.tx_type}</span>} />
+          <Row label="Network" value={chainName} />
+          <Row label="Date" value={date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })} />
+          {tx.amount_out !== null && (
+            <Row label="Sent" value={<span className="font-mono">-{tx.amount_out.toLocaleString(undefined, { maximumFractionDigits: 8 })} {tx.token_out ?? ''}</span>} />
+          )}
+          {tx.amount_in !== null && (
+            <Row label="Received" value={<span className="font-mono text-[#10B981]">+{tx.amount_in.toLocaleString(undefined, { maximumFractionDigits: 8 })} {tx.token_in ?? ''}</span>} />
+          )}
+          {tx.usd_value !== null && tx.usd_value > 0 && (
+            <Row label="Value" value={`$${tx.usd_value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`} />
+          )}
+          <Row
+            label="Tx hash"
+            value={
+              <button onClick={() => void copyHash()} className="inline-flex items-center gap-1.5 font-mono text-[#8FA3FF] hover:text-white transition-colors" title="Copy transaction hash">
+                <span>{tx.tx_hash.slice(0, 10)}…{tx.tx_hash.slice(-8)}</span>
+                {copied ? <Check className="w-3.5 h-3.5 text-[#10B981]" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
+            }
+          />
+        </div>
+
+        <a
+          href={explorerHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="nl-glass flex items-center justify-center gap-1.5 py-3 rounded-2xl text-[#8FA3FF] text-sm font-semibold hover:-translate-y-px transition-transform"
+          style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.3)' }}
+        >
+          View on {explorerName} <ExternalLink className="w-3.5 h-3.5" />
+        </a>
+      </div>
     </div>
   );
 }

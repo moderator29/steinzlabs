@@ -129,14 +129,25 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
     setWalletAddresses(prev => prev.includes(addr) ? prev.filter(x => x !== addr) : [...prev, addr]);
   };
 
-  const canSave = useMemo(() => {
-    if (!name.trim()) return false;
-    if (chains.length === 0) return false;
-    if (amountUsd <= 0) return false;
-    if (trigger === 'whale_buy' && !whaleAddress.trim()) return false;
-    if (trigger === 'price_target' && !priceTarget) return false;
-    return true;
-  }, [name, chains, amountUsd, trigger, whaleAddress, priceTarget]);
+  // Inline validation — returns the first reason the form can't be saved (shown
+  // to the user) or null when valid, so they know exactly what to fix.
+  const validationError = useMemo<string | null>(() => {
+    if (!name.trim()) return 'Give your sniper a name.';
+    if (chains.length === 0) return 'Select at least one chain.';
+    if (!(amountUsd > 0)) return 'Per-snipe amount must be greater than $0.';
+    if (trigger === 'whale_buy') {
+      if (!whaleAddress.trim()) return 'Enter the whale address to follow.';
+      if (!isPlausibleAddress(whaleAddress)) return 'That whale address isn\'t a valid EVM (0x…) or Solana address.';
+    }
+    if (trigger === 'price_target') {
+      if (!priceTarget) return 'Enter a price target.';
+      if (!(Number(priceTarget) > 0)) return 'Price target must be greater than 0.';
+      if (tokenAddress && !isPlausibleAddress(tokenAddress)) return 'That token address isn\'t valid.';
+    }
+    if (Number(maxBuyTaxPct) > 100 || Number(maxSellTaxPct) > 100) return 'Max tax can\'t exceed 100%.';
+    return null;
+  }, [name, chains, amountUsd, trigger, whaleAddress, priceTarget, tokenAddress, maxBuyTaxPct, maxSellTaxPct]);
+  const canSave = validationError === null;
 
   const handleSave = async () => {
     if (!canSave || saving) return;
@@ -175,7 +186,10 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
         // Explicit wallet choice: 'builtin' = Naka in-app wallet (manual
         // password-sign), 'metamask' = a connected external wallet that
         // authorized a non-custodial session key.
-        wallet_source: walletMode === 'external' && walletAddresses.length > 0 ? 'metamask' : 'builtin',
+        // Key off the explicit mode alone — "External" with no specific wallet
+        // picked means "use my primary external wallet" (empty addresses), NOT
+        // a silent fall-back to the built-in wallet.
+        wallet_source: walletMode === 'external' ? 'metamask' : 'builtin',
         wallet_addresses: walletMode === 'external' ? walletAddresses : [],
         expiry_hours: expiryHours === '' ? null : Number(expiryHours),
       };
@@ -328,7 +342,7 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
           {/* Auto-execute */}
           <Toggle
             label="Auto-Execute"
-            hint="Auto-stage a buy for one-tap approval on match (you sign). Off = alert only."
+            hint="On a match: the Naka wallet auto-buys while it's unlocked and Naka is open (non-custodial — keys stay in your browser); otherwise it's staged for one-tap approval. External wallets always need your one-tap sign. Off = alert only."
             value={autoExecute}
             onChange={setAutoExecute}
             icon={Zap}
@@ -441,6 +455,8 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
         {/* Footer */}
         <div className="p-4 border-t border-white/10 flex items-center justify-between gap-3 sticky bottom-0 bg-[#0a0d18]">
           <button onClick={onClose} className="px-4 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 font-semibold text-sm hover:bg-white/[0.1] transition">Cancel</button>
+          {/* Tells the user exactly why Review & Create is disabled. */}
+          {validationError && <span className="flex-1 text-center text-[11px] text-amber-400 px-2">{validationError}</span>}
           {/* §12 — Pre-create security gate. Only fires for the price_target
               trigger because that's the only path with a known token at
               criteria-creation time. Other triggers (new_pair / whale_buy /

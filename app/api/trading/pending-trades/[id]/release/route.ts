@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/**
+ * Release a claim (#11). Called by the client ONLY after a failure it knows
+ * happened BEFORE any on-chain broadcast (wrong password, locked/missing key,
+ * unsupported chain) so the user can retry immediately instead of waiting out
+ * the claim TTL. Never call this after a send may have gone out — leaving the
+ * claim in place is what prevents a double-broadcast. Clears claimed_at only
+ * while the row is still pending and owned by the caller.
+ */
 async function getSupabase() {
   const cookieStore = await cookies();
   return createServerClient(
@@ -22,7 +31,8 @@ async function getSupabase() {
   );
 }
 
-export async function GET(_request: NextRequest) {
+export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const supabase = await getSupabase();
   const {
     data: { user },
@@ -30,18 +40,13 @@ export async function GET(_request: NextRequest) {
   } = await supabase.auth.getUser();
   if (authError || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const nowIso = new Date().toISOString();
-  const { data, error } = await supabase
+  const admin = getSupabaseAdmin();
+  const { error } = await admin
     .from("pending_trades")
-    .select(
-      "id,source_reason,source_order_id,source_order_table,chain,wallet_source,from_token_address,from_token_symbol,to_token_address,to_token_symbol,amount_in,slippage_bps,expected_amount_out,expected_price_usd,route_provider,security_trust_score,security_is_honeypot,auto_confirm,status,expires_at,created_at",
-    )
+    .update({ claimed_at: null })
+    .eq("id", id)
     .eq("user_id", user.id)
-    .eq("status", "pending")
-    .gt("expires_at", nowIso)
-    .order("created_at", { ascending: false })
-    .limit(50);
-
+    .eq("status", "pending");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ trades: data ?? [] });
+  return NextResponse.json({ ok: true });
 }

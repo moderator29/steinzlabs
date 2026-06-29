@@ -43,6 +43,12 @@ export function StopLossPanel() {
     if (res.ok) {
       toast.success("Cancelled");
       load();
+    } else {
+      // A stop/TP that fails to cancel is still armed — tell the user so
+      // they don't assume their protection is off.
+      let reason = `Couldn't cancel order — it's still active (${res.status})`;
+      try { const b = await res.json(); if (b?.error) reason = b.error; } catch { /* non-JSON */ }
+      toast.error(reason);
     }
   }
 

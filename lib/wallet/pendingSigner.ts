@@ -61,7 +61,12 @@ interface PrepareResponseSolana {
 interface StoredBuiltinWallet {
   address?: string;
   encryptedKey?: string;
-  iv?: string;
+  // Seed-backed fields, mirrored from the Wallet page's StoredWallet.
+  // Solana signing derives its keypair from the mnemonic at accountIndex
+  // (the EVM hex key in encryptedKey is NOT a Solana key).
+  encryptedMnemonic?: string;
+  solanaAddress?: string;
+  accountIndex?: number;
 }
 
 interface EthereumProvider {
@@ -154,23 +159,6 @@ async function signExternalSolana(trade: PendingTradeForSigning): Promise<Inline
   return { txHash: signed.signature };
 }
 
-async function decryptBuiltinKeyBytes(pwd: string, wallet: StoredBuiltinWallet): Promise<Uint8Array> {
-  if (!wallet.encryptedKey) throw new Error("Built-in wallet has no stored key");
-  if (!wallet.iv) {
-    throw new Error(
-      "This wallet uses an outdated encryption format. Please re-import the seed phrase from the Wallet page to upgrade to AES-256-GCM.",
-    );
-  }
-  const keyMaterial = new TextEncoder().encode(pwd.padEnd(32).slice(0, 32));
-  const cryptoKey = await crypto.subtle.importKey("raw", keyMaterial, "AES-GCM", false, [
-    "decrypt",
-  ]);
-  const iv = Uint8Array.from(atob(wallet.iv), (c) => c.charCodeAt(0));
-  const encrypted = Uint8Array.from(atob(wallet.encryptedKey), (c) => c.charCodeAt(0));
-  const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, cryptoKey, encrypted);
-  return new Uint8Array(decrypted);
-}
-
 const BUILTIN_RPC: Record<string, string> = {
   ethereum: "https://eth.llamarpc.com",
   base: "https://mainnet.base.org",
@@ -196,58 +184,89 @@ async function signBuiltin(trade: PendingTradeForSigning): Promise<InlineSignRes
   if (!wallet) throw new Error("Active built-in wallet not found");
   if (!wallet.address) throw new Error("Built-in wallet missing address");
 
-  // Decrypt to bytes, then materialize the string form ethers + bs58
-  // expect. We zero `pkBytes` immediately and `pk` in a finally below
-  // so the secret leaves memory as soon as the broadcast finishes.
-  const pkBytes = await decryptBuiltinKeyBytes(pwd, wallet);
-  let pk = new TextDecoder().decode(pkBytes);
-  pkBytes.fill(0);
   const chain = trade.chain.toLowerCase();
+  // Both keys are stored with the shared AES-256-GCM/PBKDF2 helper. The
+  // EVM hex key lives in encryptedKey; the Solana keypair is DERIVED from
+  // the mnemonic (encryptedMnemonic) — encryptedKey is NOT a Solana key.
+  const { decryptPrivateKey } = await import("@/lib/wallet/encryption");
 
-  // NW1: Solana branch. The relayer's prepare response for Solana
-  // returns a base64-encoded Jupiter swap transaction the client signs
-  // with the user's keypair before broadcasting via Helius RPC. The
-  // private key never leaves this function's closure and the secret
-  // buffers (bs58-decoded bytes + intermediate string) are zeroed
-  // before we return.
+  // Solana branch. The relayer's prepare response returns a base64
+  // Jupiter swap transaction the client signs with the derived keypair
+  // before broadcasting via Helius RPC. The taker is the Solana address,
+  // not the EVM one.
   if (chain === 'solana') {
+    if (!wallet.encryptedMnemonic) {
+      throw new Error("This built-in wallet can't sign Solana trades — re-import its seed phrase from the Wallet page.");
+    }
+    // Require the derived Solana address so the safety guard below is
+    // unconditional — never fall back to the EVM address as a Solana taker.
+    if (!wallet.solanaAddress) {
+      throw new Error("This wallet has no Solana address derived — re-import its seed phrase from the Wallet page.");
+    }
+    let mnemonic = "";
     try {
-      const prep = (await prepare(trade.id, wallet.address)) as { quote: { transactionBase64?: string; buyAmount?: string; price?: string | number } };
-      const txB64 = prep.quote.transactionBase64;
-      if (!txB64) throw new Error("Solana prepare returned no transactionBase64");
+      mnemonic = await decryptPrivateKey(wallet.encryptedMnemonic, pwd);
+    } catch {
+      throw new Error("Wrong wallet password, or this wallet predates AES-256-GCM (re-import the seed phrase).");
+    }
+    try {
+      const taker = wallet.solanaAddress;
+      // prepare() returns the route fields; the executable Jupiter tx
+      // comes from /api/swap/quote (mirrors signExternalSolana). The
+      // prior code read a non-existent prep.quote.transactionBase64.
+      const prep = (await prepare(trade.id, taker)) as PrepareResponseSolana;
+      const qs = new URLSearchParams({
+        chain: "solana",
+        sellToken: prep.sellToken,
+        buyToken: prep.buyToken,
+        sellAmount: prep.sellAmount,
+        taker,
+      });
+      const quoteRes = await fetch(`/api/swap/quote?${qs.toString()}`);
+      if (!quoteRes.ok) {
+        const err = (await quoteRes.json().catch(() => ({}))) as { error?: string };
+        throw new Error(err.error ?? "Solana quote failed");
+      }
+      const swapData = (await quoteRes.json()) as { swapTransaction?: string; buyAmount?: string; price?: string | number };
+      if (!swapData.swapTransaction) throw new Error("No Solana transaction returned");
 
-      const [{ Connection, VersionedTransaction, Keypair }, bs58] = await Promise.all([
+      const [{ Connection, VersionedTransaction }, { deriveSolanaKeypair }] = await Promise.all([
         import('@solana/web3.js'),
-        import('bs58'),
+        import('@/lib/wallet/derive'),
       ]);
 
-      // Naka keypairs are stored as base58 secret-key strings; pk is
-      // the decrypted form. Keypair.fromSecretKey expects raw bytes.
-      const secretKey = bs58.default.decode(pk);
-      const keypair = Keypair.fromSecretKey(secretKey);
-      // Zero the bs58-decoded bytes the moment Keypair has copied them.
-      secretKey.fill(0);
-      if (keypair.publicKey.toBase58() !== wallet.address) {
-        throw new Error("Decrypted Solana key does not match active wallet address");
+      const keypair = deriveSolanaKeypair(mnemonic, wallet.accountIndex ?? 0);
+      // Funds-safety: the signing key must match the account we're
+      // trading from — abort before broadcasting on any mismatch.
+      if (keypair.publicKey.toBase58() !== wallet.solanaAddress) {
+        throw new Error("Derived signing key does not match this account. Aborted for safety.");
       }
 
       const conn = new Connection(
         process.env.NEXT_PUBLIC_HELIUS_RPC_URL ?? 'https://api.mainnet-beta.solana.com',
         'confirmed',
       );
-      const tx = VersionedTransaction.deserialize(Buffer.from(txB64, 'base64'));
+      const tx = VersionedTransaction.deserialize(Buffer.from(swapData.swapTransaction, 'base64'));
       tx.sign([keypair]);
       const txHash = await conn.sendRawTransaction(tx.serialize(), { skipPreflight: false, maxRetries: 2 });
       return {
         txHash,
-        clientReportedAmountOut: prep.quote.buyAmount,
-        clientReportedPrice: prep.quote.price ? Number(prep.quote.price) : undefined,
+        clientReportedAmountOut: swapData.buyAmount,
+        clientReportedPrice: swapData.price ? Number(swapData.price) : undefined,
       };
     } finally {
-      pk = "";
+      mnemonic = "";
     }
   }
 
+  // EVM branch.
+  if (!wallet.encryptedKey) throw new Error("Built-in wallet has no stored key");
+  let pk = "";
+  try {
+    pk = await decryptPrivateKey(wallet.encryptedKey, pwd);
+  } catch {
+    throw new Error("Wrong wallet password, or this wallet predates AES-256-GCM (re-import the seed phrase).");
+  }
   try {
     const prep = (await prepare(trade.id, wallet.address)) as PrepareResponseEvm;
     const tx = prep.quote.transaction;

@@ -179,7 +179,12 @@ export function SwapCard({ swap, walletAddress, onCancel, source = 'vtx' }: Prop
       }
     })();
     return () => { cancelled = true; };
-  }, [swap, balance]);
+    // Depend on the primitive fields that drive the quote, NOT the `swap` object
+    // identity — callers that rebuild `swap` each render (e.g. View Proof) would
+    // otherwise refetch the quote on every parent re-render and knock the card
+    // out of signing/done back to ready.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [swap.chain, swap.fromToken, swap.toToken, swap.fromAmount, balance]);
 
   const impactColor =
     quote.priceImpact < 1 ? 'text-emerald-400' :
@@ -222,7 +227,14 @@ export function SwapCard({ swap, walletAddress, onCancel, source = 'vtx' }: Prop
         if (/insufficient|not enough|balance/i.test(msg)) {
           setStage('insufficient');
         } else {
-          setError(msg || 'Could not fetch a swap quote. Try again in a moment.');
+          // Tell the user which kind of failure it is so they know what to do.
+          if (/route|no.*pair|not.*found|unsupported|liquidity/i.test(msg)) {
+            setError('No swap route for this pair right now. Try a smaller amount or a different token.');
+          } else if (qres.status === 429 || qres.status >= 500 || /timeout|overload|rate.?limit/i.test(msg)) {
+            setError('Swap provider is busy. Wait ~30s and try again.');
+          } else {
+            setError(msg || 'Could not fetch a swap quote. Try again in a moment.');
+          }
           setStage('error');
         }
         return;

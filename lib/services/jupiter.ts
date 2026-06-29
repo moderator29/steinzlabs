@@ -7,8 +7,12 @@ import { cacheKey, TTL, withCache } from '../api/cache-manager';
  * Quotes cached 15s, prices cached 30s.
  */
 
-const QUOTE_URL = 'https://lite-api.jup.ag/swap/v1';
-const PRICE_URL = 'https://api.jup.ag/price/v2';
+// Jupiter Swap API v1 (the current API — `quote-api.jup.ag/v6` is deprecated).
+// With a JUPITER_API_KEY we route through the keyed host (api.jup.ag) for higher
+// rate limits + reliability under load; otherwise the free lite-api host.
+const JUPITER_API_KEY = process.env.JUPITER_API_KEY || '';
+const QUOTE_URL = JUPITER_API_KEY ? 'https://api.jup.ag/swap/v1' : 'https://lite-api.jup.ag/swap/v1';
+const PRICE_URL = JUPITER_API_KEY ? 'https://api.jup.ag/price/v2' : 'https://lite-api.jup.ag/price/v2';
 const TIMEOUT_MS = parseInt(process.env.JUPITER_TIMEOUT_MS || '10000', 10);
 
 // SOL mint address
@@ -61,6 +65,7 @@ async function jupiterFetch(url: string, options?: RequestInit): Promise<unknown
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
+          ...(JUPITER_API_KEY ? { 'x-api-key': JUPITER_API_KEY } : {}),
           ...options?.headers,
         },
         signal: AbortSignal.timeout(TIMEOUT_MS),
@@ -120,6 +125,9 @@ export async function getQuote(
         outputMint,
         amount: String(amountLamports),
         slippageBps: String(slippageBps),
+        // Jupiter-recommended: avoid routing through illiquid intermediate
+        // tokens, which is a common cause of quotes that fail at execution.
+        restrictIntermediateTokens: 'true',
       });
 
       const data = await jupiterFetch(`${QUOTE_URL}/quote?${params}`) as Record<string, unknown>;

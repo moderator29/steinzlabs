@@ -3,7 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import { verifyCron, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { fetchWithRetry } from "@/lib/api/fetchWithRetry";
-import { priceActivityUsd } from "@/lib/whales/priceActivity";
+import { priceActivityUsdBatch } from "@/lib/whales/priceActivity";
 import { addressesEqual } from "@/lib/utils/addressNormalize";
 
 export const maxDuration = 60;
@@ -58,7 +58,11 @@ async function pollTransfers(
   if (!key || !host) return [];
   const params: Record<string, unknown> = {
     category: ["external", "erc20"],
-    maxCount: "0xa",
+    // 0x32 = 50 (was 0xa = 10). A DEX swap's two legs only pair into a
+    // buy/sell row when BOTH land in their direction's slice and share a
+    // tx_hash; a 10-row cap starved the pairing, so ~96% of rows degraded
+    // to transfer noise. 50/direction captures far more real trades.
+    maxCount: "0x32",
     order: "desc",
     withMetadata: true,
     excludeZeroValue: true,
@@ -124,13 +128,19 @@ async function buildRows(whale: WhaleRow, legs: AlchemyAssetTransfer[]): Promise
     byTx.set(t.hash, arr);
   }
 
-  const price = (t: AlchemyAssetTransfer) =>
-    priceActivityUsd({
+  // Batch-price every leg up front via the dedupe + GeckoTerminal-multi path,
+  // so a whale with 50 legs costs ~1-2 price requests instead of 50.
+  const legUsd = new Map<AlchemyAssetTransfer, number | null>();
+  const pricedValues = await priceActivityUsdBatch(
+    legs.map((t) => ({
       chain: whale.chain,
       token_address: t.rawContract?.address ?? null,
       token_symbol: t.asset,
       amount: typeof t.value === "number" ? t.value : null,
-    });
+    })),
+  );
+  legs.forEach((t, i) => legUsd.set(t, pricedValues[i]));
+  const price = (t: AlchemyAssetTransfer) => legUsd.get(t) ?? null;
   const largest = (arr: AlchemyAssetTransfer[]) =>
     arr.reduce((m, t) => ((t.value ?? 0) > (m.value ?? 0) ? t : m), arr[0]);
 
@@ -152,7 +162,8 @@ async function buildRows(whale: WhaleRow, legs: AlchemyAssetTransfer[]): Promise
       if (outBase && !incBase) { action = "buy"; traded = inc; }
       else if (!outBase && incBase) { action = "sell"; traded = out; }
       else { action = "swap"; traded = inc; }
-      const [outUsd, incUsd] = await Promise.all([price(out), price(inc)]);
+      const outUsd = price(out);
+      const incUsd = price(inc);
       rows.push({
         whale_address: whale.address,
         chain: whale.chain,
@@ -180,7 +191,7 @@ async function buildRows(whale: WhaleRow, legs: AlchemyAssetTransfer[]): Promise
         token_address: t.rawContract?.address ?? null,
         token_symbol: t.asset,
         amount: typeof t.value === "number" ? t.value : null,
-        value_usd: await price(t),
+        value_usd: price(t),
         counterparty: isOut ? t.to : t.from,
         counterparty_label: null,
         block_number: block,
