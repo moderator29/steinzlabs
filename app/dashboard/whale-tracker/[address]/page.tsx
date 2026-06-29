@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, use } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ExternalLink, CheckCircle2, Loader2, Copy, Download, Repeat2 } from "lucide-react";
+import { ExternalLink, CheckCircle2, Loader2, Copy, Download, Repeat2, Sparkles } from "lucide-react";
 import BackButton from "@/components/ui/BackButton";
 import { SecurityBadge } from "@/components/security/SecurityBadge";
 import { WhaleAvatar } from "@/components/whales/WhaleAvatar";
@@ -324,15 +324,26 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
               </div>
               </div>
             </div>
-            <button
-              onClick={toggleFollow}
-              disabled={followingLoading}
-              className={`rounded-lg text-xs font-semibold transition ${
-                following ? "px-4 py-2 bg-slate-800 text-slate-300 hover:bg-slate-700" : "nl-btn-neon !px-4 !py-2 !text-xs"
-              }`}
-            >
-              {followingLoading ? <Loader2 size={11} className="animate-spin" /> : following ? "Following" : "Follow"}
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              {/* DNA Scan — deep-links to the AI DNA analyzer pre-loaded with
+                  this whale's address; the analyzer auto-runs on arrival. */}
+              <a
+                href={`/dashboard/dna-analyzer?address=${encodeURIComponent(w.address)}`}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/35 text-violet-200 transition-colors"
+                title="Run AI DNA analysis on this whale"
+              >
+                <Sparkles size={12} /> DNA Scan
+              </a>
+              <button
+                onClick={toggleFollow}
+                disabled={followingLoading}
+                className={`rounded-lg text-xs font-semibold transition ${
+                  following ? "px-4 py-2 bg-slate-800 text-slate-300 hover:bg-slate-700" : "nl-btn-neon !px-4 !py-2 !text-xs"
+                }`}
+              >
+                {followingLoading ? <Loader2 size={11} className="animate-spin" /> : following ? "Following" : "Follow"}
+              </button>
+            </div>
           </div>
 
           {/* A11Y5: WAI-ARIA tablist pattern. Arrow keys + Home/End nav,
