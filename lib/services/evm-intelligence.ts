@@ -243,7 +243,7 @@ async function buildFromAlchemy(
     .slice(0, 30)
     .map(t => ({
       hash: t.hash,
-      blockTime: null,
+      blockTime: typeof t.timestamp === 'number' ? new Date(t.timestamp * 1000).toISOString() : null,
       status: 'success',
       type: 'transfer',
       asset: t.asset || cfg.nativeSymbol,
@@ -252,6 +252,17 @@ async function buildFromAlchemy(
       to: t.to,
       valueUsd: null,
     }));
+
+  // Derive first-seen / last-active from the transfer block timestamps (now
+  // available via withMetadata). These were previously hardcoded null on the
+  // Alchemy path, so EVM wallets never showed activity dates.
+  const txTimes = dedupedTxs
+    .map(t => t.timestamp)
+    .filter((x): x is number => typeof x === 'number' && Number.isFinite(x));
+  const fmtDate = (sec: number) =>
+    new Date(sec * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  const firstSeenDerived = txTimes.length > 0 ? fmtDate(Math.min(...txTimes)) : null;
+  const lastActiveDerived = txTimes.length > 0 ? fmtDate(Math.max(...txTimes)) : null;
 
   // Build native token entry
   const nativeEntry: EvmEnrichedToken = {
@@ -281,8 +292,8 @@ async function buildFromAlchemy(
     transactions,
     txCount: dedupedTxs.length,
     explorerUrl: cfg.explorerUrl,
-    firstSeen: null,
-    lastActive: null,
+    firstSeen: firstSeenDerived,
+    lastActive: lastActiveDerived,
     dataSource: 'alchemy',
   };
 }

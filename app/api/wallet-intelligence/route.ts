@@ -116,6 +116,8 @@ async function getEvmData(address: string, chain: string) {
     nativeValueUsd,
     totalBalanceUsd,
     txCount,
+    firstSeen: intel.firstSeen,
+    lastActive: intel.lastActive,
     holdings,
     tokenCount: holdings.filter(h => h.contractAddress).length,
     explorerUrl: intel.explorerUrl,
