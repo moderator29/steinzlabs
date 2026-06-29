@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { User, Shield, Bell, Wallet, Eye, EyeOff, AlertTriangle } from '@/components/icons/brand';
 import { Loader2, Download, RotateCcw } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
+import { Toggle } from '@/components/ui/Toggle';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
@@ -427,21 +428,18 @@ export default function SettingsPage() {
                         {pushPermission === 'denied' ? 'Blocked by browser — allow in site settings' : 'Instant alerts in your browser'}
                       </div>
                     </div>
-                    <button
+                    <Toggle
+                      checked={browserPushEnabled}
                       disabled={pushPermission === 'denied'}
-                      onClick={async () => {
-                        if (pushPermission === 'granted') {
-                          setBrowserPushEnabled(false);
-                        } else {
-                          const result = await Notification.requestPermission();
-                          setPushPermission(result);
-                          setBrowserPushEnabled(result === 'granted');
-                        }
+                      label="Browser push notifications"
+                      onChange={async (next) => {
+                        if (!next) { setBrowserPushEnabled(false); return; }
+                        if (pushPermission === 'granted') { setBrowserPushEnabled(true); return; }
+                        const result = await Notification.requestPermission();
+                        setPushPermission(result);
+                        setBrowserPushEnabled(result === 'granted');
                       }}
-                      className={`w-12 h-6 rounded-full relative transition-colors disabled:opacity-40 ${browserPushEnabled ? 'bg-green-500' : 'bg-gray-600'}`}
-                    >
-                      <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${browserPushEnabled ? 'right-0.5' : 'left-0.5'}`} />
-                    </button>
+                    />
                   </div>
                   {Object.entries(notifications).map(([key, enabled]) => (
                     <div key={key} className="flex items-center justify-between p-4 nl-glass rounded-lg">
@@ -455,12 +453,11 @@ export default function SettingsPage() {
                            key === 'priceAlerts' ? 'Price target alerts' : 'Entity trading activity'}
                         </div>
                       </div>
-                      <button
-                        onClick={() => setNotifications((prev) => ({ ...prev, [key]: !enabled }))}
-                        className={`w-12 h-6 rounded-full relative transition-colors ${enabled ? 'bg-green-500' : 'bg-gray-600'}`}
-                      >
-                        <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${enabled ? 'right-0.5' : 'left-0.5'}`} />
-                      </button>
+                      <Toggle
+                        checked={enabled}
+                        label={key}
+                        onChange={(next) => setNotifications((prev) => ({ ...prev, [key]: next }))}
+                      />
                     </div>
                   ))}
                 </div>
@@ -494,14 +491,11 @@ export default function SettingsPage() {
                       <div className="text-white font-medium">Expert Mode</div>
                       <div className="text-gray-400 text-sm">Disable confirmation dialogs</div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setExpertMode((v) => !v)}
-                      aria-pressed={expertMode}
-                      className={`flex-shrink-0 w-12 h-6 rounded-full relative transition-colors ${expertMode ? 'bg-green-500' : 'bg-gray-600'}`}
-                    >
-                      <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${expertMode ? 'right-0.5' : 'left-0.5'}`} />
-                    </button>
+                    <Toggle
+                      checked={expertMode}
+                      label="Expert mode"
+                      onChange={(next) => setExpertMode(next)}
+                    />
                   </div>
                   <p className="text-xs text-gray-400">Preferences are saved automatically.</p>
                 </div>
