@@ -3770,6 +3770,7 @@ function WalletSettingsView({
 
   // Seed / key reveal
   const [revealPassword, setRevealPassword] = useState('');
+  const [showRevealPwd, setShowRevealPwd] = useState(false);
   const [revealError, setRevealError] = useState('');
   const [revealLoading, setRevealLoading] = useState(false);
   const [revealedPhrase, setRevealedPhrase] = useState('');
@@ -3978,7 +3979,12 @@ function WalletSettingsView({
                         <p className="text-sm font-semibold text-white mb-1">Reveal Seed Phrase</p>
                         <p className="text-xs text-slate-400 mb-3">Enter your password to reveal your 12-word recovery phrase.</p>
                         <div className="flex gap-2 mb-3">
-                          <input type="password" value={revealPassword} onChange={e => { setRevealPassword(e.target.value); setRevealError(''); setRevealedPhrase(''); setRevealedKey(''); }} placeholder="Wallet password" className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500/60 text-white" />
+                          <div className="relative flex-1">
+                            <input type={showRevealPwd ? 'text' : 'password'} value={revealPassword} onChange={e => { setRevealPassword(e.target.value); setRevealError(''); setRevealedPhrase(''); setRevealedKey(''); }} placeholder="Wallet password" className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 pe-10 text-sm focus:outline-none focus:border-blue-500/60 text-white" />
+                            <button type="button" onClick={() => setShowRevealPwd(v => !v)} aria-label={showRevealPwd ? 'Hide password' : 'Show password'} className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-slate-300">
+                              {showRevealPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
                           <button onClick={() => handleReveal('phrase')} disabled={revealLoading || !revealPassword} className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-bold disabled:opacity-50 transition-colors">
                             {revealLoading ? <RotateCcw className="w-4 h-4 animate-spin" /> : 'Reveal'}
                           </button>
