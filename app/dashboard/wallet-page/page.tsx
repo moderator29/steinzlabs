@@ -1570,6 +1570,7 @@ export default function WalletPage() {
                       contractAddress={token.contractAddress}
                       logoUrl={logoUrl}
                       chainLabel={chainById(token.chain)?.name ?? ''}
+                      chainLogoUrl={chainById(token.chain)?.logoUrl}
                       // Testnet tokens get NO price lookup (empty id) so we never
                       // render a mainnet USD price against a worthless test coin.
                       coinGeckoId={isTestnetChain(token.chain)
