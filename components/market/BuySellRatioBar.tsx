@@ -16,7 +16,7 @@ export default function BuySellRatioBar({ buys, sells, className = '' }: Props) 
   const pctSell = 100 - pctBuy;
 
   return (
-    <div className={`rounded-xl border border-slate-800/70 bg-slate-950/60 p-3 text-xs ${className}`}>
+    <div className={`nl-glass rounded-xl p-3 text-xs ${className}`} style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
       <div className="flex items-center justify-between text-[10px] uppercase tracking-wider font-semibold mb-2">
         <span className="text-emerald-400">{pctBuy}% Buyers</span>
         <span className="text-red-400">{pctSell}% Sellers</span>

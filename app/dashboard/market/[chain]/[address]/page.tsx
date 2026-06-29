@@ -176,7 +176,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
   return (
     <div className="flex flex-col min-h-screen text-white pb-20 md:pb-0">
       {/* Top bar */}
-      <div className="sticky top-0 z-20 border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-xl">
+      <div className="sticky top-0 z-20 nl-glass rounded-none" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         {/* Bug §6.6 — breadcrumb above the back button gives users an
             explicit two-level escape (Dashboard / Market / {Token}) so
             they're never stuck on a coin detail page without a way back
@@ -318,7 +318,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
               ? 'fixed inset-0 z-[80] bg-slate-950 flex flex-col'
               : 'flex flex-col border-b border-slate-800/50'
           }>
-            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800/40 bg-slate-950/40 gap-2">
+            <div className="flex items-center justify-between px-3 py-2 nl-glass rounded-none gap-2" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
                 {CHART_INTERVALS.map((tf) => {
                   const active = tf.id === chartInterval;
@@ -441,7 +441,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
         </div>
 
         {/* Desktop right rail — buy/sell + recent trades */}
-        <aside className="hidden md:block w-[320px] shrink-0 border-l border-slate-800/50 bg-slate-950/40 overflow-y-auto p-3 space-y-3">
+        <aside className="hidden md:block w-[320px] shrink-0 nl-glass rounded-none overflow-y-auto p-3 space-y-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           <InlineBuySellForm
             symbol={symbol}
             chain={chain}
@@ -465,7 +465,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
         {showIntel && (
           <div className="md:hidden fixed inset-0 z-40 flex items-end">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowIntel(false)} />
-            <div className="relative w-full max-h-[85vh] bg-[#05081E] border-t border-white/10 rounded-t-2xl overflow-y-auto p-4 shadow-2xl">
+            <div className="relative w-full max-h-[85vh] nl-glass rounded-t-2xl overflow-y-auto p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Brain className="w-4 h-4 text-[#8FA3FF]" />

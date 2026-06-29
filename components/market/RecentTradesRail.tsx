@@ -17,7 +17,7 @@ export default function RecentTradesRail({ pairAddress, chain }: Props) {
   const { trades } = useRecentTrades(pairAddress, chain);
 
   return (
-    <div className="rounded-xl border border-slate-800/70 bg-slate-950/60 overflow-hidden">
+    <div className="nl-glass rounded-xl overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
       <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800/70">
         <span className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Recent Trades</span>
         {/* Only claim LIVE (pulsing) when we actually have a trade tape; an

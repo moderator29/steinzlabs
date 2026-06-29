@@ -42,11 +42,11 @@ export default function SecurityLayout({ children }: { children: React.ReactNode
   });
 
   return (
-    <div className="min-h-screen bg-[#060A12] text-white pb-20">
-      <div className="sticky top-0 z-40 bg-[#060A12]/90 backdrop-blur-2xl border-b border-[#1a1f2e]">
+    <div className="min-h-screen text-white pb-20">
+      <div className="sticky top-0 z-40 nl-glass backdrop-blur-2xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
-          <div className="w-8 h-8 bg-gradient-to-br from-[#0066FF] to-[#7C3AED] rounded-xl flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-[#1E90FF] to-[#0066FF] rounded-xl flex items-center justify-center">
             <Shield className="w-4 h-4" aria-hidden="true" />
           </div>
           <h1 className="text-sm font-heading font-bold">Security Center</h1>
@@ -74,7 +74,7 @@ export default function SecurityLayout({ children }: { children: React.ReactNode
                 className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-semibold border transition-colors ${
                   isActive
                     ? 'bg-[#0066FF]/15 border-[#0066FF]/40 text-white'
-                    : 'bg-[#0f1320] border-[#1a1f2e] text-gray-400 hover:text-white hover:border-[#0066FF]/30'
+                    : 'nl-button--ghost text-gray-400 hover:text-white'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" aria-hidden="true" />

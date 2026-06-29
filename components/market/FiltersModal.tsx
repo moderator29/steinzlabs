@@ -82,20 +82,21 @@ export function FiltersModal({ isOpen, onClose, filters, onChange }: FiltersModa
       <div
         ref={trapRef}
         className="
+          nl-glass
           w-full sm:w-80 sm:h-full sm:max-h-none max-h-[90vh]
-          bg-[#111827] border-t border-[#1E2433] sm:border-t-0 sm:border-l
           rounded-t-2xl sm:rounded-none overflow-y-auto
           flex flex-col
           animate-in slide-in-from-bottom sm:slide-in-from-right duration-200
         "
+        style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#1E2433] sticky top-0 bg-[#111827] z-10">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 sticky top-0 bg-[#0A0E1A]/95 backdrop-blur z-10">
           <span className="text-white font-semibold text-base">Filters</span>
           <button
             onClick={onClose}
             aria-label="Close filters"
-            className="text-gray-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-[#1E2433]"
+            className="text-gray-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
           >
             <X size={18} aria-hidden />
           </button>
@@ -175,16 +176,16 @@ export function FiltersModal({ isOpen, onClose, filters, onChange }: FiltersModa
         </div>
 
         {/* Footer Buttons */}
-        <div className="sticky bottom-0 bg-[#111827] border-t border-[#1E2433] px-5 py-4 flex gap-3">
+        <div className="sticky bottom-0 bg-[#0A0E1A]/95 backdrop-blur border-t border-white/10 px-5 py-4 flex gap-3">
           <button
             onClick={handleReset}
-            className="flex-1 py-2.5 rounded-lg border border-[#1E2433] text-gray-400 hover:text-white hover:border-gray-500 text-sm font-medium transition-colors"
+            className="nl-button--ghost flex-1 py-2.5 rounded-lg text-sm"
           >
             Reset
           </button>
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-lg bg-[#0066FF] hover:bg-[#0066FF]/90 text-white text-sm font-semibold transition-colors"
+            className="nl-button flex-1 py-2.5 rounded-lg text-sm"
           >
             Apply
           </button>

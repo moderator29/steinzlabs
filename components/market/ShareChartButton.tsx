@@ -55,13 +55,7 @@ export function ShareChartButton({
     <button
       onClick={handleCapture}
       disabled={capturing}
-      className="
-        inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#1E2433]
-        bg-[#111827] hover:bg-[#1E2433] hover:border-[#2E3443]
-        text-gray-400 hover:text-white
-        text-xs font-medium
-        transition-colors disabled:opacity-60 disabled:cursor-not-allowed
-      "
+      className="nl-button--ghost gap-2 px-3 py-1.5 rounded-lg text-xs disabled:cursor-not-allowed"
     >
       {capturing ? (
         <Loader2 size={13} className="animate-spin" />

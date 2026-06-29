@@ -559,7 +559,7 @@ export function SwapCard({ swap, walletAddress, onCancel, source = 'vtx' }: Prop
             <button
               onClick={handleSign}
               disabled={stage === 'quoting' || stage === 'signing' || isHighImpact}
-              className="naka-button-primary w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="nl-button w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ paddingTop: 12, paddingBottom: 12 }}
             >
               {stage === 'quoting' && (<><Loader2 size={14} className="animate-spin" /> Fetching quote…</>)}

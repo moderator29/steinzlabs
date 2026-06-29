@@ -109,11 +109,11 @@ export default function ContractAnalyzerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#060A12] text-white pb-20">
-      <div className="sticky top-0 z-40 bg-[#060A12]/90 backdrop-blur-2xl border-b border-[#1a1f2e]">
+    <div className="min-h-screen text-white pb-20">
+      <div className="sticky top-0 z-40 nl-glass backdrop-blur-2xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
-          <div className="w-8 h-8 bg-gradient-to-br from-[#0066FF] to-[#7C3AED] rounded-xl flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-[#1E90FF] to-[#0066FF] rounded-xl flex items-center justify-center">
             <Code className="w-4 h-4" />
           </div>
           <div>
@@ -124,7 +124,7 @@ export default function ContractAnalyzerPage() {
       </div>
 
       <div className="p-4 space-y-4">
-        <div className="bg-[#0066FF]/5 border border-[#0066FF]/20 rounded-2xl p-3 flex items-start gap-3">
+        <div className="nl-glass bg-gradient-to-br from-[#0066FF]/5 to-transparent rounded-2xl p-3 flex items-start gap-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           <Info className="w-4 h-4 text-[#0066FF] mt-0.5 flex-shrink-0" />
           <p className="text-[11px] text-gray-400 leading-relaxed">
             Analyze any smart contract or token address for honeypot risk, dangerous permissions, high taxes, and malicious patterns.
@@ -134,7 +134,7 @@ export default function ContractAnalyzerPage() {
         <div className="flex gap-2 flex-wrap">
           {CHAINS.map((c) => (
             <button key={c.id} onClick={() => setChain(c.id)}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${chain === c.id ? 'bg-[#0066FF]/10 border-[#0066FF]/30 text-blue-300' : 'bg-[#0f1320] border-[#1a1f2e] text-gray-500 hover:text-gray-300'}`}>
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${chain === c.id ? 'bg-[#0066FF]/10 border-[#0066FF]/30 text-blue-300' : 'nl-button--ghost text-gray-500 hover:text-gray-300'}`}>
               {c.label}
             </button>
           ))}
@@ -147,10 +147,10 @@ export default function ContractAnalyzerPage() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
             placeholder="Contract or token address (0x... or Solana)"
-            className="flex-1 bg-[#0f1320] border border-[#1a1f2e] rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40"
+            className="flex-1 nl-glass rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40"
           />
           <button onClick={handleAnalyze} disabled={analyzing || !input.trim()}
-            className="bg-gradient-to-r from-[#0066FF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5">
+            className="nl-btn-neon px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5">
             {analyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
             Analyze
           </button>
@@ -169,7 +169,7 @@ export default function ContractAnalyzerPage() {
         )}
 
         {error && !analyzing && (
-          <div className="bg-[#0f1320] rounded-2xl p-4 border border-red-500/20 text-center">
+          <div className="nl-glass nl-glass--crimson rounded-2xl p-4 text-center">
             <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-2" />
             <p className="text-sm text-red-400 font-semibold">{error}</p>
           </div>
@@ -179,7 +179,7 @@ export default function ContractAnalyzerPage() {
           <>
             {/* Token Header with DexScreener data */}
             {result.dexData && (
-              <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+              <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <div className="flex items-center gap-3 mb-3">
                   {result.dexData.imageUrl ? (
                     <img src={result.dexData.imageUrl} alt={result.dexData.symbol} className="w-10 h-10 rounded-full object-cover flex-shrink-0 border border-white/10" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
@@ -210,19 +210,19 @@ export default function ContractAnalyzerPage() {
                   )}
                 </div>
                 <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-[#060A12] rounded-xl p-2">
+                  <div className="bg-white/[0.03] rounded-xl p-2">
                     <p className="text-[9px] text-gray-500">MCap</p>
                     <p className="text-xs font-bold font-mono">
                       ${result.dexData.marketCap > 1e6 ? (result.dexData.marketCap / 1e6).toFixed(2) + 'M' : result.dexData.marketCap > 1000 ? (result.dexData.marketCap / 1000).toFixed(1) + 'K' : result.dexData.marketCap.toFixed(0)}
                     </p>
                   </div>
-                  <div className="bg-[#060A12] rounded-xl p-2">
+                  <div className="bg-white/[0.03] rounded-xl p-2">
                     <p className="text-[9px] text-gray-500">Volume 24h</p>
                     <p className="text-xs font-bold font-mono">
                       ${result.dexData.volume24h > 1e6 ? (result.dexData.volume24h / 1e6).toFixed(2) + 'M' : result.dexData.volume24h > 1000 ? (result.dexData.volume24h / 1000).toFixed(1) + 'K' : result.dexData.volume24h.toFixed(0)}
                     </p>
                   </div>
-                  <div className="bg-[#060A12] rounded-xl p-2">
+                  <div className="bg-white/[0.03] rounded-xl p-2">
                     <p className="text-[9px] text-gray-500">Liquidity</p>
                     <p className="text-xs font-bold font-mono">
                       ${result.dexData.liquidity > 1e6 ? (result.dexData.liquidity / 1e6).toFixed(2) + 'M' : result.dexData.liquidity > 1000 ? (result.dexData.liquidity / 1000).toFixed(1) + 'K' : result.dexData.liquidity.toFixed(0)}
@@ -233,7 +233,7 @@ export default function ContractAnalyzerPage() {
             )}
 
             {/* Score Card */}
-            <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+            <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <div className="flex items-center gap-4">
                 <div className="relative w-20 h-20 flex-shrink-0">
                   <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
@@ -275,7 +275,7 @@ export default function ContractAnalyzerPage() {
 
             {/* Risk Flags */}
             {result.riskFlags.length > 0 && (
-              <div className="bg-[#0f1320] rounded-2xl p-4 border border-red-500/20">
+              <div className="nl-glass nl-glass--crimson rounded-2xl p-4">
                 <h3 className="font-bold text-sm mb-3 flex items-center gap-2 text-red-400">
                   <AlertTriangle className="w-4 h-4" />
                   Risk Flags ({result.riskFlags.length})
@@ -293,24 +293,24 @@ export default function ContractAnalyzerPage() {
 
             {/* Token Security Details */}
             {result.tokenSecurity && (
-              <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+              <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <h3 className="font-bold text-sm mb-3">Token Security Details</h3>
                 <div className="grid grid-cols-2 gap-2 mb-3">
-                  <div className="bg-[#060A12] rounded-xl p-2.5">
+                  <div className="bg-white/[0.03] rounded-xl p-2.5">
                     <p className="text-[9px] text-gray-500">Honeypot</p>
                     <p className={`text-xs font-bold ${result.tokenSecurity.isHoneypot ? 'text-red-400' : 'text-emerald-400'}`}>
                       {result.tokenSecurity.isHoneypot ? 'Detected' : 'None'}
                     </p>
                   </div>
-                  <div className="bg-[#060A12] rounded-xl p-2.5">
+                  <div className="bg-white/[0.03] rounded-xl p-2.5">
                     <p className="text-[9px] text-gray-500">Buy Tax</p>
                     <p className="text-xs font-bold">{result.tokenSecurity.buyTax}</p>
                   </div>
-                  <div className="bg-[#060A12] rounded-xl p-2.5">
+                  <div className="bg-white/[0.03] rounded-xl p-2.5">
                     <p className="text-[9px] text-gray-500">Sell Tax</p>
                     <p className="text-xs font-bold">{result.tokenSecurity.sellTax}</p>
                   </div>
-                  <div className="bg-[#060A12] rounded-xl p-2.5">
+                  <div className="bg-white/[0.03] rounded-xl p-2.5">
                     <p className="text-[9px] text-gray-500">Holders</p>
                     <p className="text-xs font-bold">{result.tokenSecurity.holderCount.toLocaleString()}</p>
                   </div>
@@ -336,7 +336,7 @@ export default function ContractAnalyzerPage() {
 
             {/* Address Intel */}
             {result.addressIntel && result.addressIntel.labels.length > 0 && (
-              <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+              <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <h3 className="font-bold text-sm mb-3">Intelligence Flags</h3>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-lg"
@@ -357,7 +357,7 @@ export default function ContractAnalyzerPage() {
             )}
 
             {result.riskFlags.length === 0 && (
-              <div className="bg-[#0f1320] rounded-2xl p-4 border border-emerald-500/20">
+              <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(16,185,129,.4), 0 0 16px rgba(16,185,129,.18)' }}>
                 <div className="flex items-center gap-3">
                   <CheckCircle className="w-5 h-5 text-emerald-400" />
                   <div>
@@ -369,7 +369,7 @@ export default function ContractAnalyzerPage() {
             )}
 
             {/* Security Assessment Summary */}
-            <div className="bg-[#0A0E1A] rounded-2xl p-4 border border-[#0066FF]/20 bg-gradient-to-br from-[#0066FF]/5 to-transparent">
+            <div className="nl-glass rounded-2xl p-4 bg-gradient-to-br from-[#0066FF]/5 to-transparent" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-7 h-7 bg-[#0066FF]/20 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Brain className="w-4 h-4 text-[#0066FF]" />
@@ -462,7 +462,7 @@ export default function ContractAnalyzerPage() {
             </div>
 
             <button onClick={() => { setResult(null); setInput(''); }}
-              className="w-full bg-[#0f1320] border border-[#1a1f2e] hover:border-[#0066FF]/30 py-2.5 rounded-xl text-xs text-gray-400 hover:text-white transition-all">
+              className="w-full nl-btn-neon py-2.5 rounded-xl text-xs text-gray-400 hover:text-white transition-all">
               Analyze another contract
             </button>
           </>

@@ -50,7 +50,7 @@ export function SmartMoneyPanel({ tokenAddress, chain }: SmartMoneyPanelProps) {
 
   if (loading) {
     return (
-      <div className="bg-[#141824] rounded-lg p-4">
+      <div className="nl-glass rounded-lg p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         <div className="animate-pulse">
           <div className="h-4 bg-[#1E2433] rounded w-1/3 mb-4"></div>
           <div className="space-y-3">
@@ -64,7 +64,7 @@ export function SmartMoneyPanel({ tokenAddress, chain }: SmartMoneyPanelProps) {
 
   if (entities.length === 0) {
     return (
-      <div className="bg-[#141824] rounded-lg p-4">
+      <div className="nl-glass rounded-lg p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         <h3 className="text-sm font-medium text-gray-400 mb-2">
           Smart Money Intelligence
         </h3>
@@ -76,7 +76,7 @@ export function SmartMoneyPanel({ tokenAddress, chain }: SmartMoneyPanelProps) {
   }
 
   return (
-    <div className="bg-[#141824] rounded-lg p-4">
+    <div className="nl-glass rounded-lg p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
       <h3 className="text-sm font-medium text-gray-300 mb-4 flex items-center gap-2">
         <TrendingUp size={16} className="text-[#0066FF]" />
         Smart Money Intelligence (Live)
@@ -86,7 +86,7 @@ export function SmartMoneyPanel({ tokenAddress, chain }: SmartMoneyPanelProps) {
         {entities.map((entity) => (
           <div
             key={entity.id}
-            className="bg-[#0A0E1A] rounded-lg p-3 border border-[#1E2433] hover:border-[#0066FF] transition-colors"
+            className="nl-glass nl-glass--interactive rounded-lg p-3"
           >
             <div className="flex items-start justify-between mb-2">
               <div className="flex items-center gap-2">
