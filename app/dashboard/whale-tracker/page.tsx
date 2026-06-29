@@ -27,6 +27,7 @@ import { BackButton } from "@/components/ui/BackButton";
 import { ChainLogo } from "@/components/common/ChainLogo";
 import { NakaLoader } from "@/components/brand/NakaLoader";
 import { WhaleAvatar } from "@/components/whales/WhaleAvatar";
+import LiveTradersGrid from "@/components/whales/LiveTradersGrid";
 import TierGateOverlay from "@/components/tier/TierGateOverlay";
 import { useAuth, hasTierAccess } from "@/lib/hooks/useAuth";
 import { useNavState } from "@/lib/nav/useNavState";
@@ -125,6 +126,9 @@ export default function WhaleTrackerPage() {
   const canFollow = hasTierAccess(user, 'pro');
   const goUpgrade = useCallback(() => router.push('/dashboard/pricing'), [router]);
   const [selectedChains, setSelectedChains] = useState<string[]>(["all"]);
+  // Primary view: ranked active TRADERS (default — what the live feed is for) vs
+  // the raw ACTIVITY tape. Traders = copy-tradeable wallets by 7d DEX volume.
+  const [feedView, setFeedView] = useState<'traders' | 'activity'>('traders');
   const [size, setSize] = useState<Size>("100k");
   const [timeRange, setTimeRange] = useState<TimeRange>("24h");
   const [actionFilter, setActionFilter] = useState<Action>(null);
@@ -461,6 +465,27 @@ export default function WhaleTrackerPage() {
       {/* Body grid */}
       <div className="max-w-7xl mx-auto px-4 py-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div>
+          {/* View toggle — Traders (ranked active wallets, the default) vs the
+              raw Activity tape. */}
+          <div className="inline-flex items-center gap-1 p-0.5 rounded-lg bg-white/[0.04] border border-white/10 mb-3">
+            {(['traders', 'activity'] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setFeedView(v)}
+                className={`px-3 py-1.5 rounded-md text-[11px] font-semibold capitalize transition-colors ${
+                  feedView === v ? 'bg-[#0066FF]/20 text-[#8FA3FF]' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+
+          {feedView === 'traders' && (
+            <LiveTradersGrid chain={selectedChains.includes('all') ? undefined : selectedChains[0]} />
+          )}
+
+          {feedView === 'activity' && (<>
           {/* Smart Money / CEX / Bot label filter — relocated out of the
               header into the feed column. Small rectangular containers
               (rounded-md, no glass) per brand direction. */}
@@ -581,6 +606,7 @@ export default function WhaleTrackerPage() {
               </AnimatePresence>
             </div>
           )}
+          </>)}
         </div>
 
         <div className="space-y-4">
