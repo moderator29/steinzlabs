@@ -8,6 +8,7 @@
     "start": "next start -p 5000",
     "lint": "next lint",
     "perf:lighthouse": "node scripts/lighthouse-ci.mjs",
+    "test:unit": "tsx --test \"tests/lib/**/*.test.ts\"",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "postinstall": "echo 'Setup complete'"

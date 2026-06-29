@@ -107,8 +107,18 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ group: stri
             ? `blocked-${r.status}`
             : r.status;
         } catch (err) {
-          results[name] = err instanceof Error ? err.name : 'error';
-          Sentry.captureException(err, { tags: { cron: 'dispatch', group, target: name } });
+          const errName = err instanceof Error ? err.name : 'error';
+          results[name] = errName;
+          // A per-handler fetch timeout/abort is already recorded in `results`
+          // and rolled into the dispatch-<group> failed summary + cron_execution_log,
+          // so it stays observable. Don't ALSO page Sentry for it — an
+          // occasionally-slow non-critical handler (e.g. whale-activity-poll)
+          // overrunning the 60s budget is expected operational noise, not a bug.
+          // Real handler exceptions (non-timeout) still surface here.
+          const isTimeout = errName === 'TimeoutError' || errName === 'AbortError';
+          if (!isTimeout) {
+            Sentry.captureException(err, { tags: { cron: 'dispatch', group, target: name } });
+          }
         }
       }),
     );

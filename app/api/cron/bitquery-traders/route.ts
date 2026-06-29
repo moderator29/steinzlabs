@@ -68,6 +68,8 @@ async function upsertTraders(
       // Higher volume rank → higher score (70–90); metrics refine it later.
       whale_score: Math.max(70, Math.round(90 - (i / Math.max(1, ranked.length)) * 20)),
       trade_count_30d: t.trades,
+      volume_7d_usd: t.volumeUsd,
+      active_days_7d: t.activeDays,
       follower_count: 0,
       verified: false,
       is_active: true,

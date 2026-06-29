@@ -8,9 +8,14 @@ interface BackButtonProps {
   href?: string;
   label?: string;
   className?: string;
+  /**
+   * Compact icon-only variant — a small, em-dash-sized chevron used across the
+   * Whale Tracker headers where the full padded button is too heavy.
+   */
+  compact?: boolean;
 }
 
-export function BackButton({ href, label, className = "" }: BackButtonProps) {
+export function BackButton({ href, label, className = "", compact = false }: BackButtonProps) {
   const router = useRouter();
   const handleClick = () => {
     if (href) {
@@ -39,6 +44,20 @@ export function BackButton({ href, label, className = "" }: BackButtonProps) {
     }
     router.push("/dashboard");
   };
+
+  if (compact) {
+    return (
+      <motion.button
+        onClick={handleClick}
+        whileHover={{ x: -1 }}
+        whileTap={{ scale: 0.9 }}
+        aria-label={label || "Go back"}
+        className={`group inline-flex items-center justify-center h-7 w-7 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors ${className}`}
+      >
+        <ArrowLeft size={15} className="transition-colors" />
+      </motion.button>
+    );
+  }
 
   return (
     <motion.button

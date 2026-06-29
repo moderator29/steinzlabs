@@ -27,6 +27,7 @@ import { BackButton } from "@/components/ui/BackButton";
 import { ChainLogo } from "@/components/common/ChainLogo";
 import { NakaLoader } from "@/components/brand/NakaLoader";
 import { WhaleAvatar } from "@/components/whales/WhaleAvatar";
+import LiveTradersGrid from "@/components/whales/LiveTradersGrid";
 import TierGateOverlay from "@/components/tier/TierGateOverlay";
 import { useAuth, hasTierAccess } from "@/lib/hooks/useAuth";
 import { useNavState } from "@/lib/nav/useNavState";
@@ -125,6 +126,9 @@ export default function WhaleTrackerPage() {
   const canFollow = hasTierAccess(user, 'pro');
   const goUpgrade = useCallback(() => router.push('/dashboard/pricing'), [router]);
   const [selectedChains, setSelectedChains] = useState<string[]>(["all"]);
+  // Primary view: ranked active TRADERS (default — what the live feed is for) vs
+  // the raw ACTIVITY tape. Traders = copy-tradeable wallets by 7d DEX volume.
+  const [feedView, setFeedView] = useState<'traders' | 'activity'>('traders');
   // Default to 50k, not 100k: at 100k the first-load feed was a trickle
   // (most real whale moves + freshly-priced rows sit below $100k), which
   // read as "tracker shows nothing". 50k still filters to genuine size.
@@ -335,7 +339,7 @@ export default function WhaleTrackerPage() {
       <div className="min-h-screen text-white pb-20">
         <div className="sticky top-0 z-30 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/50">
           <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
-            <BackButton href="/dashboard" />
+            <BackButton href="/dashboard" compact />
             <h1 className="text-lg md:text-xl font-bold">Whale Tracker</h1>
             <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-[#0066FF]/15 text-[#6F7EFF] border border-[#0066FF]/30">
               PRO
@@ -374,46 +378,16 @@ export default function WhaleTrackerPage() {
       {/* Sticky top bar */}
       <div className="sticky top-0 z-30 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/50">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
-          <BackButton href="/dashboard" />
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg md:text-xl font-bold">Whale Tracker</h1>
-            {(() => {
-              // Honest status pill: only claim "Live" (pulsing) when the newest
-              // feed row is genuinely recent. Otherwise show how stale the feed
-              // is instead of a permanent fake-live pulse over empty/old data.
-              const newestMs = feed.length > 0 ? new Date(feed[0].timestamp).getTime() : 0;
-              const ageMs = newestMs ? Date.now() - newestMs : Infinity;
-              const isLive = ageMs < 10 * 60 * 1000;
-              if (isLive) {
-                return (
-                  <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-emerald-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live
-                  </span>
-                );
-              }
-              return (
-                <span
-                  className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-slate-500"
-                  title={newestMs ? `Newest activity ${timeAgo(feed[0].timestamp)}` : 'No recent activity'}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-500" /> {newestMs ? 'Delayed' : 'Idle'}
-                </span>
-              );
-            })()}
-            <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-[#0066FF]/15 text-[#6F7EFF] border border-[#0066FF]/30">
-              PRO
-            </span>
-          </div>
-          <div className="ms-auto flex items-center gap-2">
-            {/* Directory + Submit — matched, compact neon-blue stride pills,
-                same scale as the PRO chip. "Submit" (not "Submit whale"). */}
-            <Link href="/dashboard/whale-tracker/directory" className="nl-btn-neon !px-3 !py-1.5 !text-[11px]">
-              Directory
-            </Link>
-            <Link href="/dashboard/whale-tracker/submit" className="nl-btn-neon !px-3 !py-1.5 !text-[11px]">
-              Submit
-            </Link>
-          </div>
+          <BackButton href="/dashboard" compact />
+          {/* Tab bar replaces the old "Whale Tracker / Live / PRO" cluster —
+              one clean row of section tabs. Live Feed is the current page. */}
+          <nav className="flex items-center gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1">
+            <span className="shrink-0 nl-btn-neon !px-3 !py-1.5 !text-[11px] !border-[#0066FF]/90 cursor-default">Live Feed</span>
+            <Link href="/dashboard/whale-tracker/directory" className="shrink-0 px-3 py-1.5 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-white bg-white/[0.04] border border-white/10 hover:border-white/20 transition-colors">Directory</Link>
+            <Link href="/dashboard/whale-tracker/watchlist" className="shrink-0 px-3 py-1.5 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-white bg-white/[0.04] border border-white/10 hover:border-white/20 transition-colors">Watchlist</Link>
+            <Link href="/dashboard/whale-tracker/copy-trade" className="shrink-0 px-3 py-1.5 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-white bg-white/[0.04] border border-white/10 hover:border-white/20 transition-colors">Copy Trade</Link>
+            <Link href="/dashboard/whale-tracker/submit" className="shrink-0 px-3 py-1.5 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-white bg-white/[0.04] border border-white/10 hover:border-white/20 transition-colors">Submit</Link>
+          </nav>
         </div>
 
         {/* Filters */}
@@ -494,6 +468,27 @@ export default function WhaleTrackerPage() {
       {/* Body grid */}
       <div className="max-w-7xl mx-auto px-4 py-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div>
+          {/* View toggle — Traders (ranked active wallets, the default) vs the
+              raw Activity tape. */}
+          <div className="inline-flex items-center gap-1 p-0.5 rounded-lg bg-white/[0.04] border border-white/10 mb-3">
+            {(['traders', 'activity'] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setFeedView(v)}
+                className={`px-3 py-1.5 rounded-md text-[11px] font-semibold capitalize transition-colors ${
+                  feedView === v ? 'bg-[#0066FF]/20 text-[#8FA3FF]' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+
+          {feedView === 'traders' && (
+            <LiveTradersGrid chain={selectedChains.includes('all') ? undefined : selectedChains[0]} />
+          )}
+
+          {feedView === 'activity' && (<>
           {/* Smart Money / CEX / Bot label filter — relocated out of the
               header into the feed column. Small rectangular containers
               (rounded-md, no glass) per brand direction. */}
@@ -614,6 +609,7 @@ export default function WhaleTrackerPage() {
               </AnimatePresence>
             </div>
           )}
+          </>)}
         </div>
 
         <div className="space-y-4">
@@ -770,7 +766,18 @@ function FeedCard({
                 : row.direction === "in" ? "Received"
                 : row.direction === "out" ? "Sent"
                 : "Transferred"}{" "}
-              <span className="font-semibold text-white">{row.token_symbol}</span>
+              {row.token_address ? (
+                <button
+                  type="button"
+                  title="Open token chart"
+                  onClick={(e) => { e.stopPropagation(); onOpenToken(); }}
+                  className="font-semibold text-white hover:text-[#8FA3FF] underline-offset-2 hover:underline transition-colors"
+                >
+                  {row.token_symbol}
+                </button>
+              ) : (
+                <span className="font-semibold text-white">{row.token_symbol}</span>
+              )}
             </div>
           )}
         </div>
@@ -806,19 +813,20 @@ function FeedCard({
               <BellOff size={14} />
             )}
           </button>
-          {row.token_address && (
-            <button
-              type="button"
-              title="Open token terminal"
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenToken();
-              }}
-              className="p-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
-            >
-              <ChevronRight size={14} />
-            </button>
-          )}
+          {/* Chevron opens the WHALE PROFILE (last active, first seen, score,
+              recent activity) — not the token chart. The token chart is reached
+              by tapping the token symbol above. */}
+          <button
+            type="button"
+            title="View whale profile"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenWhale();
+            }}
+            className="p-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+          >
+            <ChevronRight size={14} />
+          </button>
         </div>
       </div>
     </motion.div>

@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { ethers } from 'ethers';
 import { encryptSessionKey, sessionKeyEncryptionAvailable } from '@/lib/trading/sessionKeyCrypto';
+import { buildSolanaAuthMessage, verifySolanaAuthMessage, solanaSecretMatchesAddress, type SolanaAuthScope } from '@/lib/trading/solanaSessionAuth';
 
 /**
  * §3 P2-D.1 — Session keys for auto_copy mode.
@@ -105,6 +106,73 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'caps must be positive' }, { status: 400 });
   }
   const hours = Math.max(1, Math.min(168, body.hours ?? 24));   // 1h-7d window
+
+  // ── Solana branch — ed25519 signMessage instead of EIP-712. Self-contained:
+  // verifies the main Solana wallet signed the canonical scope, then stores the
+  // (optionally encrypted) session keypair. Solana addresses are CASE-SENSITIVE,
+  // so scope comparisons are exact (never lower-cased).
+  if ((body.chain || '').toLowerCase() === 'solana') {
+    const signed = body.auth_payload as Record<string, unknown>;
+    const scope: SolanaAuthScope = {
+      sessionAddress: String(signed.sessionAddress ?? ''),
+      chain: 'solana',
+      maxPerTradeUsd: Number(signed.maxPerTradeUsd ?? NaN),
+      dailyCapUsd: Number(signed.dailyCapUsd ?? NaN),
+      allowedTokens: String(signed.allowedTokens ?? ''),
+      expiresAt: Number(signed.expiresAt ?? NaN),
+    };
+    if (
+      scope.sessionAddress !== body.session_address ||
+      scope.chain !== (body.chain || '').toLowerCase() ||
+      !Number.isFinite(scope.maxPerTradeUsd) || scope.maxPerTradeUsd <= 0 ||
+      !Number.isFinite(scope.dailyCapUsd) || scope.dailyCapUsd <= 0 ||
+      !Number.isFinite(scope.expiresAt)
+    ) {
+      return NextResponse.json({ error: 'auth_payload does not match the authorized scope' }, { status: 400 });
+    }
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (scope.expiresAt <= nowSec || scope.expiresAt > nowSec + 168 * 3600) {
+      return NextResponse.json({ error: 'expiry must be in the future and within 7 days' }, { status: 400 });
+    }
+    // The signature must cover the EXACT canonical message rebuilt from the scope.
+    const message = buildSolanaAuthMessage(scope);
+    if (!verifySolanaAuthMessage(message, body.auth_signature, body.main_address)) {
+      return NextResponse.json({ error: 'signature does not match main_address' }, { status: 400 });
+    }
+    const allowedTokens = scope.allowedTokens.trim()
+      ? scope.allowedTokens.split(',').map((t) => t.trim()).filter(Boolean)
+      : null;
+    let encryptedKey: string | null = null;
+    if (body.session_private_key) {
+      if (!sessionKeyEncryptionAvailable()) {
+        return NextResponse.json({ error: '24/7 session keys are not enabled on this deployment' }, { status: 503 });
+      }
+      if (!solanaSecretMatchesAddress(body.session_private_key, scope.sessionAddress)) {
+        return NextResponse.json({ error: 'session_private_key does not match session_address' }, { status: 400 });
+      }
+      encryptedKey = encryptSessionKey(body.session_private_key);
+    }
+    const admin = getSupabaseAdmin();
+    const { data, error } = await admin
+      .from('user_session_keys')
+      .insert({
+        user_id: user.id,
+        session_address: scope.sessionAddress,
+        main_address: body.main_address,
+        chain: 'solana',
+        max_per_trade_usd: scope.maxPerTradeUsd,
+        daily_cap_usd: scope.dailyCapUsd,
+        allowed_tokens: allowedTokens,
+        auth_signature: body.auth_signature,
+        auth_payload: body.auth_payload,
+        expires_at: new Date(scope.expiresAt * 1000).toISOString(),
+        encrypted_session_key: encryptedKey,
+      })
+      .select('id, session_address, expires_at')
+      .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true, session_key: data, mode: encryptedKey ? 'auto_24_7' : 'client_sign' });
+  }
 
   // Verify EIP-712 signature recovers to main_address.
   try {
