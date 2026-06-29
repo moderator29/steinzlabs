@@ -683,18 +683,18 @@ export default function WalletIntelligencePage() {
                   <>
                     {/* Score + Grade */}
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e] text-center">
+                      <div className="nl-glass rounded-2xl p-4 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                         <div className="text-4xl font-black mb-1" style={{ color: scoreColor(aiAnalysis.overallScore) }}>{aiAnalysis.overallScore}</div>
                         <div className="text-[10px] text-gray-500 uppercase tracking-widest">Overall Score</div>
                       </div>
-                      <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e] text-center">
+                      <div className="nl-glass rounded-2xl p-4 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                         <div className="text-4xl font-black mb-1 text-[#F59E0B]">{aiAnalysis.portfolioGrade}</div>
                         <div className="text-[10px] text-gray-500 uppercase tracking-widest">Portfolio Grade</div>
                       </div>
                     </div>
 
                     {/* Trading Style + Classification */}
-                    <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                    <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                       <div className="flex items-center gap-3 mb-3">
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${walletClassification.color}20` }}>
                           <Brain className="w-5 h-5" style={{ color: walletClassification.color }} />
@@ -720,7 +720,7 @@ export default function WalletIntelligencePage() {
 
                     {/* Performance Metrics Bars */}
                     {aiAnalysis.metrics && (
-                      <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                      <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                         <div className="flex items-center gap-2 mb-3">
                           <PieChart className="w-4 h-4 text-[#0066FF]" />
                           <h3 className="font-bold text-sm">Performance Metrics</h3>
@@ -749,7 +749,7 @@ export default function WalletIntelligencePage() {
 
                     {/* Key Insight */}
                     {aiAnalysis.topInsight && (
-                      <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                      <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                         <div className="flex items-center gap-2 mb-2">
                           <Zap className="w-4 h-4 text-[#0066FF]" />
                           <h3 className="font-bold text-sm">Key Insight</h3>
@@ -761,7 +761,7 @@ export default function WalletIntelligencePage() {
                     {/* Strengths & Weaknesses */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {aiAnalysis.strengths && aiAnalysis.strengths.length > 0 && (
-                        <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#10B981]/20">
+                        <div className="nl-glass rounded-2xl p-4 border border-[#10B981]/20">
                           <div className="flex items-center gap-2 mb-2">
                             <CheckCircle className="w-4 h-4 text-[#10B981]" />
                             <span className="text-sm font-bold text-[#10B981]">Strengths</span>
@@ -776,7 +776,7 @@ export default function WalletIntelligencePage() {
                         </div>
                       )}
                       {aiAnalysis.weaknesses && aiAnalysis.weaknesses.length > 0 && (
-                        <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#F59E0B]/20">
+                        <div className="nl-glass rounded-2xl p-4 border border-[#F59E0B]/20">
                           <div className="flex items-center gap-2 mb-2">
                             <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />
                             <span className="text-sm font-bold text-[#F59E0B]">Weaknesses</span>
@@ -794,7 +794,7 @@ export default function WalletIntelligencePage() {
 
                     {/* AI Recommendations */}
                     {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
-                      <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                      <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                         <div className="flex items-center gap-2 mb-3">
                           <TrendingUp className="w-4 h-4 text-[#7C3AED]" />
                           <h3 className="font-bold text-sm">AI Recommendations</h3>
@@ -814,7 +814,7 @@ export default function WalletIntelligencePage() {
 
                     {/* Risk Assessment */}
                     {aiAnalysis.riskAssessment && (
-                      <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                      <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <Shield className="w-4 h-4 text-[#EF4444]" />
@@ -839,7 +839,7 @@ export default function WalletIntelligencePage() {
 
                     {/* Activity Pattern */}
                     {aiAnalysis.activityPattern && (
-                      <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                      <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                         <div className="flex items-center gap-2 mb-2">
                           <Activity className="w-4 h-4 text-[#0066FF]" />
                           <h3 className="font-bold text-sm">Activity Pattern</h3>
@@ -851,7 +851,7 @@ export default function WalletIntelligencePage() {
 
                     {/* Notable Behaviors */}
                     {aiAnalysis.notableBehaviors && aiAnalysis.notableBehaviors.length > 0 && (
-                      <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                      <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                         <div className="flex items-center gap-2 mb-3">
                           <Brain className="w-4 h-4 text-[#7C3AED]" />
                           <h3 className="font-bold text-sm">Notable Behaviors</h3>
