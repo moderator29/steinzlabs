@@ -69,6 +69,19 @@ export async function GET(request: NextRequest) {
     return cronResponse('sniper-auto-execute', startedAt, { pending: count, killed: true, reason: killErr ? 'kill-state unreadable (fail-closed)' : (!killState ? 'kill-state missing (fail-closed)' : 'admin disabled') });
   }
 
+  // Audit #47 C1: serialize money-cron ticks. Two overlapping invocations would
+  // each read the same daily-cap total before either incremented it (TOCTOU) and
+  // could both broadcast. Take an atomic DB lock; if another tick holds it, exit.
+  // TTL matches maxDuration so a crashed tick self-releases.
+  const { data: lockOk } = await supabase.rpc('try_acquire_cron_lock', {
+    p_name: 'sniper-auto-execute',
+    p_ttl_seconds: 280,
+  });
+  if (!lockOk) {
+    return cronResponse('sniper-auto-execute', startedAt, { pending: count, skipped: 'another tick is running' });
+  }
+
+  try {
   const { data: matches, error } = await supabase
     .from('sniper_match_events')
     .select('id, criteria_id, user_id, matched_token_address, matched_chain, details')
@@ -103,7 +116,29 @@ export async function GET(request: NextRequest) {
 
   const processed: Array<{ matchId: string; status: 'queued' | 'skipped' | 'error' | 'executed'; reason?: string; pendingTradeId?: string; txHash?: string }> = [];
 
+  const claimStaleIso = new Date(Date.now() - 120_000).toISOString();
   for (const m of matches) {
+    // Audit #47 C2: atomically claim the match before doing any work. The
+    // conditional UPDATE only matches an unexecuted, unstaged, unclaimed (or
+    // stale-claimed) row, and Postgres re-checks the WHERE after row-locking —
+    // so even without the cron lock, two ticks can't both broadcast this buy.
+    if (!dryRun) {
+      const { data: claimed } = await supabase
+        .from('sniper_match_events')
+        .update({ claimed_at: new Date().toISOString() })
+        .eq('id', m.id)
+        .eq('decision', 'sniped_pending')
+        .is('executed_tx_hash', null)
+        .is('pending_trade_id', null)
+        .or(`claimed_at.is.null,claimed_at.lt.${claimStaleIso}`)
+        .select('id')
+        .maybeSingle();
+      if (!claimed) {
+        processed.push({ matchId: m.id, status: 'skipped', reason: 'already claimed by another tick' });
+        continue;
+      }
+    }
+
     const criteria = criteriaMap.get(m.criteria_id) as
       | {
           id: string;
@@ -272,4 +307,9 @@ export async function GET(request: NextRequest) {
     dryRun,
     sample: processed.slice(0, 5),
   });
+  } finally {
+    // Release the lock so the next 1-min tick can run immediately (the TTL is
+    // only a crash backstop). Best-effort — if this fails the TTL still frees it.
+    await supabase.rpc('release_cron_lock', { p_name: 'sniper-auto-execute' });
+  }
 }

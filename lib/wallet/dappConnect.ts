@@ -114,8 +114,20 @@ export async function signEvmRequest(params: {
   const wallet = new ethers.Wallet(params.privateKey);
   const m = params.method;
 
+  // Audit #47 M4: a malicious/buggy dApp can name a signer address that isn't
+  // ours. We only ever hold the active built-in key, so signing a request that
+  // targets a different account would mis-attribute the signature. Reject any
+  // mismatch up-front (case-insensitive, checksum-normalized).
+  const assertSelf = (addr: unknown) => {
+    if (typeof addr !== 'string' || !ethers.isAddress(addr)) return;
+    if (ethers.getAddress(addr) !== ethers.getAddress(wallet.address)) {
+      throw new Error('Requested signer does not match the connected Naka wallet.');
+    }
+  };
+
   if (m === 'personal_sign') {
     // params: [message(hex), address]
+    assertSelf(params.requestParams[1]);
     const message = params.requestParams[0] as string;
     return wallet.signMessage(ethers.getBytes(message));
   }
@@ -126,6 +138,7 @@ export async function signEvmRequest(params: {
   }
   if (m === 'eth_signTypedData' || m === 'eth_signTypedData_v4') {
     // params: [address, typedDataJSON]
+    assertSelf(params.requestParams[0]);
     const raw = params.requestParams[1] as string;
     const typed = typeof raw === 'string' ? JSON.parse(raw) : raw;
     const types = { ...typed.types };
@@ -137,7 +150,9 @@ export async function signEvmRequest(params: {
     if (!rpc) throw new Error(`Unsupported chain for sending: ${params.chainId}`);
     const provider = new ethers.JsonRpcProvider(rpc);
     const signer = wallet.connect(provider);
-    const tx = params.requestParams[0] as { to: string; data?: string; value?: string; gas?: string };
+    const tx = params.requestParams[0] as { from?: string; to: string; data?: string; value?: string; gas?: string };
+    // Don't broadcast a tx the dApp attributed to a different `from` account.
+    assertSelf(tx.from);
     const sent = await signer.sendTransaction({
       to: tx.to,
       data: tx.data,

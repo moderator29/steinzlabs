@@ -166,9 +166,14 @@ export async function DELETE(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const id = req.nextUrl.searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+  // Audit #47 H2: revocation must be more than an advisory flag. Null the
+  // encrypted session key + on-chain approval so a leaked DB snapshot of the
+  // revoked row cannot reconstruct a signer, and a replayed approve can't
+  // resurrect it (the unique index is on the live tuple). The executor already
+  // filters on revoked_at IS NULL; this removes the material itself.
   const { error } = await sb
     .from('user_session_keys')
-    .update({ revoked_at: new Date().toISOString() })
+    .update({ revoked_at: new Date().toISOString(), encrypted_session_key: null, approval: null, auth_signature: null })
     .eq('id', id)
     .eq('user_id', user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

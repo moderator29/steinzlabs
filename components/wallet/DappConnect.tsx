@@ -222,8 +222,11 @@ export function DappConnect() {
             <p className="text-[11px] text-slate-400">
               A connected dApp is requesting: <span className="font-mono text-slate-200">{request.params.request.method}</span> on chain {request.params.chainId}.
             </p>
-            <div className="max-h-32 overflow-auto rounded-lg bg-[#111827] border border-white/5 p-2 text-[10px] font-mono text-slate-400 break-all">
-              {JSON.stringify(request.params.request.params).slice(0, 600)}
+            {/* Audit #47 M4: show the FULL request (don't truncate). A 600-char
+                slice could hide a malicious calldata tail on eth_sendTransaction;
+                the box scrolls so the user can review everything they sign. */}
+            <div className="max-h-40 overflow-auto rounded-lg bg-[#111827] border border-white/5 p-2 text-[10px] font-mono text-slate-400 break-all whitespace-pre-wrap">
+              {JSON.stringify(request.params.request.params, null, 2)}
             </div>
             <input type="password" value={password} onChange={(e) => { setPassword(e.target.value); if (error) setError(null); }} placeholder="Wallet password" autoComplete="current-password" className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-sm" />
             {error && <p className="text-[11px] text-[#EF4444]">{error}</p>}

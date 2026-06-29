@@ -73,6 +73,18 @@ export async function GET(request: NextRequest) {
     return cronResponse("sniper-autosell", startedAt, { open: 0, noWork: true });
   }
 
+  // Audit #47 C1: serialize ticks so two overlapping invocations can't both
+  // pass a position's realized_at guard and double-sell. Atomic DB lock; if
+  // another tick holds it, exit. TTL matches maxDuration as a crash backstop.
+  const { data: lockOk } = await supabase.rpc("try_acquire_cron_lock", {
+    p_name: "sniper-autosell",
+    p_ttl_seconds: 280,
+  });
+  if (!lockOk) {
+    return cronResponse("sniper-autosell", startedAt, { open: count, skipped: "another tick is running" });
+  }
+  try {
+
   const { data: positions, error } = await supabase
     .from("sniper_executions")
     .select(
@@ -333,4 +345,7 @@ export async function GET(request: NextRequest) {
     sells,
     summary,
   });
+  } finally {
+    await supabase.rpc("release_cron_lock", { p_name: "sniper-autosell" });
+  }
 }
