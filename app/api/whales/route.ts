@@ -45,7 +45,12 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
 
       if (chain) query = query.eq("chain", chain);
       if (entityType) query = query.eq("entity_type", entityType);
-      if (q) query = query.or(`label.ilike.%${q}%,address.ilike.%${q}%`);
+      if (q) {
+        // Sanitize before interpolating into the PostgREST .or() filter: strip
+        // structural chars + LIKE wildcards so the search can't inject operators.
+        const safeQ = q.replace(/[^a-zA-Z0-9 .\-]/g, "").trim();
+        if (safeQ) query = query.or(`label.ilike.%${safeQ}%,address.ilike.%${safeQ}%`);
+      }
 
       const { data, error, count } = await query;
       if (error) throw error;

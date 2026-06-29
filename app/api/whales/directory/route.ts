@@ -63,16 +63,23 @@ export const GET = withTierGate('mini', async (request: NextRequest) => {
 
       if (chain) query = query.eq('chain', chain);
       if (entityType) query = query.eq('entity_type', entityType);
-      // Default view favors genuine traders: hide custodial exchange/bridge
-      // omnibus wallets (seeded at score ~99, which otherwise dominate the list)
-      // unless the user explicitly filters to an entity type or searches an
-      // address. This is why the directory was "mostly CEX".
-      else if (!q) query = query.not('entity_type', 'in', '("exchange","cex","bridge")');
+      // Default view favors genuine traders: hide custodial exchange/bridge/
+      // institutional omnibus wallets (seeded at score ~99, which otherwise
+      // dominate the list) unless the user explicitly filters to an entity type
+      // or searches an address. This is why the directory was "mostly CEX".
+      else if (!q) query = query.not('entity_type', 'in', '(exchange,cex,bridge,institutional)');
       if (minScore > 0) query = query.gte('whale_score', minScore);
       if (minPortfolioUsd > 0) query = query.gte('portfolio_value_usd', minPortfolioUsd);
       if (activity === 'daily') query = query.gte('active_days_7d', DAILY_ACTIVE_MIN_DAYS);
       else if (activity === 'barely') query = query.lte('active_days_7d', BARELY_ACTIVE_MAX_DAYS);
-      if (q) query = query.or(`label.ilike.%${q}%,address.ilike.%${q}%`);
+      if (q) {
+        // Strip PostgREST-structural chars (, ( ) : * " \) and LIKE wildcards
+        // (% _) so the search string can't inject filter operators into .or().
+        // Addresses (0x-hex / base58) and labels are alphanumeric + space/.-,
+        // so this preserves all legitimate searches.
+        const safeQ = q.replace(/[^a-zA-Z0-9 .\-]/g, '').trim();
+        if (safeQ) query = query.or(`label.ilike.%${safeQ}%,address.ilike.%${safeQ}%`);
+      }
 
       const { data, error, count } = await query;
       if (error) throw error;

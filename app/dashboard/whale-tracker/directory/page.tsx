@@ -127,8 +127,10 @@ const VOLUME_PILLS = [
   { id: 1000000, label: '>$1M' },
 ];
 
-// Custodial entity types where realized PnL / win-rate don't apply.
-const CUSTODIAL_ENTITIES = new Set(['exchange', 'cex', 'bridge']);
+// Custodial / non-copy-tradeable entity types where realized PnL / win-rate
+// don't apply and copy-trading makes no sense — exchanges, bridges, and
+// institutional (CEX cold / market-maker omnibus) wallets.
+const CUSTODIAL_ENTITIES = new Set(['exchange', 'cex', 'bridge', 'institutional']);
 
 function fmtUsd(v: string | number | null): string {
   if (v === null || v === undefined) return '—';

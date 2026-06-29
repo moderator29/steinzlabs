@@ -26,7 +26,10 @@ export interface TraderCardData {
   verified: boolean | null;
 }
 
-const CUSTODIAL_ENTITIES = new Set(['exchange', 'cex', 'bridge']);
+// Custodial / non-copy-tradeable entity types: exchange omnibus + institutional
+// (CEX cold wallets, market makers) + bridges. You can't mirror these — the
+// owner was explicit: "NOT institutional address but normal whale traders".
+const CUSTODIAL_ENTITIES = new Set(['exchange', 'cex', 'bridge', 'institutional']);
 
 export function isCopyTradeable(t: Pick<TraderCardData, 'entity_type' | 'active_days_7d'>): boolean {
   const custodial = CUSTODIAL_ENTITIES.has((t.entity_type || '').toLowerCase());
@@ -160,14 +163,16 @@ export default function TraderCard({ trader, watched, onOpen, onFollow, onToggle
         </div>
         <div className="ms-auto flex items-center gap-1.5 shrink-0">
           {copyable && (
+            // Primary CTA — brighter fill + ring + label so copy-trade is the
+            // most prominent action on the card (per the owner: "more visible").
             <button
               type="button"
               aria-label="Copy trade this whale"
               title="Copy trade"
               onClick={(e) => { e.stopPropagation(); onCopy(); }}
-              className="inline-flex items-center justify-center h-7 w-7 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 transition-colors"
+              className="inline-flex items-center justify-center gap-1 h-7 px-3 rounded-md bg-emerald-500/25 hover:bg-emerald-500/35 border border-emerald-400/50 ring-1 ring-emerald-400/20 text-emerald-100 text-[11px] font-bold transition-colors"
             >
-              <CopyIcon className="w-3.5 h-3.5" />
+              <CopyIcon className="w-3.5 h-3.5" /> Copy
             </button>
           )}
           <button
