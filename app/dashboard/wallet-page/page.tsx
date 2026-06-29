@@ -271,6 +271,9 @@ function ChainLogo({ chain, size = 24 }: { chain: ChainInfo; size?: number }) {
 }
 
 const SOLANA_CHAIN = SUPPORTED_CHAINS.find(c => c.id === 'solana') || SUPPORTED_CHAINS[0];
+// Naka is an EVM-first wallet — default the active chain to Ethereum so Send /
+// Receive / the big-4 actions open on ETH, not Solana.
+const ETHEREUM_CHAIN = SUPPORTED_CHAINS.find(c => c.id === 'ethereum') || SUPPORTED_CHAINS[0];
 
 export default function WalletPage() {
   useFeatureUsageLog('wallet');
@@ -303,7 +306,7 @@ export default function WalletPage() {
   // Pleasure Coin always render with real price/logo even when the
   // wallet has zero balance.
   const [customTokenRows, setCustomTokenRows] = useState<Array<TokenBalance & { chain: string }>>([]);
-  const [activeChain, setActiveChain] = useState<ChainInfo>(SOLANA_CHAIN);
+  const [activeChain, setActiveChain] = useState<ChainInfo>(ETHEREUM_CHAIN);
   const [multiChainBalances, setMultiChainBalances] = useState<Record<string, WalletData | null>>({});
   const [multiChainLoading, setMultiChainLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'crypto' | 'watchlist' | 'nfts' | 'activity'>('crypto');
@@ -411,6 +414,18 @@ export default function WalletPage() {
     let changed = false;
     for (const t of DEFAULT_TOKENS) {
       if (!parsed.includes(t)) { merged = [...merged, t]; changed = true; }
+    }
+    // One-time cleanup: an earlier build seeded "Pleasure Coin" (NSFW) as a
+    // default token. Strip it from the local list AND the server so it stops
+    // re-appearing via cross-device sync. Case-insensitive (EVM addrs).
+    const NSFW_RE = /0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19/i;
+    const nsfwKeys = merged.filter((t) => NSFW_RE.test(t));
+    if (nsfwKeys.length) {
+      merged = merged.filter((t) => !NSFW_RE.test(t));
+      changed = true;
+      for (const key of nsfwKeys) {
+        void fetch(`/api/wallet/custom-tokens?key=${encodeURIComponent(key)}`, { method: 'DELETE', credentials: 'include' }).catch(() => {});
+      }
     }
     if (changed) localStorage.setItem('steinz_custom_tokens', JSON.stringify(merged));
     setCustomTokens(merged);
@@ -1141,7 +1156,18 @@ export default function WalletPage() {
       a.prio - b.prio || a.t.symbol.localeCompare(b.t.symbol));
     else if (assetSort === 'change') withPriority.sort((a, b) =>
       a.prio - b.prio || parseFloat(b.t.valueUsd || '0') - parseFloat(a.t.valueUsd || '0'));
-    return withPriority.map((x) => x.t);
+    // Final de-dupe: a token can arrive from both the on-chain fetch and the
+    // custom-token list with slightly different keys (contract vs symbol, case),
+    // which surfaced as a duplicate NAKA row. Collapse by chain-aware identity,
+    // keeping the first (highest-priority/highest-value) occurrence.
+    const dedupeSeen = new Set<string>();
+    const deduped = withPriority.map((x) => x.t).filter((t) => {
+      const k = tokenKey(t.chain, t.contractAddress, t.symbol);
+      if (dedupeSeen.has(k)) return false;
+      dedupeSeen.add(k);
+      return true;
+    });
+    return deduped;
   })();
 
   const pnlAmount = currentBalance * (priceChange / 100);
@@ -1515,6 +1541,11 @@ export default function WalletPage() {
               id="wallet-panel-crypto"
               aria-labelledby="wallet-tab-crypto"
               hidden={activeTab !== 'crypto'}
+              // The Tailwind `flex` class overrides the native [hidden] display:none
+              // (equal specificity, utilities win), which leaked the holdings list
+              // under the Watchlist/NFTs/Activity tabs. Force display via inline
+              // style so each tab is a true full page.
+              style={{ display: activeTab === 'crypto' ? 'flex' : 'none' }}
               className="flex flex-col mb-6 divide-y divide-slate-900/60"
             >
               {loading ? (
@@ -1570,15 +1601,12 @@ export default function WalletPage() {
                 <FundWalletEmpty onFund={() => setView('receive')} onManage={() => setView('customize')} />
               )}
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <button onClick={() => setView('add-network')} className="nl-glass py-3 rounded-xl text-[11px] text-slate-200 hover:-translate-y-px flex items-center justify-center gap-1.5 transition-all" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}>
                   <Plus className="w-3.5 h-3.5 text-blue-300" /> Network
                 </button>
                 <button onClick={() => setView('add-token')} className="nl-glass py-3 rounded-xl text-[11px] text-slate-200 hover:-translate-y-px flex items-center justify-center gap-1.5 transition-all" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}>
                   <Plus className="w-3.5 h-3.5 text-blue-300" /> Add Token
-                </button>
-                <button onClick={() => setView('customize')} className="nl-glass py-3 rounded-xl text-[11px] text-slate-200 hover:-translate-y-px flex items-center justify-center gap-1.5 transition-all" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}>
-                  <Settings className="w-3.5 h-3.5 text-blue-300" /> Customize
                 </button>
               </div>
             </div>
