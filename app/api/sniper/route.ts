@@ -2,8 +2,8 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { checkTierServer } from '@/lib/subscriptions/serverTierCheck';
 import { getTokenSecurity } from '@/lib/services/goplus';
-import { getNewEvmPairs } from '@/lib/services/geckoterminal';
-import { getTokensMulti, type DexPair } from '@/lib/services/dexscreener';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { launchpadLabel, launchpadIconUrl, tokenExternalUrl } from '@/lib/sniper/launchpads';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,113 +39,138 @@ export interface SniperToken {
   marketCap?: number;
   pairAge?: string;
   logo?: string;
-  source?: string;
+  source?: string;          // launchpad id (pumpfun, raydium, …)
+  sourceLabel?: string;     // human label (Pump.fun)
+  sourceIcon?: string | null; // real launchpad icon URL
+  url?: string;             // chart / launchpad deep-link for the card
   volume24h?: number;
+  priceChange24h?: number;
+  fdv?: number;
+  txns24h?: number;
+  holders?: number;
+  bondingCurvePct?: number;
+  hasSocial?: boolean;
+  socials?: { twitter?: string; telegram?: string; website?: string } | null;
+}
+
+interface FeedRowDb {
+  token_address: string; symbol: string | null; name: string | null; chain: string;
+  logo_url: string | null; launchpad: string | null; dex: string | null;
+  price_usd: number | null; market_cap_usd: number | null; fdv_usd: number | null;
+  liquidity_usd: number | null; volume_24h_usd: number | null; txns_24h: number | null;
+  price_change_24h: number | null; holders: number | null; bonding_curve_pct: number | null;
+  socials: { twitter?: string; telegram?: string; website?: string } | null;
+  is_honeypot: boolean | null; buy_tax: number | null; sell_tax: number | null;
+  security_score: number | null; has_social: boolean | null;
+  pool_created_at: string | null; first_seen_at: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Heuristic security score from pair data alone (no GoPlus). */
-function scoreFromPair(pair: DexPair): number {
-  const liq = pair.liquidity?.usd ?? 0;
-  let score = 65;
-  if (liq > 100_000) score += 20;
-  else if (liq > 50_000) score += 12;
-  else if (liq > 10_000) score += 5;
-  else if (liq < 5_000) score -= 20;
-  else if (liq < 1_000) score -= 40;
-
-  // Penalise very new pairs (< 5 min old)
-  const ageMs = Date.now() - (pair.pairCreatedAt ?? Date.now());
-  if (ageMs < 5 * 60_000) score -= 10;
-
-  return Math.max(0, Math.min(100, score));
-}
-
-function statusFromScore(score: number): SniperToken['status'] {
+function statusFromRow(r: FeedRowDb): SniperToken['status'] {
+  if (r.is_honeypot) return 'blocked';
+  const score = r.security_score;
+  if (score == null) return 'scanning';
   if (score >= 70) return 'safe';
   if (score >= 40) return 'risky';
   return 'blocked';
 }
 
-function pairAgeLabel(pairCreatedAt?: number): string {
-  if (!pairCreatedAt) return 'New';
-  const mins = Math.round((Date.now() - pairCreatedAt) / 60_000);
+function ageLabel(iso: string | null): string {
+  if (!iso) return 'New';
+  const mins = Math.round((Date.now() - Date.parse(iso)) / 60_000);
   if (mins < 1) return '<1m';
   if (mins < 60) return `${mins}m`;
-  return `${Math.round(mins / 60)}h`;
+  const h = Math.floor(mins / 60);
+  if (h < 24) return `${h}h ${mins % 60}m`;
+  return `${Math.floor(h / 24)}d`;
 }
 
-// ─── GET Handler — New Token Feed ─────────────────────────────────────────────
+// ─── GET Handler — Real-time New Token Feed (from sniper_feed_tokens) ──────────
 
 export async function GET(request: NextRequest) {
   // Sniper Bot is a Max-tier feature (per the pricing page).
   const gate = await checkTierServer('max');
   if (!gate.allowed) return NextResponse.json({ error: 'upgrade_required', requiredTier: gate.requiredTier, currentTier: gate.currentTier, expired: gate.expired }, { status: 403 });
   const { searchParams } = new URL(request.url);
-  const limit = Math.min(parseInt(searchParams.get('limit') ?? '24'), 40);
-  const chainFilter = searchParams.get('chain') || undefined;
-  const minLiquidity = parseFloat(searchParams.get('minLiquidity') ?? '3000');
+  const limit = Math.min(parseInt(searchParams.get('limit') ?? '60', 10) || 60, 200);
+  const offset = Math.max(0, parseInt(searchParams.get('offset') ?? '0', 10) || 0);
+  const chainFilter = (searchParams.get('chain') || 'all').toLowerCase();
+  const minLiquidity = parseFloat(searchParams.get('minLiquidity') ?? '0') || 0;
   const maxLiquidity = searchParams.get('maxLiquidity') ? parseFloat(searchParams.get('maxLiquidity')!) : undefined;
-  // Comma-separated DEX/source filter (e.g. "uniswap_v3,aerodrome").
+  // Comma-separated launchpad/source filter (e.g. "pumpfun,raydium").
   const sources = (searchParams.get('source') || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-  const q = (searchParams.get('q') || '').trim().toLowerCase();
+  const q = (searchParams.get('q') || '').trim();
+  const sort = (searchParams.get('sort') || 'new').toLowerCase();
+  const audit = (searchParams.get('audit') || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 
   try {
-    // Real freshly-created EVM pools (GeckoTerminal). EVM-only for now.
-    const allPairs = await getNewEvmPairs(minLiquidity, chainFilter === 'all' ? undefined : chainFilter);
-    // Source chips come from the UNFILTERED set so picking a source doesn't
-    // collapse the chip list down to just that one source.
-    const availableSources = Array.from(new Set(allPairs.map(p => p.dexId))).slice(0, 12);
-    let pairs = allPairs;
-    if (maxLiquidity !== undefined) pairs = pairs.filter(p => (p.liquidity?.usd ?? 0) <= maxLiquidity);
-    if (sources.length) pairs = pairs.filter(p => sources.some(s => p.dexId.toLowerCase().includes(s)));
-    if (q) pairs = pairs.filter(p =>
-      p.baseToken.symbol.toLowerCase().includes(q) ||
-      p.baseToken.name.toLowerCase().includes(q) ||
-      p.baseToken.address.toLowerCase() === q,
-    );
+    const sb = getSupabaseAdmin();
+    let query = sb.from('sniper_feed_tokens').select('*', { count: 'exact' });
 
-    const tokens: SniperToken[] = pairs.slice(0, limit).map(pair => {
-      const score = scoreFromPair(pair);
-      return {
-        id: pair.baseToken.address,
-        address: pair.baseToken.address,
-        symbol: pair.baseToken.symbol,
-        name: pair.baseToken.name,
-        chain: pair.chainId,
-        liquidity: pair.liquidity?.usd ?? 0,
-        tax: 0,
-        honeypot: false,
-        securityScore: score,
-        detectedAt: pair.pairCreatedAt ?? Date.now(),
-        status: statusFromScore(score),
-        price: pair.priceUsd ? parseFloat(pair.priceUsd) : undefined,
-        marketCap: pair.marketCap ?? pair.fdv,
-        logo: pair.info?.imageUrl ?? undefined,
-        pairAge: pairAgeLabel(pair.pairCreatedAt),
-        source: pair.dexId,
-        volume24h: pair.volume?.h24,
-      };
-    });
-
-    // Logo enrichment: GeckoTerminal often has no image for brand-new tokens.
-    // Batch-resolve missing logos from DexScreener (one call for up to 30) so
-    // the feed shows REAL token logos instead of placeholders wherever possible.
-    const missing = tokens.filter(t => !t.logo).map(t => t.address);
-    if (missing.length) {
-      try {
-        const meta = await getTokensMulti(missing.slice(0, 30));
-        for (const t of tokens) {
-          if (!t.logo) {
-            const img = meta.get(t.address)?.info?.imageUrl ?? meta.get(t.address.toLowerCase())?.info?.imageUrl;
-            if (img) t.logo = img;
-          }
-        }
-      } catch { /* keep placeholders */ }
+    if (chainFilter !== 'all') query = query.eq('chain', chainFilter);
+    if (sources.length) query = query.in('launchpad', sources);
+    if (minLiquidity > 0) query = query.gte('liquidity_usd', minLiquidity);
+    if (maxLiquidity !== undefined) query = query.lte('liquidity_usd', maxLiquidity);
+    if (q) {
+      // Exact address match OR symbol/name partial — real DB filter, not client.
+      query = query.or(`token_address.eq.${q},symbol.ilike.%${q}%,name.ilike.%${q}%`);
     }
+    // Audit filters (real columns from GoPlus enrichment).
+    if (audit.includes('nohoneypot')) query = query.or('is_honeypot.is.null,is_honeypot.eq.false');
+    if (audit.includes('social')) query = query.eq('has_social', true);
+    if (audit.includes('devsoldall')) query = query.eq('dev_sold_all', true);
 
-    return NextResponse.json({ tokens, sources: availableSources });
+    const sortCol = sort === 'volume' ? 'volume_24h_usd'
+      : sort === 'liquidity' ? 'liquidity_usd'
+      : sort === 'mcap' ? 'market_cap_usd'
+      : 'pool_created_at';
+    query = query.order(sortCol, { ascending: false, nullsFirst: false }).range(offset, offset + limit - 1);
+
+    const { data, count, error } = await query;
+    if (error) return NextResponse.json({ error: error.message, tokens: [] }, { status: 500 });
+
+    const rows = (data ?? []) as FeedRowDb[];
+    const tokens: SniperToken[] = rows.map((r) => ({
+      id: `${r.chain}:${r.token_address}`,
+      address: r.token_address,
+      symbol: r.symbol ?? '???',
+      name: r.name ?? 'Unknown',
+      chain: r.chain,
+      liquidity: r.liquidity_usd ?? 0,
+      tax: Math.max(r.buy_tax ?? 0, r.sell_tax ?? 0),
+      honeypot: !!r.is_honeypot,
+      securityScore: r.security_score ?? 0,
+      detectedAt: r.pool_created_at ? Date.parse(r.pool_created_at) : Date.parse(r.first_seen_at),
+      status: statusFromRow(r),
+      price: r.price_usd ?? undefined,
+      marketCap: r.market_cap_usd ?? r.fdv_usd ?? undefined,
+      fdv: r.fdv_usd ?? undefined,
+      logo: r.logo_url ?? undefined,
+      pairAge: ageLabel(r.pool_created_at ?? r.first_seen_at),
+      source: r.launchpad ?? 'dex',
+      sourceLabel: launchpadLabel(r.launchpad),
+      sourceIcon: launchpadIconUrl(r.launchpad),
+      url: tokenExternalUrl(r.chain, r.token_address, r.launchpad),
+      volume24h: r.volume_24h_usd ?? undefined,
+      priceChange24h: r.price_change_24h ?? undefined,
+      txns24h: r.txns_24h ?? undefined,
+      holders: r.holders ?? undefined,
+      bondingCurvePct: r.bonding_curve_pct ?? undefined,
+      hasSocial: !!r.has_social,
+      socials: r.socials ?? null,
+    }));
+
+    // Available source chips = distinct launchpads currently in the feed for the
+    // selected chain (so the row reflects what's really live, with real logos).
+    let srcQuery = sb.from('sniper_feed_tokens').select('launchpad');
+    if (chainFilter !== 'all') srcQuery = srcQuery.eq('chain', chainFilter);
+    const { data: srcRows } = await srcQuery.limit(2000);
+    const availableSources = Array.from(
+      new Set(((srcRows ?? []) as { launchpad: string | null }[]).map((s) => s.launchpad).filter(Boolean)),
+    ) as string[];
+
+    return NextResponse.json({ tokens, sources: availableSources, total: count ?? tokens.length });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Failed to fetch tokens';
     return NextResponse.json({ error: msg, tokens: [] }, { status: 500 });
