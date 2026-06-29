@@ -1,5 +1,5 @@
 import 'server-only';
-import { type Address, type Hex, encodeFunctionData, erc20Abi } from 'viem';
+import { type Address, type Hex, encodeFunctionData, erc20Abi, isAddress } from 'viem';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { usdcForChain } from '@/lib/trading/usdc';
 import { getSwapQuote } from '@/lib/services/zerox';
@@ -21,6 +21,16 @@ import { decryptServerSecret, vaultConfigured } from '@/lib/wallet/serverKeyVaul
 const CHAIN_IDS: Record<string, number> = {
   ethereum: 1, base: 8453, arbitrum: 42161, optimism: 10, polygon: 137, bsc: 56, avalanche: 43114,
 };
+
+// Server-side slippage ceiling (audit #47 M3). A user-set max_slippage_bps of,
+// say, 9999 would let the background cron execute a ~100%-slippage swap — an
+// instant self-rug / MEV magnet. Clamp every AA swap to a sane maximum.
+const MAX_SLIPPAGE_BPS = 1000; // 10%
+
+function clampSlippage(bps: number): number {
+  if (!Number.isFinite(bps) || bps <= 0) return 200;
+  return Math.min(Math.floor(bps), MAX_SLIPPAGE_BPS);
+}
 
 interface ActiveSession {
   id: string;
@@ -93,6 +103,12 @@ async function executeSessionSwap(params: {
   sellAmountBaseUnits: string;
   slippageBps: number;
 }): Promise<string | null> {
+  // Validate the token addresses on the money path before they reach 0x / the
+  // approve calldata (audit #47 M2) and clamp slippage server-side (M3).
+  if (!isAddress(params.sellToken) || !isAddress(params.buyToken)) return null;
+  if (!params.sellAmountBaseUnits || !/^\d+$/.test(params.sellAmountBaseUnits)) return null;
+  if (BigInt(params.sellAmountBaseUnits) <= BigInt(0)) return null;
+
   const quote = await getSwapQuote({
     chainId: params.chainId,
     sellToken: params.sellToken,
@@ -100,7 +116,7 @@ async function executeSessionSwap(params: {
     sellAmount: params.sellAmountBaseUnits,
     taker: params.session.kernel_address!,
     permit2: false,
-    slippageBps: params.slippageBps,
+    slippageBps: clampSlippage(params.slippageBps),
   });
   if (!quote?.transaction?.to || !quote.transaction.data) return null;
 

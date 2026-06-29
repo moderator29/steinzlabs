@@ -16,10 +16,14 @@ import { WalletKit, type IWalletKit } from '@reown/walletkit';
 import { Core } from '@walletconnect/core';
 import { buildApprovedNamespaces, getSdkError } from '@walletconnect/utils';
 
+// NOTE: `eth_sign` is deliberately NOT advertised (audit #47 H2). It signs an
+// arbitrary 32-byte digest with no human-readable framing — the classic
+// blind-signing primitive a malicious dApp uses to get a user to "sign a
+// message" that is actually a transaction/approval hash. MetaMask disables it
+// by default for the same reason; we don't support it at all.
 const EVM_METHODS = [
   'eth_sendTransaction',
   'personal_sign',
-  'eth_sign',
   'eth_signTypedData',
   'eth_signTypedData_v4',
 ];
@@ -116,9 +120,9 @@ export async function signEvmRequest(params: {
     return wallet.signMessage(ethers.getBytes(message));
   }
   if (m === 'eth_sign') {
-    // params: [address, message(hex)]
-    const message = params.requestParams[1] as string;
-    return wallet.signMessage(ethers.getBytes(message));
+    // Blind-signing primitive — rejected outright (audit #47 H2). Not advertised
+    // in EVM_METHODS, but reject defensively in case a dApp requests it anyway.
+    throw new Error('eth_sign is disabled — it allows blind-signing of arbitrary data.');
   }
   if (m === 'eth_signTypedData' || m === 'eth_signTypedData_v4') {
     // params: [address, typedDataJSON]

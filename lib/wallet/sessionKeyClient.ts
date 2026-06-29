@@ -16,6 +16,18 @@
 
 import { decryptPrivateKey } from './encryption';
 
+const AA_TYPED_DATA_DOMAIN = { name: 'NakaLabs AA Session Key', version: '1' };
+const AA_TYPED_DATA_TYPES = {
+  Authorization: [
+    { name: 'sessionAddress', type: 'address' },
+    { name: 'kernelAddress', type: 'address' },
+    { name: 'chain', type: 'string' },
+    { name: 'maxPerTradeUsd', type: 'uint256' },
+    { name: 'dailyCapUsd', type: 'uint256' },
+    { name: 'expiresAt', type: 'uint256' },
+  ],
+};
+
 export async function enableBackgroundSniping(params: {
   chain: string;
   mainAddress: string;
@@ -26,7 +38,8 @@ export async function enableBackgroundSniping(params: {
   maxTradesPerDay?: number;
   hours?: number;
 }): Promise<{ kernelAddress: string; sessionId: string; validUntil: number }> {
-  // 1. init
+  // 1. init — server mints + encrypts a session key, returns the ciphertext to
+  //    round-trip and the scope to sign. No row is stored yet.
   const initRes = await fetch('/api/trading/session-key/aa', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -41,9 +54,13 @@ export async function enableBackgroundSniping(params: {
     }),
   });
   const init = (await initRes.json().catch(() => ({}))) as {
-    id?: string; session_address?: string; valid_until?: number; max_trades_per_day?: number; error?: string;
+    session_address?: string; encrypted_session_key?: string; valid_until?: number;
+    max_trades_per_day?: number; max_per_trade_usd?: number; daily_cap_usd?: number; error?: string;
   };
-  if (!initRes.ok || !init.id || !init.session_address || !init.valid_until) {
+  if (
+    !initRes.ok || !init.session_address || !init.encrypted_session_key ||
+    !init.valid_until || init.max_per_trade_usd == null || init.daily_cap_usd == null
+  ) {
     throw new Error(init.error || 'Could not start background-sniping setup.');
   }
 
@@ -62,14 +79,43 @@ export async function enableBackgroundSniping(params: {
     scope: { validUntil: init.valid_until, maxTradesPerDay: init.max_trades_per_day ?? 20 },
   });
 
-  // 3. persist the approval
+  // 3. sign the EIP-712 scope with the OWNER key (proves the main wallet
+  //    authorized this exact session + kernel + caps + expiry), so the server
+  //    can store the grant with on-record authorization (audit #47 C1).
+  const { Wallet } = await import('ethers');
+  const authPayload = {
+    sessionAddress: init.session_address,
+    kernelAddress,
+    chain: params.chain.toLowerCase(),
+    maxPerTradeUsd: Math.floor(init.max_per_trade_usd),
+    dailyCapUsd: Math.floor(init.daily_cap_usd),
+    expiresAt: init.valid_until,
+  };
+  const ownerWallet = new Wallet(ownerPk);
+  const authSignature = await ownerWallet.signTypedData(
+    AA_TYPED_DATA_DOMAIN,
+    AA_TYPED_DATA_TYPES,
+    authPayload,
+  );
+
+  // 4. persist the approval + authorization
   const apRes = await fetch('/api/trading/session-key/aa', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ step: 'approve', id: init.id, approval, kernel_address: kernelAddress }),
+    body: JSON.stringify({
+      step: 'approve',
+      chain: params.chain,
+      main_address: params.mainAddress,
+      session_address: init.session_address,
+      encrypted_session_key: init.encrypted_session_key,
+      approval,
+      kernel_address: kernelAddress,
+      auth_signature: authSignature,
+      auth_payload: authPayload,
+    }),
   });
-  const ap = (await apRes.json().catch(() => ({}))) as { ok?: boolean; error?: string };
-  if (!apRes.ok || !ap.ok) throw new Error(ap.error || 'Could not save the session approval.');
+  const ap = (await apRes.json().catch(() => ({}))) as { ok?: boolean; id?: string; error?: string };
+  if (!apRes.ok || !ap.ok || !ap.id) throw new Error(ap.error || 'Could not save the session approval.');
 
-  return { kernelAddress, sessionId: init.id, validUntil: init.valid_until };
+  return { kernelAddress, sessionId: ap.id, validUntil: init.valid_until };
 }
