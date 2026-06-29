@@ -322,7 +322,7 @@ export default function ContractAnalyzerPage() {
                   {showChecks ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
                 {showChecks && (
-                  <div className="space-y-2 border-t border-[#1a1f2e] pt-3">
+                  <div className="space-y-2 border-t border-white/10 pt-3">
                     {result.tokenSecurity.checks.map((check, i) => (
                       <div key={i} className="flex items-center gap-2">
                         {getStatusIcon(check.status)}

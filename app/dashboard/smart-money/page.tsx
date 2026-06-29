@@ -188,9 +188,9 @@ export default function SmartMoneyPage() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-[#060A12] text-white pb-24">
+    <div className="min-h-screen text-white pb-24">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-[#060A12]/95 backdrop-blur-xl border-b border-white/[0.04]">
+      <div className="sticky top-0 z-40 nl-glass backdrop-blur-xl border-b border-white/[0.04]">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
           <div className="w-8 h-8 bg-gradient-to-br from-[#F59E0B] to-[#F97316] rounded-xl flex items-center justify-center">
@@ -249,19 +249,19 @@ export default function SmartMoneyPage() {
         {activeTab === 'leaderboard' && <>
         {/* Stats */}
         <div className="grid grid-cols-3 gap-2">
-          <div className="bg-[#0D1117] rounded-xl p-3 border border-white/[0.04] text-center">
+          <div className="nl-glass rounded-xl p-3 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <Users className="w-4 h-4 text-[#0066FF] mx-auto mb-1" />
             <div className="text-lg font-bold">{wallets.length}</div>
             <div className="text-[9px] text-gray-600 uppercase">Tracked</div>
           </div>
-          <div className="bg-[#0D1117] rounded-xl p-3 border border-white/[0.04] text-center">
+          <div className="nl-glass rounded-xl p-3 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <DollarSign className="w-4 h-4 text-[#10B981] mx-auto mb-1" />
             <div className="text-lg font-bold text-[#10B981]">
               {loading ? '...' : formatVol(totalVolumeAll)}
             </div>
             <div className="text-[9px] text-gray-600 uppercase">Total Vol</div>
           </div>
-          <div className="bg-[#0D1117] rounded-xl p-3 border border-white/[0.04] text-center">
+          <div className="nl-glass rounded-xl p-3 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <Activity className="w-4 h-4 text-[#F59E0B] mx-auto mb-1" />
             <div className="text-lg font-bold">{loading ? '...' : `${avgWin}%`}</div>
             <div className="text-[9px] text-gray-600 uppercase">Avg Win</div>
@@ -302,7 +302,7 @@ export default function SmartMoneyPage() {
                 const RankIcon = RankIcons[i];
                 const colors = ['#F59E0B', '#9CA3AF', '#CD7F32'];
                 return (
-                  <div key={w.id} className="bg-[#0D1117] rounded-xl p-3 border text-center"
+                  <div key={w.id} className="nl-glass rounded-xl p-3 text-center"
                     style={{ borderColor: colors[i] + '30' }}>
                     <div className="w-8 h-8 rounded-full mx-auto mb-1 flex items-center justify-center" style={{ background: colors[i] + '20' }}>
                       <RankIcon className="w-4 h-4" style={{ color: colors[i] }} />
@@ -325,7 +325,7 @@ export default function SmartMoneyPage() {
 
         {/* Weekly Risers */}
         {weeklyRisers.length > 0 && (
-          <div className="bg-[#0D1117] rounded-2xl border border-white/[0.04] overflow-hidden">
+          <div className="nl-glass rounded-2xl overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="px-4 py-3 border-b border-white/[0.04] flex items-center gap-2">
               <Flame className="w-3.5 h-3.5 text-[#EF4444]" />
               <span className="text-xs font-bold">Weekly Risers</span>
@@ -363,7 +363,7 @@ export default function SmartMoneyPage() {
 
         {/* Recent Moves */}
         {(loading || recentMoves.length > 0) && (
-          <div className="bg-[#0D1117] rounded-2xl border border-white/[0.04] overflow-hidden">
+          <div className="nl-glass rounded-2xl overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="px-4 py-3 border-b border-white/[0.04] flex items-center justify-between">
               <span className="text-xs font-bold flex items-center gap-2">
                 <Zap className="w-3.5 h-3.5 text-[#F59E0B]" />Recent Moves
@@ -420,9 +420,8 @@ export default function SmartMoneyPage() {
             {filteredWallets.map((wallet) => (
               <div
                 key={wallet.id}
-                className={`bg-[#0D1117] rounded-2xl border transition-all ${
-                  watching.includes(wallet.id) ? 'border-[#0066FF]/15' : 'border-white/[0.04]'
-                } hover:border-white/[0.08]`}
+                className="nl-glass nl-glass--interactive rounded-2xl transition-all"
+                style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
               >
                 <div className="p-4 cursor-pointer" onClick={() => setExpandedWallet(expandedWallet === wallet.id ? null : wallet.id)}>
                   <div className="flex items-start justify-between mb-3">
@@ -501,7 +500,7 @@ export default function SmartMoneyPage() {
                       <div className="mb-3 space-y-1">
                         <div className="text-[9px] text-gray-600 uppercase font-semibold mb-1.5">Recent Activity</div>
                         {wallet.recentTrades.map((trade, ti) => (
-                          <div key={ti} className="flex items-center gap-2 bg-[#060A12] rounded-lg px-2.5 py-1.5">
+                          <div key={ti} className="flex items-center gap-2 nl-card rounded-lg px-2.5 py-1.5">
                             <span className={`text-[9px] font-bold w-10 ${trade.action === 'Bought' ? 'text-[#10B981]' : trade.action === 'Sold' ? 'text-[#EF4444]' : 'text-[#0066FF]'}`}>
                               {trade.action}
                             </span>
@@ -513,15 +512,15 @@ export default function SmartMoneyPage() {
                       </div>
                     )}
                     <div className="grid grid-cols-3 gap-2 mb-3">
-                      <div className="bg-[#060A12] rounded-lg p-2.5 text-center">
+                      <div className="nl-card rounded-lg p-2.5 text-center">
                         <div className="text-[8px] text-gray-600 uppercase mb-0.5">Avg Hold</div>
                         <div className="text-[11px] font-semibold">{wallet.avgHold}</div>
                       </div>
-                      <div className="bg-[#060A12] rounded-lg p-2.5 text-center">
+                      <div className="nl-card rounded-lg p-2.5 text-center">
                         <div className="text-[8px] text-gray-600 uppercase mb-0.5">Best Trade</div>
                         <div className="text-[11px] font-semibold text-[#10B981]">{wallet.bestTrade}</div>
                       </div>
-                      <div className="bg-[#060A12] rounded-lg p-2.5 text-center">
+                      <div className="nl-card rounded-lg p-2.5 text-center">
                         <div className="text-[8px] text-gray-600 uppercase mb-0.5">Win Rate</div>
                         <div className="text-[11px] font-semibold">{wallet.winRate}%</div>
                       </div>
@@ -529,13 +528,13 @@ export default function SmartMoneyPage() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => router.push(`/dashboard/wallet-intelligence?address=${wallet.address}`)}
-                        className="flex-1 py-2.5 bg-[#0066FF]/10 border border-[#0066FF]/20 rounded-xl text-[10px] font-semibold text-[#0066FF] hover:bg-[#0066FF]/15 transition-colors flex items-center justify-center gap-1.5"
+                        className="flex-1 py-2.5 nl-btn-neon rounded-xl text-[10px] font-semibold flex items-center justify-center gap-1.5"
                       >
                         <Shield className="w-3 h-3" /> Analyze
                       </button>
                       <button
                         onClick={() => toggleWatch(wallet.id)}
-                        className="flex-1 py-2.5 nl-glass rounded-xl text-[10px] font-semibold text-gray-400 hover:bg-white/[0.06] transition-colors flex items-center justify-center gap-1.5"
+                        className="flex-1 py-2.5 nl-button--ghost rounded-xl text-[10px] font-semibold flex items-center justify-center gap-1.5"
                       >
                         <Bell className="w-3 h-3" /> {watching.includes(wallet.id) ? 'Unwatch' : 'Watch'}
                       </button>
@@ -570,7 +569,7 @@ export default function SmartMoneyPage() {
                 <p className="text-sm text-gray-500">Loading recent moves…</p>
               </div>
             ) : (
-              <div className="bg-[#0D1117] border border-white/[0.04] rounded-2xl divide-y divide-white/[0.04]">
+              <div className="nl-glass rounded-2xl divide-y divide-white/[0.04]" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 {recentMoves.map((move, i) => {
                   const isUp = move.action === 'buy';
                   const color = isUp ? '#10B981' : '#EF4444';
@@ -604,7 +603,7 @@ export default function SmartMoneyPage() {
               { label: 'Smart money convergence', desc: 'Multiple wallets buying same token', key: 'convergence' },
               { label: 'Weekly performance report', desc: 'Summary of tracked wallet performance', key: 'weekly' },
             ].map(({ label, desc, key }) => (
-              <div key={key} className="flex items-center justify-between bg-[#0D1117] border border-white/[0.04] rounded-xl p-4">
+              <div key={key} className="flex items-center justify-between nl-glass rounded-xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <div>
                   <div className="text-xs font-semibold text-white">{label}</div>
                   <div className="text-[10px] text-gray-500 mt-0.5">{desc}</div>
@@ -620,7 +619,7 @@ export default function SmartMoneyPage() {
               { label: 'Show convergence signals', desc: 'Alert when multiple smart wallets target same token' },
               { label: 'Show weekly risers', desc: 'Highlight wallets with improving recent performance' },
             ].map(({ label, desc }) => (
-              <div key={label} className="flex items-center justify-between bg-[#0D1117] border border-white/[0.04] rounded-xl p-4">
+              <div key={label} className="flex items-center justify-between nl-glass rounded-xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <div>
                   <div className="text-xs font-semibold text-white">{label}</div>
                   <div className="text-[10px] text-gray-500 mt-0.5">{desc}</div>
@@ -638,7 +637,7 @@ export default function SmartMoneyPage() {
       {paperTrade && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
           onClick={e => e.target === e.currentTarget && setPaperTrade(null)}>
-          <div className="w-full sm:max-w-sm bg-[#0D1117] border border-white/[0.08] rounded-t-2xl sm:rounded-2xl p-5 shadow-2xl">
+          <div className="w-full sm:max-w-sm nl-glass rounded-t-2xl sm:rounded-2xl p-5 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <div className="text-sm font-bold text-white">Paper Trade — {paperTrade.name}</div>
@@ -648,11 +647,11 @@ export default function SmartMoneyPage() {
             </div>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2 text-center">
-                <div className="bg-[#060A12] rounded-xl p-3">
+                <div className="nl-card rounded-xl p-3">
                   <div className="text-xs font-bold text-[#10B981]">{paperTrade.winRate}%</div>
                   <div className="text-[9px] text-gray-600">Win Rate</div>
                 </div>
-                <div className="bg-[#060A12] rounded-xl p-3">
+                <div className="nl-card rounded-xl p-3">
                   <div className={`text-xs font-bold ${paperTrade.pnlChange >= 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
                     {paperTrade.pnlChange >= 0 ? '+' : ''}{paperTrade.pnlChange}%
                   </div>
@@ -675,7 +674,7 @@ export default function SmartMoneyPage() {
                 ))}
               </div>
               <button onClick={() => setPaperTrade(null)}
-                className="w-full py-2.5 bg-gradient-to-r from-[#0066FF] to-[#7C3AED] rounded-xl text-xs font-bold">
+                className="w-full py-2.5 nl-button rounded-xl text-xs font-bold">
                 Start Paper Simulation
               </button>
             </div>

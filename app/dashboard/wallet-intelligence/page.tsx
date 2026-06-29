@@ -869,7 +869,7 @@ export default function WalletIntelligencePage() {
 
                     {/* Market Outlook */}
                     {aiAnalysis.marketOutlook && (
-                      <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                      <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                         <div className="flex items-center gap-2 mb-2">
                           <TrendingUp className="w-4 h-4 text-[#10B981]" />
                           <h3 className="font-bold text-sm">Market Outlook</h3>
@@ -903,7 +903,7 @@ export default function WalletIntelligencePage() {
 
         {activeTab === 'contract' && (
           <>
-            <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+            <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <h2 className="font-bold text-sm mb-2">Analyze Smart Contract</h2>
               <p className="text-[10px] text-gray-500 mb-3">Scan any token contract for security risks, honeypot detection, and tax analysis</p>
 
@@ -931,12 +931,12 @@ export default function WalletIntelligencePage() {
                   onChange={(e) => setContractInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleContractScan()}
                   placeholder="Enter contract address (0x...)"
-                  className="flex-1 bg-[#0f1320] border border-[#1a1f2e] rounded-lg px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/30"
+                  className="flex-1 nl-card rounded-lg px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none"
                 />
                 <button
                   onClick={handleContractScan}
                   disabled={contractLoading}
-                  className="bg-gradient-to-r from-[#0066FF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
+                  className="nl-button px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
                 >
                   {contractLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Shield className="w-3.5 h-3.5" />}
                   Scan
@@ -945,7 +945,7 @@ export default function WalletIntelligencePage() {
             </div>
 
             {contractError && (
-              <div className="bg-[#0f1320] rounded-2xl p-4 border border-red-500/30 bg-red-500/5">
+              <div className="nl-glass rounded-2xl p-4 border border-red-500/30 bg-red-500/5">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
                   <span className="text-xs text-red-400">{contractError}</span>
@@ -963,7 +963,7 @@ export default function WalletIntelligencePage() {
 
             {contractResult && !contractLoading && (
               <>
-                <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${contractResult.safetyColor}20` }}>
@@ -991,19 +991,19 @@ export default function WalletIntelligencePage() {
                   </div>
 
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
-                    <div className="bg-[#0f1320] rounded-lg p-2.5 text-center">
+                    <div className="nl-card rounded-lg p-2.5 text-center">
                       <div className="text-[9px] text-gray-500">Holders</div>
                       <div className="text-sm font-bold text-[#0066FF]">{contractResult.holderCount.toLocaleString()}</div>
                     </div>
-                    <div className="bg-[#0f1320] rounded-lg p-2.5 text-center">
+                    <div className="nl-card rounded-lg p-2.5 text-center">
                       <div className="text-[9px] text-gray-500">Buy Tax</div>
                       <div className="text-sm font-bold" style={{ color: parseFloat(contractResult.buyTax) > 5 ? 'var(--nl-error)' : 'var(--nl-success)' }}>{contractResult.buyTax}</div>
                     </div>
-                    <div className="bg-[#0f1320] rounded-lg p-2.5 text-center">
+                    <div className="nl-card rounded-lg p-2.5 text-center">
                       <div className="text-[9px] text-gray-500">Sell Tax</div>
                       <div className="text-sm font-bold" style={{ color: parseFloat(contractResult.sellTax) > 5 ? 'var(--nl-error)' : 'var(--nl-success)' }}>{contractResult.sellTax}</div>
                     </div>
-                    <div className="bg-[#0f1320] rounded-lg p-2.5 text-center">
+                    <div className="nl-card rounded-lg p-2.5 text-center">
                       <div className="text-[9px] text-gray-500">Honeypot</div>
                       <div className="text-sm font-bold" style={{ color: contractResult.isHoneypot ? 'var(--nl-error)' : 'var(--nl-success)' }}>
                         {contractResult.isHoneypot ? 'YES' : 'NO'}
@@ -1020,13 +1020,13 @@ export default function WalletIntelligencePage() {
                 </div>
 
                 {contractResult.dexData && (
-                  <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                  <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                     <div className="flex items-center gap-2 mb-3">
                       <TrendingUp className="w-4 h-4 text-[#0066FF]" />
                       <h3 className="font-bold text-sm">Market Data</h3>
                     </div>
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-                      <div className="bg-[#0a0e1a] rounded-lg p-2.5">
+                      <div className="nl-card rounded-lg p-2.5">
                         <div className="text-[9px] text-gray-500">Price</div>
                         <div className="text-sm font-bold font-mono text-white">
                           ${contractResult.dexData.price < 0.01
@@ -1034,13 +1034,13 @@ export default function WalletIntelligencePage() {
                             : contractResult.dexData.price.toLocaleString(undefined, { maximumFractionDigits: 4 })}
                         </div>
                       </div>
-                      <div className="bg-[#0a0e1a] rounded-lg p-2.5">
+                      <div className="nl-card rounded-lg p-2.5">
                         <div className="text-[9px] text-gray-500">24h Change</div>
                         <div className="text-sm font-bold" style={{ color: contractResult.dexData.priceChange24h >= 0 ? 'var(--nl-success)' : 'var(--nl-error)' }}>
                           {contractResult.dexData.priceChange24h >= 0 ? '+' : ''}{contractResult.dexData.priceChange24h.toFixed(2)}%
                         </div>
                       </div>
-                      <div className="bg-[#0a0e1a] rounded-lg p-2.5">
+                      <div className="nl-card rounded-lg p-2.5">
                         <div className="text-[9px] text-gray-500">Market Cap</div>
                         <div className="text-sm font-bold font-mono text-white">
                           ${contractResult.dexData.marketCap > 1000000
@@ -1050,7 +1050,7 @@ export default function WalletIntelligencePage() {
                             : contractResult.dexData.marketCap.toFixed(0)}
                         </div>
                       </div>
-                      <div className="bg-[#0a0e1a] rounded-lg p-2.5">
+                      <div className="nl-card rounded-lg p-2.5">
                         <div className="text-[9px] text-gray-500">24h Volume</div>
                         <div className="text-sm font-bold font-mono text-white">
                           ${contractResult.dexData.volume24h > 1000000
@@ -1060,7 +1060,7 @@ export default function WalletIntelligencePage() {
                             : contractResult.dexData.volume24h.toFixed(0)}
                         </div>
                       </div>
-                      <div className="bg-[#0a0e1a] rounded-lg p-2.5">
+                      <div className="nl-card rounded-lg p-2.5">
                         <div className="text-[9px] text-gray-500">Liquidity</div>
                         <div className="text-sm font-bold font-mono text-white">
                           ${contractResult.dexData.liquidity > 1000000
@@ -1070,7 +1070,7 @@ export default function WalletIntelligencePage() {
                             : contractResult.dexData.liquidity.toFixed(0)}
                         </div>
                       </div>
-                      <div className="bg-[#0a0e1a] rounded-lg p-2.5">
+                      <div className="nl-card rounded-lg p-2.5">
                         <div className="text-[9px] text-gray-500">FDV</div>
                         <div className="text-sm font-bold font-mono text-white">
                           ${contractResult.dexData.fdv > 1000000
@@ -1090,11 +1090,11 @@ export default function WalletIntelligencePage() {
                   </div>
                 )}
 
-                <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                   <h3 className="font-bold text-sm mb-3">Security Checks</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {contractResult.checks.map((check, i) => (
-                      <div key={i} className="flex items-center gap-2 bg-[#0f1320] rounded-lg p-2.5">
+                      <div key={i} className="flex items-center gap-2 nl-card rounded-lg p-2.5">
                         {check.status === 'pass' || check.status === 'safe' ? (
                           <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
                         ) : check.status === 'fail' || check.status === 'danger' ? (
@@ -1108,7 +1108,7 @@ export default function WalletIntelligencePage() {
                   </div>
                 </div>
 
-                <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                   <h3 className="font-bold text-sm mb-3">Contract Details</h3>
                   <div className="space-y-2">
                     {[

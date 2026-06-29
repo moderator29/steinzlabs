@@ -130,7 +130,7 @@ function WalletPanel({ node, chain, onClose }: { node: BubbleNode; chain: string
   }
 
   return (
-    <div className="absolute right-0 top-0 bottom-0 w-72 bg-[#0a0e1a]/97 border-l border-white/[0.06] backdrop-blur-xl z-20 flex flex-col shadow-2xl">
+    <div className="absolute right-0 top-0 bottom-0 w-72 nl-glass border-l border-white/[0.06] backdrop-blur-xl z-20 flex flex-col shadow-2xl">
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
         <div className="flex items-center gap-2">
           <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: node.color }} />
@@ -566,9 +566,9 @@ function BubbleMapInner() {
   const fmtTime = (ts: number) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div className="min-h-screen bg-[#060A12] text-white flex flex-col">
+    <div className="min-h-screen text-white flex flex-col">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-[#060A12]/95 backdrop-blur-xl border-b border-white/[0.04]">
+      <div className="sticky top-0 z-40 nl-glass backdrop-blur-xl border-b border-white/[0.04]">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
           <div className="w-9 h-9 bg-gradient-to-br from-[#0066FF] to-[#4F46E5] rounded-xl flex items-center justify-center shadow-lg shadow-[#0066FF]/20">
@@ -594,7 +594,7 @@ function BubbleMapInner() {
             </button>
             {showChainDrop && <>
               <div className="fixed inset-0 z-30" onClick={() => setShowChainDrop(false)} />
-              <div className="absolute top-full left-0 mt-1 w-40 bg-[#0f1320] border border-white/[0.08] rounded-xl overflow-hidden z-40 shadow-xl">
+              <div className="absolute top-full left-0 mt-1 w-40 nl-glass rounded-xl overflow-hidden z-40 shadow-xl">
                 {CHAIN_OPTIONS.map(c => (
                   <button key={c.value} onClick={() => { setChain(c.value); setShowChainDrop(false); }}
                     className={`w-full text-start px-3 py-2.5 text-xs hover:bg-white/[0.06] transition-colors ${chain === c.value ? 'text-[#0066FF]' : 'text-gray-400'}`}>
@@ -612,7 +612,7 @@ function BubbleMapInner() {
               className="flex-1 bg-transparent py-3 px-2 text-xs placeholder-gray-600 focus:outline-none font-mono" />
           </div>
           <button onClick={() => fetchMap()} disabled={loading || !tokenAddress.trim()}
-            className="h-11 px-4 bg-[#0066FF] hover:bg-[#0918D0] rounded-xl text-xs font-bold transition-colors disabled:opacity-30 flex-shrink-0">
+            className="h-11 px-4 nl-btn-neon rounded-xl text-xs font-bold disabled:opacity-30 flex-shrink-0">
             {loading ? '…' : 'Analyze'}
           </button>
         </div>
@@ -651,7 +651,7 @@ function BubbleMapInner() {
           <div className="flex gap-1 mt-3 flex-wrap items-center">
             {MODE_TABS.map(tab => (
               <button key={tab.id} onClick={() => handleModeChange(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${mode === tab.id ? 'bg-[#0066FF] text-white' : 'bg-white/[0.03] text-gray-400 hover:bg-white/[0.06]'}`}>
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors ${mode === tab.id ? 'nl-btn-neon' : 'nl-button--ghost'}`}>
                 <tab.icon className="w-3 h-3" />{tab.label}
               </button>
             ))}
@@ -678,7 +678,7 @@ function BubbleMapInner() {
       )}
 
       {/* Main area */}
-      <div className={`flex flex-col lg:flex-row flex-1 min-h-0 ${isFullscreen ? 'fixed inset-0 z-50 bg-[#060A12]' : ''}`}>
+      <div className={`flex flex-col lg:flex-row flex-1 min-h-0 ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
         {/* Graph pane */}
         <div className={`relative ${isFullscreen ? 'flex-1' : 'h-[420px] sm:h-[500px] lg:h-auto lg:flex-1'} border-b lg:border-b-0 lg:border-r border-white/[0.04]`}>
           {loading ? (
@@ -722,13 +722,13 @@ function BubbleMapInner() {
                 />
               )}
               <button onClick={() => setIsFullscreen(v => !v)}
-                className="absolute top-3 right-3 p-2 bg-[#0f1320]/80 border border-white/[0.08] rounded-lg hover:bg-white/[0.06] transition-colors backdrop-blur-sm z-10">
+                className="absolute top-3 right-3 p-2 nl-glass rounded-lg transition-colors backdrop-blur-sm z-10">
                 {isFullscreen ? <Minimize2 className="w-4 h-4 text-gray-400" /> : <Maximize2 className="w-4 h-4 text-gray-400" />}
               </button>
               {/* Legend */}
               <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5">
                 {Object.entries(TYPE_LABELS).filter(([k]) => k !== 'token').map(([key, label]) => (
-                  <div key={key} className="flex items-center gap-1.5 px-2 py-1 bg-[#0f1320]/80 border border-white/[0.06] rounded-md backdrop-blur-sm">
+                  <div key={key} className="flex items-center gap-1.5 px-2 py-1 nl-glass rounded-md backdrop-blur-sm">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ({ exchange: '#10B981', whale: '#F59E0B', contract: '#8B5CF6', dex: '#06B6D4', team: '#EC4899', scammer: '#EF4444', unknown: '#6B7280' } as Record<string,string>)[key] }} />
                     <span className="text-[9px] text-gray-400">{label}</span>
                   </div>
@@ -830,7 +830,7 @@ function BubbleMapInner() {
                   placeholder="Ask about holders, risk, dev wallets, cluster patterns…"
                   className="flex-1 nl-glass rounded-xl px-3 py-2 text-xs placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/30 transition-colors" />
                 <button onClick={() => sendChat()} disabled={chatLoading || !chatInput.trim()}
-                  className="w-8 h-8 bg-[#0066FF] hover:bg-[#0918D0] rounded-xl flex items-center justify-center transition-colors disabled:opacity-30 flex-shrink-0">
+                  className="w-8 h-8 nl-btn-neon rounded-xl flex items-center justify-center disabled:opacity-30 flex-shrink-0">
                   <Send className="w-3.5 h-3.5" />
                 </button>
               </div>

@@ -58,7 +58,7 @@ export function ShadowGuardianScan({ tokenAddress, onComplete }: ShadowGuardianS
 
   if (scanning) {
     return (
-      <div className="bg-[#141824] rounded-lg p-6 text-center">
+      <div className="nl-glass rounded-lg p-6 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         <Loader className="animate-spin mx-auto mb-4 text-[#0066FF]" size={32} />
         <p className="text-gray-300">Shadow Guardian scanning...</p>
         <p className="text-sm text-gray-500 mt-2">
@@ -70,7 +70,7 @@ export function ShadowGuardianScan({ tokenAddress, onComplete }: ShadowGuardianS
 
   if (error) {
     return (
-      <div className="bg-red-500/10 border-2 border-red-500 rounded-lg p-5">
+      <div className="nl-glass nl-glass--crimson border-2 border-red-500 rounded-lg p-5">
         <div className="flex items-center gap-3 mb-2">
           <AlertTriangle className="text-red-500 shrink-0" size={28} />
           <h3 className="text-base font-bold text-red-500">Scan didn&rsquo;t complete</h3>
@@ -81,7 +81,7 @@ export function ShadowGuardianScan({ tokenAddress, onComplete }: ShadowGuardianS
         </p>
         <button
           onClick={runScan}
-          className="w-full bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+          className="nl-btn-neon w-full text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
         >
           <Shield size={18} />
           Retry scan
@@ -94,7 +94,7 @@ export function ShadowGuardianScan({ tokenAddress, onComplete }: ShadowGuardianS
     return (
       <button
         onClick={runScan}
-        className="w-full bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+        className="nl-btn-neon w-full text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
       >
         <Shield size={20} />
         Run Shadow Guardian Scan
@@ -104,7 +104,7 @@ export function ShadowGuardianScan({ tokenAddress, onComplete }: ShadowGuardianS
 
   if (result.blocked) {
     return (
-      <div className="bg-red-500/10 border-2 border-red-500 rounded-lg p-6">
+      <div className="nl-glass nl-glass--crimson border-2 border-red-500 rounded-lg p-6">
         <div className="flex items-center gap-3 mb-4">
           <AlertTriangle className="text-red-500" size={32} />
           <div>
@@ -119,7 +119,7 @@ export function ShadowGuardianScan({ tokenAddress, onComplete }: ShadowGuardianS
           <div className="space-y-2">
             <p className="text-sm font-medium text-gray-300">Detected Scammers:</p>
             {result.scammers.map((scammer: any, i: number) => (
-              <div key={i} className="bg-[#0A0E1A] rounded p-3 text-sm">
+              <div key={i} className="bg-white/[0.03] rounded p-3 text-sm">
                 <div className="text-red-400 font-medium">{scammer.name}</div>
                 <div className="text-gray-400">
                   {scammer.rugPulls} rug pulls • ${scammer.totalStolen} stolen • {scammer.victims} victims
@@ -137,7 +137,7 @@ export function ShadowGuardianScan({ tokenAddress, onComplete }: ShadowGuardianS
   }
 
   return (
-    <div className="bg-green-500/10 border-2 border-green-500 rounded-lg p-6">
+    <div className="nl-glass border-2 border-green-500 rounded-lg p-6" style={{ boxShadow: '0 0 0 1px rgba(16,185,129,.4), 0 0 16px rgba(16,185,129,.18)' }}>
       <div className="flex items-center gap-3 mb-4">
         <CheckCircle className="text-green-500" size={32} />
         <div>
@@ -149,7 +149,7 @@ export function ShadowGuardianScan({ tokenAddress, onComplete }: ShadowGuardianS
       <p className="text-white mb-4">{result.message}</p>
 
       {result.verifiedHolders && result.verifiedHolders.length > 0 && (
-        <div className="bg-[#0A0E1A] rounded p-3 text-sm">
+        <div className="bg-white/[0.03] rounded p-3 text-sm">
           <div className="text-gray-400">Verified Institutions:</div>
           <div className="text-green-400 font-medium">
             {result.verifiedHolders.join(', ')}

@@ -154,7 +154,7 @@ export default function RiskScannerPage() {
 
   return (
     <div className="min-h-screen text-white pb-20">
-      <div className="sticky top-0 z-40 glass backdrop-blur-xl border-b border-white/10">
+      <div className="sticky top-0 z-40 nl-glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
           <Target className="w-5 h-5 text-[#0066FF]" />
@@ -164,7 +164,7 @@ export default function RiskScannerPage() {
 
       <div className="p-4 space-y-4">
         {!scanned && !scanning && (
-          <div className="glass rounded-xl p-6 border border-white/10 text-center">
+          <div className="nl-glass rounded-xl p-6 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="w-16 h-16 bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <Target className="w-8 h-8 text-[#0066FF]" />
             </div>
@@ -172,7 +172,7 @@ export default function RiskScannerPage() {
             <p className="text-xs text-gray-500 mb-4">Scan any wallet for on-chain risks across all positions</p>
 
             <div className="mb-4">
-              <div className="flex items-center bg-[#111827] rounded-xl border border-white/10 overflow-hidden">
+              <div className="flex items-center nl-glass rounded-xl overflow-hidden">
                 <Search className="w-4 h-4 text-gray-500 ms-3 flex-shrink-0" />
                 <input
                   type="text"
@@ -187,7 +187,7 @@ export default function RiskScannerPage() {
             <button
               onClick={handleScan}
               disabled={scanning || (!manualAddress.trim() && !walletAddress)}
-              className="bg-gradient-to-r from-[#0066FF] to-[#7C3AED] px-6 py-3 rounded-xl text-sm font-semibold hover:scale-[1.02] transition-transform disabled:opacity-50 flex items-center gap-2 mx-auto"
+              className="nl-btn-neon px-6 py-3 rounded-xl text-sm font-semibold hover:scale-[1.02] transition-transform disabled:opacity-50 flex items-center gap-2 mx-auto"
             >
               <Zap className="w-4 h-4" /> Run Full Scan
             </button>
@@ -199,7 +199,7 @@ export default function RiskScannerPage() {
         )}
 
         {scanning && (
-          <div className="glass rounded-xl p-8 border border-white/10 text-center">
+          <div className="nl-glass rounded-xl p-8 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <Loader2 className="w-10 h-10 text-[#0066FF] animate-spin mx-auto mb-4" />
             <p className="text-sm font-semibold mb-1">Scanning wallet...</p>
             <p className="text-[10px] text-gray-500 font-mono">{scannedAddress.slice(0, 10)}...{scannedAddress.slice(-6)}</p>
@@ -209,7 +209,7 @@ export default function RiskScannerPage() {
         {scanned && !scanning && (
           <>
             {!hasData ? (
-              <div className="glass rounded-xl p-6 border border-white/10 text-center">
+              <div className="nl-glass rounded-xl p-6 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Shield className="w-8 h-8 text-gray-500" />
                 </div>
@@ -218,7 +218,7 @@ export default function RiskScannerPage() {
               </div>
             ) : (
               <>
-                <div className="glass rounded-xl p-4 border border-white/10 text-center">
+                <div className="nl-glass rounded-xl p-4 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                   <p className="text-[10px] text-gray-500 font-mono mb-2">{scannedAddress.slice(0, 10)}...{scannedAddress.slice(-6)}</p>
                   <div className="relative w-24 h-24 mx-auto mb-2">
                     <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
@@ -239,7 +239,7 @@ export default function RiskScannerPage() {
 
                 <div className="space-y-2">
                   {risks.map((risk) => (
-                    <div key={risk.name} className="glass rounded-xl p-4 border border-white/10">
+                    <div key={risk.name} className="nl-card rounded-xl p-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${risk.color}20` }}>
@@ -263,7 +263,7 @@ export default function RiskScannerPage() {
 
             {/* Intelligence Report */}
             {hasData && (
-              <div className="bg-[#0A0E1A] rounded-xl p-4 border border-[#0066FF]/20 bg-gradient-to-br from-[#0066FF]/5 to-transparent">
+              <div className="nl-glass rounded-xl p-4 bg-gradient-to-br from-[#0066FF]/5 to-transparent" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-7 h-7 bg-[#0066FF]/20 rounded-lg flex items-center justify-center flex-shrink-0">
                     <Brain className="w-4 h-4 text-[#0066FF]" />
@@ -403,7 +403,7 @@ export default function RiskScannerPage() {
               </div>
             )}
 
-            <button onClick={() => { setScanned(false); setRisks([]); setHasData(false); }} className="w-full glass py-3 rounded-xl text-xs font-semibold text-[#0066FF] border border-white/10 hover:bg-white/5 transition-colors">
+            <button onClick={() => { setScanned(false); setRisks([]); setHasData(false); }} className="w-full nl-btn-neon py-3 rounded-xl text-xs font-semibold text-[#0066FF] transition-colors">
               Scan Again
             </button>
           </>

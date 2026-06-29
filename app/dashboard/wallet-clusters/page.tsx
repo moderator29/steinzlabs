@@ -149,9 +149,9 @@ export default function WalletClustersPage() {
   }, [rows]);
 
   return (
-    <div className="min-h-screen bg-[#05081E] text-white pb-24">
+    <div className="min-h-screen text-white pb-24">
       {/* Hero */}
-      <div className="sticky top-0 z-30 bg-[#05081E]/90 backdrop-blur-xl border-b border-white/5">
+      <div className="sticky top-0 z-30 nl-glass backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-start gap-3">
           <BackButton />
           <div className="flex-1">
@@ -234,7 +234,7 @@ export default function WalletClustersPage() {
 
       {/* Paste-wallet analyzer */}
       <div className="max-w-7xl mx-auto px-4 mt-5">
-        <form onSubmit={runAnalysis} className="bg-gradient-to-br from-[#0066FF]/10 via-[#7C3AED]/5 to-transparent border border-[#0066FF]/30 rounded-xl p-4 flex items-start gap-3 flex-wrap">
+        <form onSubmit={runAnalysis} className="nl-glass rounded-xl p-4 flex items-start gap-3 flex-wrap" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           <Cpu className="w-5 h-5 text-[#8FA3FF] mt-0.5 shrink-0" />
           <div className="flex-1 min-w-[200px]">
             <div className="text-sm font-bold">Analyze any wallet</div>
@@ -244,19 +244,19 @@ export default function WalletClustersPage() {
             value={analyzeAddr}
             onChange={(e) => setAnalyzeAddr(e.target.value)}
             placeholder="0x… or Solana address"
-            className="flex-1 min-w-[240px] bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm font-mono outline-none focus:border-[#0066FF]/50"
+            className="flex-1 min-w-[240px] nl-card rounded-lg px-3 py-2 text-sm font-mono outline-none"
           />
           <button
             type="submit"
             disabled={analyzing || !analyzeAddr.trim()}
-            className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#0066FF] to-[#7C3AED] font-bold text-sm disabled:opacity-60 flex items-center gap-2"
+            className="px-4 py-2 rounded-lg nl-button font-bold text-sm disabled:opacity-60 flex items-center gap-2"
           >
             {analyzing ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Analyzing…</> : <><Sparkles className="w-3.5 h-3.5" /> Analyze</>}
           </button>
         </form>
 
         {analyzeResult && (
-          <div className="mt-3 p-4 bg-white/[0.02] border border-white/10 rounded-xl">
+          <div className="mt-3 p-4 nl-glass rounded-xl" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             {analyzeResult.note && <p className="text-xs text-slate-400 mb-2">{analyzeResult.note}</p>}
             {analyzeResult.clusters && analyzeResult.clusters.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -264,7 +264,7 @@ export default function WalletClustersPage() {
                   <Link
                     key={c.cluster_id || i}
                     href={`/dashboard/wallet-clusters/cluster/${c.cluster_id}`}
-                    className="p-3 bg-black/30 hover:bg-black/50 rounded-lg border border-white/5 hover:border-white/20 transition-colors"
+                    className="p-3 nl-card rounded-lg transition-colors"
                   >
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-sm">{c.ai_name || 'Cluster'}</span>
@@ -310,9 +310,9 @@ export default function WalletClustersPage() {
 
         {!loading && total > rows.length && (
           <div className="flex items-center justify-center gap-2 mt-6">
-            <button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 24))} className="px-3 py-1.5 rounded-lg bg-white/5 text-xs disabled:opacity-40">Prev</button>
+            <button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 24))} className="px-3 py-1.5 rounded-lg nl-button--ghost text-xs disabled:opacity-40">Prev</button>
             <span className="text-xs text-slate-500">{offset + 1}–{Math.min(offset + 24, total)} of {total}</span>
-            <button disabled={offset + 24 >= total} onClick={() => setOffset(offset + 24)} className="px-3 py-1.5 rounded-lg bg-white/5 text-xs disabled:opacity-40">Next</button>
+            <button disabled={offset + 24 >= total} onClick={() => setOffset(offset + 24)} className="px-3 py-1.5 rounded-lg nl-button--ghost text-xs disabled:opacity-40">Next</button>
           </div>
         )}
       </div>
@@ -322,7 +322,7 @@ export default function WalletClustersPage() {
 
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-white/[0.02] border border-white/10 rounded-xl p-3">
+    <div className="nl-glass rounded-xl p-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
       <div className="text-[10px] uppercase tracking-wider text-slate-500">{label}</div>
       <div className="text-base font-bold font-mono mt-0.5">{value}</div>
     </div>
@@ -338,7 +338,8 @@ function ClusterCard({ row }: { row: ClusterRow }) {
   return (
     <Link
       href={`/dashboard/wallet-clusters/cluster/${row.cluster_id}`}
-      className="group bg-white/[0.03] hover:bg-white/[0.05] border border-white/10 hover:border-white/20 rounded-xl p-4 transition-all"
+      className="group nl-glass nl-glass--interactive rounded-xl p-4 transition-all"
+      style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
     >
       <div className="flex items-start gap-3">
         <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${meta.tone} flex items-center justify-center shrink-0`}>
