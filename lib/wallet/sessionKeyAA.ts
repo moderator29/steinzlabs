@@ -7,6 +7,11 @@
  * right to act on that kernel account, bounded ON-CHAIN by:
  *   • a timestamp policy  → the grant expires automatically
  *   • a rate-limit policy → at most N trades per 24h
+ * The rate policy bounds trade *count*, not notional, so the executor adds a
+ * software daily-USD cap (#46) on top — see sessionKeyExecutor. A stricter
+ * on-chain call policy (restrict the session key to ERC20.approve + the 0x
+ * AllowanceHolder) is the next hardening step but needs testnet validation
+ * before it can safely replace sudo on a live snipe path.
  * The session key's private key is the only thing held server-side (encrypted),
  * so the background sniper cron can broadcast capped, expiring, revocable buys
  * while the user's tab is closed — WITHOUT ever holding the main wallet key.
@@ -70,13 +75,23 @@ export function aaChainFor(slug: string): Chain | null {
 }
 
 /**
- * Per-chain ZeroDev RPC (bundler + paymaster live on the same URL). Owner sets
- * e.g. ZERODEV_RPC_BASE, ZERODEV_RPC_ARBITRUM. A single ZERODEV_RPC is used as
- * the fallback for any chain. Returns null when unconfigured → feature dormant.
+ * Per-chain ZeroDev RPC (bundler + paymaster live on the same URL).
+ * Resolution order:
+ *   1. explicit ZERODEV_RPC_<CHAIN> / ZERODEV_RPC override, else
+ *   2. construct ZeroDev's v3 meta-RPC from NEXT_PUBLIC_ZERODEV_PROJECT_ID —
+ *      so the owner only needs the project id set (the URL is derivable):
+ *      https://rpc.zerodev.app/api/v3/<projectId>/chain/<chainId>
+ * Returns null when neither is configured → feature stays dormant.
  */
 export function getZeroDevRpc(slug: string): string | null {
-  const key = `ZERODEV_RPC_${slug.toUpperCase()}`;
-  return process.env[key] || process.env.ZERODEV_RPC || null;
+  const explicit = process.env[`ZERODEV_RPC_${slug.toUpperCase()}`] || process.env.ZERODEV_RPC;
+  if (explicit) return explicit;
+  const projectId = process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID;
+  const chain = aaChainFor(slug);
+  if (projectId && chain) {
+    return `https://rpc.zerodev.app/api/v3/${projectId}/chain/${chain.id}`;
+  }
+  return null;
 }
 
 // Public read RPCs — the kernel address derives deterministically from the

@@ -20,6 +20,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getCurrentTokenPriceUsd, getEvmTokenDecimals } from "@/lib/sniper/priceFeed";
 import { usdcForChain } from "@/lib/trading/usdc";
 import { evaluatePosition } from "@/lib/sniper/autosell";
+import { tryExecuteSellViaSessionKey } from "@/lib/trading/sessionKeyExecutor";
 import type { SniperChain } from "@/lib/sniper/chains";
 
 export const runtime = "nodejs";
@@ -210,6 +211,57 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
+    // tokens_received is a WHOLE-token count; the aggregator expects base
+    // units. Scale by 10**decimals (BigInt to avoid float drift on big mc).
+    const tokenAmountBaseUnits = (
+      BigInt(Math.round((pos.tokens_received ?? 0) * 1e6)) *
+      (BigInt(10) ** BigInt(decimals)) /
+      BigInt(1e6)
+    ).toString();
+
+    // AA fast-path (#45): if the user has an active, owner-approved session key
+    // on this chain, unwind the position right here as a background userOp
+    // (token → USDC) — no browser, no pending-trade round trip. On any miss
+    // (AA dormant, no session, over caps, quote failure) this returns null and
+    // we fall through to staging a one-tap pending sell below.
+    try {
+      const aa = await tryExecuteSellViaSessionKey({
+        userId: pos.user_id,
+        chain: pos.chain,
+        tokenAddress: pos.token_address,
+        tokenAmountBaseUnits,
+        slippageBps: c.max_slippage_bps ?? 200,
+      });
+      if (aa?.txHash) {
+        // Closed on-chain. Mark realized so the next tick skips it, and record
+        // an approximate realized PnL from the price delta at trigger time.
+        const realizedPnlUsd =
+          pos.entry_price_usd != null
+            ? (currentPriceUsd - pos.entry_price_usd) * (pos.tokens_received ?? 0)
+            : null;
+        await supabase
+          .from("sniper_executions")
+          .update({
+            sell_tx_hash: aa.txHash,
+            sell_dispatched_at: new Date().toISOString(),
+            realized_at: new Date().toISOString(),
+            ...(realizedPnlUsd != null ? { pnl_usd: realizedPnlUsd } : {}),
+          })
+          .eq("id", pos.id)
+          .is("realized_at", null);
+
+        summary.push({
+          id: pos.id,
+          action: "sell",
+          reason: `${decision.reason ?? "trigger"} (AA session key)`,
+          pnlPct: decision.pnlPct,
+        });
+        continue;
+      }
+    } catch {
+      // Fall back to pending-trade staging on any AA execution error.
+    }
+
     // Schema fix: pending_trades has from_token_address / to_token_address /
     // source_reason / source_order_id / source_order_table, NOT the older
     // token_in / token_out / source / source_id pair this route used to
@@ -227,9 +279,7 @@ export async function GET(request: NextRequest) {
         from_token_symbol: pos.token_symbol,
         to_token_address: usdcAddress,
         to_token_symbol: "USDC",
-        // tokens_received is a WHOLE-token count; the aggregator expects base
-        // units. Scale by 10**decimals (BigInt to avoid float drift on big mc).
-        amount_in: (BigInt(Math.round((pos.tokens_received ?? 0) * 1e6)) * (BigInt(10) ** BigInt(decimals)) / BigInt(1e6)).toString(),
+        amount_in: tokenAmountBaseUnits,
         slippage_bps: c.max_slippage_bps ?? 200,
         source_reason: "sniper_autosell",
         source_order_id: pos.id,
