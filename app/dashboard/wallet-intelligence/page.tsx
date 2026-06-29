@@ -45,6 +45,17 @@ interface WalletData {
   nativeValueUsd?: string;
   explorerUrl?: string;
   recentTransactions?: RecentTx[];
+  // Per-holding GoPlus security (already fetched by the API for top tokens —
+  // surfaced here so risky bags are flagged instead of silently dropped).
+  contractSecurity?: Record<string, {
+    isHoneypot: boolean;
+    trustScore: number;
+    trustLevel: 'SAFE' | 'CAUTION' | 'WARNING' | 'DANGER';
+    flags: { name: string; severity: string }[];
+  } | null>;
+  tokenDistribution?: { symbol: string; percentage: number }[];
+  isWhale?: boolean;
+  whaleScore?: number;
 }
 
 // ─── Recent Transactions ───────────────────────────────────────────────────────
@@ -623,6 +634,9 @@ export default function WalletIntelligencePage() {
                       (showAllHoldings ? walletData.holdings : walletData.holdings.slice(0, 10)).map((h, i) => {
                         const val = h.valueUsd ? parseFloat(h.valueUsd) : 0;
                         const pct = totalUsd > 0 && val > 0 ? (val / totalUsd * 100) : 0;
+                        // Per-holding GoPlus security (already fetched by the API) — flag risky bags.
+                        const sec = h.contractAddress ? walletData.contractSecurity?.[h.contractAddress] : null;
+                        const risky = !!sec && (sec.isHoneypot || sec.trustLevel === 'DANGER' || sec.trustLevel === 'WARNING' || (sec.flags?.length ?? 0) > 0);
                         return (
                           <div key={`${h.symbol}-${i}`} className="flex items-center justify-between py-2 border-b border-[#1a1f2e]/40 last:border-0">
                             <div className="flex items-center gap-2">
@@ -635,7 +649,16 @@ export default function WalletIntelligencePage() {
                                 </div>
                               )}
                               <div>
-                                <div className="text-xs font-semibold">{h.symbol}</div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs font-semibold">{h.symbol}</span>
+                                  {sec && (risky ? (
+                                    <span className="text-[8px] px-1 py-0.5 rounded bg-red-500/15 text-red-300 border border-red-500/30 font-bold uppercase tracking-wide" title={sec.flags?.map(f => f.name).join(', ') || sec.trustLevel}>
+                                      {sec.isHoneypot ? 'Honeypot' : sec.trustLevel}
+                                    </span>
+                                  ) : sec.trustLevel === 'SAFE' ? (
+                                    <span className="text-[8px] px-1 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 font-bold uppercase tracking-wide">Safe</span>
+                                  ) : null)}
+                                </div>
                                 <div className="text-[10px] text-gray-500 truncate max-w-[100px]">{h.name}</div>
                               </div>
                             </div>
