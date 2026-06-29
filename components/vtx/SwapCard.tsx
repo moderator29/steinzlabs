@@ -305,7 +305,7 @@ export function SwapCard({ swap, walletAddress, onCancel, source = 'vtx' }: Prop
   // ── Stage 3 (terminal) — executed ──────────────────────────────────────
   if (stage === 'done' && txHash) {
     return (
-      <div className="bg-[#0A0F1A] border border-emerald-500/30 rounded-2xl p-4">
+      <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(16,185,129,.35), 0 0 16px rgba(16,185,129,.15)' }}>
         <div className="flex items-center gap-2 mb-2">
           <CheckCircle size={16} className="text-emerald-400" />
           <span className="text-emerald-400 font-semibold text-sm">Swap executed</span>
@@ -326,7 +326,7 @@ export function SwapCard({ swap, walletAddress, onCancel, source = 'vtx' }: Prop
   }
 
   return (
-    <div className="relative bg-[#0A0F1A] border border-white/[0.08] rounded-2xl overflow-hidden">
+    <div className="relative nl-glass rounded-2xl overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
       {/* Aurora top accent — brand-consistent with the price card */}
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-[#0066FF] via-[#8B5CF6] to-[#10B981] opacity-70" />
       {/* Stage progress rail */}
@@ -471,7 +471,7 @@ export function SwapCard({ swap, walletAddress, onCancel, source = 'vtx' }: Prop
           modal, or the built-in Naka wallet on the wallet page. The swap stays
           non-custodial either way — nothing executes until the user signs. */}
       {!walletAddress && stage === 'ready' && (
-        <div className="mx-4 mb-3 rounded-xl border border-[#1E2433] bg-[#0B0F1A]/60 px-4 py-3.5">
+        <div className="mx-4 mb-3 nl-glass rounded-xl px-4 py-3.5" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.2)' }}>
           <div className="flex items-center gap-2">
             <Wallet size={14} className="text-[#0066FF]" />
             <span className="text-[12px] font-semibold text-white">Connect a wallet to swap</span>
@@ -482,13 +482,13 @@ export function SwapCard({ swap, walletAddress, onCancel, source = 'vtx' }: Prop
           <div className="mt-3 flex flex-col sm:flex-row gap-2">
             <button
               onClick={() => open()}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#0066FF] px-3 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[#0052CC]"
+              className="nl-button flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-[12px] font-semibold"
             >
               <Wallet size={13} /> Connect Wallet
             </button>
             <Link
               href="/dashboard/wallet-page"
-              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#1E2433] bg-[#141824] px-3 py-2 text-[12px] font-semibold text-gray-200 transition-colors hover:border-[#0066FF]/40 hover:text-white"
+              className="nl-button--ghost flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 text-[12px] font-semibold"
             >
               Set up Naka Wallet
             </Link>
