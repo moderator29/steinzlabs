@@ -1035,20 +1035,6 @@ export default function WalletPage() {
     />
   );
 
-  const CHAIN_FILTER_PILLS = [
-    { id: 'all', label: 'All' },
-    { id: 'ethereum', label: 'Ethereum' },
-    { id: 'solana', label: 'Solana' },
-    { id: 'base', label: 'Base' },
-    { id: 'arbitrum', label: 'Arbitrum' },
-    { id: 'polygon', label: 'Polygon' },
-    { id: 'bnb', label: 'BSC' },
-    // Enabled testnets get their own pills so the user can switch to them.
-    ...(testnetMode
-      ? TESTNET_CHAINS.filter((c) => enabledChains.includes(c.id)).map((c) => ({ id: c.id, label: c.name }))
-      : []),
-  ];
-
   // Stable token identity for hidden/customize (chain-aware, matches the IIFE).
   const tokenKeyOf = (chain: string, contractAddress: string | null | undefined, symbol: string) =>
     `${chain}:${contractAddress ? normalizeAddress(contractAddress, chain) : symbol.toLowerCase()}`;
@@ -1423,25 +1409,10 @@ export default function WalletPage() {
               ))}
             </div>
 
-            {/* ── CHAIN FILTER PILLS ───────────────────────── */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide mb-4">
-              {CHAIN_FILTER_PILLS.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => { setChainFilter(p.id); if (p.id !== 'all') { const c = chainById(p.id); if (c) setActiveChain(c); } }}
-                  style={chainFilter === p.id
-                    ? { background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 14px rgba(0,102,255,.5), inset 0 1px 0 rgba(255,255,255,.2)' }
-                    : { boxShadow: '0 0 0 1px rgba(0,102,255,.15)' }}
-                  className={`px-3 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all ${
-                    chainFilter === p.id
-                      ? 'text-white nl-glass'
-                      : 'bg-white/[0.03] text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
+            {/* Chain-filter chip row removed per product direction — each coin
+                row already shows its chain, so the chips were redundant. The
+                `chainFilter` state stays 'all'; search + the holdings list
+                cover discovery. */}
 
             {/* ── SEARCH + SORT BAR ────────────────────────── */}
             <div className="flex items-center gap-2 mb-4">
