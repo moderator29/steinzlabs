@@ -1912,7 +1912,7 @@ function CreateWalletView({ onBack, onCreated, walletCount = 0 }: { onBack: () =
       <div className="px-4 pt-6 max-w-lg mx-auto">
         <div className="flex items-center justify-between mb-6">
           <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-sm hover:text-white transition-colors">
-            <ArrowLeft className="w-4 h-4" /> Back
+            <ArrowLeft className="w-3.5 h-3.5" /> Back
           </button>
         </div>
 
@@ -2122,7 +2122,7 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
     <div className="min-h-screen text-white pb-24">
       <div className="px-4 pt-6 max-w-lg mx-auto">
         <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-xs mb-6 hover:text-white">
-          <ArrowLeft className="w-4 h-4" /> Back
+          <ArrowLeft className="w-3.5 h-3.5" /> Back
         </button>
 
         <div className="flex items-center gap-3 mb-6">
@@ -2498,14 +2498,18 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
       <div className="px-4 pt-6 max-w-lg mx-auto">
         <button
           onClick={() => (step === 'form' || step === 'sent' ? onBack() : setStep(step === 'password' ? 'confirm' : 'form'))}
-          className="flex items-center gap-2 text-gray-400 text-xs mb-6 hover:text-white"
+          className="flex items-center gap-1.5 text-gray-400 text-[11px] mb-5 hover:text-white"
         >
-          <ArrowLeft className="w-4 h-4" /> {step === 'form' || step === 'sent' ? 'Back' : 'Back'}
+          <ArrowLeft className="w-3.5 h-3.5" /> Back
         </button>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF 60%,#1233AE)', boxShadow: '0 0 14px rgba(0,102,255,.5)' }}>
-            <ArrowUpRight className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden" style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF 60%,#1233AE)', boxShadow: '0 0 14px rgba(0,102,255,.5)' }}>
+            {/* Real per-chain token logo (Solana logo for SOL, ETH for Ethereum,
+                Arbitrum badge, etc.) instead of a generic arrow. */}
+            {chain.logoUrl
+              ? <img src={chain.logoUrl} alt={chain.symbol} className="w-6 h-6 rounded-full" />
+              : <ArrowUpRight className="w-5 h-5 text-white" />}
           </div>
           <div>
             <h1 className="text-xl font-heading font-bold">
@@ -2779,7 +2783,7 @@ function ApprovalsView({ onBack, wallet, chain }: { onBack: () => void; wallet: 
       <div className="max-w-md mx-auto px-4 pt-6">
         <div className="flex items-center gap-3 mb-6">
           <button onClick={onBack} aria-label="Back" className="p-2 -ms-2 hover:bg-white/5 rounded-xl transition-colors">
-            <ArrowLeft className="w-5 h-5 text-slate-400" />
+            <ArrowLeft className="w-4 h-4 text-slate-400" />
           </button>
           <div>
             <h1 className="text-lg font-bold">Token Approvals</h1>
@@ -2945,7 +2949,7 @@ function PortfolioAnalyticsView({ onBack, wallet }: { onBack: () => void; wallet
       <div className="max-w-md mx-auto px-4 pt-6">
         <div className="flex items-center gap-3 mb-6">
           <button onClick={onBack} aria-label="Back" className="p-2 -ms-2 hover:bg-white/5 rounded-xl transition-colors">
-            <ArrowLeft className="w-5 h-5 text-slate-400" />
+            <ArrowLeft className="w-4 h-4 text-slate-400" />
           </button>
           <div>
             <h1 className="text-lg font-bold">Portfolio Analytics</h1>
@@ -3119,7 +3123,7 @@ function ReceiveView({
     <div className="min-h-screen text-white pb-24">
       <div className="px-4 pt-6 max-w-lg mx-auto">
         <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-xs mb-6 hover:text-white">
-          <ArrowLeft className="w-4 h-4" /> Back
+          <ArrowLeft className="w-3.5 h-3.5" /> Back
         </button>
 
         <div className="flex items-center gap-3 mb-5">
@@ -3441,7 +3445,7 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
     <div className="min-h-screen text-white pb-24">
       <div className="px-4 pt-6 max-w-lg mx-auto">
         <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-xs mb-6 hover:text-white">
-          <ArrowLeft className="w-4 h-4" /> Back
+          <ArrowLeft className="w-3.5 h-3.5" /> Back
         </button>
 
         <div className="flex items-center gap-3 mb-6">
@@ -3639,7 +3643,7 @@ function CustomizeTokensView({ onBack, tokens, isHidden, onToggle, onAddToken }:
       <div className="px-4 pt-6 max-w-lg mx-auto">
         <div className="flex items-center justify-between mb-6">
           <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-xs hover:text-white">
-            <ArrowLeft className="w-4 h-4" /> Back
+            <ArrowLeft className="w-3.5 h-3.5" /> Back
           </button>
           <button onClick={onAddToken} className="nl-glass inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4)' }}>
             <Plus className="w-3.5 h-3.5 text-blue-300" /> Add Token
@@ -3869,7 +3873,7 @@ function WalletSettingsView({
       <div className="px-4 pt-6 max-w-lg mx-auto">
         {/* Top bar */}
         <button onClick={onBack} className="flex items-center gap-2 text-slate-400 text-sm mb-6 hover:text-white transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back to Wallet
+          <ArrowLeft className="w-3.5 h-3.5" /> Back to Wallet
         </button>
 
         {/* Header */}
