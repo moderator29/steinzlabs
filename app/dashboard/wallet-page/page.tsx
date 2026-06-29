@@ -137,6 +137,24 @@ const SUPPORTED_CHAINS: ChainInfo[] = [
   { id: 'fantom', name: 'Fantom', symbol: 'FTM', color: '#1969FF', explorerUrl: 'https://ftmscan.com', explorerName: 'FtmScan', apiChain: 'fantom', logoUrl: COIN_LOGOS.FTM, coinGeckoId: 'fantom' },
   { id: 'cronos', name: 'Cronos', symbol: 'CRO', color: '#002D74', explorerUrl: 'https://cronoscan.com', explorerName: 'CronoScan', apiChain: 'cronos', logoUrl: COIN_LOGOS.CRO, coinGeckoId: 'crypto-com-chain' },
   { id: 'sui', name: 'Sui', symbol: 'SUI', color: '#4DA2FF', explorerUrl: 'https://suiscan.xyz', explorerName: 'SuiScan', apiChain: 'sui', logoUrl: COIN_LOGOS.SUI, coinGeckoId: 'sui' },
+  // #53 — additional popular EVM networks. Opt-in via Add Network. Native
+  // balance reads through the generic RPC path (CHAIN_RPC below); token
+  // indexing depends on backend support per chain.
+  { id: 'linea', name: 'Linea', symbol: 'ETH', color: '#61DFFF', explorerUrl: 'https://lineascan.build', explorerName: 'LineaScan', apiChain: 'linea', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/linea.png', coinGeckoId: 'ethereum' },
+  { id: 'scroll', name: 'Scroll', symbol: 'ETH', color: '#FFEEDA', explorerUrl: 'https://scrollscan.com', explorerName: 'ScrollScan', apiChain: 'scroll', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/scroll.png', coinGeckoId: 'ethereum' },
+  { id: 'zksync', name: 'zkSync Era', symbol: 'ETH', color: '#8C8DFC', explorerUrl: 'https://explorer.zksync.io', explorerName: 'zkSync Explorer', apiChain: 'zksync', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/zksync.png', coinGeckoId: 'ethereum' },
+  { id: 'mantle', name: 'Mantle', symbol: 'MNT', color: '#000000', explorerUrl: 'https://explorer.mantle.xyz', explorerName: 'Mantle Explorer', apiChain: 'mantle', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/mantle.png', coinGeckoId: 'mantle' },
+  { id: 'blast', name: 'Blast', symbol: 'ETH', color: '#FCFC03', explorerUrl: 'https://blastscan.io', explorerName: 'BlastScan', apiChain: 'blast', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/blast.png', coinGeckoId: 'ethereum' },
+  { id: 'mode', name: 'Mode', symbol: 'ETH', color: '#DFFE00', explorerUrl: 'https://explorer.mode.network', explorerName: 'Mode Explorer', apiChain: 'mode', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/mode.png', coinGeckoId: 'ethereum' },
+  { id: 'gnosis', name: 'Gnosis', symbol: 'XDAI', color: '#3E6957', explorerUrl: 'https://gnosisscan.io', explorerName: 'GnosisScan', apiChain: 'gnosis', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/gnosischain.png', coinGeckoId: 'xdai' },
+  { id: 'celo', name: 'Celo', symbol: 'CELO', color: '#FCFF52', explorerUrl: 'https://celoscan.io', explorerName: 'CeloScan', apiChain: 'celo', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/celo.png', coinGeckoId: 'celo' },
+  { id: 'metis', name: 'Metis', symbol: 'METIS', color: '#00DACC', explorerUrl: 'https://explorer.metis.io', explorerName: 'Metis Explorer', apiChain: 'metis', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/metis.png', coinGeckoId: 'metis-token' },
+  { id: 'moonbeam', name: 'Moonbeam', symbol: 'GLMR', color: '#53CBC8', explorerUrl: 'https://moonscan.io', explorerName: 'MoonScan', apiChain: 'moonbeam', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/moonbeam.png', coinGeckoId: 'moonbeam' },
+  { id: 'opbnb', name: 'opBNB', symbol: 'BNB', color: '#F0B90B', explorerUrl: 'https://opbnbscan.com', explorerName: 'opBNBScan', apiChain: 'opbnb', logoUrl: COIN_LOGOS.BNB, coinGeckoId: 'binancecoin' },
+  { id: 'manta', name: 'Manta Pacific', symbol: 'ETH', color: '#0091FF', explorerUrl: 'https://pacific-explorer.manta.network', explorerName: 'Manta Explorer', apiChain: 'manta', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/manta.png', coinGeckoId: 'ethereum' },
+  { id: 'zora', name: 'Zora', symbol: 'ETH', color: '#000000', explorerUrl: 'https://explorer.zora.energy', explorerName: 'Zora Explorer', apiChain: 'zora', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/zora.png', coinGeckoId: 'ethereum' },
+  { id: 'aurora', name: 'Aurora', symbol: 'ETH', color: '#70D44B', explorerUrl: 'https://explorer.aurora.dev', explorerName: 'Aurora Explorer', apiChain: 'aurora', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/aurora.png', coinGeckoId: 'ethereum' },
+  { id: 'kava', name: 'Kava', symbol: 'KAVA', color: '#FF564F', explorerUrl: 'https://kavascan.com', explorerName: 'KavaScan', apiChain: 'kava', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/kava.png', coinGeckoId: 'kava' },
 ];
 
 // FIX 5A.1 / Phase 4: was 'ethereum,base,polygon,avalanche,solana' only, which is why
@@ -2181,6 +2199,22 @@ const CHAIN_RPC: Record<string, string> = {
   optimism: 'https://mainnet.optimism.io',
   bnb: 'https://bsc-dataseed.binance.org',
   fantom: 'https://rpc.ftm.tools',
+  // #53 — additional EVM networks (public RPCs).
+  linea: 'https://rpc.linea.build',
+  scroll: 'https://rpc.scroll.io',
+  zksync: 'https://mainnet.era.zksync.io',
+  mantle: 'https://rpc.mantle.xyz',
+  blast: 'https://rpc.blast.io',
+  mode: 'https://mainnet.mode.network',
+  gnosis: 'https://rpc.gnosischain.com',
+  celo: 'https://forno.celo.org',
+  metis: 'https://andromeda.metis.io/?owner=1088',
+  moonbeam: 'https://rpc.api.moonbeam.network',
+  opbnb: 'https://opbnb-mainnet-rpc.bnbchain.org',
+  manta: 'https://pacific-rpc.manta.network/http',
+  zora: 'https://rpc.zora.energy',
+  aurora: 'https://mainnet.aurora.dev',
+  kava: 'https://evm.kava.io',
   // Test networks (real public RPCs).
   sepolia: 'https://ethereum-sepolia-rpc.publicnode.com',
   'base-sepolia': 'https://sepolia.base.org',
@@ -4502,6 +4536,7 @@ function AddNetworkView({
   testnetMode: boolean;
   onTestnetModeChange: (on: boolean) => void;
 }) {
+  const [q, setQ] = useState('');
   const toggle = (id: string) => {
     const next = enabled.includes(id)
       ? enabled.filter((x) => x !== id)
@@ -4511,6 +4546,10 @@ function AddNetworkView({
     if (next.length === 0) return;
     onChange(next);
   };
+  const query = q.trim().toLowerCase();
+  const visibleChains = query
+    ? chains.filter((c) => c.name.toLowerCase().includes(query) || c.symbol.toLowerCase().includes(query) || c.id.toLowerCase().includes(query))
+    : chains;
 
   return (
     <div className="min-h-screen text-white">
@@ -4535,8 +4574,16 @@ function AddNetworkView({
           </div>
           <ToggleSwitch on={testnetMode} onToggle={() => onTestnetModeChange(!testnetMode)} />
         </div>
+        {/* #53 — search across the network catalog. */}
+        <div className="mb-3 flex items-center gap-2 nl-glass rounded-xl px-3 py-2.5" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.15)' }}>
+          <Search className="w-4 h-4 text-slate-500 shrink-0" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search networks…" className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-slate-500" />
+        </div>
         <div className="rounded-xl border border-slate-800/60 bg-slate-950/40 overflow-hidden divide-y divide-slate-800/60">
-          {chains.map((c) => {
+          {visibleChains.length === 0 && (
+            <div className="px-3 py-6 text-center text-xs text-slate-500">No networks match &ldquo;{q}&rdquo;.</div>
+          )}
+          {visibleChains.map((c) => {
             const isOn = enabled.includes(c.id);
             const isDefault = DEFAULT_ENABLED_CHAINS.includes(c.id);
             return (
