@@ -59,6 +59,8 @@ interface CreateBody {
   max_inventory_usd?: number;
   max_slippage_bps?: number;
   band_pct?: number;
+  range_lower_pct?: number;
+  range_upper_pct?: number;
 }
 
 export async function POST(req: NextRequest) {
@@ -78,6 +80,16 @@ export async function POST(req: NextRequest) {
   if (b.reference_price_mode === 'manual' && (!b.manual_reference_price || b.manual_reference_price <= 0)) {
     return NextResponse.json({ error: 'manual reference price required' }, { status: 400 });
   }
+  const stratType = b.strategy_type ?? 'grid';
+  if (!['grid', 'range'].includes(stratType)) {
+    return NextResponse.json({ error: 'only grid and range strategies are available' }, { status: 400 });
+  }
+  if (stratType === 'range') {
+    const lo = b.range_lower_pct, hi = b.range_upper_pct;
+    if (lo == null || hi == null || lo >= hi) {
+      return NextResponse.json({ error: 'range requires lower_pct < upper_pct' }, { status: 400 });
+    }
+  }
 
   const admin = getSupabaseAdmin();
   const { data, error } = await admin
@@ -88,9 +100,11 @@ export async function POST(req: NextRequest) {
       token_address: b.token_address,
       token_symbol: b.token_symbol ?? null,
       quote_token_address: b.quote_token_address ?? null,
-      strategy_type: b.strategy_type ?? 'grid',
+      strategy_type: stratType,
       reference_price_mode: b.reference_price_mode ?? 'market',
       manual_reference_price: b.manual_reference_price ?? null,
+      range_lower_pct: stratType === 'range' ? b.range_lower_pct : null,
+      range_upper_pct: stratType === 'range' ? b.range_upper_pct : null,
       spread_bps: Math.max(10, Math.min(b.spread_bps ?? 100, 5000)),
       num_levels: Math.max(1, Math.min(b.num_levels ?? 3, 10)),
       order_size_usd: b.order_size_usd,

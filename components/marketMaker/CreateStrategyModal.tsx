@@ -70,7 +70,9 @@ type RefMode = 'market' | 'manual';
 export function CreateStrategyModal({ onClose, onSaved }: Props) {
   const [chain, setChain] = useState<MmChain>('base');
   const [tokenAddress, setTokenAddress] = useState('');
-  const [strategyType] = useState<StrategyType>('grid'); // grid only for now
+  const [strategyType, setStrategyType] = useState<StrategyType>('grid');
+  const [rangeLowerPct, setRangeLowerPct] = useState(-20);
+  const [rangeUpperPct, setRangeUpperPct] = useState(20);
   const [refMode, setRefMode] = useState<RefMode>('market');
   const [manualPrice, setManualPrice] = useState('');
   const [spreadBps, setSpreadBps] = useState(100);
@@ -160,6 +162,7 @@ export function CreateStrategyModal({ onClose, onSaved }: Props) {
         max_inventory_usd: maxInventoryUsd === '' ? null : Number(maxInventoryUsd),
         max_slippage_bps: maxSlippageBps,
         band_pct: bandPct,
+        ...(strategyType === 'range' ? { range_lower_pct: rangeLowerPct, range_upper_pct: rangeUpperPct } : {}),
       };
       const res = await fetch('/api/market-maker/strategies', {
         method: 'POST',
@@ -239,25 +242,39 @@ export function CreateStrategyModal({ onClose, onSaved }: Props) {
 
               {/* Strategy type */}
               <Panel>
-                <Field label="Strategy Type" hint="Grid is live. Range & presence are on the roadmap.">
+                <Field label="Strategy Type" hint="Grid & Range are live. Presence (volume) is intentionally not offered — single-account self-trading is wash trading.">
                   <div className="grid grid-cols-3 gap-2">
                     {([
                       { id: 'grid' as const, label: 'Grid', sub: 'Live', disabled: false },
-                      { id: 'range' as const, label: 'Range', sub: 'Coming soon', disabled: true },
-                      { id: 'presence' as const, label: 'Presence', sub: 'Coming soon', disabled: true },
+                      { id: 'range' as const, label: 'Range', sub: 'Live', disabled: false },
+                      { id: 'presence' as const, label: 'Presence', sub: 'Not offered', disabled: true },
                     ]).map((o) => (
                       <button
                         key={o.id}
                         type="button"
                         disabled={o.disabled}
+                        onClick={() => !o.disabled && setStrategyType(o.id)}
                         className={`${SEG_CLS(strategyType === o.id)} text-center ${o.disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
-                        title={o.disabled ? 'Coming soon' : undefined}
+                        title={o.disabled ? 'Not offered — single-account self-trading is wash trading' : undefined}
                       >
                         <div className={`text-sm font-semibold ${strategyType === o.id ? 'text-blue-100' : 'text-white/80'}`}>{o.label}</div>
                         <div className="text-[10px] uppercase tracking-wide text-white/40">{o.sub}</div>
                       </button>
                     ))}
                   </div>
+                  {strategyType === 'range' && (
+                    <div className="grid grid-cols-2 gap-2 mt-3">
+                      <div>
+                        <label className="text-[11px] text-white/50">Lower bound %</label>
+                        <input type="number" value={rangeLowerPct} onChange={(e) => setRangeLowerPct(Number(e.target.value))} className={INPUT_CLS} />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-white/50">Upper bound %</label>
+                        <input type="number" value={rangeUpperPct} onChange={(e) => setRangeUpperPct(Number(e.target.value))} className={INPUT_CLS} />
+                      </div>
+                      <p className="col-span-2 text-[11px] text-white/40">Accumulate at/below the lower bound, distribute at/above the upper bound (relative to the reference price).</p>
+                    </div>
+                  )}
                 </Field>
               </Panel>
 

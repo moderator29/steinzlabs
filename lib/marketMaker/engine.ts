@@ -56,6 +56,7 @@ interface Strategy {
   strategy_type: string; reference_price_mode: string; manual_reference_price: number | null;
   spread_bps: number; num_levels: number; order_size_usd: number; budget_usd: number;
   max_inventory_usd: number | null; max_slippage_bps: number; band_pct: number | null;
+  range_lower_pct: number | null; range_upper_pct: number | null;
   status: string; realized_pnl_usd: number; inventory_tokens: number; spent_usd: number;
 }
 
@@ -71,7 +72,12 @@ export interface TickResult { id: string; action: 'buy' | 'sell' | 'hold' | 'ski
 export async function runStrategyTick(s: Strategy): Promise<TickResult> {
   // AA execution is EVM-only; Solana strategies persist but don't auto-trade.
   if (!aaChainFor(s.chain)) return { id: s.id, action: 'skip', reason: 'chain not AA-executable yet' };
-  if (s.strategy_type !== 'grid') return { id: s.id, action: 'skip', reason: 'only grid implemented' };
+  // grid = symmetric ladder around reference; range = accumulate at/below a lower
+  // bound, distribute at/above an upper bound. presence/CLMM are not auto-traded
+  // (single-account self-trading is wash trading; CLMM needs LP-NFT mgmt + tests).
+  if (s.strategy_type !== 'grid' && s.strategy_type !== 'range') {
+    return { id: s.id, action: 'skip', reason: `${s.strategy_type} not auto-executed` };
+  }
   const usdc = usdcForChain(s.chain);
   if (!usdc) return { id: s.id, action: 'skip', reason: 'no USDC for chain' };
 
@@ -80,7 +86,12 @@ export async function runStrategyTick(s: Strategy): Promise<TickResult> {
   const price = await getDexPrice(s.token_address).catch(() => 0);
   if (!(price > 0)) return { id: s.id, action: 'skip', reason: 'no market price' };
 
-  const ladder = computeLadder(ref, s.spread_bps, s.num_levels, s.band_pct ?? 10);
+  const ladder = s.strategy_type === 'range'
+    ? [
+        { level: 1, side: 'buy' as const, targetPrice: ref * (1 + (s.range_lower_pct ?? -20) / 100) },
+        { level: 1, side: 'sell' as const, targetPrice: ref * (1 + (s.range_upper_pct ?? 20) / 100) },
+      ]
+    : computeLadder(ref, s.spread_bps, s.num_levels, s.band_pct ?? 10);
   const sb = getSupabaseAdmin();
   const inventoryUsd = (s.inventory_tokens ?? 0) * price;
 
