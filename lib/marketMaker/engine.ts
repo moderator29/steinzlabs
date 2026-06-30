@@ -1,8 +1,9 @@
 import 'server-only';
+import * as Sentry from '@sentry/nextjs';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { getDexPrice } from '@/lib/services/dexscreener';
-import { getEvmTokenDecimals } from '@/lib/sniper/priceFeed';
-import { usdcForChain } from '@/lib/trading/usdc';
+import { getDexPriceForChain } from '@/lib/services/dexscreener';
+import { getEvmTokenDecimalsStrict } from '@/lib/sniper/priceFeed';
+import { usdcForChain, usdcBaseUnitsToUsd } from '@/lib/trading/usdc';
 import { aaChainFor } from '@/lib/wallet/sessionKeyAA';
 import { tryExecuteSnipeViaSessionKey, tryExecuteSellViaSessionKey } from '@/lib/trading/sessionKeyExecutor';
 
@@ -63,11 +64,18 @@ interface Strategy {
 
 async function referencePrice(s: Strategy): Promise<number | null> {
   if (s.reference_price_mode === 'manual' && s.manual_reference_price) return s.manual_reference_price;
-  const p = await getDexPrice(s.token_address).catch(() => 0);
+  const p = await getDexPriceForChain(s.token_address, s.chain).catch(() => 0);
   return p > 0 ? p : null;
 }
 
 export interface TickResult { id: string; action: 'buy' | 'sell' | 'hold' | 'skip'; reason?: string; txHash?: string; }
+
+// A rung must not re-fill on every tick. Without a re-arm window the same buy
+// rung re-fires on each ~2-min cron pass during a one-directional move and
+// drains the entire budget into a falling knife (the opposite of grid
+// accumulation). Re-arm a given (level, side) rung at most once per window.
+// (Full price-re-entry re-arming is a follow-up; this bounds the runaway.)
+const RUNG_COOLDOWN_MS = 30 * 60 * 1000;
 
 /** Run one tick for a single active strategy. Conservative: at most one fill. */
 export async function runStrategyTick(s: Strategy): Promise<TickResult> {
@@ -84,7 +92,7 @@ export async function runStrategyTick(s: Strategy): Promise<TickResult> {
 
   const ref = await referencePrice(s);
   if (!ref) return { id: s.id, action: 'skip', reason: 'no reference price' };
-  const price = await getDexPrice(s.token_address).catch(() => 0);
+  const price = await getDexPriceForChain(s.token_address, s.chain).catch(() => 0);
   if (!(price > 0)) return { id: s.id, action: 'skip', reason: 'no market price' };
 
   // H3: a manual reference far from the live price would make the grid buy into a
@@ -110,10 +118,25 @@ export async function runStrategyTick(s: Strategy): Promise<TickResult> {
     return (data as { status?: string } | null)?.status === 'active';
   };
 
+  // True if this exact rung already filled within the re-arm window.
+  const rungOnCooldown = async (level: number, side: 'buy' | 'sell'): Promise<boolean> => {
+    const { data } = await sb
+      .from('mm_orders')
+      .select('id')
+      .eq('strategy_id', s.id).eq('side', side).eq('level', level).eq('status', 'filled')
+      .gte('filled_at', new Date(Date.now() - RUNG_COOLDOWN_MS).toISOString())
+      .limit(1);
+    return !!(data && data.length);
+  };
+
   // SELL side: price at/above the lowest sell rung and we hold inventory.
   const sellRung = ladder.filter((l) => l.side === 'sell' && price >= l.targetPrice).sort((a, b) => a.targetPrice - b.targetPrice)[0];
   if (sellRung && (s.inventory_tokens ?? 0) > 0) {
-    const decimals = await getEvmTokenDecimals(s.chain, s.token_address).catch(() => 18);
+    if (await rungOnCooldown(sellRung.level, 'sell')) return { id: s.id, action: 'hold', reason: 'sell rung on cooldown' };
+    // Money-path sizing: a wrong decimals mis-scales the sell by 1e10–1e12x, so
+    // SKIP this tick if the on-chain read fails rather than assuming 18.
+    const decimals = await getEvmTokenDecimalsStrict(s.chain, s.token_address).catch(() => null);
+    if (decimals == null) return { id: s.id, action: 'skip', reason: 'decimals unavailable (RPC) — retry next tick' };
     const tokensToSell = Math.min(s.order_size_usd / price, s.inventory_tokens);
     // M3: decimal-safe base-units (avoid float truncation to 0 for tiny amounts).
     const baseUnits = (BigInt(Math.round(tokensToSell * 1e9)) * (BigInt(10) ** BigInt(decimals))) / BigInt(1e9);
@@ -126,7 +149,7 @@ export async function runStrategyTick(s: Strategy): Promise<TickResult> {
     if (res?.txHash) {
       // H4: use the ACTUAL on-chain fill amounts (0x quote), not price estimates.
       const tokensSold = res.sellAmountBaseUnits ? Number(res.sellAmountBaseUnits) / 10 ** decimals : tokensToSell;
-      const proceedsUsd = res.buyAmountBaseUnits ? Number(res.buyAmountBaseUnits) / 1e6 : tokensToSell * price;
+      const proceedsUsd = res.buyAmountBaseUnits ? usdcBaseUnitsToUsd(res.buyAmountBaseUnits, s.chain) : tokensToSell * price;
       // C1: realized PnL = proceeds - cost basis of the tokens sold (NET, not gross).
       const inv = s.inventory_tokens || 0;
       const avgCost = inv > 0 ? (s.inventory_cost_usd ?? 0) / inv : 0;
@@ -151,17 +174,32 @@ export async function runStrategyTick(s: Strategy): Promise<TickResult> {
   if (buyRung) {
     // C2: gate against MONOTONIC lifetime deployed USD, not the revolving spent_usd.
     if ((s.gross_deployed_usd ?? 0) + s.order_size_usd > s.budget_usd) return { id: s.id, action: 'hold', reason: 'budget (lifetime) exhausted' };
-    if (s.max_inventory_usd != null && inventoryUsd >= s.max_inventory_usd) return { id: s.id, action: 'hold', reason: 'max inventory reached' };
+    // Hard inventory cap: gate on POST-buy inventory so a single order can't
+    // overshoot max_inventory_usd by up to order_size_usd.
+    if (s.max_inventory_usd != null && inventoryUsd + s.order_size_usd > s.max_inventory_usd) return { id: s.id, action: 'hold', reason: 'max inventory reached' };
+    if (await rungOnCooldown(buyRung.level, 'buy')) return { id: s.id, action: 'hold', reason: 'buy rung on cooldown' };
     if (!(await stillActive())) return { id: s.id, action: 'skip', reason: 'paused/stopped before execution' };
     const res = await tryExecuteSnipeViaSessionKey({
       userId: s.user_id, chain: s.chain, tokenAddress: s.token_address,
       amountUsd: s.order_size_usd, slippageBps: s.max_slippage_bps,
     }).catch(() => null);
     if (res?.txHash) {
-      const decimals = await getEvmTokenDecimals(s.chain, s.token_address).catch(() => 18);
+      // The buy is already on-chain — we cannot skip. Prefer the exact fill from
+      // the quote, but if decimals can't be read fall back to the price estimate
+      // rather than dividing by a wrong 10**18 (which would corrupt inventory).
+      const decimals = await getEvmTokenDecimalsStrict(s.chain, s.token_address).catch(() => null);
       // H4: actual tokens received from the quote, not order_size/price.
-      const tokensBought = res.buyAmountBaseUnits ? Number(res.buyAmountBaseUnits) / 10 ** decimals : s.order_size_usd / price;
-      await sb.from('mm_fills').insert({ strategy_id: s.id, user_id: s.user_id, side: 'buy', price, amount_usd: s.order_size_usd, amount_tokens: tokensBought, tx_hash: res.txHash });
+      const tokensBought = (decimals != null && res.buyAmountBaseUnits)
+        ? Number(res.buyAmountBaseUnits) / 10 ** decimals
+        : s.order_size_usd / price;
+      // The buy is already on-chain. If this fill row fails to insert, the spend
+      // is real but uncounted by aa_daily_spend_usd once the reservation TTL
+      // lapses (an UNSAFE under-count of the daily cap). Surface it loudly so it
+      // can be reconciled rather than silently dropping money from the cap math.
+      const { error: fillErr } = await sb.from('mm_fills').insert({ strategy_id: s.id, user_id: s.user_id, side: 'buy', price, amount_usd: s.order_size_usd, amount_tokens: tokensBought, tx_hash: res.txHash });
+      if (fillErr) {
+        Sentry.captureException(new Error(`mm_fills buy insert failed after on-chain swap ${res.txHash}: ${fillErr.message}`), { tags: { source: 'marketMaker/engine', strategyId: s.id, txHash: res.txHash } });
+      }
       await sb.from('mm_orders').insert({ strategy_id: s.id, user_id: s.user_id, level: buyRung.level, side: 'buy', target_price: buyRung.targetPrice, size_usd: s.order_size_usd, status: 'filled', tx_hash: res.txHash, filled_at: new Date().toISOString() });
       await sb.from('mm_strategies').update({
         inventory_tokens: (s.inventory_tokens ?? 0) + tokensBought,

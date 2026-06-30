@@ -114,10 +114,16 @@ export async function GET(request: NextRequest) {
     if (chainFilter !== 'all') query = query.eq('chain', chainFilter);
     if (sources.length) query = query.in('launchpad', sources);
     if (minLiquidity > 0) query = query.gte('liquidity_usd', minLiquidity);
-    if (maxLiquidity !== undefined) query = query.lte('liquidity_usd', maxLiquidity);
+    if (maxLiquidity !== undefined && Number.isFinite(maxLiquidity)) query = query.lte('liquidity_usd', maxLiquidity);
     if (q) {
-      // Exact address match OR symbol/name partial — real DB filter, not client.
-      query = query.or(`token_address.eq.${q},symbol.ilike.%${q}%,name.ilike.%${q}%`);
+      // Sanitize before interpolating into a PostgREST .or() string: strip the
+      // structural chars (comma, parens) and LIKE wildcards (%, _) that would
+      // otherwise let a crafted q break the query or inject extra OR conditions.
+      // Addresses/symbols/names are alphanumeric, so this is lossless for real input.
+      const safeQ = q.replace(/[^a-zA-Z0-9 .-]/g, '').slice(0, 64);
+      if (safeQ) {
+        query = query.or(`token_address.eq.${safeQ},symbol.ilike.%${safeQ}%,name.ilike.%${safeQ}%`);
+      }
     }
     // Audit filters (real columns from GoPlus enrichment).
     if (audit.includes('nohoneypot')) query = query.or('is_honeypot.is.null,is_honeypot.eq.false');

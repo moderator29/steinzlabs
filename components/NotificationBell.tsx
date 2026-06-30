@@ -79,7 +79,21 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<DisplayNotification[]>([]);
   const [apiLoading, setApiLoading] = useState(false);
+  // Authenticated user id from the Supabase session — replaces the dead
+  // localStorage 'steinz_user_id' (which was never written), so the realtime
+  // filter user_id=eq.<id> actually matches this user's notification rows.
+  const [userId, setUserId] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Resolve the session user once on mount (mirrors the DM thread page).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!cancelled) setUserId(data.user?.id ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const loadNotifications = useCallback(async () => {
     // Local notifications first (instant)
@@ -101,7 +115,6 @@ export default function NotificationBell() {
     // Merge with API notifications
     try {
       setApiLoading(true);
-      const userId = typeof window !== 'undefined' ? localStorage.getItem('steinz_user_id') || '' : '';
       const params = userId ? `?userId=${userId}` : '';
       const res = await fetch(`/api/notifications${params}`);
       if (res.ok) {
@@ -127,7 +140,7 @@ export default function NotificationBell() {
     } finally {
       setApiLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     loadNotifications();
@@ -182,7 +195,6 @@ export default function NotificationBell() {
     // refetch. Realtime publication for `notifications` must be enabled on
     // the Supabase side (see supabase/migrations/2026_05_21_enable_notifications_realtime).
     let channel: ReturnType<typeof supabase.channel> | null = null;
-    const userId = typeof window !== 'undefined' ? localStorage.getItem('steinz_user_id') || '' : '';
     if (userId) {
       channel = supabase
         .channel(`notifications:${userId}`)
@@ -194,13 +206,18 @@ export default function NotificationBell() {
             const readIds: string[] = (() => {
               try { return JSON.parse(localStorage.getItem('steinz_read_notifs') || '[]'); } catch { return []; }
             })();
+            // Supabase rows are addressed everywhere by an `sb-`-prefixed id
+            // (the GET route, the read route, lib/notifications all require it).
+            // Use that form here too, or live notifications would never mark read
+            // and would duplicate the next polled row.
+            const sbId = `sb-${row.id}`;
             const next: DisplayNotification = {
-              id: row.id,
+              id: sbId,
               type: row.type as DisplayNotification['type'],
               title: row.title,
               message: row.body,
               time: 'Just now',
-              read: row.read || readIds.includes(row.id),
+              read: row.read || readIds.includes(sbId),
               href: row.url ?? undefined,
             };
             setNotifications((prev) => (prev.some((n) => n.id === next.id) ? prev : [next, ...prev]));
@@ -211,7 +228,7 @@ export default function NotificationBell() {
           { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
           (payload) => {
             const row = payload.new as NotificationRowPayload;
-            setNotifications((prev) => prev.map((n) => (n.id === row.id ? { ...n, read: n.read || row.read } : n)));
+            setNotifications((prev) => prev.map((n) => (n.id === `sb-${row.id}` ? { ...n, read: n.read || row.read } : n)));
           },
         )
         .subscribe();
@@ -223,7 +240,7 @@ export default function NotificationBell() {
       window.removeEventListener('steinz_notification', handleLocal);
       if (channel) supabase.removeChannel(channel);
     };
-  }, [loadNotifications]);
+  }, [loadNotifications, userId]);
 
   // Close on outside click
   useEffect(() => {
@@ -244,7 +261,7 @@ export default function NotificationBell() {
     setNotifications(prev =>
       prev.map(n => n.id === id ? { ...n, read: true } : n)
     );
-    // Persist to read-ids list
+    // Persist to read-ids list (covers local-only notifications).
     const readIds: string[] = (() => {
       try { return JSON.parse(localStorage.getItem('steinz_read_notifs') || '[]'); } catch { /* Malformed JSON — return default */ return []; }
     })();
@@ -252,13 +269,25 @@ export default function NotificationBell() {
       readIds.push(id);
       localStorage.setItem('steinz_read_notifs', JSON.stringify(readIds));
     }
+    // DB-authoritative: persist read-state for Supabase-backed rows. The PATCH
+    // route binds the update to the session user (no IDOR).
+    void fetch(`/api/notifications/${encodeURIComponent(id)}/read`, { method: 'PATCH' })
+      .catch((err) => console.error('[NotificationBell] mark read failed:', err));
   };
 
-  const handleMarkAllRead = () => {
+  const handleMarkAllRead = async () => {
     markAllNotificationsRead();
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     const allIds = notifications.map(n => n.id);
     localStorage.setItem('steinz_read_notifs', JSON.stringify(allIds));
+    // DB-authoritative: the RPC is RLS-safe and marks every unread row for the
+    // session user in one round-trip.
+    try {
+      const { error } = await supabase.rpc('mark_all_notifications_read');
+      if (error) console.error('[NotificationBell] mark_all RPC failed:', error.message);
+    } catch (err) {
+      console.error('[NotificationBell] mark_all RPC threw:', err);
+    }
   };
 
   return (

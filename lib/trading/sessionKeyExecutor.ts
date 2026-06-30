@@ -1,7 +1,7 @@
 import 'server-only';
 import { type Address, type Hex, encodeFunctionData, erc20Abi, isAddress } from 'viem';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { usdcForChain } from '@/lib/trading/usdc';
+import { usdcForChain, usdToUsdcBaseUnits } from '@/lib/trading/usdc';
 import { getSwapQuote } from '@/lib/services/zerox';
 import { executeSessionKeyTx, getZeroDevRpc, aaChainFor, getErc20Balance } from '@/lib/wallet/sessionKeyAA';
 import { decryptServerSecret, vaultConfigured } from '@/lib/wallet/serverKeyVault';
@@ -177,30 +177,62 @@ export async function tryExecuteSnipeViaSessionKey(params: {
     return null;
   }
 
-  // Software daily USD cap (#46, audit #68 C3). The on-chain rate policy bounds
-  // the *count* of trades/24h, not their notional. Enforce daily_cap_usd by
-  // summing the user's AA buys on this chain over the trailing 24h — across BOTH
-  // the sniper AND the market maker (unified RPC), so the bot can't slip the cap.
+  // Software daily USD cap (#46, audit #68 C3, audit-R3 TOCTOU). The on-chain
+  // rate policy bounds the *count* of trades/24h, not their notional. Enforce
+  // daily_cap_usd ATOMICALLY: aa_reserve_daily_spend runs the check-and-reserve
+  // under a per-(user,chain) advisory lock that spans BOTH money crons (sniper +
+  // market maker), counting recorded spend AND in-flight reservations — so two
+  // concurrent crons can't both read the same pre-trade total and both bust the
+  // cap. A reservation is released if the swap aborts, and TTL-expires otherwise.
+  let reservationId: string | null = null;
   if (session.daily_cap_usd != null) {
     const since = new Date(Date.now() - 86_400_000).toISOString();
-    const { data: spent } = await getSupabaseAdmin().rpc('aa_daily_spend_usd', {
-      p_user: params.userId, p_chain: chain, p_since: since,
+    const { data: rid, error: capErr } = await getSupabaseAdmin().rpc('aa_reserve_daily_spend', {
+      p_user: params.userId,
+      p_chain: chain,
+      p_amount: params.amountUsd,
+      p_cap: Number(session.daily_cap_usd),
+      p_since: since,
     });
-    if (Number(spent ?? 0) + params.amountUsd > Number(session.daily_cap_usd)) return null;
+    // Fail CLOSED on a cap-read error — never spend blind against a money cap.
+    if (capErr) return null;
+    // NULL id = reservation denied: this trade (plus recorded + in-flight spend)
+    // would breach the daily cap.
+    if (!rid) return null;
+    reservationId = rid as string;
   }
 
-  // Buy: USDC -> token. Sell amount is denominated in USDC (6dp).
-  const res = await executeSessionSwap({
-    session,
-    sessionPrivateKey,
-    chain,
-    chainId,
-    sellToken: usdc,
-    buyToken: params.tokenAddress,
-    sellAmountBaseUnits: String(Math.round(params.amountUsd * 1e6)),
-    slippageBps: params.slippageBps,
-  });
-  if (!res) return null;
+  const releaseReservation = async () => {
+    if (!reservationId) return;
+    try {
+      await getSupabaseAdmin().rpc('aa_release_reservation', { p_id: reservationId });
+    } catch { /* best-effort; the reservation TTL-expires regardless */ }
+  };
+
+  // Buy: USDC -> token. USDC base units are chain-aware (6dp everywhere except
+  // BSC's 18dp Binance-Peg USDC) — hardcoding 1e6 would turn $50 into dust on BSC.
+  let res: Awaited<ReturnType<typeof executeSessionSwap>>;
+  try {
+    res = await executeSessionSwap({
+      session,
+      sessionPrivateKey,
+      chain,
+      chainId,
+      sellToken: usdc,
+      buyToken: params.tokenAddress,
+      sellAmountBaseUnits: usdToUsdcBaseUnits(params.amountUsd, chain),
+      slippageBps: params.slippageBps,
+    });
+  } catch (err) {
+    // Swap threw before landing — free the reserved budget, then rethrow.
+    await releaseReservation();
+    throw err;
+  }
+  if (!res) {
+    // Swap aborted (no quote / no liquidity / invalid token) — free the budget.
+    await releaseReservation();
+    return null;
+  }
 
   return { txHash: res.txHash, kernelAddress: session.kernel_address!, sellAmountBaseUnits: res.sellAmountBaseUnits, buyAmountBaseUnits: res.buyAmountBaseUnits };
 }

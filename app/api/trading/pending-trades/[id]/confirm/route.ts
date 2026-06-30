@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { getEvmTokenDecimals } from "@/lib/sniper/priceFeed";
-import { usdcForChain } from "@/lib/trading/usdc";
+import { getEvmTokenDecimalsStrict } from "@/lib/sniper/priceFeed";
+import { usdcBaseUnitsToUsd } from "@/lib/trading/usdc";
+import { getDexPriceForChain } from "@/lib/services/dexscreener";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -192,11 +193,28 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           // tokens_received as WHOLE tokens (÷10**decimals) so autosell — which
           // scales whole→base — doesn't double-scale, and the numeric stays well
           // within JS-number precision.
-          const tokDecimals = await getEvmTokenDecimals(pending.chain, pending.to_token_address);
-          const tokensReceived = body.clientReportedAmountOut
+          // Strict token decimals: on an RPC miss, leave tokens_received null
+          // (autosell skips with "tokens_received unknown") rather than dividing
+          // by a wrong 18 and corrupting the stored whole-token count.
+          const tokDecimals = await getEvmTokenDecimalsStrict(pending.chain, pending.to_token_address);
+          const tokensReceived = (tokDecimals != null && body.clientReportedAmountOut)
             ? Number(body.clientReportedAmountOut) / 10 ** tokDecimals
             : null;
-          const entryPrice = body.clientReportedPrice ?? null;
+          // entry_price_usd drives TP/SL + realized PnL, so it must NOT be blindly
+          // client-trusted (a bogus tiny price would fire an instant take-profit
+          // and overstate PnL). Prefer a server market price; accept the client
+          // price only within 5x of market, else fall back to the market price.
+          const serverPrice = await getDexPriceForChain(pending.to_token_address, pending.chain).catch(() => 0);
+          const clientPrice = body.clientReportedPrice;
+          const clientPriceSane = clientPrice != null && Number.isFinite(clientPrice) && clientPrice > 0;
+          let entryPrice: number | null = null;
+          if (serverPrice > 0) {
+            entryPrice = (clientPriceSane && clientPrice! >= serverPrice / 5 && clientPrice! <= serverPrice * 5)
+              ? clientPrice!
+              : serverPrice;
+          } else if (clientPriceSane) {
+            entryPrice = clientPrice!;
+          }
           await admin
             .from("sniper_executions")
             .update({
@@ -218,12 +236,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             .select("buy_amount_usd")
             .eq("id", pending.source_order_id)
             .single<{ buy_amount_usd: number | null }>();
-          // Proceeds arrive as USDC BASE UNITS (0x buyAmount); convert to USD
-          // with the real USDC decimals for the chain (6 on most, 18 on BSC).
-          const usdcAddr = usdcForChain(pending.chain);
-          const usdcDecimals = usdcAddr ? await getEvmTokenDecimals(pending.chain, usdcAddr) : 6;
-          const proceedsUsd = body.clientReportedAmountOut
-            ? Number(body.clientReportedAmountOut) / 10 ** usdcDecimals
+          // Proceeds arrive as USDC BASE UNITS (0x buyAmount); convert with the
+          // DETERMINISTIC per-chain USDC decimals (6 on most, 18 on BSC). The old
+          // path read decimals via RPC, which on a transient failure defaulted to
+          // 18 and understated proceeds by 1e12 on 6-dp chains, recording a wildly
+          // wrong realized loss. usdcBaseUnitsToUsd needs no network call.
+          const proceedsUsd = body.clientReportedAmountOut != null
+            ? usdcBaseUnitsToUsd(body.clientReportedAmountOut, pending.chain)
             : null;
           const buyCost = posRow?.buy_amount_usd != null ? Number(posRow.buy_amount_usd) : null;
           const pnlUsd = proceedsUsd != null && buyCost != null && Number.isFinite(proceedsUsd) ? proceedsUsd - buyCost : null;

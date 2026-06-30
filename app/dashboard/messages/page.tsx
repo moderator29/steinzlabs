@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Lock, Search, X, MoreHorizontal, CheckCheck, Filter, Volume2, Eye } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { GlassCard } from '@/components/ui/GlassCard';
+import { supabase } from '@/lib/supabase';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { messagesHowItWorks } from '@/lib/howItWorks/content/messages';
 
@@ -13,6 +14,8 @@ interface Conversation {
   peer_id: string;
   sealed_conversation_key: string;
   last_message_at: string | null;
+  last_message_preview?: string | null;
+  is_encrypted?: boolean;
   created_at: string;
   archived: boolean;
   request_state?: 'pending' | 'accepted' | 'declined';
@@ -42,6 +45,16 @@ interface SearchUser {
  * platform user to start a new conversation. Plaintext never reaches the
  * inbox — message bodies live only inside the thread after libsodium unseals.
  */
+/** Inbox row snippet. The DB trigger fills last_message_preview only for
+ *  plaintext conversations; for true E2E threads the body never leaves the
+ *  client so we show "Encrypted message", and a brand-new (empty) thread
+ *  shows "New". */
+function previewText(c: Conversation): string {
+  if (c.last_message_preview) return c.last_message_preview;
+  if (c.last_message_at) return c.is_encrypted ? 'Encrypted message' : 'New message';
+  return 'New';
+}
+
 function SettingToggle({ label, icon: Icon, on, onClick }: { label: string; icon: React.ComponentType<{ className?: string }>; on: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick} className="w-full text-start flex items-center gap-2 px-2 py-2 rounded-lg text-[12px] text-slate-200 hover:bg-white/[0.05]">
@@ -83,39 +96,102 @@ export default function MessagesInboxPage() {
     setSettingsOpen(false);
   }, [convos]);
 
+  // Resolve a batch of peer ids in ONE request (replaces the per-conversation
+  // N+1 of /api/social/profile/{id}). Identity is kept stable (no `peers` dep)
+  // so realtime/load effects don't churn — the dedupe reads the latest cache
+  // through the functional setState below.
   const loadPeers = useCallback(async (ids: string[]) => {
-    const peersData: Record<string, PeerInfo> = {};
-    await Promise.all(ids.map(async (id) => {
-      const r = await fetch(`/api/social/profile/${encodeURIComponent(id)}`).catch(() => null);
-      if (r && r.ok) {
-        const pj = await r.json();
-        if (pj?.profile) peersData[id] = {
-          id: pj.profile.id, username: pj.profile.username,
-          display_name: pj.profile.display_name, avatar_url: pj.profile.avatar_url,
-        };
-      }
-    }));
-    setPeers((prev) => ({ ...prev, ...peersData }));
+    const unique = Array.from(new Set(ids));
+    try {
+      const r = await fetch('/api/social/profile/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: unique }),
+      });
+      if (!r.ok) return;
+      const j = await r.json();
+      const map = (j?.profiles ?? {}) as Record<string, PeerInfo>;
+      if (Object.keys(map).length) setPeers((prev) => ({ ...prev, ...map }));
+    } catch {
+      /* network blip — rows fall back to their placeholder name */
+    }
   }, []);
 
+  const loadConversations = useCallback(async () => {
+    try {
+      const res = await fetch('/api/social/dm/conversations');
+      const json = await res.json();
+      if (!res.ok) { setError(json.error ?? 'Failed'); return; }
+      const list: Conversation[] = json.conversations ?? [];
+      setConvos(list);
+      const ids = list.map((c) => c.peer_id);
+      if (ids.length) await loadPeers(ids);
+    } catch {
+      setError('Network error');
+    }
+  }, [loadPeers]);
+
+  useEffect(() => { void loadConversations(); }, [loadConversations]);
+
+  // Supabase Realtime — keep the inbox live without a refresh. New DMs and
+  // last-message changes land on dm_conversations (via the DB trigger); new
+  // requests + unread-count changes are driven by dm_messages INSERT/UPDATE.
+  // Mirrors the thread page's subscribe-and-resubscribe-on-visibility pattern.
   useEffect(() => {
     let cancelled = false;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cleanup: (() => void) | null = null;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
     (async () => {
-      try {
-        const res = await fetch('/api/social/dm/conversations');
-        const json = await res.json();
-        if (cancelled) return;
-        if (!res.ok) { setError(json.error ?? 'Failed'); return; }
-        const list: Conversation[] = json.conversations ?? [];
-        setConvos(list);
-        const ids = list.map((c) => c.peer_id);
-        if (ids.length) await loadPeers(ids);
-      } catch {
-        if (!cancelled) setError('Network error');
-      }
+      const { data } = await supabase.auth.getUser();
+      const uid = data.user?.id;
+      if (!uid || cancelled) return;
+
+      // Debounce the refetch: a single conversation can fire many
+      // dm_messages INSERT/UPDATE events in a burst (read-receipts, rapid
+      // back-and-forth), and an un-debounced refetch storms /api/social/dm/
+      // conversations once per event. Coalesce a burst into one trailing
+      // reload ~350ms after the last event.
+      const onChange = () => {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => { void loadConversations(); }, 350);
+      };
+      const subscribe = (suffix: string) =>
+        supabase
+          .channel(`inbox:${uid}${suffix}`)
+          // Either side of a conversation the user participates in.
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'dm_conversations', filter: `user_a_id=eq.${uid}` }, onChange)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'dm_conversations', filter: `user_b_id=eq.${uid}` }, onChange)
+          // Message inserts/read-state changes shift unread counts + previews.
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dm_messages' }, onChange)
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'dm_messages' }, onChange)
+          .subscribe();
+
+      channel = subscribe('');
+
+      const onVisibility = () => {
+        if (document.visibilityState !== 'visible' || !channel) return;
+        void supabase.removeChannel(channel);
+        channel = subscribe(`:${Date.now()}`);
+        void loadConversations();
+      };
+      document.addEventListener('visibilitychange', onVisibility);
+      cleanup = () => {
+        document.removeEventListener('visibilitychange', onVisibility);
+        if (debounceTimer) clearTimeout(debounceTimer);
+        if (channel) void supabase.removeChannel(channel);
+      };
+      if (cancelled) cleanup();
     })();
-    return () => { cancelled = true; };
-  }, [loadPeers]);
+
+    return () => {
+      cancelled = true;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      if (cleanup) cleanup();
+      else if (channel) void supabase.removeChannel(channel);
+    };
+  }, [loadConversations]);
 
   // Debounced user search.
   useEffect(() => {
@@ -151,7 +227,7 @@ export default function MessagesInboxPage() {
         )}
         <div className="min-w-0 flex-1">
           <div className={`text-sm truncate ${c.unread ? 'font-bold text-white' : 'font-semibold text-white'}`}>{peer?.display_name || peer?.username || 'Unknown user'}</div>
-          <div className="text-[11px] text-slate-500">@{peer?.username ?? '—'}</div>
+          <div className={`text-[11px] truncate ${c.unread ? 'text-slate-300' : 'text-slate-500'}`}>{previewText(c)}</div>
         </div>
         <div className="flex flex-col items-end gap-1">
           <div className="text-[11px] text-slate-500 tabular-nums">
@@ -178,7 +254,7 @@ export default function MessagesInboxPage() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search people by username or name…"
-            className="flex-1 bg-transparent outline-none text-sm text-white placeholder-slate-500 min-w-0"
+            className="flex-1 bg-transparent outline-none text-base text-white placeholder-slate-500 min-w-0"
           />
           {q && <button onClick={() => setQ('')} aria-label="Clear"><X className="w-3.5 h-3.5 text-slate-500 hover:text-white" /></button>}
         </div>
@@ -201,7 +277,11 @@ export default function MessagesInboxPage() {
                 <SettingToggle label="Notification sound" icon={Volume2} on={soundOn} onClick={() => { setSoundOn((v) => { const n = !v; try { localStorage.setItem('naka_dm_sound', n ? '1' : '0'); } catch {} return n; }); }} />
                 <SettingToggle label="Read receipts" icon={Eye} on={receiptsOn} onClick={() => { setReceiptsOn((v) => { const n = !v; try { localStorage.setItem('naka_dm_receipts', n ? '1' : '0'); } catch {} return n; }); }} />
                 <div className="my-1 border-t border-white/[0.06]" />
-                <div className="px-2 py-1.5 flex items-center gap-1.5 text-[10px] text-emerald-300/80"><Lock className="w-3 h-3" /> End-to-end encrypted</div>
+                {/* Encryption is per-conversation (E2E when both sides have keys,
+                    otherwise plaintext). The blanket "End-to-end encrypted" claim
+                    was misleading at the inbox level — each thread shows its own
+                    real state in its header instead. */}
+                <div className="px-2 py-1.5 flex items-center gap-1.5 text-[10px] text-white/50"><Lock className="w-3 h-3" /> Encryption is shown per conversation</div>
               </div>
             </>
           )}

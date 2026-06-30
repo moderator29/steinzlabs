@@ -7,12 +7,14 @@ import { RATES, takeToken } from '@/lib/social/rateLimit';
 import { notifySocialEvent } from '@/lib/social/notify';
 
 /**
- * GET  /api/social/dm/messages?conversation_id=...&before=<iso>&limit=50
- * POST /api/social/dm/messages   body: { conversation_id, encrypted_content, iv, message_type? }
+ * GET  /api/social/dm/messages?conversation_id=...&before=<iso>&before_id=<uuid>&limit=50
+ * POST /api/social/dm/messages   body: { conversation_id, encrypted_content, iv, message_type?, client_msg_id? }
  *
- * Server never touches plaintext. encrypted_content + iv are stored
- * verbatim. POST also bumps the conversation's last_message_at so
- * the inbox list orders correctly.
+ * encrypted_content + iv are stored verbatim. POST relies on the
+ * trg_dm_bump_last trigger to maintain the conversation's
+ * last_message_at / last_message_preview / last_message_sender. The
+ * (before, before_id) cursor keyset-paginates with a created_at+id
+ * tie-break so same-millisecond messages aren't skipped or duplicated.
  */
 
 export async function GET(req: NextRequest) {
@@ -23,6 +25,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid conversation_id' }, { status: 400 });
   }
   const before = req.nextUrl.searchParams.get('before');
+  const beforeId = req.nextUrl.searchParams.get('before_id');
   const limitParam = Number(req.nextUrl.searchParams.get('limit') ?? '50');
   const limit = Math.min(200, Math.max(1, Number.isFinite(limitParam) ? limitParam : 50));
 
@@ -58,8 +61,16 @@ export async function GET(req: NextRequest) {
     .eq('conversation_id', conversationId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
     .limit(limit);
-  if (before) q = q.lt('created_at', before);
+  // Keyset cursor with an (created_at, id) tie-break so same-millisecond
+  // messages aren't skipped or duplicated across pages. With both params:
+  // older = created_at < before OR (created_at = before AND id < before_id).
+  if (before && beforeId && z.string().uuid().safeParse(beforeId).success) {
+    q = q.or(`created_at.lt.${before},and(created_at.eq.${before},id.lt.${beforeId})`);
+  } else if (before) {
+    q = q.lt('created_at', before);
+  }
 
   const { data, error } = await q;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -73,6 +84,10 @@ const PostBody = z.object({
   encrypted_content: z.string().min(1).max(8192),
   iv: z.string().max(128),
   message_type: z.enum(['text', 'image', 'system']).optional(),
+  // Client-generated idempotency key. The unique index
+  // dm_messages_client_dedupe (conversation_id, sender_id, client_msg_id)
+  // dedupes retries; a duplicate is treated as a successful re-send.
+  client_msg_id: z.string().uuid().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -122,7 +137,6 @@ export async function POST(req: NextRequest) {
     if (!decision.allowed) return NextResponse.json({ error: `DM not permitted: ${decision.reason}` }, { status: 403 });
   }
 
-  const nowIso = new Date().toISOString();
   const { data, error } = await sb
     .from('dm_messages')
     .insert({
@@ -131,12 +145,28 @@ export async function POST(req: NextRequest) {
       encrypted_content: parsed.data.encrypted_content,
       iv: parsed.data.iv,
       message_type: parsed.data.message_type ?? 'text',
+      client_msg_id: parsed.data.client_msg_id ?? null,
     })
     .select('id, conversation_id, sender_id, encrypted_content, iv, message_type, created_at')
     .single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  await sb.from('dm_conversations').update({ last_message_at: nowIso }).eq('id', parsed.data.conversation_id);
+  if (error) {
+    // Idempotent retry: a duplicate (conversation_id, sender_id, client_msg_id)
+    // means the original send already landed. Return the existing row as success
+    // instead of a 500 so the client doesn't double-send or surface an error.
+    if (error.code === '23505' && parsed.data.client_msg_id) {
+      const { data: existing } = await sb
+        .from('dm_messages')
+        .select('id, conversation_id, sender_id, encrypted_content, iv, message_type, created_at')
+        .eq('conversation_id', parsed.data.conversation_id)
+        .eq('sender_id', user.id)
+        .eq('client_msg_id', parsed.data.client_msg_id)
+        .maybeSingle();
+      if (existing) return NextResponse.json({ message: existing, deduped: true });
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  // last_message_at + last_message_preview + last_message_sender are maintained
+  // by the trg_dm_bump_last trigger on insert — no manual update needed.
 
   // Fire-and-forget social notification to peer. A first message in a
   // still-pending request (sent by the requester) notifies as a "Message
@@ -147,7 +177,10 @@ export async function POST(req: NextRequest) {
     notifySocialEvent({
       recipient_id: peerId,
       event: isPendingRequest ? 'dm_request' : 'dm_received',
-      metadata: { sender_id: user.id, conversation_id: parsed.data.conversation_id },
+      // message_id is the per-message discriminator the dm_received dedup key
+      // needs: without it every message in a conversation collapses onto the
+      // first within the 5-min window and back-to-back DMs are suppressed.
+      metadata: { sender_id: user.id, conversation_id: parsed.data.conversation_id, message_id: data.id },
     }).catch(() => {});
   }
 

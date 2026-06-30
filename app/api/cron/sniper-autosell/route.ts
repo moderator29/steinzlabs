@@ -17,8 +17,8 @@
 import { NextRequest } from "next/server";
 import { verifyCron, cronResponse, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { getCurrentTokenPriceUsd, getEvmTokenDecimals } from "@/lib/sniper/priceFeed";
-import { usdcForChain } from "@/lib/trading/usdc";
+import { getCurrentTokenPriceUsd, getEvmTokenDecimalsStrict, getSolanaTokenDecimals } from "@/lib/sniper/priceFeed";
+import { usdcForChain, usdcBaseUnitsToUsd } from "@/lib/trading/usdc";
 import { evaluatePosition } from "@/lib/sniper/autosell";
 import { tryExecuteSellViaSessionKey } from "@/lib/trading/sessionKeyExecutor";
 import type { SniperChain } from "@/lib/sniper/chains";
@@ -38,6 +38,7 @@ interface OpenPosition {
   tokens_received: number | null;
   entry_price_usd: number | null;
   peak_price_usd: number | null;
+  pnl_usd: number | null;
   wallet_address: string | null;
   sell_pending_trade_id: string | null;
 }
@@ -89,7 +90,7 @@ export async function GET(request: NextRequest) {
     .from("sniper_executions")
     .select(
       "id,user_id,criteria_id,chain,token_address,token_symbol,amount_native," +
-        "tokens_received,entry_price_usd,peak_price_usd,wallet_address,sell_pending_trade_id",
+        "tokens_received,entry_price_usd,peak_price_usd,pnl_usd,wallet_address,sell_pending_trade_id",
     )
     .eq("status", "confirmed")
     .is("realized_at", null)
@@ -163,7 +164,19 @@ export async function GET(request: NextRequest) {
     // Resolve real on-chain decimals once — needed for both correct pricing
     // and base-unit sell sizing (the sell amount_in must be wei, not whole
     // tokens, or the swap sells ~nothing yet marks the position realized).
-    const decimals = await getEvmTokenDecimals(pos.chain as string, pos.token_address);
+    // A failed decimals read must SKIP this tick, never assume 18: the sell
+    // amount is scaled by 10**decimals and flows as base units straight into the
+    // aggregator (0x for EVM, Jupiter for Solana). Assuming 18 for a 6/8/9-dp
+    // token over-scales by 1e9–1e12x — the swap reverts on insufficient balance
+    // and the protective sell silently never fires. EVM reads on-chain decimals;
+    // Solana reads the SPL mint decimals from the Jupiter token list.
+    const decimals = pos.chain === "solana"
+      ? await getSolanaTokenDecimals(pos.token_address)
+      : await getEvmTokenDecimalsStrict(pos.chain as string, pos.token_address);
+    if (decimals == null) {
+      summary.push({ id: pos.id, action: "skip", reason: "token decimals unavailable — retry next tick" });
+      continue;
+    }
     const currentPriceUsd = await getCurrentTokenPriceUsd(
       pos.chain as SniperChain,
       pos.token_address,
@@ -245,19 +258,33 @@ export async function GET(request: NextRequest) {
         slippageBps: c.max_slippage_bps ?? 200,
       });
       if (aa?.txHash) {
-        // Closed on-chain. Mark realized so the next tick skips it, and record
-        // an approximate realized PnL from the price delta at trigger time.
+        // The M3 balance cap can sell LESS than requested (stale/inflated
+        // tokens_received, or a partially-drained kernel). Use the ACTUAL sold
+        // amount, not tokens_received, for PnL — and only fully close the position
+        // when essentially all of it sold; otherwise decrement the remainder and
+        // leave it open so the next tick can finish unwinding it.
+        const soldBase = aa.sellAmountBaseUnits ? BigInt(aa.sellAmountBaseUnits) : BigInt(tokenAmountBaseUnits);
+        const reqBase = BigInt(tokenAmountBaseUnits);
+        const tokensSold = Number(soldBase) / 10 ** decimals;
+        const proceedsUsd = aa.buyAmountBaseUnits ? usdcBaseUnitsToUsd(aa.buyAmountBaseUnits, pos.chain) : null;
         const realizedPnlUsd =
-          pos.entry_price_usd != null
-            ? (currentPriceUsd - pos.entry_price_usd) * (pos.tokens_received ?? 0)
-            : null;
+          proceedsUsd != null && pos.entry_price_usd != null
+            ? proceedsUsd - pos.entry_price_usd * tokensSold
+            : pos.entry_price_usd != null
+              ? (currentPriceUsd - pos.entry_price_usd) * tokensSold
+              : null;
+        // Fully sold if not capped down (allow tiny rounding slack).
+        const fullySold = soldBase * BigInt(1000) >= reqBase * BigInt(999);
+        const remainingTokens = Math.max(0, (pos.tokens_received ?? 0) - tokensSold);
         await supabase
           .from("sniper_executions")
           .update({
             sell_tx_hash: aa.txHash,
             sell_dispatched_at: new Date().toISOString(),
-            realized_at: new Date().toISOString(),
-            ...(realizedPnlUsd != null ? { pnl_usd: realizedPnlUsd } : {}),
+            ...(fullySold ? { realized_at: new Date().toISOString() } : { tokens_received: remainingTokens }),
+            // Accumulate — a partial sell already recorded a chunk; don't overwrite
+            // it and lose the earlier chunk's realized PnL (it feeds reputation/stats).
+            ...(realizedPnlUsd != null ? { pnl_usd: (pos.pnl_usd ?? 0) + realizedPnlUsd } : {}),
           })
           .eq("id", pos.id)
           .is("realized_at", null);
@@ -265,7 +292,7 @@ export async function GET(request: NextRequest) {
         summary.push({
           id: pos.id,
           action: "sell",
-          reason: `${decision.reason ?? "trigger"} (AA session key)`,
+          reason: `${decision.reason ?? "trigger"} (AA session key${fullySold ? "" : ", partial"})`,
           pnlPct: decision.pnlPct,
         });
         continue;

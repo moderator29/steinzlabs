@@ -41,16 +41,20 @@ const RPC_BY_CHAIN: Record<string, string> = {
 const decimalsCache = new Map<string, number>();
 
 /**
- * On-chain ERC-20 decimals() via a raw eth_call. Cached. Defaults to 18 when
- * the RPC is unreachable or the token doesn't implement decimals — callers use
- * this to scale whole-token amounts to base units for swaps and pricing.
+ * On-chain ERC-20 decimals() via a raw eth_call. Cached. Returns null when the
+ * RPC is unreachable, returns a malformed reply, or the token doesn't implement
+ * decimals — so MONEY-PATH callers (auto-sell sizing, market-maker pricing) can
+ * SKIP the position instead of silently assuming 18. Assuming 18 for a 6- or
+ * 8-decimal token mis-scales the sell amount by 1e10–1e12x, which either sells
+ * dust (and falsely marks the position realized) or over-reports price and
+ * fires a false take-profit. A skipped tick simply retries next cron pass.
  */
-export async function getEvmTokenDecimals(chain: string, tokenAddress: string): Promise<number> {
+export async function getEvmTokenDecimalsStrict(chain: string, tokenAddress: string): Promise<number | null> {
   const key = `${chain}:${tokenAddress.toLowerCase()}`;
   const cached = decimalsCache.get(key);
   if (cached != null) return cached;
   const rpc = RPC_BY_CHAIN[chain];
-  if (!rpc) return 18;
+  if (!rpc) return null;
   try {
     const res = await fetch(rpc, {
       method: "POST",
@@ -67,8 +71,44 @@ export async function getEvmTokenDecimals(chain: string, tokenAddress: string): 
       const d = parseInt(hex, 16);
       if (Number.isFinite(d) && d >= 0 && d <= 36) { decimalsCache.set(key, d); return d; }
     }
-  } catch { /* fall through to default */ }
-  return 18;
+  } catch { /* fall through to null */ }
+  return null;
+}
+
+/**
+ * Lenient decimals read for DISPLAY / non-money paths: defaults to 18 when the
+ * strict read can't resolve. Never use this to size a swap or compute PnL — use
+ * getEvmTokenDecimalsStrict and skip on null there.
+ */
+export async function getEvmTokenDecimals(chain: string, tokenAddress: string): Promise<number> {
+  return (await getEvmTokenDecimalsStrict(chain, tokenAddress)) ?? 18;
+}
+
+// Solana decimals are cached under a CASE-SENSITIVE key — Solana mint addresses
+// are case-sensitive (CLAUDE.md: never lowercase a Solana address), unlike the
+// EVM cache which lowercases.
+const solDecimalsCache = new Map<string, number>();
+
+/**
+ * SPL mint decimals via the Jupiter token list. Returns null on failure (RPC/
+ * list miss) so MONEY-PATH callers SKIP the position instead of assuming a wrong
+ * default — SPL tokens are typically 6 or 9 decimals, so assuming 18 over-scales
+ * a sell amount by 1e9–1e12x (the swap then reverts on insufficient balance and
+ * the protective sell silently never fires). Never default this for sizing.
+ */
+export async function getSolanaTokenDecimals(mint: string): Promise<number | null> {
+  const cached = solDecimalsCache.get(mint);
+  if (cached != null) return cached;
+  try {
+    const res = await fetch(`https://tokens.jup.ag/token/${mint}`, { signal: AbortSignal.timeout(7000) });
+    if (!res.ok) return null;
+    const t = await res.json();
+    if (t && typeof t.decimals === 'number' && t.decimals >= 0 && t.decimals <= 18) {
+      solDecimalsCache.set(mint, t.decimals);
+      return t.decimals;
+    }
+  } catch { /* fall through to null */ }
+  return null;
 }
 
 async function priceUsdSolana(mint: string): Promise<number | null> {
