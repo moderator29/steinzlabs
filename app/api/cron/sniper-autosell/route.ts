@@ -38,6 +38,7 @@ interface OpenPosition {
   tokens_received: number | null;
   entry_price_usd: number | null;
   peak_price_usd: number | null;
+  pnl_usd: number | null;
   wallet_address: string | null;
   sell_pending_trade_id: string | null;
 }
@@ -89,7 +90,7 @@ export async function GET(request: NextRequest) {
     .from("sniper_executions")
     .select(
       "id,user_id,criteria_id,chain,token_address,token_symbol,amount_native," +
-        "tokens_received,entry_price_usd,peak_price_usd,wallet_address,sell_pending_trade_id",
+        "tokens_received,entry_price_usd,peak_price_usd,pnl_usd,wallet_address,sell_pending_trade_id",
     )
     .eq("status", "confirmed")
     .is("realized_at", null)
@@ -269,7 +270,9 @@ export async function GET(request: NextRequest) {
             sell_tx_hash: aa.txHash,
             sell_dispatched_at: new Date().toISOString(),
             ...(fullySold ? { realized_at: new Date().toISOString() } : { tokens_received: remainingTokens }),
-            ...(realizedPnlUsd != null ? { pnl_usd: realizedPnlUsd } : {}),
+            // Accumulate — a partial sell already recorded a chunk; don't overwrite
+            // it and lose the earlier chunk's realized PnL (it feeds reputation/stats).
+            ...(realizedPnlUsd != null ? { pnl_usd: (pos.pnl_usd ?? 0) + realizedPnlUsd } : {}),
           })
           .eq("id", pos.id)
           .is("realized_at", null);

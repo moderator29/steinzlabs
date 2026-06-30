@@ -185,9 +185,13 @@ export async function notifySocialEvent({ recipient_id, event, metadata }: Notif
     const wantsFanout = event === 'dm_received' || event === 'new_follower';
     if (!wantsFanout) return;
 
+    // Defaults match the social_notification_preferences column defaults when the
+    // user has no row yet: push opt-OUT (default on), email + Telegram opt-IN
+    // (default off). Otherwise an un-configured user would get email/Telegram
+    // fanout the schema intends to be opt-in.
     const pushOn     = prefs ? prefRow[CHANNEL_PREF.push] !== false     : true;
-    const emailOn    = prefs ? prefRow[CHANNEL_PREF.email] !== false    : true;
-    const telegramOn = prefs ? prefRow[CHANNEL_PREF.telegram] !== false : true;
+    const emailOn    = prefs ? prefRow[CHANNEL_PREF.email] !== false    : false;
+    const telegramOn = prefs ? prefRow[CHANNEL_PREF.telegram] !== false : false;
 
     if (pushOn) {
       try {
