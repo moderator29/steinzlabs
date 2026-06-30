@@ -8,6 +8,8 @@ import {
 } from '@/components/icons/brand';
 import { ToggleLeft, ToggleRight, Rocket, History } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { alertsHowItWorks } from '@/lib/howItWorks/content/alerts';
 import { useNavState } from '@/lib/nav/useNavState';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
@@ -793,6 +795,7 @@ export default function AlertsPage() {
           <BackButton />
           <Bell className="w-5 h-5 text-[#0066FF]" />
           <h1 className="text-sm font-heading font-bold">Smart Alerts</h1>
+          <HowItWorksButton content={alertsHowItWorks} className="shrink-0" />
           <button
             onClick={() => { setCreateError(null); setShowCreate(true); }}
             className="nl-btn-neon ms-auto px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold"

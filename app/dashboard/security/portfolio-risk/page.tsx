@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { PieChart, AlertTriangle, CheckCircle, Loader2, ShieldAlert } from 'lucide-react';
 import { useNakaWallet } from '@/lib/hooks/useNakaWallet';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { portfolioHowItWorks } from '@/lib/howItWorks/content/portfolio';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { TiltCard } from '@/components/brand/TiltCard';
 
@@ -125,6 +127,7 @@ export default function PortfolioRiskPage() {
             </button>
           ))}
         </div>
+        <HowItWorksButton content={portfolioHowItWorks} className="ms-auto shrink-0" />
       </div>
 
       {loading && (
