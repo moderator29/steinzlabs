@@ -109,6 +109,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Not a participant' }, { status: 403 });
   }
 
+  // A declined message request is final: the requester must not be able to keep
+  // depositing messages into it (which would still fire dm_received push/email at
+  // the decliner — a harassment vector). Freeze the thread for both sides.
+  if (conv.request_state === 'declined') {
+    return NextResponse.json({ error: 'This message request was declined.' }, { status: 403 });
+  }
+
   // Replying to a pending request implicitly accepts it (X/IG behavior) —
   // only the recipient (not the original requester) can accept this way.
   if (conv.request_state === 'pending' && conv.requested_by && conv.requested_by !== user.id) {

@@ -5,7 +5,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getDexPrice } from "@/lib/services/dexscreener";
 import { executeTrade } from "@/lib/trading/relayer";
 import { usdcForChain } from "@/lib/trading/usdc";
-import { getEvmTokenDecimals } from "@/lib/sniper/priceFeed";
+import { getTokenDecimalsForSizing } from "@/lib/sniper/priceFeed";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -145,7 +145,14 @@ export async function GET(request: NextRequest) {
     const slExitAddr = /^0x[a-fA-F0-9]{40}$/.test(order.exit_to_token_address)
       ? order.exit_to_token_address
       : (usdcForChain(order.chain) ?? order.exit_to_token_address);
-    const slFromDecimals = await getEvmTokenDecimals(order.chain, order.token_address);
+    // Resolve the held token's real decimals and SKIP on failure rather than
+    // assuming 18: a 6/8-dp token mis-scaled by 1e10–1e12x makes the protective
+    // sell revert (it never fires), leaving the user's position unprotected.
+    const slFromDecimals = await getTokenDecimalsForSizing(order.chain, order.token_address);
+    if (slFromDecimals == null) {
+      Sentry.captureMessage(`stop-loss-monitor: token decimals unavailable for ${order.chain}:${order.token_address} — skipping order ${order.id} this tick`);
+      continue;
+    }
     const slAmountInBase = (BigInt(Math.round(Number(order.position_amount) * 1e6)) * (BigInt(10) ** BigInt(slFromDecimals)) / BigInt(1e6)).toString();
 
     const result = await executeTrade({

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { getEvmTokenDecimalsStrict } from "@/lib/sniper/priceFeed";
+import { getTokenDecimalsForSizing } from "@/lib/sniper/priceFeed";
 import { usdcBaseUnitsToUsd } from "@/lib/trading/usdc";
 import { getDexPriceForChain } from "@/lib/services/dexscreener";
 
@@ -193,10 +193,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
           // tokens_received as WHOLE tokens (÷10**decimals) so autosell — which
           // scales whole→base — doesn't double-scale, and the numeric stays well
           // within JS-number precision.
-          // Strict token decimals: on an RPC miss, leave tokens_received null
-          // (autosell skips with "tokens_received unknown") rather than dividing
-          // by a wrong 18 and corrupting the stored whole-token count.
-          const tokDecimals = await getEvmTokenDecimalsStrict(pending.chain, pending.to_token_address);
+          // Real token decimals (EVM strict on-chain, Solana via SPL mint list).
+          // On a miss, leave tokens_received null (autosell skips with
+          // "tokens_received unknown") rather than dividing by a wrong 18 and
+          // corrupting the stored whole-token count. Using the chain-dispatch
+          // helper means solana buys get a correct count instead of always null.
+          const tokDecimals = await getTokenDecimalsForSizing(pending.chain, pending.to_token_address);
           const tokensReceived = (tokDecimals != null && body.clientReportedAmountOut)
             ? Number(body.clientReportedAmountOut) / 10 ** tokDecimals
             : null;
