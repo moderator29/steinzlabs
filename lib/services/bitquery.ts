@@ -416,6 +416,54 @@ export async function bitqueryDiagnostic(
 
 export { SOLANA_QUERY, EVM_QUERY };
 
+const CHAIN_METRICS_EVM_QUERY = `
+  query ChainMetrics($network: evm_network, $since: DateTime) {
+    EVM(network: $network) {
+      DEXTrades(where: { Block: { Time: { since: $since } } }) {
+        volumeUsd: sum(of: Trade_Buy_AmountInUSD)
+        activeAddresses: uniq(of: Trade_Buy_Buyer)
+      }
+    }
+  }`;
+
+const CHAIN_METRICS_SOL_QUERY = `
+  query SolChainMetrics($since: DateTime) {
+    Solana {
+      DEXTrades(where: { Block: { Time: { since: $since } } }) {
+        volumeUsd: sum(of: Trade_Buy_AmountInUSD)
+        activeAddresses: uniq(of: Trade_Buy_Account_Owner)
+      }
+    }
+  }`;
+
+/**
+ * Real DEX volume + unique active trader count for a chain since `sinceIso`.
+ * Powers the on-chain trends Volume/Addresses cards with REAL data (replacing
+ * placeholders). Fails closed (returns null) — never fabricates.
+ */
+export async function getChainDexMetrics(
+  chain: string,
+  sinceIso: string,
+): Promise<{ volumeUsd: number; activeAddresses: number } | null> {
+  if (!isBitqueryEnabled() || !sinceIso) return null;
+  const c = chain.toLowerCase();
+  const isSolana = c === 'solana';
+  const network = isSolana ? null : EVM_NETWORK_BY_CHAIN[c];
+  if (!isSolana && !network) return null;
+  try {
+    const json = (await bitqueryPost(
+      isSolana ? CHAIN_METRICS_SOL_QUERY : CHAIN_METRICS_EVM_QUERY,
+      isSolana ? { since: sinceIso } : { network, since: sinceIso },
+    )) as { data?: { EVM?: { DEXTrades?: unknown[] }; Solana?: { DEXTrades?: unknown[] } } } | null;
+    const rows = (isSolana ? json?.data?.Solana?.DEXTrades : json?.data?.EVM?.DEXTrades) ?? [];
+    const row = Array.isArray(rows) ? (rows[0] as Record<string, unknown> | undefined) : undefined;
+    if (!row) return null;
+    return { volumeUsd: num(row.volumeUsd), activeAddresses: num(row.activeAddresses) };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Top DEX traders on `chain` since `sinceIso`, by USD volume, with trade count
  * and distinct active-day count so the caller can apply activity filters.
