@@ -78,9 +78,23 @@ const LaunchParams = z.object({
   keywords: z.array(z.string().max(40)).max(10).default([]),
 });
 
-const PostBody = z.discriminatedUnion('type', [
+const SmartPostBody = z.discriminatedUnion('type', [
   PriceParams, WhaleParams, WalletActivityParams, LaunchParams,
 ]);
+
+// Legacy shape still used by the older /app/alerts page. Kept working so this
+// change stays scoped to the dashboard alerts feature without breaking that
+// surface. These rows are stored verbatim under their uppercase alert_type.
+const LEGACY_TYPES = ['PRICE', 'VOLUME', 'WHALE', 'ENTITY_MOVEMENT', 'SCAMMER'] as const;
+const LegacyPostBody = z.object({
+  alert_type: z.enum(LEGACY_TYPES),
+  label: z.string().min(1).max(140).optional(),
+  condition: z.object({
+    token: z.string().min(1).max(120),
+    threshold: z.union([z.string(), z.number()]).optional(),
+    direction: z.enum(['above', 'below']).optional(),
+  }),
+});
 
 const PatchBody = z.object({
   id: z.string().uuid(),
@@ -100,16 +114,22 @@ interface AlertRow {
   created_at: string;
 }
 
+// Superset shape: the dashboard page reads `type`/`name`/`triggerCount`, while
+// the legacy /app/alerts page reads `alert_type`/`label`. Returning both keeps
+// both consumers working off one endpoint.
 function toApi(r: AlertRow) {
   const cursor = (r.condition?.cursor ?? {}) as { triggerCount?: number; lastTriggered?: number };
   return {
     id: r.id,
     type: r.alert_type as SmartAlertType,
+    alert_type: r.alert_type,
     name: r.label,
+    label: r.label,
     active: r.active,
     triggered: r.triggered,
     triggeredAt: r.triggered_at,
     createdAt: r.created_at,
+    created_at: r.created_at,
     triggerCount: typeof cursor.triggerCount === 'number' ? cursor.triggerCount : 0,
     lastTriggered: typeof cursor.lastTriggered === 'number' ? cursor.lastTriggered : undefined,
     condition: r.condition,
@@ -129,7 +149,6 @@ export async function GET() {
     .from('alerts')
     .select(SELECT)
     .eq('user_id', user.id)
-    .in('alert_type', ['price', 'whale', 'launch', 'wallet_activity'])
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -145,7 +164,32 @@ export async function POST(request: NextRequest) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const parsed = PostBody.safeParse(await request.json().catch(() => null));
+  const rawBody = await request.json().catch(() => null);
+
+  // Legacy /app/alerts page sends { alert_type: 'PRICE'|… , condition: {token…} }.
+  // Preserve that contract verbatim so this dashboard change stays scoped.
+  if (rawBody && typeof rawBody === 'object' && 'alert_type' in rawBody && !('type' in rawBody)) {
+    const legacy = LegacyPostBody.safeParse(rawBody);
+    if (!legacy.success) {
+      return NextResponse.json({ error: 'Invalid payload', details: legacy.error.issues }, { status: 400 });
+    }
+    const label = legacy.data.label ?? `${legacy.data.alert_type} ${legacy.data.condition.token}`;
+    const { data, error } = await supabase
+      .from('alerts')
+      .insert({
+        user_id: user.id,
+        alert_type: legacy.data.alert_type,
+        label,
+        condition: legacy.data.condition,
+        active: true,
+      })
+      .select(SELECT)
+      .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ alert: toApi(data as AlertRow) });
+  }
+
+  const parsed = SmartPostBody.safeParse(rawBody);
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid payload', details: parsed.error.issues }, { status: 400 });
   }

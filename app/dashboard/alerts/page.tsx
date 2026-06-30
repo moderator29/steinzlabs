@@ -698,7 +698,10 @@ export default function AlertsPage() {
       if (res.status === 401) { setLoadError('Sign in to manage your alerts.'); setAlerts([]); return; }
       if (!res.ok) { setLoadError('Could not load alerts.'); return; }
       const data = await res.json() as { alerts: ServerAlert[] };
-      setAlerts(data.alerts || []);
+      // This page owns the four smart-alert types; ignore legacy rows created
+      // by the older /alerts surface so we never render an unknown type.
+      const known: CreateTab[] = ['price', 'whale', 'launch', 'wallet_activity'];
+      setAlerts((data.alerts || []).filter(a => known.includes(a.type)));
       setLoadError(null);
     } catch {
       setLoadError('Could not load alerts.');
