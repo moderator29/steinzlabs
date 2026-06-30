@@ -45,5 +45,3 @@ export const alertsHowItWorks: HowItWorksContent = {
     },
   ],
 };
-</content>
-</invoke>
