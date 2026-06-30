@@ -68,6 +68,84 @@ interface WalletData {
   } | null;
 }
 
+interface MultiChainResult {
+  address: string;
+  totalUsd: number;
+  chainsWithBalance: number;
+  chainsScanned: number;
+  breakdown: Array<{
+    chain: string;
+    chainName: string;
+    nativeSymbol: string;
+    totalBalanceUsd: number;
+    tokenCount: number;
+    txCount: number;
+  }>;
+}
+
+const CHAIN_DOT: Record<string, string> = {
+  ethereum: '#627EEA', base: '#0052FF', arbitrum: '#28A0F0',
+  polygon: '#8247E5', avalanche: '#E84142', bsc: '#F0B90B',
+};
+
+// ─── Multi-Chain Aggregate ──────────────────────────────────────────────────────
+// One net-worth figure across every supported EVM chain, with a per-chain
+// breakdown bar. Real priced balances only; renders nothing until the lazy
+// fetch returns at least one chain with a balance.
+function MultiChainBalances({ data, loading }: { data: MultiChainResult | null; loading: boolean }) {
+  if (loading && !data) {
+    return (
+      <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e] flex items-center gap-2 text-xs text-gray-500">
+        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0066FF]" /> Aggregating balances across chains…
+      </div>
+    );
+  }
+  if (!data || data.breakdown.length === 0) return null;
+  const priced = data.breakdown.filter(c => c.totalBalanceUsd > 0);
+  if (priced.length === 0) return null;
+  const total = data.totalUsd || priced.reduce((s, c) => s + c.totalBalanceUsd, 0);
+
+  return (
+    <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Wallet className="w-4 h-4 text-[#0066FF]" />
+          <h3 className="font-bold text-sm">Multi-Chain Net Worth</h3>
+        </div>
+        <span className="text-[10px] text-gray-500">{data.chainsWithBalance} of {data.chainsScanned} chains</span>
+      </div>
+      <div className="text-2xl font-bold text-white">
+        ${total.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+      </div>
+      {/* Stacked proportion bar */}
+      <div className="flex h-2 rounded-full overflow-hidden mt-3 bg-black/30">
+        {priced.map(c => (
+          <div
+            key={c.chain}
+            style={{ width: `${(c.totalBalanceUsd / total) * 100}%`, backgroundColor: CHAIN_DOT[c.chain] ?? '#6F7EFF' }}
+            title={`${c.chainName} · $${c.totalBalanceUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
+          />
+        ))}
+      </div>
+      <div className="mt-3 space-y-1.5">
+        {priced.map(c => (
+          <div key={c.chain} className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: CHAIN_DOT[c.chain] ?? '#6F7EFF' }} />
+              <span className="font-semibold text-white truncate">{c.chainName}</span>
+              <span className="text-[10px] text-gray-500">{c.tokenCount} {c.tokenCount === 1 ? 'token' : 'tokens'}</span>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="font-mono text-gray-300">${c.totalBalanceUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+              <span className="text-[10px] text-gray-600 font-mono w-9 text-end">{Math.round((c.totalBalanceUsd / total) * 100)}%</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Recent Transactions ───────────────────────────────────────────────────────
 function RecentTransactions({ transactions, chain, walletAddress }: { transactions: RecentTx[]; chain: string; walletAddress: string }) {
   const [expanded, setExpanded] = useState(false);
@@ -386,6 +464,8 @@ export default function WalletIntelligencePage() {
     },
   );
   const [walletData, setWalletData] = useState<WalletData | null>(null);
+  const [multiChain, setMultiChain] = useState<MultiChainResult | null>(null);
+  const [multiChainLoading, setMultiChainLoading] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<AiAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
@@ -426,6 +506,7 @@ export default function WalletIntelligencePage() {
     setLoading(true);
     setError('');
     setWalletData(null);
+    setMultiChain(null);
     setAiAnalysis(null);
 
     try {
@@ -444,6 +525,17 @@ export default function WalletIntelligencePage() {
 
       setWalletData(data);
       setLoading(false);
+
+      // Lazy multi-chain aggregate (EVM only) — runs after the primary view so
+      // it never blocks first paint. The viewed chain is a cache hit server-side.
+      if (addrType === 'EVM') {
+        setMultiChainLoading(true);
+        fetch(`/api/wallet-intelligence/multichain?address=${encodeURIComponent(trimmed)}`)
+          .then(r => (r.ok ? r.json() : null))
+          .then(mc => { if (mc && Array.isArray(mc.breakdown)) setMultiChain(mc); })
+          .catch(() => {})
+          .finally(() => setMultiChainLoading(false));
+      }
 
       setAiLoading(true);
       try {
@@ -708,6 +800,9 @@ export default function WalletIntelligencePage() {
                   </div>
                 </div>
 
+
+                {/* Multi-chain net worth — EVM only, lazy aggregate across chains */}
+                <MultiChainBalances data={multiChain} loading={multiChainLoading} />
 
                 {/* Realized PnL (90d) — real FIFO cost basis from Bitquery DEX
                     trades. Only shown when there are priced trades to report. */}
