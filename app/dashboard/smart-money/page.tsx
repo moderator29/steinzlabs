@@ -13,6 +13,8 @@ import {
 } from '@/components/icons/brand';
 import { Trophy, DollarSign, Target, Users, Zap, Loader2, Flame, ArrowUpRight, SortAsc, Award, Building2, Settings2, Radio } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { smartMoneyHowItWorks } from '@/lib/howItWorks/content/smart-money';
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { addLocalNotification } from '@/lib/notifications';
@@ -211,6 +213,7 @@ export default function SmartMoneyPage() {
             <button onClick={() => fetchData()} className="p-1.5 hover:bg-white/[0.06] rounded-lg transition-colors text-gray-500 hover:text-gray-300" title="Refresh">
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             </button>
+            <HowItWorksButton content={smartMoneyHowItWorks} className="ms-auto shrink-0" />
           </div>
         </div>
 

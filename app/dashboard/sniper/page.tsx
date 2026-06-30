@@ -30,6 +30,8 @@ import { SourceFilterRow } from '@/components/sniper/SourceFilterRow';
 import { TokenCard } from '@/components/sniper/TokenCard';
 import { FeedSoundToggle } from '@/components/sniper/FeedSoundToggle';
 import { useFeedSound } from '@/lib/sniper/useFeedSound';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { sniperHowItWorks } from '@/lib/howItWorks/content/sniper';
 
 interface SniperCriteriaRow {
   id: string;
@@ -390,6 +392,7 @@ export default function SniperPage() {
                 </div>
                 <p className="text-[11px] sm:text-xs text-white/50">Sub-2s execution · EVM · MEV-protected · Shadow Guardian gated</p>
               </div>
+              <HowItWorksButton content={sniperHowItWorks} className="ms-auto shrink-0" />
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">

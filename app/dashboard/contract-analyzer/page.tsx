@@ -10,6 +10,8 @@ import {
 import BackButton from '@/components/ui/BackButton';
 import { isEvmAddress, isSolanaAddress } from '@/lib/utils/addressNormalize';
 import { RelatedTokensPanels } from '@/components/security/RelatedTokensPanels';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { contractAnalyzerHowItWorks } from '@/lib/howItWorks/content/contract-analyzer';
 
 interface Socials { twitter?: string; telegram?: string; website?: string }
 interface Launchpad { id: string; label: string }
@@ -161,6 +163,7 @@ function ContractAnalyzerInner() {
             <h1 className="text-sm font-heading font-bold">Contract Analyzer</h1>
             <p className="text-[10px] text-gray-500">Deep contract security analysis and rug detection</p>
           </div>
+          <HowItWorksButton content={contractAnalyzerHowItWorks} className="ms-auto shrink-0" />
         </div>
       </div>
 

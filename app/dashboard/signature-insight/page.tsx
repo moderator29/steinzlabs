@@ -7,6 +7,8 @@ import {
   XCircle, Shield, Loader2, Info, ChevronDown, ChevronUp
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { signatureInsightHowItWorks } from '@/lib/howItWorks/content/signature-insight';
 
 interface DecodeResult {
   functionName: string;
@@ -97,6 +99,7 @@ export default function SignatureInsightPage() {
             <h1 className="text-sm font-heading font-bold">Signature Insight</h1>
             <p className="text-[10px] text-gray-500">Decode and analyze transaction signatures</p>
           </div>
+          <HowItWorksButton content={signatureInsightHowItWorks} className="ms-auto shrink-0" />
         </div>
       </div>
 

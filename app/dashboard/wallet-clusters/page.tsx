@@ -14,6 +14,8 @@ import {
   Brain, Bot, Activity, Crown, Cpu, Layers, ChevronRight, X, Download,
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { walletClustersHowItWorks } from '@/lib/howItWorks/content/wallet-clusters';
 
 type Archetype =
   | 'alpha_hive' | 'sybil_farm' | 'insider_ring' | 'smart_money_pack'
@@ -177,6 +179,7 @@ export default function WalletClustersPage() {
           >
             <Download className="w-4 h-4" />
           </button>
+          <HowItWorksButton content={walletClustersHowItWorks} className="shrink-0" />
         </div>
 
         {/* Search + sort + min-score */}

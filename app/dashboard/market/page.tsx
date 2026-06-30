@@ -18,6 +18,8 @@ import { LoadingSkeleton } from "@/components/market/LoadingSkeleton";
 import { ErrorState } from "@/components/market/ErrorState";
 import { resolveTokenChain } from "@/lib/market/tokenChainResolver";
 import { useNavState } from "@/lib/nav/useNavState";
+import { HowItWorksButton } from "@/components/common/HowItWorks";
+import { marketHowItWorks } from "@/lib/howItWorks/content/market";
 
 type CategoryId = "all" | "majors" | "defi" | "layer1" | "layer2" | "gaming" | "ai" | "meme" | "depin" | "pumpfun" | "bnb-meme";
 
@@ -173,6 +175,7 @@ export default function DashboardMarketPage() {
           <h1 className="text-2xl font-bold text-white">Market</h1>
           <p className="text-sm text-slate-400">Live prices across the top assets. Click any row to open its trading terminal.</p>
         </div>
+        <HowItWorksButton content={marketHowItWorks} className="ms-auto shrink-0" />
       </div>
 
       {/* Search + Filters */}

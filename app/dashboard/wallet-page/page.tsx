@@ -30,6 +30,8 @@ import { encryptPrivateKey, decryptPrivateKey, verifyWalletPassword } from '@/li
 import { normalizeAddress, isEvmChain, isSolanaAddress, addressesEqual } from '@/lib/utils/addressNormalize';
 import { getOnrampUrl } from '@/lib/wallet/onramp';
 import { DappConnect } from '@/components/wallet/DappConnect';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { walletHowItWorks } from '@/lib/howItWorks/content/wallet-page';
 
 interface TokenBalance {
   symbol: string;
@@ -1351,6 +1353,7 @@ export default function WalletPage() {
                 <button onClick={() => setView('wallet-settings')} className="p-2 hover:bg-white/5 rounded-xl transition-colors" aria-label="Wallet settings">
                   <Settings className="w-5 h-5 text-slate-400" />
                 </button>
+                <HowItWorksButton content={walletHowItWorks} className="ms-auto shrink-0" />
               </div>
             </div>
 

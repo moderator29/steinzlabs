@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { TrendingUp, TrendingDown, Zap, AlertTriangle, RefreshCw, Bell, Activity, BarChart3, X, ChevronRight, ExternalLink } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { trendsHowItWorks } from '@/lib/howItWorks/content/trends';
 import { useNavState } from '@/lib/nav/useNavState';
 import type { TrendCard, TrendAlertItem, TrendsResponse, TrendSparkpoint } from '@/app/api/intelligence/on-chain-trends/route';
 
@@ -244,6 +246,7 @@ export default function TrendsPage() {
               {lastRefresh ? `Updated ${lastRefresh.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'DeFiLlama · Multi-chain metrics'}
             </span>
           </div>
+          <HowItWorksButton content={trendsHowItWorks} className="ms-auto shrink-0" />
           <button onClick={() => fetchTrends()} disabled={loading}
             className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors disabled:opacity-40">
             <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? 'animate-spin' : ''}`} />

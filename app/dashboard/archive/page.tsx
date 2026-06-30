@@ -12,6 +12,8 @@ import BackButton from '@/components/ui/BackButton';
 import { useState, useMemo } from 'react';
 import { useArchivedFeed, type ChainFilter, type ContextEventFilter } from '@/lib/hooks/useContextFeed';
 import ContextEventCard from '@/components/context-feed/ContextEventCard';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { archiveHowItWorks } from '@/lib/howItWorks/content/archive';
 
 // Pill → the underscored event types it surfaces. Source fetchers emit a
 // different taxonomy than the UI pills, and hyphen/prefix variants drift, so we
@@ -85,6 +87,7 @@ export default function ArchivePage() {
           <Archive className="w-5 h-5 text-[#0066FF]" />
           <h1 className="text-sm font-heading font-bold">Archive</h1>
           <span className="text-[10px] text-gray-500 ms-1">Events older than 24h</span>
+          <HowItWorksButton content={archiveHowItWorks} className="ms-auto shrink-0" />
         </div>
       </div>
 

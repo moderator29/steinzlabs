@@ -5,6 +5,8 @@ import { ArrowLeftRight, Crosshair, ExternalLink, Loader2, Filter, RefreshCw } f
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { PageHeader } from '@/components/common/PageHeader';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { transactionsHowItWorks } from '@/lib/howItWorks/content/transactions';
 import { formatTimeAgo, formatUSD } from '@/lib/formatters';
 import { useNavState } from '@/lib/nav/useNavState';
 
@@ -133,7 +135,13 @@ export default function TransactionsPage() {
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-5xl mx-auto">
-        <PageHeader title="Transactions" description="Your swap and snipe history across all chains" showBack backTo="/dashboard" />
+        <PageHeader
+          title="Transactions"
+          description="Your swap and snipe history across all chains"
+          showBack
+          backTo="/dashboard"
+          actions={<HowItWorksButton content={transactionsHowItWorks} className="ms-auto shrink-0" />}
+        />
 
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-1 nl-card rounded-lg p-1">

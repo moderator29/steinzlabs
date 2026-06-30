@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { Lock, Search, X, MoreHorizontal, CheckCheck, Filter, Volume2, Eye } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { GlassCard } from '@/components/ui/GlassCard';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { messagesHowItWorks } from '@/lib/howItWorks/content/messages';
 
 interface Conversation {
   id: string;
@@ -204,6 +206,7 @@ export default function MessagesInboxPage() {
             </>
           )}
         </div>
+        <HowItWorksButton content={messagesHowItWorks} className="shrink-0" />
       </div>
 
       {/* User search results */}

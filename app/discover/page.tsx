@@ -10,6 +10,8 @@ import { UserListRow } from '@/components/social/UserListRow';
 import BackButton from '@/components/ui/BackButton';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { discoverHowItWorks } from '@/lib/howItWorks/content/discover';
 import { useFeatureUsageLog } from '@/lib/hooks/useFeatureUsageLog';
 
 /**
@@ -36,6 +38,7 @@ function DiscoverInner() {
             <Compass className="w-5 h-5 text-[var(--nl-blue,#0066FF)]" />
             <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Discover users</h1>
           </div>
+          <HowItWorksButton content={discoverHowItWorks} className="ms-auto shrink-0" />
         </div>
 
         <div className="mb-5">

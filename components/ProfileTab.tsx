@@ -15,6 +15,8 @@ import { VtxWalletAccessCard } from '@/components/profile/VtxWalletAccessCard';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import NotificationSettingsPanel from '@/components/profile/NotificationSettingsPanel';
 import { AppearancePanel } from '@/components/profile/AppearancePanel';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { profileHowItWorks } from '@/lib/howItWorks/content/profile';
 
 interface Notification {
   id: string;
@@ -1369,6 +1371,9 @@ export default function ProfileTab() {
 
   return (
     <div>
+      <div className="flex items-center mb-3">
+        <HowItWorksButton content={profileHowItWorks} className="ms-auto shrink-0" />
+      </div>
       <div className="glass rounded-xl border border-white/10 mb-5 overflow-hidden">
         <button
           onClick={() => setShowNotifications(!showNotifications)}

@@ -7,6 +7,8 @@ import BackButton from '@/components/ui/BackButton';
 import { toast } from 'sonner';
 import { useAuth, effectiveTier } from '@/lib/hooks/useAuth';
 import { TierBadge } from '@/components/ui/TierBadge';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { pricingHowItWorks } from '@/lib/howItWorks/content/pricing';
 
 // Platform tiers only (free/mini/pro/max). NakaCult is NOT a tier — it's a
 // separate on-chain entitlement shown in the NFT section below.
@@ -103,6 +105,7 @@ export default function PricingPage() {
       <div className="sticky top-0 z-10 bg-black/40 backdrop-blur-xl border-b border-white/[0.06] px-4 h-14 flex items-center gap-3">
         <BackButton />
         <span className="text-white font-semibold">Pricing</span>
+        <HowItWorksButton content={pricingHowItWorks} className="ms-auto shrink-0" />
       </div>
 
       <div className="max-w-5xl mx-auto px-4 pt-12 pb-8">

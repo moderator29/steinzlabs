@@ -11,6 +11,8 @@ import {
   Search, Calendar, ChevronRight, Clock, RefreshCw, TrendingUp, X,
 } from '@/components/icons/brand';
 import { BookOpen, Tag, Loader2, SlidersHorizontal, Zap } from 'lucide-react';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { researchHowItWorks } from '@/lib/howItWorks/content/research';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface ResearchPost {
@@ -409,6 +411,7 @@ export default function ResearchPage() {
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
             </button>
+            <HowItWorksButton content={researchHowItWorks} className="shrink-0" />
           </div>
         </div>
 
