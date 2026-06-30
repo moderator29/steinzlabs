@@ -50,9 +50,15 @@ export async function GET(request: NextRequest) {
 
     // Publish the post. Set both schema variants (summary/excerpt,
     // published/status, author, read_time) so every reader path renders it.
-    const { data: post, error: insErr } = await sb
+    //
+    // Atomic idempotency: upsert on the UNIQUE slug with ignoreDuplicates, so a
+    // concurrent or retried daily dispatch tick that loses the race inserts
+    // nothing and gets back an EMPTY result set (ON CONFLICT DO NOTHING returns
+    // only rows this call actually wrote). We email ONLY when this call inserted
+    // the row, so the entire userbase can never be re-blasted for the same day.
+    const { data: insertedRows, error: insErr } = await sb
       .from('research_posts')
-      .insert({
+      .upsert({
         slug: brief.slug,
         title: brief.title,
         summary: brief.summary,
@@ -68,18 +74,24 @@ export async function GET(request: NextRequest) {
         read_time: brief.readTime,
         published_at: now.toISOString(),
         created_at: now.toISOString(),
-      })
-      .select('id')
-      .single();
-    if (insErr || !post?.id) throw insErr ?? new Error('insert returned no id');
+      }, { onConflict: 'slug', ignoreDuplicates: true })
+      .select('id');
+    if (insErr) throw insErr;
 
-    const postUrl = `${APP_URL}/research/${post.id}`;
+    const postId = insertedRows && insertedRows.length > 0 ? insertedRows[0].id : null;
+    if (!postId) {
+      // Another tick already published today — do not re-publish or re-email.
+      await logCronExecution(NAME, 'success', Date.now() - startedAt, undefined, 0);
+      return NextResponse.json({ ok: true, skipped: 'already_published_race', slug: brief.slug });
+    }
+
+    const postUrl = `${APP_URL}/research/${postId}`;
 
     // Email kill switch — set RESEARCH_DIGEST_EMAIL=false to publish the web
     // post only (e.g. a web-first rollout) without broadcasting to inboxes.
     if (process.env.RESEARCH_DIGEST_EMAIL === 'false') {
       await logCronExecution(NAME, 'success', Date.now() - startedAt, undefined, 0);
-      return NextResponse.json({ ok: true, id: post.id, slug: brief.slug, emailed: false, reason: 'email_disabled' });
+      return NextResponse.json({ ok: true, id: postId, slug: brief.slug, emailed: false, reason: 'email_disabled' });
     }
 
     // Build the recipient list: every auth user, minus those who set
@@ -120,7 +132,7 @@ export async function GET(request: NextRequest) {
     const { sent, failed } = await sendBatch(emails);
 
     await logCronExecution(NAME, 'success', Date.now() - startedAt, undefined, sent);
-    return NextResponse.json({ ok: true, id: post.id, slug: brief.slug, recipients: recipients.length, sent, failed });
+    return NextResponse.json({ ok: true, id: postId, slug: brief.slug, recipients: recipients.length, sent, failed });
   } catch (err) {
     Sentry.captureException(err, { tags: { cron: NAME } });
     await logCronExecution(NAME, 'failed', Date.now() - startedAt, String(err));
