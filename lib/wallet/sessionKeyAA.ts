@@ -176,6 +176,37 @@ export async function buildSessionKeyApproval(params: {
   return { approval, kernelAddress: account.address };
 }
 
+/**
+ * Read an ERC-20 balance for an owner on a chain via the public/read RPC
+ * (audit #47 M3). Used to bound AA sells to what the kernel actually holds so a
+ * corrupted/inflated DB amount can't make the session key over-approve/sell.
+ * Returns null when the chain/RPC isn't available (caller then skips the cap).
+ */
+export async function getErc20Balance(
+  chainSlug: string,
+  owner: Address,
+  token: Address,
+): Promise<bigint | null> {
+  const chain = aaChainFor(chainSlug);
+  const rpc = getReadRpc(chainSlug);
+  if (!chain || !rpc) return null;
+  try {
+    const publicClient = createPublicClient({ chain, transport: http(rpc) });
+    const bal = await publicClient.readContract({
+      address: token,
+      abi: [{
+        type: 'function', name: 'balanceOf', stateMutability: 'view',
+        inputs: [{ name: 'a', type: 'address' }], outputs: [{ name: '', type: 'uint256' }],
+      }],
+      functionName: 'balanceOf',
+      args: [owner],
+    });
+    return bal as bigint;
+  } catch {
+    return null;
+  }
+}
+
 /** Generate a fresh session keypair (server-side). */
 export function generateSessionKey(): { privateKey: Hex; address: Address } {
   const privateKey = generatePrivateKey();

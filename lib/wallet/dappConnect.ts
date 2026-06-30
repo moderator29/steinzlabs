@@ -39,6 +39,25 @@ const RPC_BY_CHAINID: Record<number, string> = {
   56: 'https://bsc-dataseed.binance.org',
   43114: 'https://api.avax.network/ext/bc/C/rpc',
 };
+
+// Audit #47 M5: a poisoned public RPC can manipulate fee/nonce data on the
+// broadcast path. Prefer an operator-configured authenticated RPC per chain when
+// present (explicit refs so Next inlines the NEXT_PUBLIC values), falling back to
+// the public endpoint. The user still confirms to/value/data in the UI.
+const RPC_OVERRIDE: Record<number, string | undefined> = {
+  1: process.env.NEXT_PUBLIC_RPC_ETHEREUM,
+  8453: process.env.NEXT_PUBLIC_RPC_BASE,
+  42161: process.env.NEXT_PUBLIC_RPC_ARBITRUM,
+  10: process.env.NEXT_PUBLIC_RPC_OPTIMISM,
+  137: process.env.NEXT_PUBLIC_RPC_POLYGON,
+  56: process.env.NEXT_PUBLIC_RPC_BSC,
+  43114: process.env.NEXT_PUBLIC_RPC_AVALANCHE,
+};
+
+function rpcForChain(chainId: number): string | undefined {
+  return RPC_OVERRIDE[chainId] || RPC_BY_CHAINID[chainId];
+}
+
 export const DAPP_SUPPORTED_CHAIN_IDS = Object.keys(RPC_BY_CHAINID).map(Number);
 
 let _kit: IWalletKit | null = null;
@@ -146,7 +165,7 @@ export async function signEvmRequest(params: {
     return wallet.signTypedData(typed.domain, types, typed.message);
   }
   if (m === 'eth_sendTransaction') {
-    const rpc = RPC_BY_CHAINID[params.chainId];
+    const rpc = rpcForChain(params.chainId);
     if (!rpc) throw new Error(`Unsupported chain for sending: ${params.chainId}`);
     const provider = new ethers.JsonRpcProvider(rpc);
     const signer = wallet.connect(provider);

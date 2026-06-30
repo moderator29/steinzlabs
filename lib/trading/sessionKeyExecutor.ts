@@ -3,7 +3,7 @@ import { type Address, type Hex, encodeFunctionData, erc20Abi, isAddress } from 
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { usdcForChain } from '@/lib/trading/usdc';
 import { getSwapQuote } from '@/lib/services/zerox';
-import { executeSessionKeyTx, getZeroDevRpc, aaChainFor } from '@/lib/wallet/sessionKeyAA';
+import { executeSessionKeyTx, getZeroDevRpc, aaChainFor, getErc20Balance } from '@/lib/wallet/sessionKeyAA';
 import { decryptServerSecret, vaultConfigured } from '@/lib/wallet/serverKeyVault';
 
 /**
@@ -119,6 +119,15 @@ async function executeSessionSwap(params: {
     slippageBps: clampSlippage(params.slippageBps),
   });
   if (!quote?.transaction?.to || !quote.transaction.data) return null;
+  // Audit #47 M2: never broadcast a swap with no real output. If 0x reports no
+  // liquidity or a zero/empty buyAmount, abort — otherwise a background userOp
+  // would spend the sell token (+ gas) for ~nothing on an illiquid token.
+  if (quote.liquidityAvailable === false) return null;
+  try {
+    if (!quote.buyAmount || BigInt(quote.buyAmount) <= BigInt(0)) return null;
+  } catch {
+    return null;
+  }
 
   const approveData = encodeFunctionData({
     abi: erc20Abi,
@@ -221,6 +230,21 @@ export async function tryExecuteSellViaSessionKey(params: {
   if (!active) return null;
   const { session, sessionPrivateKey } = active;
 
+  // Audit #47 M3: bound the sell to what the kernel actually holds on-chain.
+  // tokens_received is a backfilled float and could be stale/inflated; selling
+  // more than the real balance just reverts and wastes gas, and over-approving
+  // a token is an unnecessary risk. Cap to the live balance when readable.
+  let sellAmount = params.tokenAmountBaseUnits;
+  try {
+    if (isAddress(params.tokenAddress) && isAddress(session.kernel_address!)) {
+      const bal = await getErc20Balance(chain, session.kernel_address as Address, params.tokenAddress as Address);
+      if (bal != null) {
+        if (bal <= BigInt(0)) return null; // nothing to sell
+        if (BigInt(sellAmount) > bal) sellAmount = bal.toString();
+      }
+    }
+  } catch { /* fall back to requested amount on read failure */ }
+
   const txHash = await executeSessionSwap({
     session,
     sessionPrivateKey,
@@ -228,7 +252,7 @@ export async function tryExecuteSellViaSessionKey(params: {
     chainId,
     sellToken: params.tokenAddress,
     buyToken: usdc,
-    sellAmountBaseUnits: params.tokenAmountBaseUnits,
+    sellAmountBaseUnits: sellAmount,
     slippageBps: params.slippageBps,
   });
   if (!txHash) return null;
