@@ -472,12 +472,12 @@ export default function Dashboard() {
           <div className="flex-1" />
           {activeNav === 'home' && (
             <div className="flex items-center gap-2">
-              <HowItWorksButton content={dashboardHowItWorks} iconOnly className="mr-0.5" />
               <SteinzLogo size={34} animated={false} />
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
                 <span className="text-[10px] text-gray-400 font-semibold tracking-wide">LIVE</span>
               </div>
+              <HowItWorksButton content={dashboardHowItWorks} iconOnly className="ms-0.5" />
             </div>
           )}
         </div>

@@ -59,7 +59,7 @@ export function HowItWorksButton({
         aria-haspopup="dialog"
         aria-label={`How ${content.title} works`}
         title="How it works"
-        className={`inline-flex items-center gap-1.5 rounded-full border border-[#0066FF]/50 bg-[#0066FF]/15 text-[#cfe0ff] shadow-[0_0_12px_rgba(0,102,255,0.30)] transition-colors hover:border-[#0066FF] hover:bg-[#0066FF]/25 hover:text-white ${
+        className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#0066FF]/50 bg-[#0066FF]/15 text-[#cfe0ff] shadow-[0_0_12px_rgba(0,102,255,0.30)] transition-colors hover:border-[#0066FF] hover:bg-[#0066FF]/25 hover:text-white ${
           iconOnly ? 'p-1.5' : 'px-2.5 py-1'
         } ${className}`}
       >
