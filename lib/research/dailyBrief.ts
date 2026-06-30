@@ -86,6 +86,23 @@ function esc(s: string): string {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+// ─── Edition (12h cadence) ──────────────────────────────────────────────────
+// Two editions per UTC day: Morning (published 00:00 UTC) and Evening (12:00
+// UTC). The slug encodes the edition so both can coexist, and the same-edition
+// idempotency guard still blocks a duplicate dispatch tick.
+
+export interface BriefEdition { period: 'am' | 'pm'; label: string; slug: string; }
+
+export function briefEdition(now: Date): BriefEdition {
+  const period: 'am' | 'pm' = now.getUTCHours() < 12 ? 'am' : 'pm';
+  const date = now.toISOString().slice(0, 10);
+  return {
+    period,
+    label: period === 'am' ? 'Morning' : 'Evening',
+    slug: `market-brief-${date}-${period}`,
+  };
+}
+
 // ─── Market vibe from real global data ──────────────────────────────────────
 
 function deriveVibe(global: GlobalMarketData | null): MarketVibe {
@@ -250,13 +267,13 @@ export async function buildDailyBrief(now: Date): Promise<DailyBrief | null> {
   }));
 
   const vibe = deriveVibe(global);
-  const dateLabel = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
-  const slugDate = now.toISOString().slice(0, 10);
-  const slug = `daily-market-brief-${slugDate}`;
+  const edition = briefEdition(now);
+  const dateLabel = `${now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })} · ${edition.label} Edition`;
+  const slug = edition.slug;
 
   // ── Summary (preview, dash-free) ──
   const topGain = gainers[0];
-  const summaryBits: string[] = [`Market vibe is ${vibe.label.toLowerCase()} today.`];
+  const summaryBits: string[] = [`Market vibe is ${vibe.label.toLowerCase()} this ${edition.label.toLowerCase()}.`];
   if (global) summaryBits.push(`Total cap ${fmtUsdCompact(global.totalMarketCapUSD)} with BTC dominance ${global.btcDominancePercent.toFixed(1)}%.`);
   if (topGain) summaryBits.push(`${topGain.symbol.toUpperCase()} leads the gainers at ${fmtPctArrow(topGain.changePct).text} up.`);
   if (moves.length) summaryBits.push(`${moves.length} major whale moves tracked on chain.`);
@@ -305,7 +322,7 @@ export async function buildDailyBrief(now: Date): Promise<DailyBrief | null> {
   const readTime = Math.max(2, Math.round((gainers.length + losers.length + moves.length + trending.length) / 4) + 1);
   const coverImage = buildCover(dateLabel, vibe, global?.totalMarketCapUSD ?? 0);
 
-  const title = `Daily Market Brief · ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}`;
+  const title = `Market Brief · ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })} ${edition.label}`;
 
   return {
     slug, title, summary, contentHtml,

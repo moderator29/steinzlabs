@@ -46,9 +46,13 @@ const GROUPS: Record<string, string[]> = {
     'whale-score-populator', 'whale-backfill-pnl', 'whale-discovery', 'bitquery-traders', 'market-pulse-warm', 'cult-refresh-treasury',
     'cult-conviction-score', 'cult-offering-draw',
   ],
+  // Every 12 hours (00:00 + 12:00 UTC) — the research brief publishes two
+  // editions a day (Morning / Evening).
+  'twice-daily': [
+    'research-daily-brief',
+  ],
   // Once daily (03:00 UTC).
   daily: [
-    'research-daily-brief',
     'daily-digest', 'expired-nonces-cleanup', 'stale-cache-cleanup', 'login-activity-prune',
     'vtx-usage-reset', 'recompute-reputation', 'first-buyer-performance',
     'insider-wallet-detector', 'sybil-clusters', 'dune-refresh', 'whale-logo-backfill',
