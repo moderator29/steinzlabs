@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, use } from "react";
+import { useCallback, useEffect, useMemo, useState, use } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -159,26 +159,58 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
   const [copyRuleOpen, setCopyRuleOpen] = useState(false);
 
   const [fetchError, setFetchError] = useState<'auth' | 'tier' | 'notfound' | 'network' | null>(null);
+  // True when we're showing the whale's last-known (cached) data because the
+  // live fetch failed — so we degrade to real saved data instead of the bare
+  // "Couldn't load this whale" error screen.
+  const [stale, setStale] = useState(false);
+
+  // Session cache of the last successful whale detail, keyed per whale. Lets us
+  // render the real card (with whatever data we last had) on a transient fetch
+  // failure instead of throwing the user to an error screen.
+  const cacheKey = `whale-detail:${chain}:${address}`;
+  const readCache = useCallback((): WhaleDetail | null => {
+    try {
+      const raw = sessionStorage.getItem(cacheKey);
+      return raw ? (JSON.parse(raw) as WhaleDetail) : null;
+    } catch { return null; }
+  }, [cacheKey]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // Paint instantly from cache if we have it (stale-while-revalidate).
+      const cached = readCache();
+      if (cached && !cancelled) { setData(cached); setLoading(false); }
       try {
         const res = await fetch(`/api/whales/${address}?chain=${encodeURIComponent(chain)}`);
         if (!res.ok) {
-          // Bug §2.4: previously a failing fetch silently left data=null, which
-          // rendered the bare "Whale not found" screen and users read it as a
-          // crash. Surface the real reason so we can show something useful.
-          if (res.status === 401) setFetchError('auth');
-          else if (res.status === 403) setFetchError('tier');
-          else if (res.status === 404) setFetchError('notfound');
-          else setFetchError('network');
+          // On failure, prefer the whale's last-known data over an error wall.
+          // Only surface the hard error when we have nothing cached to show.
+          const fallback = cached ?? readCache();
+          if (fallback) {
+            if (!cancelled) { setData(fallback); setStale(true); }
+          } else if (!cancelled) {
+            if (res.status === 401) setFetchError('auth');
+            else if (res.status === 403) setFetchError('tier');
+            else if (res.status === 404) setFetchError('notfound');
+            else setFetchError('network');
+          }
           return;
         }
         const json = (await res.json()) as WhaleDetail;
-        if (!cancelled) setData(json);
+        if (!cancelled) {
+          setData(json);
+          setStale(false);
+          setFetchError(null);
+          // Persist only when we actually have the whale row (don't cache a
+          // not-found shell as if it were real data).
+          if (json.whale) { try { sessionStorage.setItem(cacheKey, JSON.stringify(json)); } catch { /* quota */ } }
+        }
       } catch {
-        if (!cancelled) setFetchError('network');
+        const fallback = cached ?? readCache();
+        if (fallback) {
+          if (!cancelled) { setData(fallback); setStale(true); }
+        } else if (!cancelled) setFetchError('network');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -186,7 +218,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
     return () => {
       cancelled = true;
     };
-  }, [address, chain]);
+  }, [address, chain, cacheKey, readCache]);
 
   // Bug §5a — hydrate `following` from the server so the button reflects
   // reality on first paint, not the optimistic local default.
@@ -281,6 +313,11 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
 
   return (
     <div className="min-h-screen text-white pb-20">
+      {stale && (
+        <div className="bg-amber-500/10 border-b border-amber-500/20 text-amber-300/90 text-[11px] text-center py-1.5 px-4">
+          Showing this whale's last saved data · live refresh is taking a moment
+        </div>
+      )}
       <div className="sticky top-0 z-30 bg-[#0A0E27]/95 backdrop-blur-xl border-b border-slate-800">
         <div className="max-w-5xl mx-auto px-4 py-4">
           <div className="mb-3"><BackButton href="/dashboard/whale-tracker" label="Whale tracker" compact /></div>

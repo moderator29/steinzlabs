@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Search, TrendingUp, ExternalLink, RotateCcw, Zap, Plus, X, Send, Globe, MessageCircle, Star } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { discoverHowItWorks } from '@/lib/howItWorks/content/discover';
 import Link from 'next/link';
 
 interface Project {
@@ -113,6 +115,7 @@ export default function ProjectDiscoveryPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <HowItWorksButton content={discoverHowItWorks} className="shrink-0" />
             <button
               onClick={() => setShowListingForm(true)}
               className="nl-btn-neon px-3 py-1.5 rounded-lg text-[11px] font-bold flex items-center gap-1 hover:opacity-90 transition-opacity"
