@@ -28,7 +28,7 @@ export function GlobalWhatsNewButton() {
         type="button"
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
-        className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[12px] font-semibold text-slate-300 transition-colors hover:border-[#0066FF]/40 hover:bg-white/[0.08] hover:text-white"
+        className="flex w-full items-center gap-2 rounded-xl border border-[#0066FF]/40 bg-[#0066FF]/12 px-3 py-2 text-[12px] font-semibold text-[#cfe0ff] transition-colors hover:border-[#0066FF] hover:bg-[#0066FF]/20 hover:text-white"
       >
         <Rocket className="h-3.5 w-3.5 text-[#6F8BFF]" />
         What&apos;s new
