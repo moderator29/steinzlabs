@@ -139,13 +139,22 @@ export default function MessagesInboxPage() {
     let cancelled = false;
     let channel: ReturnType<typeof supabase.channel> | null = null;
     let cleanup: (() => void) | null = null;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
     (async () => {
       const { data } = await supabase.auth.getUser();
       const uid = data.user?.id;
       if (!uid || cancelled) return;
 
-      const onChange = () => { void loadConversations(); };
+      // Debounce the refetch: a single conversation can fire many
+      // dm_messages INSERT/UPDATE events in a burst (read-receipts, rapid
+      // back-and-forth), and an un-debounced refetch storms /api/social/dm/
+      // conversations once per event. Coalesce a burst into one trailing
+      // reload ~350ms after the last event.
+      const onChange = () => {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => { void loadConversations(); }, 350);
+      };
       const subscribe = (suffix: string) =>
         supabase
           .channel(`inbox:${uid}${suffix}`)
@@ -168,6 +177,7 @@ export default function MessagesInboxPage() {
       document.addEventListener('visibilitychange', onVisibility);
       cleanup = () => {
         document.removeEventListener('visibilitychange', onVisibility);
+        if (debounceTimer) clearTimeout(debounceTimer);
         if (channel) void supabase.removeChannel(channel);
       };
       if (cancelled) cleanup();
@@ -175,6 +185,7 @@ export default function MessagesInboxPage() {
 
     return () => {
       cancelled = true;
+      if (debounceTimer) clearTimeout(debounceTimer);
       if (cleanup) cleanup();
       else if (channel) void supabase.removeChannel(channel);
     };

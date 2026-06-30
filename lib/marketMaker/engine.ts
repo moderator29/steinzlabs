@@ -1,7 +1,7 @@
 import 'server-only';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { getDexPrice } from '@/lib/services/dexscreener';
-import { getEvmTokenDecimals } from '@/lib/sniper/priceFeed';
+import { getDexPriceForChain } from '@/lib/services/dexscreener';
+import { getEvmTokenDecimalsStrict } from '@/lib/sniper/priceFeed';
 import { usdcForChain, usdcBaseUnitsToUsd } from '@/lib/trading/usdc';
 import { aaChainFor } from '@/lib/wallet/sessionKeyAA';
 import { tryExecuteSnipeViaSessionKey, tryExecuteSellViaSessionKey } from '@/lib/trading/sessionKeyExecutor';
@@ -63,7 +63,7 @@ interface Strategy {
 
 async function referencePrice(s: Strategy): Promise<number | null> {
   if (s.reference_price_mode === 'manual' && s.manual_reference_price) return s.manual_reference_price;
-  const p = await getDexPrice(s.token_address).catch(() => 0);
+  const p = await getDexPriceForChain(s.token_address, s.chain).catch(() => 0);
   return p > 0 ? p : null;
 }
 
@@ -84,7 +84,7 @@ export async function runStrategyTick(s: Strategy): Promise<TickResult> {
 
   const ref = await referencePrice(s);
   if (!ref) return { id: s.id, action: 'skip', reason: 'no reference price' };
-  const price = await getDexPrice(s.token_address).catch(() => 0);
+  const price = await getDexPriceForChain(s.token_address, s.chain).catch(() => 0);
   if (!(price > 0)) return { id: s.id, action: 'skip', reason: 'no market price' };
 
   // H3: a manual reference far from the live price would make the grid buy into a
@@ -113,7 +113,10 @@ export async function runStrategyTick(s: Strategy): Promise<TickResult> {
   // SELL side: price at/above the lowest sell rung and we hold inventory.
   const sellRung = ladder.filter((l) => l.side === 'sell' && price >= l.targetPrice).sort((a, b) => a.targetPrice - b.targetPrice)[0];
   if (sellRung && (s.inventory_tokens ?? 0) > 0) {
-    const decimals = await getEvmTokenDecimals(s.chain, s.token_address).catch(() => 18);
+    // Money-path sizing: a wrong decimals mis-scales the sell by 1e10–1e12x, so
+    // SKIP this tick if the on-chain read fails rather than assuming 18.
+    const decimals = await getEvmTokenDecimalsStrict(s.chain, s.token_address).catch(() => null);
+    if (decimals == null) return { id: s.id, action: 'skip', reason: 'decimals unavailable (RPC) — retry next tick' };
     const tokensToSell = Math.min(s.order_size_usd / price, s.inventory_tokens);
     // M3: decimal-safe base-units (avoid float truncation to 0 for tiny amounts).
     const baseUnits = (BigInt(Math.round(tokensToSell * 1e9)) * (BigInt(10) ** BigInt(decimals))) / BigInt(1e9);
@@ -158,9 +161,14 @@ export async function runStrategyTick(s: Strategy): Promise<TickResult> {
       amountUsd: s.order_size_usd, slippageBps: s.max_slippage_bps,
     }).catch(() => null);
     if (res?.txHash) {
-      const decimals = await getEvmTokenDecimals(s.chain, s.token_address).catch(() => 18);
+      // The buy is already on-chain — we cannot skip. Prefer the exact fill from
+      // the quote, but if decimals can't be read fall back to the price estimate
+      // rather than dividing by a wrong 10**18 (which would corrupt inventory).
+      const decimals = await getEvmTokenDecimalsStrict(s.chain, s.token_address).catch(() => null);
       // H4: actual tokens received from the quote, not order_size/price.
-      const tokensBought = res.buyAmountBaseUnits ? Number(res.buyAmountBaseUnits) / 10 ** decimals : s.order_size_usd / price;
+      const tokensBought = (decimals != null && res.buyAmountBaseUnits)
+        ? Number(res.buyAmountBaseUnits) / 10 ** decimals
+        : s.order_size_usd / price;
       await sb.from('mm_fills').insert({ strategy_id: s.id, user_id: s.user_id, side: 'buy', price, amount_usd: s.order_size_usd, amount_tokens: tokensBought, tx_hash: res.txHash });
       await sb.from('mm_orders').insert({ strategy_id: s.id, user_id: s.user_id, level: buyRung.level, side: 'buy', target_price: buyRung.targetPrice, size_usd: s.order_size_usd, status: 'filled', tx_hash: res.txHash, filled_at: new Date().toISOString() });
       await sb.from('mm_strategies').update({

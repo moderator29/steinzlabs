@@ -100,6 +100,23 @@ export async function getDexPrice(tokenAddress: string): Promise<number> {
 }
 
 /**
+ * Chain-scoped live price: the deepest-liquidity pair FOR THE GIVEN CHAIN.
+ * getBestPair/getDexPrice pick the best pair across ALL chains, which mis-prices
+ * a token that also trades on another chain — the market maker swaps on one
+ * specific chain, so it must price against that chain. DexScreener pair.chainId
+ * matches our slugs (ethereum/base/bsc/arbitrum/optimism/polygon/avalanche/solana).
+ * Returns 0 when the token has no pair on that chain.
+ */
+export async function getDexPriceForChain(tokenAddress: string, chain: string): Promise<number> {
+  const pairs = await getTokenPairs(tokenAddress);
+  const c = chain.toLowerCase();
+  const onChain = pairs.filter((p) => p.chainId?.toLowerCase() === c);
+  if (onChain.length === 0) return 0;
+  const best = onChain.sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0))[0];
+  return best.priceUsd ? parseFloat(best.priceUsd) || 0 : 0;
+}
+
+/**
  * Batch fetch token data for up to 30 token addresses at once.
  * Returns a map of mintAddress → best pair (highest liquidity).
  * Used for logo resolution and identity verification.

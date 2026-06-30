@@ -117,11 +117,21 @@ const TELEGRAM_KIND: Record<SocialEvent, 'general'> = {
 const DEDUP_WINDOW_MS = 5 * 60 * 1000;
 
 /** Build the stable dedup key for an event: `${event}:${actorId}:${conversationId||''}`.
- *  Falls back across the metadata id fields the various call-sites supply. */
+ *  Falls back across the metadata id fields the various call-sites supply.
+ *
+ *  For dm_received the key MUST include a per-message discriminator: two
+ *  genuinely different messages from the same sender within DEDUP_WINDOW_MS are
+ *  distinct notifications, not a double-fire. Without message_id the second real
+ *  message inside 5min would be silently swallowed. Other events (follows,
+ *  requests) are correctly coarse — one per actor/window is the intent. */
 function buildDedupKey(event: SocialEvent, metadata?: Record<string, unknown>): string {
   const m = metadata ?? {};
   const actorId = (m.follower_id ?? m.sender_id ?? m.peer_id ?? m.actor_id ?? '') as string;
   const conversationId = (m.conversation_id ?? m.peer_id ?? '') as string;
+  if (event === 'dm_received') {
+    const messageId = (m.message_id ?? m.client_msg_id ?? '') as string;
+    return `${event}:${actorId}:${conversationId}:${messageId}`;
+  }
   return `${event}:${actorId}:${conversationId}`;
 }
 

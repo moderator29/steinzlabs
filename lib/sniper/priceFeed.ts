@@ -41,16 +41,20 @@ const RPC_BY_CHAIN: Record<string, string> = {
 const decimalsCache = new Map<string, number>();
 
 /**
- * On-chain ERC-20 decimals() via a raw eth_call. Cached. Defaults to 18 when
- * the RPC is unreachable or the token doesn't implement decimals — callers use
- * this to scale whole-token amounts to base units for swaps and pricing.
+ * On-chain ERC-20 decimals() via a raw eth_call. Cached. Returns null when the
+ * RPC is unreachable, returns a malformed reply, or the token doesn't implement
+ * decimals — so MONEY-PATH callers (auto-sell sizing, market-maker pricing) can
+ * SKIP the position instead of silently assuming 18. Assuming 18 for a 6- or
+ * 8-decimal token mis-scales the sell amount by 1e10–1e12x, which either sells
+ * dust (and falsely marks the position realized) or over-reports price and
+ * fires a false take-profit. A skipped tick simply retries next cron pass.
  */
-export async function getEvmTokenDecimals(chain: string, tokenAddress: string): Promise<number> {
+export async function getEvmTokenDecimalsStrict(chain: string, tokenAddress: string): Promise<number | null> {
   const key = `${chain}:${tokenAddress.toLowerCase()}`;
   const cached = decimalsCache.get(key);
   if (cached != null) return cached;
   const rpc = RPC_BY_CHAIN[chain];
-  if (!rpc) return 18;
+  if (!rpc) return null;
   try {
     const res = await fetch(rpc, {
       method: "POST",
@@ -67,8 +71,17 @@ export async function getEvmTokenDecimals(chain: string, tokenAddress: string): 
       const d = parseInt(hex, 16);
       if (Number.isFinite(d) && d >= 0 && d <= 36) { decimalsCache.set(key, d); return d; }
     }
-  } catch { /* fall through to default */ }
-  return 18;
+  } catch { /* fall through to null */ }
+  return null;
+}
+
+/**
+ * Lenient decimals read for DISPLAY / non-money paths: defaults to 18 when the
+ * strict read can't resolve. Never use this to size a swap or compute PnL — use
+ * getEvmTokenDecimalsStrict and skip on null there.
+ */
+export async function getEvmTokenDecimals(chain: string, tokenAddress: string): Promise<number> {
+  return (await getEvmTokenDecimalsStrict(chain, tokenAddress)) ?? 18;
 }
 
 async function priceUsdSolana(mint: string): Promise<number | null> {
