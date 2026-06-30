@@ -178,16 +178,24 @@ export async function getAssetTransfers(
         AssetTransfersCategory.EXTERNAL,
       ],
       maxCount,
+      // Request block timestamps so callers can derive first-seen/last-active
+      // and show real transaction times (was missing → EVM wallets showed null).
+      withMetadata: true,
     };
     const result = await alchemy.core.getAssetTransfers(params);
-    return result.transfers.map(t => ({
-      hash: t.hash,
-      from: t.from,
-      to: t.to ?? '',
-      value: String(t.value ?? 0),
-      asset: t.asset ?? '',
-      blockNum: t.blockNum,
-    }));
+    return result.transfers.map(t => {
+      const meta = (t as { metadata?: { blockTimestamp?: string } }).metadata;
+      const tsMs = meta?.blockTimestamp ? new Date(meta.blockTimestamp).getTime() : NaN;
+      return {
+        hash: t.hash,
+        from: t.from,
+        to: t.to ?? '',
+        value: String(t.value ?? 0),
+        asset: t.asset ?? '',
+        blockNum: t.blockNum,
+        timestamp: Number.isFinite(tsMs) ? Math.floor(tsMs / 1000) : undefined,
+      };
+    });
   });
 }
 

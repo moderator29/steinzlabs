@@ -12,6 +12,8 @@ import {
   Loader2,
 } from 'lucide-react';
 import * as d3 from 'd3';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { networkGraphHowItWorks } from '@/lib/howItWorks/content/network-graph';
 import type { NetworkNode, NetworkEdge, NetworkStats, NetworkGraphResponse } from '@/app/api/network-graph/route';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -523,6 +525,8 @@ export default function NetworkGraphPage() {
           <span className="text-white/20 text-xs">|</span>
           <span className="text-[10px] text-gray-400">Edges {edges.length}</span>
         </div>
+
+        <HowItWorksButton content={networkGraphHowItWorks} className="ms-auto shrink-0" />
       </div>
 
       {/* ── Search bar ── */}

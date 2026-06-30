@@ -7,6 +7,8 @@ import {
   XCircle, Loader2, Info, ExternalLink, Shield, ShieldAlert,
 } from 'lucide-react';
 import type { ApprovalResult } from '@/app/api/security/approvals/route';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { approvalManagerHowItWorks } from '@/lib/howItWorks/content/approval-manager';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -111,6 +113,7 @@ export default function ApprovalManagerPage() {
             <h1 className="text-sm font-heading font-bold">Approval Manager</h1>
             <p className="text-[10px] text-gray-500">Scan and manage token spending approvals</p>
           </div>
+          <HowItWorksButton content={approvalManagerHowItWorks} className="ms-auto shrink-0" />
         </div>
       </div>
 

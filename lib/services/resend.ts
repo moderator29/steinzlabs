@@ -176,39 +176,94 @@ export async function sendWhaleAlert(params: {
   fromEntity?: string;
   toEntity?: string;
   txHash?: string;
+  // Rich enrichment (all optional — the email degrades gracefully without them).
+  whaleName?: string;
+  whaleAddress?: string;
+  chain?: string;
+  whaleScore?: number | null;     // 0-100 Naka whale score
+  archetype?: string | null;      // e.g. "Active Trader", "Smart Money", "Distributor"
+  entityType?: string | null;     // trader / fund / exchange ...
+  aiTake?: string | null;         // a grounded one-liner built from real data
+  activeDays7d?: number | null;
+  viewUrl?: string;               // absolute link to the whale profile
 }): Promise<EmailResult> {
-  const directionLabel = params.direction === 'buy' ? '🐋 Whale Buy' :
-    params.direction === 'sell' ? '🔴 Whale Sell' : '🔀 Whale Transfer';
-  const directionColor = params.direction === 'buy' ? '#22c55e' :
-    params.direction === 'sell' ? '#ef4444' : '#a855f7';
+  const isBuy = params.direction === 'buy';
+  const isSell = params.direction === 'sell';
+  const verb = isBuy ? 'bought' : isSell ? 'sold' : 'moved';
+  const directionLabel = isBuy ? '🐋 Whale Buy' : isSell ? '🔴 Whale Sell' : '🔀 Whale Transfer';
+  const accent = isBuy ? '#22c55e' : isSell ? '#ef4444' : '#8B7CFF';
+  const grad = isBuy
+    ? 'linear-gradient(135deg,#0a2a1a,#05131f)'
+    : isSell ? 'linear-gradient(135deg,#2a0a12,#05131f)' : 'linear-gradient(135deg,#161033,#05131f)';
 
-  // Never headline an email with a fabricated number — fall back to the symbol
-  // verb when the move is unpriced (NULL/NaN value_usd) rather than "$0.00M".
   const amountLabel = fmtWhaleUsd(params.amountUsd);
+  const whaleName = params.whaleName || (params.whaleAddress
+    ? `${params.whaleAddress.slice(0, 6)}…${params.whaleAddress.slice(-4)}`
+    : 'A tracked whale');
+  const chainLabel = params.chain ? params.chain.charAt(0).toUpperCase() + params.chain.slice(1) : '';
+  const score = typeof params.whaleScore === 'number' ? params.whaleScore : null;
+  const scoreColor = score == null ? '#64748b' : score >= 90 ? '#34d399' : score >= 75 ? '#8B7CFF' : '#94a3b8';
+  const symbolTag = params.symbol ? `$${params.symbol.replace(/^\$/, '')}` : 'tokens';
+  const view = params.viewUrl || (params.whaleAddress
+    ? `https://nakalabs.xyz/dashboard/whale-tracker/${params.whaleAddress}${params.chain ? `?chain=${params.chain}` : ''}`
+    : 'https://nakalabs.xyz/dashboard/whale-tracker');
+
+  // Stat chips — only render the ones we actually have (no fabricated fillers,
+  // no placeholder dashes).
+  const chips: string[] = [];
+  if (chainLabel) chips.push(`<td style="padding:0 6px 0 0"><div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 12px"><div style="font-size:10px;letter-spacing:.08em;color:#64748b;text-transform:uppercase">Chain</div><div style="font-size:14px;font-weight:700;color:#e2e8f0;margin-top:2px">${chainLabel}</div></div></td>`);
+  chips.push(`<td style="padding:0 6px"><div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 12px"><div style="font-size:10px;letter-spacing:.08em;color:#64748b;text-transform:uppercase">Action</div><div style="font-size:14px;font-weight:700;color:${accent};margin-top:2px;text-transform:capitalize">${params.direction}</div></div></td>`);
+  if (typeof params.activeDays7d === 'number' && params.activeDays7d > 0) chips.push(`<td style="padding:0 0 0 6px"><div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 12px"><div style="font-size:10px;letter-spacing:.08em;color:#64748b;text-transform:uppercase">Active</div><div style="font-size:14px;font-weight:700;color:#e2e8f0;margin-top:2px">${params.activeDays7d}/7d</div></div></td>`);
 
   const html = `
-    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0f172a;color:#f1f5f9;padding:32px;border-radius:12px">
-      <h2 style="color:${directionColor};margin:0 0 16px">${directionLabel}</h2>
-      <p style="font-size:32px;font-weight:700;color:#f1f5f9;margin:0 0 4px">
-        ${amountLabel ?? params.symbol}
-      </p>
-      <p style="color:#94a3b8;margin:0 0 16px">${params.symbol}</p>
-      ${params.fromEntity || params.toEntity ? `
-        <div style="background:#1e293b;border-radius:8px;padding:12px;font-size:13px;margin-bottom:16px">
-          ${params.fromEntity ? `<p style="margin:0;color:#64748b">From: <span style="color:#f1f5f9">${params.fromEntity}</span></p>` : ''}
-          ${params.toEntity ? `<p style="margin:0;color:#64748b">To: <span style="color:#f1f5f9">${params.toEntity}</span></p>` : ''}
-        </div>
-      ` : ''}
-      <hr style="border:none;border-top:1px solid #1e293b;margin:24px 0"/>
-      <p style="font-size:12px;color:#475569">
-        Naka Labs Whale Alerts — <a href="#" style="color:#a855f7">Manage alerts</a>
-      </p>
+  <div style="background:#03050e;padding:24px 12px">
+    <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;background:${grad};border:1px solid rgba(139,124,255,0.18);border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+      <!-- Header -->
+      <div style="padding:22px 24px 0">
+        <div style="display:inline-block;background:rgba(139,124,255,0.14);border:1px solid rgba(139,124,255,0.3);color:#cfc7ff;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:5px 11px;border-radius:999px">${directionLabel}</div>
+      </div>
+      <!-- Whale identity -->
+      <div style="padding:16px 24px 0">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="vertical-align:middle">
+            <div style="font-size:20px;font-weight:800;color:#ffffff;line-height:1.2">${whaleName}</div>
+            <div style="font-size:12px;color:#8a93a8;margin-top:4px">${[chainLabel, params.entityType ? params.entityType.charAt(0).toUpperCase() + params.entityType.slice(1) : '', params.archetype || ''].filter(Boolean).join('  ·  ')}</div>
+          </td>
+          ${score != null ? `<td style="vertical-align:middle;text-align:right;white-space:nowrap">
+            <div style="display:inline-block;background:rgba(255,255,255,0.04);border:1px solid ${scoreColor}55;border-radius:14px;padding:8px 14px;text-align:center">
+              <div style="font-size:10px;letter-spacing:.08em;color:#64748b;text-transform:uppercase">Whale score</div>
+              <div style="font-size:26px;font-weight:800;color:${scoreColor};line-height:1">${score}</div>
+            </div>
+          </td>` : ''}
+        </tr></table>
+      </div>
+      <!-- The move -->
+      <div style="padding:20px 24px 0">
+        <div style="font-size:13px;color:#8a93a8">${whaleName} ${verb}</div>
+        <div style="font-size:38px;font-weight:800;color:#ffffff;line-height:1.1;margin-top:2px">${amountLabel || symbolTag}</div>
+        <div style="font-size:15px;color:${accent};font-weight:700;margin-top:2px">${symbolTag}${chainLabel ? ` on ${chainLabel}` : ''}</div>
+      </div>
+      <!-- AI take -->
+      ${params.aiTake ? `<div style="margin:18px 24px 0;background:rgba(139,124,255,0.08);border:1px solid rgba(139,124,255,0.22);border-radius:14px;padding:14px 16px">
+        <div style="font-size:11px;letter-spacing:.08em;color:#8B7CFF;text-transform:uppercase;font-weight:700;margin-bottom:5px">⚡ Naka AI take</div>
+        <div style="font-size:14px;color:#dfe3ee;line-height:1.5">${params.aiTake}</div>
+      </div>` : ''}
+      <!-- Stat chips -->
+      <div style="padding:18px 24px 0"><table width="100%" cellpadding="0" cellspacing="0"><tr>${chips.join('')}</tr></table></div>
+      <!-- CTA -->
+      <div style="padding:22px 24px 24px">
+        <a href="${view}" style="display:block;text-align:center;background:linear-gradient(135deg,#0066FF,#8B7CFF);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px;border-radius:12px">View this whale on Naka Labs</a>
+      </div>
+      <!-- Footer -->
+      <div style="padding:16px 24px;border-top:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.2)">
+        <div style="font-size:12px;color:#5b647a">Naka Labs Whale Alerts  ·  <a href="https://nakalabs.xyz/dashboard/settings" style="color:#8B7CFF;text-decoration:none">Manage alerts</a></div>
+      </div>
     </div>
-  `;
+  </div>`;
 
   return sendBroadcast({
     to: params.to,
-    subject: `${directionLabel}: ${amountLabel ? `${amountLabel} ` : ''}${params.symbol}`,
+    subject: `${directionLabel}: ${whaleName} ${verb} ${amountLabel || symbolTag}`,
     html,
     tags: [{ name: 'type', value: 'whale_alert' }],
   });

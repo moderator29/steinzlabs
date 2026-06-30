@@ -219,7 +219,16 @@ async function buildAiAnalysis(response: Record<string, unknown>): Promise<strin
   const failedChecks = ((response.checks as Array<{ label: string; status: string }>) ?? [])
     .filter(c => c.status === 'fail').map(c => c.label).join(', ') || 'None';
 
-  const prompt = `You are a crypto security expert. Analyze this token security scan and give a concise verdict.
+  // Market context from DexScreener — already fetched, previously ignored by
+  // the prompt. FDV-to-liquidity ratio is a strong rug signal (huge FDV on thin
+  // liquidity = exit-liquidity risk). Only real values are passed; 'N/A' else.
+  const dex = (response.dexData as {
+    liquidity?: number; volume24h?: number; fdv?: number; marketCap?: number; priceChange24h?: number;
+  } | null) ?? {};
+  const usd = (n: number | undefined) => (typeof n === 'number' && Number.isFinite(n) ? `$${Math.round(n).toLocaleString()}` : 'N/A');
+  const fdvLiq = dex.fdv && dex.liquidity ? `${(dex.fdv / dex.liquidity).toFixed(1)}x` : 'N/A';
+
+  const prompt = `You are a crypto security expert. Analyze this token security scan and give a concise verdict. Use ONLY the data below — never invent prices, holder figures, or risks not supported here.
 
 Token: ${response.name} (${response.symbol}) on ${chainLabel}
 Trust Score: ${response.trustScore}/100 — ${response.safetyLevel}
@@ -230,6 +239,8 @@ Hidden Owner: ${response.hasHiddenOwner ? 'YES [WARNING]' : 'No'}
 Owner Can Change Balance: ${response.ownerCanChangeBalance ? 'YES [WARNING]' : 'No'}
 Buy Tax: ${response.buyTax} | Sell Tax: ${response.sellTax}
 Holders: ${response.holderCount}
+Liquidity: ${usd(dex.liquidity)} | 24h Volume: ${usd(dex.volume24h)} | FDV: ${usd(dex.fdv)} | FDV/Liquidity: ${fdvLiq}
+24h Price Change: ${typeof dex.priceChange24h === 'number' ? `${dex.priceChange24h.toFixed(1)}%` : 'N/A'}
 Failed Checks: ${failedChecks}
 
 Respond with 3 sections only:

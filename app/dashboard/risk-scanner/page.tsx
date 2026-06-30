@@ -5,6 +5,8 @@ import BackButton from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { riskScannerHowItWorks } from '@/lib/howItWorks/content/risk-scanner';
 
 interface RiskItem {
   name: string;
@@ -159,6 +161,7 @@ export default function RiskScannerPage() {
           <BackButton />
           <Target className="w-5 h-5 text-[#0066FF]" />
           <h1 className="text-sm font-heading font-bold">AI Risk Scanner</h1>
+          <HowItWorksButton content={riskScannerHowItWorks} className="ms-auto shrink-0" />
         </div>
       </div>
 

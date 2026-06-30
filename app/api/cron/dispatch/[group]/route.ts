@@ -49,6 +49,7 @@ const GROUPS: Record<string, string[]> = {
   ],
   // Once daily (03:00 UTC).
   daily: [
+    'research-daily-brief',
     'daily-digest', 'expired-nonces-cleanup', 'stale-cache-cleanup', 'login-activity-prune',
     'vtx-usage-reset', 'recompute-reputation', 'first-buyer-performance',
     'insider-wallet-detector', 'sybil-clusters', 'dune-refresh', 'whale-logo-backfill',

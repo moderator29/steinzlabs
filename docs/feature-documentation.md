@@ -182,6 +182,14 @@ For pricing details see [pricing.md](./pricing.md). For slash-commands see [slas
 - **How it works:** Price alerts evaluated by cron; whale + trend alerts triggered by webhook events. Delivery via push (`push_subscriptions`), email (Resend), or Telegram.
 - **Limitations:** Push requires browser permission. Email subject to Resend deliverability.
 
+### 34. Market Maker Bot
+
+- **What it does:** Automated two-sided market making. Runs grid and range strategies that quote buy rungs below and sell rungs above a reference price, fully non-custodial.
+- **How to access:** `/dashboard/market-maker`.
+- **Tier:** Free.
+- **How it works:** You configure chain, token, strategy type (Grid or Range), spread, levels per side, band, order size, total budget, inventory cap, and max slippage. The engine builds a price ladder around a reference price that either tracks the live market mid or holds at a manual value you set. On supported EVM chains, orders run through a capped, expiring session key so the main wallet keys stay in the browser. Each strategy reports status, spend against budget, current inventory, and realized PnL.
+- **Limitations:** Strategies start paused and trade only after you fund the session key on that chain and activate. Execution is available on supported EVM chains.
+
 ---
 
 ## Security Layer
@@ -270,6 +278,62 @@ For pricing details see [pricing.md](./pricing.md). For slash-commands see [slas
 - **How it works:** Webhook handler at `/api/telegram/webhook` with `X-Telegram-Bot-Api-Secret-Token` header verification. Symbol resolution shared with VTX via `lib/telegram/commands/resolveSymbol.ts`. Tier gates use `withTierGate()` so the same enforcement runs in HTTP routes and Telegram callbacks.
 - **Limitations:** Telegram per-chat rate limit 30 commands/minute. Inline buttons subject to Telegram MarkdownV2 escaping.
 
+### 34b. Portfolio
+
+- **What it does:** Live view of your wallet holdings with allocation, performance, and risk.
+- **How to access:** `/dashboard/portfolio`.
+- **Tier:** Free.
+- **How it works:** Reads your connected wallet holdings and prices them live, polling for updates. Shows an allocation donut, a risky-holdings panel for low security tokens, and a cumulative capital flow chart across 1D / 7D / 30D / 90D / ALL. A Performance tab computes FIFO realized PnL, win rate, best and worst token, average hold time, and gas. Suspected spam is hidden.
+- **Limitations:** Realized PnL is computed from recorded trade history; coverage depends on the chains and activity the platform has indexed.
+
+### 35. Transactions
+
+- **What it does:** Unified history of your swaps and snipes.
+- **How to access:** `/dashboard/transactions`.
+- **Tier:** Free.
+- **How it works:** Merges your swap and snipe records into one newest-first list with All / Swaps / Snipes filters, confirmed / pending / failed status pills, USD or token amounts, relative timestamps, and per-chain block explorer links across the supported chains.
+- **Limitations:** Shows on-platform trades only (swaps and snipes executed through Naka Labs).
+
+### 36. Discover
+
+- **What it does:** People discovery hub for finding traders to follow.
+- **How to access:** `/discover`.
+- **Tier:** Free.
+- **How it works:** Live user search, a personalized recommendations strip, and community leaderboards (success rate, followers, new users, top tier, top traders, copy traders, whale watchers, most active). Search shows real follow state and a "Follows you" hint.
+- **Limitations:** Recommendations and boards reflect on-platform activity.
+
+### 37. Messages
+
+- **What it does:** End-to-end encrypted direct messages between platform accounts.
+- **How to access:** `/dashboard/messages`.
+- **Tier:** Free.
+- **How it works:** Primary and Requests inboxes, user search to start threads, per-conversation unread counts, real-time delivery, and a settings menu (mark all read, unread-only filter, sound, read receipts).
+- **Limitations:** Messaging is between Naka Labs accounts. Requests gate first contact from people you do not follow.
+
+### 38. Notifications
+
+- **What it does:** Unified, time-ordered feed of account events and live market signals.
+- **How to access:** `/dashboard/notifications`.
+- **Tier:** Free.
+- **How it works:** Merges durable account notifications with live signals (price breaks, trending tokens, whale activity, security risk flags). Supports unread tracking, tap to navigate, and mark all read. Whale alerts you follow write a durable in-app notification when they trigger.
+- **Limitations:** Live signals depend on the same data sources as the underlying features.
+
+### 39. Archive
+
+- **What it does:** Searchable history of past Context Feed events.
+- **How to access:** `/dashboard/archive`.
+- **Tier:** Free.
+- **How it works:** Keeps older feed events browsable by chain, type, and keyword using the same cards as the live feed.
+- **Limitations:** Covers events the Context Feed has captured.
+
+### 40. Pricing & Plans
+
+- **What it does:** Compare the four plans side by side and see your current tier.
+- **How to access:** `/dashboard/pricing`.
+- **Tier:** Free.
+- **How it works:** Shows Free, Mini, Pro, and Max with each tier's limits (VTX messages, price alerts, connected wallets, and tools). Your current plan is detected and badged. The Founder Pass NFT unlocks the Max tier for six months when you connect the wallet that holds it.
+- **Limitations:** Crypto payments are being finalized; the plan action registers interest in the meantime.
+
 ---
 
 ## Feature ↔ Tier Matrix
@@ -318,6 +382,14 @@ Quick lookup. F = Free, Mi = Mini, P = Pro, Mx = Max, NC = NakaCult.
 | Telegram (read commands) | y | y | y | y | y |
 | Telegram (trade commands) | — | y | y | y | y |
 | Telegram (snipe command) | — | — | y | y | y |
+| Market Maker Bot | y | y | y | y | y |
+| Portfolio | y | y | y | y | y |
+| Transactions | y | y | y | y | y |
+| Discover | y | y | y | y | y |
+| Messages (DMs) | y | y | y | y | y |
+| Notifications | y | y | y | y | y |
+| Archive | y | y | y | y | y |
+| Pricing & Plans | y | y | y | y | y |
 
 ---
 

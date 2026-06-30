@@ -14,6 +14,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useFeatureUsageLog } from '@/lib/hooks/useFeatureUsageLog';
 import SidebarMenu from '@/components/SidebarMenu';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { dashboardHowItWorks } from '@/lib/howItWorks/content/dashboard';
 import { OnboardingGate } from '@/components/onboarding/OnboardingFlow';
 
 import { maybeNotifyWelcome } from '@/lib/notifications';
@@ -470,6 +472,7 @@ export default function Dashboard() {
           <div className="flex-1" />
           {activeNav === 'home' && (
             <div className="flex items-center gap-2">
+              <HowItWorksButton content={dashboardHowItWorks} iconOnly className="mr-0.5" />
               <SteinzLogo size={34} animated={false} />
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />

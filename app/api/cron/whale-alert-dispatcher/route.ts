@@ -100,6 +100,19 @@ export async function GET(request: NextRequest) {
       return email;
     };
 
+    // Cache whale stats per address for the rich email enrichment + AI take.
+    type WhaleStat = { label: string | null; whale_score: number | null; archetype: string | null; entity_type: string | null; active_days_7d: number | null };
+    const whaleCache = new Map<string, WhaleStat | null>();
+    const resolveWhale = async (address: string, chain: string): Promise<WhaleStat | null> => {
+      const key = `${chain}:${address}`;
+      if (whaleCache.has(key)) return whaleCache.get(key) ?? null;
+      const { data } = await sb.from('whales')
+        .select('label, whale_score, archetype, entity_type, active_days_7d')
+        .eq('address', address).eq('chain', chain).maybeSingle();
+      whaleCache.set(key, (data as WhaleStat | null) ?? null);
+      return (data as WhaleStat | null) ?? null;
+    };
+
     for (const f of list) {
       const sinceMs = f.last_alerted_at
         ? new Date(f.last_alerted_at).getTime()
@@ -158,6 +171,19 @@ export async function GET(request: NextRequest) {
         // the watermark advance. Telegram self-checks link + quiet hours; push
         // self-checks subscriptions; email needs a resolved address.
         if (wantsEmail && userEmail) {
+          // Enrich with the whale's real stats and a GROUNDED one-liner (built
+          // only from real fields — archetype, activity, score — never invented).
+          const w = await resolveWhale(f.whale_address, f.chain);
+          const chainCap = f.chain.charAt(0).toUpperCase() + f.chain.slice(1);
+          let aiTake: string | null = null;
+          if (w) {
+            const arche = (w.archetype || w.entity_type || 'wallet').replace(/_/g, ' ');
+            const moveWord = dir === 'buy' ? 'accumulating' : dir === 'sell' ? 'distributing' : 'moving';
+            const bits = [`${arche.charAt(0).toUpperCase() + arche.slice(1)} ${moveWord} ${sym}`];
+            if (typeof w.active_days_7d === 'number' && w.active_days_7d > 0) bits.push(`active ${w.active_days_7d}/7 days`);
+            if (typeof w.whale_score === 'number') bits.push(`Naka score ${w.whale_score}`);
+            aiTake = bits.join('  ·  ') + '.';
+          }
           const res = await sendWhaleAlert({
             to: userEmail,
             symbol: a.token_symbol || "token",
@@ -166,6 +192,15 @@ export async function GET(request: NextRequest) {
             fromEntity: dir === "sell" ? whaleName : a.counterparty_label ?? undefined,
             toEntity: dir === "buy" ? whaleName : a.counterparty_label ?? undefined,
             txHash: a.tx_hash,
+            whaleName,
+            whaleAddress: f.whale_address,
+            chain: f.chain,
+            whaleScore: w?.whale_score ?? null,
+            archetype: w?.archetype ?? null,
+            entityType: w?.entity_type ?? null,
+            activeDays7d: w?.active_days_7d ?? null,
+            aiTake,
+            viewUrl: `https://nakalabs.xyz/dashboard/whale-tracker/${f.whale_address}?chain=${f.chain}`,
           });
           if (res.ok) emailed++;
         }

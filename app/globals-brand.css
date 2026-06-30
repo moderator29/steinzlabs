@@ -357,3 +357,16 @@
 .naka-text-soft     { color: var(--nl-text-soft); }
 .naka-text-muted    { color: var(--nl-text-muted); }
 .naka-text-subtle   { color: #94A3B8; }
+
+/* Research detail — on-brand defaults for posts authored as HTML (the daily
+   brief ships fully inline-styled; these cover any plain-HTML admin post). */
+.nl-research-content { color: #cbd5e1; font-size: 15px; line-height: 1.8; }
+.nl-research-content h2 { color: #f1f5f9; font-size: 22px; font-weight: 800; margin: 28px 0 10px; }
+.nl-research-content h3 { color: #f1f5f9; font-size: 17px; font-weight: 700; margin: 24px 0 8px; }
+.nl-research-content p { margin: 0 0 16px; }
+.nl-research-content a { color: #6F7EFF; text-decoration: none; }
+.nl-research-content a:hover { text-decoration: underline; }
+.nl-research-content img { max-width: 100%; border-radius: 10px; }
+.nl-research-content table { width: 100%; border-collapse: collapse; }
+.nl-research-content ul, .nl-research-content ol { margin: 0 0 16px; padding-left: 20px; }
+.nl-research-content li { margin: 4px 0; }

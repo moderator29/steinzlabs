@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import SteinzLogoSpinner from '@/components/SteinzLogoSpinner';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { bubbleMapHowItWorks } from '@/lib/howItWorks/content/bubble-map';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -581,6 +583,7 @@ function BubbleMapInner() {
             </div>
             <span className="text-[10px] text-gray-600">Token holder distribution · D3 force graph</span>
           </div>
+          <HowItWorksButton content={bubbleMapHowItWorks} className="ms-auto shrink-0" />
         </div>
       </div>
 

@@ -2,6 +2,8 @@
 
 import { Radio, Activity, Cpu, HardDrive, Zap, Globe, Loader2, RefreshCw } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { networkMetricsHowItWorks } from '@/lib/howItWorks/content/network-metrics';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 
@@ -38,6 +40,7 @@ export default function NetworkMetricsPage() {
           <BackButton />
           <Radio className="w-5 h-5 text-[#0066FF]" />
           <h1 className="text-sm font-heading font-bold">Network Metrics</h1>
+          <HowItWorksButton content={networkMetricsHowItWorks} className="ms-auto shrink-0" />
         </div>
       </div>
 

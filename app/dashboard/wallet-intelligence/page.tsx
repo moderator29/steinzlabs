@@ -3,6 +3,8 @@
 import { Search, Wallet, TrendingUp, Clock, DollarSign, Activity, ExternalLink, Loader2, AlertCircle, Shield, PieChart, FileCode, ArrowRight, Copy, CheckCircle, XCircle, AlertTriangle, ChevronDown, ChevronUp, Send, ArrowDownLeft, RefreshCw, Zap, Brain, GitCompare } from 'lucide-react';
 import Link from 'next/link';
 import BackButton from '@/components/ui/BackButton';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { walletIntelligenceHowItWorks } from '@/lib/howItWorks/content/wallet-intelligence';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useNavState } from '@/lib/nav/useNavState';
@@ -45,6 +47,115 @@ interface WalletData {
   nativeValueUsd?: string;
   explorerUrl?: string;
   recentTransactions?: RecentTx[];
+  // Per-holding GoPlus security (already fetched by the API for top tokens —
+  // surfaced here so risky bags are flagged instead of silently dropped).
+  contractSecurity?: Record<string, {
+    isHoneypot: boolean;
+    trustScore: number;
+    trustLevel: 'SAFE' | 'CAUTION' | 'WARNING' | 'DANGER';
+    flags: { name: string; severity: string }[];
+  } | null>;
+  tokenDistribution?: { symbol: string; percentage: number }[];
+  isWhale?: boolean;
+  whaleScore?: number;
+  // Top counterparties derived from real recent transactions.
+  counterparties?: Array<{
+    address: string;
+    count: number;
+    inbound: number;
+    outbound: number;
+    label: string | null;
+    category: string | null;
+    parent: string | null;
+  }>;
+  // Realized PnL from real Bitquery DEX trades (90d), FIFO cost basis.
+  realizedPnl?: {
+    byToken: Array<{ token: string; tokenSymbol: string | null; totalRealizedUsd: number; winRate: number; lots: number }>;
+    totalRealizedUsd: number;
+    totalProceedsUsd: number;
+    totalCostBasisUsd: number;
+    closedLots: number;
+    winRate: number;
+    averageHoldDays: number;
+  } | null;
+}
+
+interface MultiChainResult {
+  address: string;
+  totalUsd: number;
+  chainsWithBalance: number;
+  chainsScanned: number;
+  breakdown: Array<{
+    chain: string;
+    chainName: string;
+    nativeSymbol: string;
+    totalBalanceUsd: number;
+    tokenCount: number;
+    txCount: number;
+  }>;
+}
+
+const CHAIN_DOT: Record<string, string> = {
+  ethereum: '#627EEA', base: '#0052FF', arbitrum: '#28A0F0',
+  polygon: '#8247E5', avalanche: '#E84142', bsc: '#F0B90B',
+};
+
+// ─── Multi-Chain Aggregate ──────────────────────────────────────────────────────
+// One net-worth figure across every supported EVM chain, with a per-chain
+// breakdown bar. Real priced balances only; renders nothing until the lazy
+// fetch returns at least one chain with a balance.
+function MultiChainBalances({ data, loading }: { data: MultiChainResult | null; loading: boolean }) {
+  if (loading && !data) {
+    return (
+      <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e] flex items-center gap-2 text-xs text-gray-500">
+        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0066FF]" /> Aggregating balances across chains…
+      </div>
+    );
+  }
+  if (!data || data.breakdown.length === 0) return null;
+  const priced = data.breakdown.filter(c => c.totalBalanceUsd > 0);
+  if (priced.length === 0) return null;
+  const total = data.totalUsd || priced.reduce((s, c) => s + c.totalBalanceUsd, 0);
+
+  return (
+    <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Wallet className="w-4 h-4 text-[#0066FF]" />
+          <h3 className="font-bold text-sm">Multi-Chain Net Worth</h3>
+        </div>
+        <span className="text-[10px] text-gray-500">{data.chainsWithBalance} of {data.chainsScanned} chains</span>
+      </div>
+      <div className="text-2xl font-bold text-white">
+        ${total.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+      </div>
+      {/* Stacked proportion bar */}
+      <div className="flex h-2 rounded-full overflow-hidden mt-3 bg-black/30">
+        {priced.map(c => (
+          <div
+            key={c.chain}
+            style={{ width: `${(c.totalBalanceUsd / total) * 100}%`, backgroundColor: CHAIN_DOT[c.chain] ?? '#6F7EFF' }}
+            title={`${c.chainName} · $${c.totalBalanceUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
+          />
+        ))}
+      </div>
+      <div className="mt-3 space-y-1.5">
+        {priced.map(c => (
+          <div key={c.chain} className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: CHAIN_DOT[c.chain] ?? '#6F7EFF' }} />
+              <span className="font-semibold text-white truncate">{c.chainName}</span>
+              <span className="text-[10px] text-gray-500">{c.tokenCount} {c.tokenCount === 1 ? 'token' : 'tokens'}</span>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="font-mono text-gray-300">${c.totalBalanceUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+              <span className="text-[10px] text-gray-600 font-mono w-9 text-end">{Math.round((c.totalBalanceUsd / total) * 100)}%</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // ─── Recent Transactions ───────────────────────────────────────────────────────
@@ -54,7 +165,7 @@ function RecentTransactions({ transactions, chain, walletAddress }: { transactio
   const explorerBase = chain === 'Solana' ? 'https://solscan.io/tx/' : 'https://etherscan.io/tx/';
 
   function formatTime(blockTime: string | null) {
-    if (!blockTime) return '—';
+    if (!blockTime) return 'unknown';
     const d = new Date(blockTime);
     const diff = Date.now() - d.getTime();
     const mins = Math.floor(diff / 60000);
@@ -133,6 +244,163 @@ function RecentTransactions({ transactions, chain, walletAddress }: { transactio
           )}
         </>
       )}
+    </div>
+  );
+}
+
+// ─── Activity Heatmap ──────────────────────────────────────────────────────────
+// When (UTC) this wallet actually transacts, bucketed from real on-chain tx
+// timestamps into a 7-day x 4-block grid. No synthetic fill — cells reflect
+// only observed transactions, and the whole card hides when the sample is too
+// thin to be meaningful.
+const HEATMAP_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+// 6-hour blocks labelled by their start hour (no dash ranges — clean axis).
+const HEATMAP_BLOCKS = ['00h', '06h', '12h', '18h'];
+const HEATMAP_BLOCK_RANGE = ['00:00→06:00', '06:00→12:00', '12:00→18:00', '18:00→24:00'];
+
+function ActivityHeatmap({ transactions }: { transactions: RecentTx[] }) {
+  const stamped = transactions.filter(t => t.blockTime);
+  if (stamped.length < 4) return null;
+
+  // grid[day][block] = count. Day 0 = Sunday to match Date.getUTCDay().
+  const grid: number[][] = Array.from({ length: 7 }, () => [0, 0, 0, 0]);
+  let total = 0;
+  for (const tx of stamped) {
+    const d = new Date(tx.blockTime as string);
+    if (Number.isNaN(d.getTime())) continue;
+    const day = d.getUTCDay();
+    const block = Math.min(3, Math.floor(d.getUTCHours() / 6));
+    grid[day][block]++;
+    total++;
+  }
+  if (total < 4) return null;
+
+  const max = Math.max(...grid.flat());
+  // Peak window for a one-line human summary.
+  let peakDay = 0, peakBlock = 0, peakCount = 0;
+  grid.forEach((row, di) => row.forEach((c, bi) => { if (c > peakCount) { peakCount = c; peakDay = di; peakBlock = bi; } }));
+
+  const cellColor = (count: number) => {
+    if (count === 0) return 'rgba(255,255,255,0.03)';
+    const t = max > 0 ? count / max : 0;
+    // Blue→purple ramp matching the Naka palette; alpha scales with intensity.
+    return `rgba(${Math.round(0 + t * 90)}, ${Math.round(102 - t * 30)}, ${Math.round(255 - t * 40)}, ${0.18 + t * 0.72})`;
+  };
+
+  return (
+    <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4 text-[#0066FF]" />
+          <h3 className="font-bold text-sm">Activity Heatmap <span className="text-[10px] text-gray-500 font-normal">· UTC</span></h3>
+        </div>
+        <span className="text-[10px] text-gray-500">{total} tx</span>
+      </div>
+      <div className="flex flex-col gap-1">
+        <div className="grid grid-cols-[28px_repeat(4,1fr)] gap-1 items-center">
+          <div />
+          {HEATMAP_BLOCKS.map(b => (
+            <div key={b} className="text-[8px] text-gray-500 text-center font-mono">{b}</div>
+          ))}
+        </div>
+        {grid.map((row, di) => (
+          <div key={di} className="grid grid-cols-[28px_repeat(4,1fr)] gap-1 items-center">
+            <div className="text-[9px] text-gray-500 font-mono">{HEATMAP_DAYS[di]}</div>
+            {row.map((count, bi) => (
+              <div
+                key={bi}
+                className="h-6 rounded-md flex items-center justify-center transition-colors"
+                style={{ backgroundColor: cellColor(count) }}
+                title={`${HEATMAP_DAYS[di]} ${HEATMAP_BLOCK_RANGE[bi]} UTC · ${count} tx`}
+              >
+                {count > 0 && <span className="text-[9px] font-mono font-semibold text-white/90">{count}</span>}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 text-[10px] text-gray-500">
+        Most active <span className="text-gray-300 font-semibold">{HEATMAP_DAYS[peakDay]}</span> around <span className="text-gray-300 font-semibold">{HEATMAP_BLOCK_RANGE[peakBlock]} UTC</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Counterparty Links ─────────────────────────────────────────────────────
+// Who this wallet trades with most, from real recent transactions. Known
+// entities (CEX / DEX / bridge / mixer) get a coloured category tag; unknown
+// addresses link out to the explorer.
+const CP_CATEGORY_STYLE: Record<string, { label: string; color: string; bg: string }> = {
+  cex: { label: 'CEX', color: '#F0B90B', bg: 'rgba(240,185,11,0.12)' },
+  dex: { label: 'DEX', color: '#6F7EFF', bg: 'rgba(111,126,255,0.12)' },
+  bridge: { label: 'Bridge', color: '#28A0F0', bg: 'rgba(40,160,240,0.12)' },
+  mixer: { label: 'Mixer', color: '#EF4444', bg: 'rgba(239,68,68,0.12)' },
+  'market-maker': { label: 'Market Maker', color: '#10B981', bg: 'rgba(16,185,129,0.12)' },
+  lending: { label: 'Lending', color: '#8B7CFF', bg: 'rgba(139,124,255,0.12)' },
+};
+
+function CounterpartyLinks({
+  counterparties, chain,
+}: {
+  counterparties: NonNullable<WalletData['counterparties']>;
+  chain: string;
+}) {
+  if (!counterparties || counterparties.length === 0) return null;
+  const explorerBase = chain === 'Solana' ? 'https://solscan.io/account/' : 'https://etherscan.io/address/';
+  const maxCount = Math.max(...counterparties.map(c => c.count));
+
+  return (
+    <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <GitCompare className="w-4 h-4 text-[#7C3AED]" />
+          <h3 className="font-bold text-sm">Top Counterparties</h3>
+        </div>
+        <span className="text-[10px] text-gray-500">most frequent</span>
+      </div>
+      <div className="space-y-2">
+        {counterparties.map((cp) => {
+          const style = cp.category ? CP_CATEGORY_STYLE[cp.category] : null;
+          const name = cp.label || `${cp.address.slice(0, 6)}…${cp.address.slice(-4)}`;
+          return (
+            <a
+              key={cp.address}
+              href={`${explorerBase}${cp.address}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block group"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs font-semibold text-white truncate group-hover:text-[#6F7EFF] transition-colors">{name}</span>
+                  {style && (
+                    <span className="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded font-bold flex-shrink-0"
+                      style={{ color: style.color, backgroundColor: style.bg }}>
+                      {style.label}
+                    </span>
+                  )}
+                  {cp.parent && cp.parent !== cp.label && (
+                    <span className="text-[9px] text-gray-500 flex-shrink-0">{cp.parent}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-[9px] text-gray-500 font-mono">
+                    <span className="text-emerald-400">{cp.inbound}↓</span> <span className="text-red-400">{cp.outbound}↑</span>
+                  </span>
+                  <span className="text-xs font-mono font-bold text-gray-300 w-6 text-end">{cp.count}</span>
+                </div>
+              </div>
+              <div className="h-1 rounded-full bg-black/30 mt-1 overflow-hidden">
+                <div className="h-full rounded-full"
+                  style={{ width: `${(cp.count / maxCount) * 100}%`, backgroundColor: style?.color ?? '#6F7EFF' }} />
+              </div>
+            </a>
+          );
+        })}
+      </div>
+      <div className="mt-2.5 text-[9px] text-gray-600">
+        <span className="text-emerald-400">↓</span> received from · <span className="text-red-400">↑</span> sent to · from recent transactions
+      </div>
     </div>
   );
 }
@@ -287,6 +555,8 @@ export default function WalletIntelligencePage() {
     },
   );
   const [walletData, setWalletData] = useState<WalletData | null>(null);
+  const [multiChain, setMultiChain] = useState<MultiChainResult | null>(null);
+  const [multiChainLoading, setMultiChainLoading] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<AiAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
@@ -327,6 +597,7 @@ export default function WalletIntelligencePage() {
     setLoading(true);
     setError('');
     setWalletData(null);
+    setMultiChain(null);
     setAiAnalysis(null);
 
     try {
@@ -345,6 +616,17 @@ export default function WalletIntelligencePage() {
 
       setWalletData(data);
       setLoading(false);
+
+      // Lazy multi-chain aggregate (EVM only) — runs after the primary view so
+      // it never blocks first paint. The viewed chain is a cache hit server-side.
+      if (addrType === 'EVM') {
+        setMultiChainLoading(true);
+        fetch(`/api/wallet-intelligence/multichain?address=${encodeURIComponent(trimmed)}`)
+          .then(r => (r.ok ? r.json() : null))
+          .then(mc => { if (mc && Array.isArray(mc.breakdown)) setMultiChain(mc); })
+          .catch(() => {})
+          .finally(() => setMultiChainLoading(false));
+      }
 
       setAiLoading(true);
       try {
@@ -478,6 +760,7 @@ export default function WalletIntelligencePage() {
           >
             Wallet scan →
           </Link>
+          <HowItWorksButton content={walletIntelligenceHowItWorks} className="shrink-0" />
         </div>
       </div>
 
@@ -610,6 +893,89 @@ export default function WalletIntelligencePage() {
                 </div>
 
 
+                {/* Multi-chain net worth — EVM only, lazy aggregate across chains */}
+                <MultiChainBalances data={multiChain} loading={multiChainLoading} />
+
+                {/* Realized PnL (90d) — real FIFO cost basis from Bitquery DEX
+                    trades. Only shown when there are priced trades to report. */}
+                {walletData.realizedPnl && walletData.realizedPnl.closedLots > 0 && (() => {
+                  const p = walletData.realizedPnl!;
+                  const pos = p.totalRealizedUsd >= 0;
+                  const fmtPnl = (n: number) => n >= 0
+                    ? `+$${Math.round(n).toLocaleString()}`
+                    : `($${Math.round(Math.abs(n)).toLocaleString()})`;
+                  return (
+                    <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-bold text-sm">Realized PnL <span className="text-[10px] text-gray-500 font-normal">· 90d · FIFO</span></h3>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#0066FF]/10 text-[#6F7EFF] border border-[#0066FF]/25 font-semibold">REAL TRADE DATA</span>
+                      </div>
+                      <div className={`text-2xl font-bold ${pos ? 'text-emerald-400' : 'text-red-400'}`}>{fmtPnl(p.totalRealizedUsd)}</div>
+                      <div className="grid grid-cols-3 gap-2 mt-3">
+                        <div className="bg-black/20 rounded-lg p-2">
+                          <div className="text-[9px] uppercase tracking-wider text-gray-500">Win rate</div>
+                          <div className={`text-sm font-bold font-mono mt-0.5 ${p.winRate >= 50 ? 'text-emerald-400' : 'text-gray-300'}`}>{p.winRate}%</div>
+                        </div>
+                        <div className="bg-black/20 rounded-lg p-2">
+                          <div className="text-[9px] uppercase tracking-wider text-gray-500">Closed trades</div>
+                          <div className="text-sm font-bold font-mono mt-0.5 text-white">{p.closedLots}</div>
+                        </div>
+                        <div className="bg-black/20 rounded-lg p-2">
+                          <div className="text-[9px] uppercase tracking-wider text-gray-500">Avg hold</div>
+                          <div className="text-sm font-bold font-mono mt-0.5 text-white">{p.averageHoldDays >= 1 ? `${p.averageHoldDays.toFixed(1)}d` : `${Math.round(p.averageHoldDays * 24)}h`}</div>
+                        </div>
+                      </div>
+                      {p.byToken.length > 0 && (() => {
+                        const best = p.byToken[0];
+                        const worst = p.byToken[p.byToken.length - 1];
+                        const showWorst = p.byToken.length > 1 && worst.totalRealizedUsd < 0;
+                        const sym = (t: { tokenSymbol: string | null; token: string }) => t.tokenSymbol || `${t.token.slice(0, 6)}…${t.token.slice(-4)}`;
+                        return (
+                          <>
+                            {/* Best & worst trade highlights */}
+                            <div className="grid grid-cols-2 gap-2 mt-3">
+                              <div className="bg-emerald-500/[0.08] border border-emerald-500/20 rounded-lg p-2.5">
+                                <div className="text-[9px] uppercase tracking-wider text-emerald-300/70">Best trade</div>
+                                <div className="text-xs font-semibold text-white truncate mt-0.5">{sym(best)}</div>
+                                <div className="text-sm font-mono font-bold text-emerald-400 mt-0.5">{fmtPnl(best.totalRealizedUsd)}</div>
+                              </div>
+                              {showWorst ? (
+                                <div className="bg-red-500/[0.08] border border-red-500/20 rounded-lg p-2.5">
+                                  <div className="text-[9px] uppercase tracking-wider text-red-300/70">Worst trade</div>
+                                  <div className="text-xs font-semibold text-white truncate mt-0.5">{sym(worst)}</div>
+                                  <div className="text-sm font-mono font-bold text-red-400 mt-0.5">{fmtPnl(worst.totalRealizedUsd)}</div>
+                                </div>
+                              ) : (
+                                <div className="bg-black/20 border border-[#1a1f2e] rounded-lg p-2.5 flex flex-col justify-center">
+                                  <div className="text-[9px] uppercase tracking-wider text-gray-500">Losing trades</div>
+                                  <div className="text-xs font-semibold text-emerald-300 mt-0.5">None in window</div>
+                                </div>
+                              )}
+                            </div>
+                            <div className="mt-3 space-y-1">
+                              <div className="text-[10px] text-gray-500 uppercase tracking-wider">Top tokens by realized PnL</div>
+                              {p.byToken.slice(0, 3).map((t) => (
+                                <div key={t.token} className="flex items-center justify-between text-xs py-1 border-b border-[#1a1f2e]/40 last:border-0">
+                                  <span className="font-semibold text-white truncate max-w-[140px]">{sym(t)} <span className="text-[10px] text-gray-500 font-normal">{t.winRate}% win</span></span>
+                                  <span className={t.totalRealizedUsd >= 0 ? 'text-emerald-400 font-mono' : 'text-red-400 font-mono'}>{fmtPnl(t.totalRealizedUsd)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  );
+                })()}
+
+                {/* Activity heatmap — when (UTC) this wallet transacts, from real tx timestamps */}
+                <ActivityHeatmap transactions={walletData.recentTransactions ?? []} />
+
+                {/* Top counterparties — who this wallet trades with most */}
+                {walletData.counterparties && walletData.counterparties.length > 0 && (
+                  <CounterpartyLinks counterparties={walletData.counterparties} chain={walletData.chain} />
+                )}
+
                 {/* All Holdings */}
                 <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                   <div className="flex items-center justify-between mb-3">
@@ -623,6 +989,9 @@ export default function WalletIntelligencePage() {
                       (showAllHoldings ? walletData.holdings : walletData.holdings.slice(0, 10)).map((h, i) => {
                         const val = h.valueUsd ? parseFloat(h.valueUsd) : 0;
                         const pct = totalUsd > 0 && val > 0 ? (val / totalUsd * 100) : 0;
+                        // Per-holding GoPlus security (already fetched by the API) — flag risky bags.
+                        const sec = h.contractAddress ? walletData.contractSecurity?.[h.contractAddress.toLowerCase()] : null;
+                        const risky = !!sec && (sec.isHoneypot || sec.trustLevel === 'DANGER' || sec.trustLevel === 'WARNING' || (sec.flags?.length ?? 0) > 0);
                         return (
                           <div key={`${h.symbol}-${i}`} className="flex items-center justify-between py-2 border-b border-[#1a1f2e]/40 last:border-0">
                             <div className="flex items-center gap-2">
@@ -635,7 +1004,16 @@ export default function WalletIntelligencePage() {
                                 </div>
                               )}
                               <div>
-                                <div className="text-xs font-semibold">{h.symbol}</div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs font-semibold">{h.symbol}</span>
+                                  {sec && (risky ? (
+                                    <span className="text-[8px] px-1 py-0.5 rounded bg-red-500/15 text-red-300 border border-red-500/30 font-bold uppercase tracking-wide" title={sec.flags?.map(f => f.name).join(', ') || sec.trustLevel}>
+                                      {sec.isHoneypot ? 'Honeypot' : sec.trustLevel}
+                                    </span>
+                                  ) : sec.trustLevel === 'SAFE' ? (
+                                    <span className="text-[8px] px-1 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 font-bold uppercase tracking-wide">Safe</span>
+                                  ) : null)}
+                                </div>
                                 <div className="text-[10px] text-gray-500 truncate max-w-[100px]">{h.name}</div>
                               </div>
                             </div>
@@ -651,7 +1029,7 @@ export default function WalletIntelligencePage() {
                               )}
                               <div className="text-end">
                                 <div className="text-xs font-semibold">
-                                  {h.valueUsd && parseFloat(h.valueUsd) > 0 ? `$${parseFloat(h.valueUsd).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '—'}
+                                  {h.valueUsd && parseFloat(h.valueUsd) > 0 ? `$${parseFloat(h.valueUsd).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : 'No price'}
                                 </div>
                                 <div className="text-[10px] text-gray-500">{parseFloat(h.balance) > 1000 ? parseFloat(h.balance).toLocaleString(undefined, { maximumFractionDigits: 0 }) : h.balance} {h.symbol}</div>
                               </div>
@@ -726,13 +1104,18 @@ export default function WalletIntelligencePage() {
                           <h3 className="font-bold text-sm">Performance Metrics</h3>
                         </div>
                         <div className="space-y-3">
+                          {/* Only render metrics with a REAL value. The analyzer
+                              now grounds only `diversification` (timing/risk/
+                              conviction/consistency were ungrounded LLM guesses
+                              and were removed) — so the empty bars are filtered
+                              out instead of showing 0%/undefined. */}
                           {[
-                            { label: 'Diversification', value: aiAnalysis.metrics.diversification, color: aiAnalysis.metrics.diversification >= 60 ? 'var(--nl-success)' : aiAnalysis.metrics.diversification >= 35 ? 'var(--nl-blue)' : 'var(--nl-error)' },
-                            { label: 'Timing', value: aiAnalysis.metrics.timing, color: aiAnalysis.metrics.timing >= 60 ? 'var(--nl-blue)' : 'var(--nl-warning)' },
-                            { label: 'Risk Management', value: aiAnalysis.metrics.riskManagement, color: aiAnalysis.metrics.riskManagement >= 60 ? 'var(--nl-success)' : 'var(--nl-error)' },
+                            { label: 'Diversification', value: aiAnalysis.metrics.diversification, color: (aiAnalysis.metrics.diversification ?? 0) >= 60 ? 'var(--nl-success)' : (aiAnalysis.metrics.diversification ?? 0) >= 35 ? 'var(--nl-blue)' : 'var(--nl-error)' },
+                            { label: 'Timing', value: aiAnalysis.metrics.timing, color: (aiAnalysis.metrics.timing ?? 0) >= 60 ? 'var(--nl-blue)' : 'var(--nl-warning)' },
+                            { label: 'Risk Management', value: aiAnalysis.metrics.riskManagement, color: (aiAnalysis.metrics.riskManagement ?? 0) >= 60 ? 'var(--nl-success)' : 'var(--nl-error)' },
                             { label: 'Conviction', value: aiAnalysis.metrics.conviction, color: 'var(--nl-success)' },
                             { label: 'Consistency', value: aiAnalysis.metrics.consistency, color: 'var(--nl-purple)' },
-                          ].map(m => (
+                          ].filter(m => typeof m.value === 'number').map(m => (
                             <div key={m.label}>
                               <div className="flex justify-between text-[10px] mb-1">
                                 <span className="text-gray-400">{m.label}</span>

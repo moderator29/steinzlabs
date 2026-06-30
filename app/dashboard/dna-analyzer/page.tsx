@@ -10,6 +10,8 @@ import {
 import BackButton from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/lib/hooks/useWallet';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { dnaAnalyzerHowItWorks } from '@/lib/howItWorks/content/dna-analyzer';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -434,6 +436,7 @@ export default function DNAAnalyzerPage() {
           <Dna className="w-5 h-5 text-[#0066FF]" />
           <h1 className="font-heading font-bold">DNA Analyzer</h1>
           <span className="ms-auto text-[10px] px-2 py-1 bg-[#7C3AED]/20 text-[#7C3AED] rounded-full font-semibold">AI Powered</span>
+          <HowItWorksButton content={dnaAnalyzerHowItWorks} className="shrink-0" />
         </div>
       </div>
 
