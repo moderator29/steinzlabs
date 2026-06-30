@@ -6,6 +6,7 @@ import { getDexPrice } from "@/lib/services/dexscreener";
 import { executeTrade } from "@/lib/trading/relayer";
 import { usdcForChain, usdToUsdcBaseUnits } from "@/lib/trading/usdc";
 import { getTokenDecimalsForSizing } from "@/lib/sniper/priceFeed";
+import { addressesEqual } from "@/lib/utils/addressNormalize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -120,7 +121,12 @@ export async function GET(request: NextRequest) {
     // For a non-USDC from-token, resolve real decimals and SKIP on failure
     // rather than guessing 18.
     let dcaAmountInBase: string;
-    if (dcaFromAddr === usdcForChain(bot.chain)) {
+    const dcaChainUsdc = usdcForChain(bot.chain);
+    // Case-insensitive address compare (CLAUDE.md): usdcForChain returns a
+    // mixed-case EVM address while a stored from_token_address is often
+    // lowercased — a raw === would false-miss USDC and strand the order on an
+    // RPC blip. addressesEqual lowercases EVM and preserves case for Solana.
+    if (dcaChainUsdc && addressesEqual(dcaFromAddr, dcaChainUsdc)) {
       dcaAmountInBase = usdToUsdcBaseUnits(Number(bot.amount_per_execution), bot.chain);
     } else {
       const dec = await getTokenDecimalsForSizing(bot.chain, dcaFromAddr);

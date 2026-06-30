@@ -6,6 +6,7 @@ import { getDexPrice } from "@/lib/services/dexscreener";
 import { executeTrade } from "@/lib/trading/relayer";
 import { usdcForChain, usdToUsdcBaseUnits } from "@/lib/trading/usdc";
 import { getTokenDecimalsForSizing } from "@/lib/sniper/priceFeed";
+import { addressesEqual } from "@/lib/utils/addressNormalize";
 
 const isEvmAddress = (v: string) => /^0x[a-fA-F0-9]{40}$/.test(v);
 
@@ -111,7 +112,11 @@ export async function GET(request: NextRequest) {
     // wrong default-18 on a 6-dp USDC chain would over-scale the order by 1e12.
     // Non-USDC from-token → resolve real decimals and SKIP on failure, never 18.
     let amountInBase: string;
-    if (fromAddr === usdcForChain(order.chain)) {
+    const loChainUsdc = usdcForChain(order.chain);
+    // Case-insensitive USDC compare (CLAUDE.md): a lowercase-stored from-token
+    // would false-miss the mixed-case usdcForChain result under a raw === and
+    // strand the order on an RPC blip. addressesEqual handles EVM vs Solana case.
+    if (loChainUsdc && addressesEqual(fromAddr, loChainUsdc)) {
       amountInBase = usdToUsdcBaseUnits(Number(order.from_amount), order.chain);
     } else {
       const dec = await getTokenDecimalsForSizing(order.chain, fromAddr);
