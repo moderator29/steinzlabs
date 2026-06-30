@@ -171,7 +171,7 @@ Entity type: ${sanitizeForPrompt(whale.entity_type) || 'unknown'}
 Portfolio USD: ${whale.portfolio_value_usd ?? 'unknown'}
 30d PnL USD: ${whale.pnl_30d_usd ?? 'unknown'}
 7d PnL USD: ${whale.pnl_7d_usd ?? 'unknown'}
-Win rate (30d): ${whale.win_rate !== null ? (whale.win_rate * 100).toFixed(0) + '%' : 'insufficient data'}
+Win rate (30d): ${whale.win_rate !== null ? Math.round(whale.win_rate) + '%' : 'insufficient data'}
 Trades (30d): ${whale.trade_count_30d ?? 'unknown'}
 Whale score: ${whale.whale_score ?? 50}/100
 

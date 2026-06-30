@@ -494,7 +494,7 @@ export default function WhaleDirectoryPage() {
             >
               Prev
             </button>
-            <span className="text-xs text-slate-500">{offset + 1}–{Math.min(offset + 24, total)} of {total}</span>
+            <span className="text-xs text-slate-500">{offset + 1} to {Math.min(offset + 24, total)} of {total}</span>
             <button
               disabled={offset + 24 >= total}
               onClick={() => setOffset(offset + 24)}
