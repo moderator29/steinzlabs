@@ -59,11 +59,11 @@ export function HowItWorksButton({
         aria-haspopup="dialog"
         aria-label={`How ${content.title} works`}
         title="How it works"
-        className={`inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] text-slate-300 transition-colors hover:border-[#0066FF]/40 hover:bg-white/[0.08] hover:text-white ${
+        className={`inline-flex items-center gap-1.5 rounded-full border border-[#0066FF]/50 bg-[#0066FF]/15 text-[#cfe0ff] shadow-[0_0_12px_rgba(0,102,255,0.30)] transition-colors hover:border-[#0066FF] hover:bg-[#0066FF]/25 hover:text-white ${
           iconOnly ? 'p-1.5' : 'px-2.5 py-1'
         } ${className}`}
       >
-        <HelpCircle className="h-3.5 w-3.5 flex-shrink-0" />
+        <HelpCircle className="h-3.5 w-3.5 flex-shrink-0 text-[#4DA2FF]" />
         {!iconOnly && <span className="text-[11px] font-semibold leading-none">How it works</span>}
       </button>
       {open && <HowItWorksPanel content={content} onClose={() => setOpen(false)} />}
