@@ -5,7 +5,9 @@ import dynamic from 'next/dynamic';
 import { X, Loader2, Zap, Shield, Target, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { CHAIN_CONFIGS, SNIPER_CHAINS, type SniperChain } from '@/lib/sniper/chains';
+import { LAUNCHPADS, launchpadIconUrl } from '@/lib/sniper/launchpads';
 import { SecurityGate } from '@/components/security/SecurityGate';
+import { Toggle as SquareToggle } from '@/components/ui/Toggle';
 import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 // §11 — lazy-loaded so the chart bundle only ships when the user
@@ -14,6 +16,10 @@ const AdvancedChart = dynamic(
   () => import('@/components/trading/AdvancedChart').then(m => m.AdvancedChart),
   { ssr: false, loading: () => <div className="h-[180px] rounded-lg border border-white/10 flex items-center justify-center text-[11px] text-white/50">Loading chart…</div> },
 );
+
+// Inline blue-stride ring shared across the modal shell + every inner panel so
+// every surface carries the brand neon-blue edge glow.
+const BLUE_STRIDE = { boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' } as const;
 
 // Detect EVM (0x-prefixed, 42 chars) vs Solana (base58, 32-44 chars,
 // no 0x prefix). Same pattern used in app/dashboard/swap/page.tsx so
@@ -42,6 +48,11 @@ type Trigger = 'new_token_launch' | 'whale_buy' | 'price_target';
 
 // EVM-only: Solana/TON can't do capped, revocable session-key automation.
 const EVM_SNIPER_CHAINS = SNIPER_CHAINS.filter((c) => c !== 'solana' && c !== 'ton');
+
+// Snipe-protection launchpads shown MEVX-style. These are display/preview only:
+// sniper_criteria has no launchpad-allowlist column and the criteria API route
+// whitelists fields, so a selection here is NOT persisted (see report).
+const SNIPE_PROTECTION_LAUNCHPADS = LAUNCHPADS.filter((l) => l.id !== 'dex');
 
 export function NewSniperModal({ onClose, onSaved, userId }: Props) {
   const [name, setName] = useState('');
@@ -78,6 +89,9 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
   // (manual confirm → password-sign, already wired through pendingSigner);
   // 'external' = a connected MetaMask/Phantom wallet (session-key authorized).
   const [walletMode, setWalletMode] = useState<'builtin' | 'external'>('builtin');
+
+  // Display-only launchpad snipe-protection picker (not persisted — no column).
+  const [protectedLaunchpads, setProtectedLaunchpads] = useState<string[]>([]);
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
@@ -129,6 +143,10 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
     setWalletAddresses(prev => prev.includes(addr) ? prev.filter(x => x !== addr) : [...prev, addr]);
   };
 
+  const toggleLaunchpad = (id: string) => {
+    setProtectedLaunchpads(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
   // Inline validation — returns the first reason the form can't be saved (shown
   // to the user) or null when valid, so they know exactly what to fix.
   const validationError = useMemo<string | null>(() => {
@@ -170,6 +188,7 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
         min_holder_count: minHolders || undefined,
         min_security_score: minSecurityScore || undefined,
         block_honeypots: blockHoneypots,
+        launchpads_allowed: protectedLaunchpads.length ? protectedLaunchpads : null,
         trigger_whale_address: trigger === 'whale_buy' ? (normalizeAddress(whaleAddress.trim()) ?? whaleAddress.trim()) : null,
         trigger_price_target: trigger === 'price_target' ? Number(priceTarget) : null,
         amount_per_snipe_usd: amountUsd,
@@ -213,237 +232,283 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border-2 border-white/10 bg-[#0a0d18] shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur" onClick={onClose}>
+      <div
+        onClick={e => e.stopPropagation()}
+        style={BLUE_STRIDE}
+        className="nl-glass w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-2xl"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-white/10 sticky top-0 bg-[#0a0d18] z-10">
+        <div className="flex items-center justify-between p-5 border-b border-white/10 sticky top-0 z-10 bg-[var(--nl-canvas-base,#050816)]/80 backdrop-blur">
           <div>
-            <h2 className="text-xl font-bold flex items-center gap-2"><Zap className="w-5 h-5 text-blue-400" /> New Sniper</h2>
+            <h2 className="text-xl font-bold flex items-center gap-2"><Zap className="w-5 h-5 text-[var(--nl-blue,#0066FF)]" /> New Sniper</h2>
             <p className="text-xs text-white/50 mt-0.5">Configure a rule that triggers a buy when conditions match.</p>
           </div>
-          <button onClick={onClose} aria-label="Close sniper rule editor" className="p-2 rounded-lg hover:bg-white/10 transition"><X className="w-5 h-5" aria-hidden="true" /></button>
+          <button onClick={onClose} aria-label="Close sniper rule editor" className="nl-button nl-button--ghost !p-2"><X className="w-5 h-5" aria-hidden="true" /></button>
         </div>
 
-        <div className="p-5 space-y-5">
-          {/* Name */}
-          <Field label="Sniper Name" required>
-            <input
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="e.g. SOL pump.fun memecoin sniper"
-              className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white placeholder:text-white/40 focus:border-blue-400 focus:outline-none transition"
-            />
-          </Field>
-
-          {/* Chains */}
-          <Field label="Chains" required hint="EVM-only — non-custodial session-key automation. The first chain's defaults populate priority fee.">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {EVM_SNIPER_CHAINS.map(c => {
-                const cfg = CHAIN_CONFIGS[c];
-                const active = chains.includes(c);
-                return (
-                  <button
-                    key={c}
-                    onClick={() => toggleChain(c)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border-2 text-sm font-semibold transition ${
-                      active ? 'border-blue-400/60 bg-blue-500/15 text-blue-100' : 'border-white/10 bg-white/[0.03] text-white/60 hover:border-white/20'
-                    }`}
-                  >
-                    <img src={cfg.logo} alt="" className="w-5 h-5 rounded-full" />
-                    {cfg.symbol}
-                  </button>
-                );
-              })}
-            </div>
-          </Field>
-
-          {/* Trigger */}
-          <Field label="Trigger" hint="What event should fire this sniper?">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {([
-                { id: 'new_token_launch', label: 'New Pair' },
-                { id: 'whale_buy', label: 'Whale Buys' },
-                { id: 'price_target', label: 'Price Target' },
-              ] as { id: Trigger; label: string }[]).map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => setTrigger(t.id)}
-                  className={`px-3 py-2 rounded-lg border-2 text-sm font-semibold transition ${
-                    trigger === t.id ? 'border-blue-400/60 bg-blue-500/15 text-blue-100' : 'border-white/10 bg-white/[0.03] text-white/60 hover:border-white/20'
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          </Field>
-
-          {trigger === 'whale_buy' && (
-            <Field label="Whale Address" required>
-              <input value={whaleAddress} onChange={e => setWhaleAddress(e.target.value)} placeholder="0x... or solana address" className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white placeholder:text-white/40 focus:border-blue-400 focus:outline-none font-mono text-sm transition" />
+        <div className="p-5 space-y-4">
+          {/* Name spans full width above the two-column grid. */}
+          <Panel>
+            <Field label="Sniper Name" required>
+              <input
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="e.g. ETH uniswap memecoin sniper"
+                className={INPUT_CLS}
+              />
             </Field>
-          )}
-          {trigger === 'price_target' && (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Token Address" required>
-                  <input value={tokenAddress} onChange={e => setTokenAddress(e.target.value)} placeholder="0x... or mint" className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white placeholder:text-white/40 focus:border-blue-400 focus:outline-none font-mono text-sm transition" />
+          </Panel>
+
+          {/* MEVX-style two columns: targeting on the left, execution + risk on
+              the right. Stacks to a single scrolling column on mobile. */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* ── LEFT: Wallets + Targeting ─────────────────────────────── */}
+            <div className="space-y-4">
+              {/* Wallet source — Naka built-in vs external */}
+              <Panel>
+                <Field label="Wallet" hint={walletMode === 'builtin'
+                  ? 'Your in-app Naka wallet signs each snipe (you confirm with your wallet password). Non-custodial — keys never leave your browser.'
+                  : 'A connected external wallet (MetaMask / Phantom) signs via its authorized session key.'}>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      { id: 'builtin' as const, label: 'Naka Wallet', sub: 'In-app · you confirm' },
+                      { id: 'external' as const, label: 'External Wallet', sub: 'MetaMask / Phantom' },
+                    ]).map(opt => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => { setWalletMode(opt.id); if (opt.id === 'builtin') setWalletAddresses([]); }}
+                        className={SEG_CLS(walletMode === opt.id) + ' text-start'}
+                      >
+                        <div className={`text-sm font-semibold ${walletMode === opt.id ? 'text-blue-100' : 'text-white/80'}`}>{opt.label}</div>
+                        <div className="text-[11px] text-white/45">{opt.sub}</div>
+                      </button>
+                    ))}
+                  </div>
                 </Field>
-                <Field label="Buy When ≤ (USD)" required>
-                  <input type="number" value={priceTarget} onChange={e => setPriceTarget(e.target.value)} placeholder="0.0001" className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white placeholder:text-white/40 focus:border-blue-400 focus:outline-none transition" />
+
+                {/* External wallet multi-select — only when External is chosen */}
+                {walletMode === 'external' && userWallets.length > 0 && (
+                  <div className="mt-3">
+                    <Field label="Wallets" hint="Pick which connected wallets this sniper uses. Empty = primary only.">
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto rounded-lg border border-white/10 p-2 bg-white/[0.03]">
+                        {userWallets.map(w => (
+                          <label key={w.address} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/[0.05] cursor-pointer">
+                            <input type="checkbox" checked={walletAddresses.includes(w.address)} onChange={() => toggleWallet(w.address)} className="accent-[var(--nl-blue,#0066FF)]" />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium truncate">{w.label ?? `${w.address.slice(0, 8)}…${w.address.slice(-4)}`}</div>
+                              <div className="text-xs text-white/40 font-mono">{w.address.slice(0, 14)}… · {w.chain ?? 'evm'}</div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </Field>
+                  </div>
+                )}
+              </Panel>
+
+              {/* Chains */}
+              <Panel>
+                <Field label="Chains" required hint="EVM-only — non-custodial session-key automation. The first chain's defaults populate priority fee.">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {EVM_SNIPER_CHAINS.map(c => {
+                      const cfg = CHAIN_CONFIGS[c];
+                      const active = chains.includes(c);
+                      return (
+                        <button key={c} type="button" onClick={() => toggleChain(c)} className={SEG_CLS(active) + ' flex items-center gap-1.5 text-sm font-semibold'}>
+                          <img src={cfg.logo} alt="" className="w-5 h-5 rounded-full" />
+                          {cfg.symbol}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </Field>
-              </div>
-              {/* §11 — Live preview chart so the user can sanity-check the
-                  price target against the actual token. Only renders when
-                  the address looks plausible (EVM or base58); otherwise the
-                  modal stays clean. AdvancedChart handles its own loading
-                  + error states (gracefully shows "Failed to load chart"
-                  when the OHLCV API can't resolve the token). */}
-              {isPlausibleAddress(debouncedTokenAddress) && (
-                <div>
-                  <div className="text-[11px] uppercase tracking-wide text-white/50 mb-1.5">Token preview</div>
-                  <AdvancedChart
-                    chain={detectChainFromAddress(debouncedTokenAddress, chains[0] ?? 'ethereum')}
-                    token={debouncedTokenAddress.trim()}
-                    tf="1h"
-                    chartType="candlestick"
-                    indicators={{ ema21: true, volume: true }}
-                    height={180}
-                    className="rounded-lg border border-white/10 overflow-hidden"
+              </Panel>
+
+              {/* Trigger (Targeted / Mass via New Pair, plus Whale + Price) */}
+              <Panel>
+                <Field label="Trigger" hint="What event should fire this sniper?">
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { id: 'new_token_launch', label: 'New Pair', sub: 'Mass' },
+                      { id: 'whale_buy', label: 'Whale Buys', sub: 'Dev / wallet' },
+                      { id: 'price_target', label: 'Price Target', sub: 'Targeted' },
+                    ] as { id: Trigger; label: string; sub: string }[]).map(t => (
+                      <button key={t.id} type="button" onClick={() => setTrigger(t.id)} className={SEG_CLS(trigger === t.id) + ' text-center'}>
+                        <div className={`text-sm font-semibold ${trigger === t.id ? 'text-blue-100' : 'text-white/80'}`}>{t.label}</div>
+                        <div className="text-[10px] uppercase tracking-wide text-white/40">{t.sub}</div>
+                      </button>
+                    ))}
+                  </div>
+                </Field>
+
+                {trigger === 'whale_buy' && (
+                  <div className="mt-3">
+                    <Field label="Dev / Whale Address" required hint="Mirror this wallet — snipe whatever it buys.">
+                      <input value={whaleAddress} onChange={e => setWhaleAddress(e.target.value)} placeholder="0x… or solana address" className={INPUT_CLS + ' font-mono text-sm'} />
+                    </Field>
+                  </div>
+                )}
+                {trigger === 'price_target' && (
+                  <div className="mt-3 space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="Token / Symbol" required>
+                        <input value={tokenAddress} onChange={e => setTokenAddress(e.target.value)} placeholder="0x… or mint" className={INPUT_CLS + ' font-mono text-sm'} />
+                      </Field>
+                      <Field label="Buy When ≤ (USD)" required>
+                        <input type="number" value={priceTarget} onChange={e => setPriceTarget(e.target.value)} placeholder="0.0001" className={INPUT_CLS} />
+                      </Field>
+                    </div>
+                    {/* §11 — Live preview chart so the user can sanity-check the
+                        price target against the actual token. Only renders when
+                        the address looks plausible (EVM or base58); otherwise the
+                        modal stays clean. AdvancedChart handles its own loading
+                        + error states (gracefully shows "Failed to load chart"
+                        when the OHLCV API can't resolve the token). */}
+                    {isPlausibleAddress(debouncedTokenAddress) && (
+                      <div>
+                        <div className="text-[11px] uppercase tracking-wide text-white/50 mb-1.5">Token preview</div>
+                        <AdvancedChart
+                          chain={detectChainFromAddress(debouncedTokenAddress, chains[0] ?? 'ethereum')}
+                          token={debouncedTokenAddress.trim()}
+                          tf="1h"
+                          chartType="candlestick"
+                          indicators={{ ema21: true, volume: true }}
+                          height={180}
+                          className="rounded-lg border border-white/10 overflow-hidden"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Panel>
+
+              {/* Snipe Protection — per-launchpad enable list (MEVX reference).
+                  NOTE: display/preview only. sniper_criteria has no launchpad
+                  allowlist column, so this selection is NOT persisted. */}
+              <Panel>
+                <Field
+                  label="Snipe Protection"
+                  hint="Launchpad Migrations Only — restrict which launchpads this rule will snipe. Preview: not yet persisted (no backend column)."
+                >
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {SNIPE_PROTECTION_LAUNCHPADS.map(lp => {
+                      const active = protectedLaunchpads.includes(lp.id);
+                      const icon = launchpadIconUrl(lp.id);
+                      return (
+                        <button key={lp.id} type="button" onClick={() => toggleLaunchpad(lp.id)} className={SEG_CLS(active) + ' flex items-center gap-1.5 text-xs font-semibold'}>
+                          {icon
+                            ? <img src={icon} alt="" className="w-4 h-4 rounded-full flex-shrink-0" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                            : <span className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-[9px] flex-shrink-0">{lp.label[0]}</span>}
+                          <span className="truncate">{lp.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-2 text-[11px] text-slate-400 flex items-center gap-1">
+                    Leave all off to allow every launchpad; select some to restrict snipes to those only.
+                  </p>
+                </Field>
+              </Panel>
+            </div>
+
+            {/* ── RIGHT: Execution + Advanced ──────────────────────────── */}
+            <div className="space-y-4">
+              {/* Snipe amount + slippage + priority fee */}
+              <Panel>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <Field label="Snipe Amount (USD)" required>
+                    <input type="number" value={amountUsd} onChange={e => setAmountUsd(Number(e.target.value))} className={INPUT_CLS} />
+                  </Field>
+                  <Field label="Slippage / Min Recv (%)">
+                    <input type="number" step="0.1" value={slippagePct} onChange={e => setSlippagePct(Number(e.target.value))} className={INPUT_CLS} />
+                  </Field>
+                  <Field label={`Priority Fee${primaryChainCfg ? ` (${primaryChainCfg.symbol === 'SOL' ? 'µLamp' : 'gwei'})` : ''}`}>
+                    <input type="number" value={priorityFee ?? ''} onChange={e => setPriorityFee(e.target.value === '' ? null : Number(e.target.value))} className={INPUT_CLS} />
+                  </Field>
+                </div>
+              </Panel>
+
+              {/* Anti-MEV + Auto-execute toggles */}
+              <Panel>
+                <div className="space-y-3">
+                  <ToggleRow
+                    label="Anti-MEV"
+                    hint={primaryChainCfg ? primaryChainCfg.mevProtect.label : 'Routes through anti-front-run RPCs'}
+                    checked={mevProtect}
+                    onChange={setMevProtect}
+                    disabled={primaryChainCfg ? !primaryChainCfg.mevProtect.available : false}
+                    icon={Shield}
+                  />
+                  <ToggleRow
+                    label="Auto-Execute"
+                    hint="On a match: the Naka wallet auto-buys while it's unlocked and Naka is open (non-custodial — keys stay in your browser); otherwise it's staged for one-tap approval. External wallets always need your one-tap sign. Off = alert only."
+                    checked={autoExecute}
+                    onChange={setAutoExecute}
+                    icon={Zap}
                   />
                 </div>
-              )}
-            </div>
-          )}
+              </Panel>
 
-          {/* Amount + Slippage + Priority */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <Field label="Per Snipe (USD)" required>
-              <input type="number" value={amountUsd} onChange={e => setAmountUsd(Number(e.target.value))} className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white focus:border-blue-400 focus:outline-none transition" />
-            </Field>
-            <Field label="Max Slippage (%)">
-              <input type="number" step="0.1" value={slippagePct} onChange={e => setSlippagePct(Number(e.target.value))} className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white focus:border-blue-400 focus:outline-none transition" />
-            </Field>
-            <Field label={`Priority Fee${primaryChainCfg ? ` (${primaryChainCfg.symbol === 'SOL' ? 'µLamp' : 'gwei'})` : ''}`}>
-              <input type="number" value={priorityFee ?? ''} onChange={e => setPriorityFee(e.target.value === '' ? null : Number(e.target.value))} className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white focus:border-blue-400 focus:outline-none transition" />
-            </Field>
+              {/* Max block / daily limits / expiry */}
+              <Panel>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <Field label="Max Block / Snipes per day" hint="Daily snipe cap.">
+                    <input type="number" value={dailyMaxSnipes} onChange={e => setDailyMaxSnipes(Number(e.target.value))} className={INPUT_CLS} />
+                  </Field>
+                  <Field label="Daily Max Spend (USD)">
+                    <input type="number" value={dailyMaxSpend} onChange={e => setDailyMaxSpend(Number(e.target.value))} className={INPUT_CLS} />
+                  </Field>
+                  <Field label="Expiry (hours)" hint="Empty = never expires">
+                    <input type="number" value={expiryHours} onChange={e => setExpiryHours(e.target.value === '' ? '' : Number(e.target.value))} className={INPUT_CLS} />
+                  </Field>
+                </div>
+              </Panel>
+
+              {/* Auto TP / SL — Advance */}
+              <Section title="Auto TP / SL · Auto Sell" expanded={showAdvanced} onToggle={() => setShowAdvanced(v => !v)}>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Field label="Take Profit (%)">
+                    <input type="number" value={tp} onChange={e => setTp(e.target.value === '' ? '' : Number(e.target.value))} placeholder="200" className={INPUT_CLS} />
+                  </Field>
+                  <Field label="Stop Loss (%)">
+                    <input type="number" value={sl} onChange={e => setSl(e.target.value === '' ? '' : Number(e.target.value))} placeholder="30" className={INPUT_CLS} />
+                  </Field>
+                  <Field label="Trailing Stop (%)">
+                    <input type="number" value={trailingStop} onChange={e => setTrailingStop(e.target.value === '' ? '' : Number(e.target.value))} placeholder="15" className={INPUT_CLS} />
+                  </Field>
+                </div>
+                <div className="mt-3">
+                  <ToggleRow label="Auto-sell on target hit" hint="Sell Immediately when TP / SL is reached." checked={autoSellOnTarget} onChange={setAutoSellOnTarget} icon={Target} compact />
+                </div>
+              </Section>
+
+              {/* Safety filters */}
+              <Section title="Safety Filters" expanded={showFilters} onToggle={() => setShowFilters(v => !v)}>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <Field label="Min Liquidity (USD)">
+                    <input type="number" value={minLiqUsd} onChange={e => setMinLiqUsd(Number(e.target.value))} className={INPUT_CLS} />
+                  </Field>
+                  <Field label="Max Buy Tax (%)">
+                    <input type="number" step="0.1" value={maxBuyTaxPct} onChange={e => setMaxBuyTaxPct(Number(e.target.value))} className={INPUT_CLS} />
+                  </Field>
+                  <Field label="Max Sell Tax (%)">
+                    <input type="number" step="0.1" value={maxSellTaxPct} onChange={e => setMaxSellTaxPct(Number(e.target.value))} className={INPUT_CLS} />
+                  </Field>
+                  <Field label="Min Holders">
+                    <input type="number" value={minHolders} onChange={e => setMinHolders(Number(e.target.value))} className={INPUT_CLS} />
+                  </Field>
+                  <Field label="Min Security Score">
+                    <input type="number" min={0} max={100} value={minSecurityScore} onChange={e => setMinSecurityScore(Number(e.target.value))} className={INPUT_CLS} />
+                  </Field>
+                </div>
+                <div className="mt-3">
+                  <ToggleRow label="Block Honeypots" hint="Auto-abort if GoPlus flags as honeypot." checked={blockHoneypots} onChange={setBlockHoneypots} icon={AlertTriangle} compact />
+                </div>
+              </Section>
+            </div>
           </div>
-
-          {/* MEV protect */}
-          <Toggle
-            label="MEV Protection"
-            hint={primaryChainCfg ? primaryChainCfg.mevProtect.label : 'Routes through anti-front-run RPCs'}
-            value={mevProtect}
-            onChange={setMevProtect}
-            disabled={primaryChainCfg ? !primaryChainCfg.mevProtect.available : false}
-            icon={Shield}
-          />
-
-          {/* Auto-execute */}
-          <Toggle
-            label="Auto-Execute"
-            hint="On a match: the Naka wallet auto-buys while it's unlocked and Naka is open (non-custodial — keys stay in your browser); otherwise it's staged for one-tap approval. External wallets always need your one-tap sign. Off = alert only."
-            value={autoExecute}
-            onChange={setAutoExecute}
-            icon={Zap}
-            color="amber"
-          />
-
-          {/* TP / SL */}
-          <Section title="Take Profit / Stop Loss" expanded={showAdvanced} onToggle={() => setShowAdvanced(v => !v)}>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <Field label="Take Profit (%)">
-                <input type="number" value={tp} onChange={e => setTp(e.target.value === '' ? '' : Number(e.target.value))} placeholder="200" className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white placeholder:text-white/40 focus:border-blue-400 focus:outline-none transition" />
-              </Field>
-              <Field label="Stop Loss (%)">
-                <input type="number" value={sl} onChange={e => setSl(e.target.value === '' ? '' : Number(e.target.value))} placeholder="30" className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white placeholder:text-white/40 focus:border-blue-400 focus:outline-none transition" />
-              </Field>
-              <Field label="Trailing Stop (%)">
-                <input type="number" value={trailingStop} onChange={e => setTrailingStop(e.target.value === '' ? '' : Number(e.target.value))} placeholder="15" className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white placeholder:text-white/40 focus:border-blue-400 focus:outline-none transition" />
-              </Field>
-            </div>
-            <div className="mt-3">
-              <Toggle label="Auto-sell on target hit" value={autoSellOnTarget} onChange={setAutoSellOnTarget} icon={Target} compact />
-            </div>
-          </Section>
-
-          {/* Filters */}
-          <Section title="Safety Filters" expanded={showFilters} onToggle={() => setShowFilters(v => !v)}>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <Field label="Min Liquidity (USD)">
-                <input type="number" value={minLiqUsd} onChange={e => setMinLiqUsd(Number(e.target.value))} className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white focus:border-blue-400 focus:outline-none transition" />
-              </Field>
-              <Field label="Max Buy Tax (%)">
-                <input type="number" step="0.1" value={maxBuyTaxPct} onChange={e => setMaxBuyTaxPct(Number(e.target.value))} className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white focus:border-blue-400 focus:outline-none transition" />
-              </Field>
-              <Field label="Max Sell Tax (%)">
-                <input type="number" step="0.1" value={maxSellTaxPct} onChange={e => setMaxSellTaxPct(Number(e.target.value))} className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white focus:border-blue-400 focus:outline-none transition" />
-              </Field>
-              <Field label="Min Holders">
-                <input type="number" value={minHolders} onChange={e => setMinHolders(Number(e.target.value))} className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white focus:border-blue-400 focus:outline-none transition" />
-              </Field>
-              <Field label="Min Security Score">
-                <input type="number" min={0} max={100} value={minSecurityScore} onChange={e => setMinSecurityScore(Number(e.target.value))} className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white focus:border-blue-400 focus:outline-none transition" />
-              </Field>
-            </div>
-            <div className="mt-3">
-              <Toggle label="Block Honeypots" hint="Auto-abort if GoPlus flags as honeypot." value={blockHoneypots} onChange={setBlockHoneypots} icon={AlertTriangle} compact color="red" />
-            </div>
-          </Section>
-
-          {/* Daily limits + expiry */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <Field label="Daily Max Snipes">
-              <input type="number" value={dailyMaxSnipes} onChange={e => setDailyMaxSnipes(Number(e.target.value))} className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white focus:border-blue-400 focus:outline-none transition" />
-            </Field>
-            <Field label="Daily Max Spend (USD)">
-              <input type="number" value={dailyMaxSpend} onChange={e => setDailyMaxSpend(Number(e.target.value))} className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white focus:border-blue-400 focus:outline-none transition" />
-            </Field>
-            <Field label="Expire After (hours)" hint="Empty = never expires">
-              <input type="number" value={expiryHours} onChange={e => setExpiryHours(e.target.value === '' ? '' : Number(e.target.value))} className="w-full px-3 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 text-white focus:border-blue-400 focus:outline-none transition" />
-            </Field>
-          </div>
-
-          {/* Wallet source — Naka built-in vs external */}
-          <Field label="Wallet" hint={walletMode === 'builtin'
-            ? 'Your in-app Naka wallet signs each snipe (you confirm with your wallet password).'
-            : 'A connected external wallet (MetaMask / Phantom) signs via its authorized session key.'}>
-            <div className="grid grid-cols-2 gap-2">
-              {([
-                { id: 'builtin' as const, label: 'Naka Wallet', sub: 'In-app · you confirm' },
-                { id: 'external' as const, label: 'External Wallet', sub: 'MetaMask / Phantom' },
-              ]).map(opt => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => { setWalletMode(opt.id); if (opt.id === 'builtin') setWalletAddresses([]); }}
-                  className={`px-3 py-2.5 rounded-lg border-2 text-start transition ${
-                    walletMode === opt.id ? 'border-blue-400/60 bg-blue-500/15' : 'border-white/10 bg-white/[0.03] hover:border-white/20'
-                  }`}
-                >
-                  <div className={`text-sm font-semibold ${walletMode === opt.id ? 'text-blue-100' : 'text-white/80'}`}>{opt.label}</div>
-                  <div className="text-[11px] text-white/45">{opt.sub}</div>
-                </button>
-              ))}
-            </div>
-          </Field>
-
-          {/* External wallet picker — only when External is chosen */}
-          {walletMode === 'external' && userWallets.length > 0 && (
-            <Field label="Wallets" hint="Pick which connected wallets this sniper uses. Empty = primary only.">
-              <div className="space-y-1.5 max-h-40 overflow-y-auto rounded-lg border border-white/10 p-2 bg-white/[0.02]">
-                {userWallets.map(w => (
-                  <label key={w.address} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/[0.04] cursor-pointer">
-                    <input type="checkbox" checked={walletAddresses.includes(w.address)} onChange={() => toggleWallet(w.address)} className="accent-blue-500" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{w.label ?? `${w.address.slice(0, 8)}…${w.address.slice(-4)}`}</div>
-                      <div className="text-xs text-white/40 font-mono">{w.address.slice(0, 14)}… · {w.chain ?? 'evm'}</div>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </Field>
-          )}
 
           {error && (
             <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2.5 text-sm text-red-200">
@@ -453,8 +518,8 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-white/10 flex items-center justify-between gap-3 sticky bottom-0 bg-[#0a0d18]">
-          <button onClick={onClose} className="px-4 py-2.5 rounded-lg bg-white/[0.05] border border-white/10 font-semibold text-sm hover:bg-white/[0.1] transition">Cancel</button>
+        <div className="p-4 border-t border-white/10 flex items-center justify-between gap-3 sticky bottom-0 bg-[var(--nl-canvas-base,#050816)]/80 backdrop-blur">
+          <button onClick={onClose} className="nl-button nl-button--ghost">Cancel</button>
           {/* Tells the user exactly why Review & Create is disabled. */}
           {validationError && <span className="flex-1 text-center text-[11px] text-amber-400 px-2">{validationError}</span>}
           {/* §12 — Pre-create security gate. Only fires for the price_target
@@ -472,7 +537,7 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
             <button
               onClick={() => setShowReview(true)}
               disabled={!canSave || saving}
-              className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-blue-800 font-bold text-sm hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-blue-900/30"
+              className="nl-btn-neon !px-6 !py-2.5 !text-sm font-bold"
             >
               <Zap className="w-4 h-4" />
               Review &amp; Create
@@ -481,11 +546,15 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
         </div>
 
         {showReview && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => !saving && setShowReview(false)}>
-            <div onClick={e => e.stopPropagation()} className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border-2 border-blue-500/30 bg-[#0a0d18] shadow-2xl p-5">
+          <div className="absolute inset-0 z-20 flex items-center justify-center p-4 bg-black/60 backdrop-blur" onClick={() => !saving && setShowReview(false)}>
+            <div
+              onClick={e => e.stopPropagation()}
+              style={BLUE_STRIDE}
+              className="nl-glass w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl p-5"
+            >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold flex items-center gap-2"><Zap className="w-5 h-5 text-blue-400" /> Confirm sniper</h3>
-                <button onClick={() => !saving && setShowReview(false)} disabled={saving} aria-label="Close confirm sniper" className="p-1.5 rounded-lg hover:bg-white/10 transition disabled:opacity-50"><X className="w-4 h-4" aria-hidden="true" /></button>
+                <h3 className="text-lg font-bold flex items-center gap-2"><Zap className="w-5 h-5 text-[var(--nl-blue,#0066FF)]" /> Confirm sniper</h3>
+                <button onClick={() => !saving && setShowReview(false)} disabled={saving} aria-label="Close confirm sniper" className="nl-button nl-button--ghost !p-1.5"><X className="w-4 h-4" aria-hidden="true" /></button>
               </div>
               <p className="text-xs text-white/60 mb-4">Review every value before this rule goes live. Once saved, it watches the chain on every match.</p>
               <dl className="space-y-2 text-sm">
@@ -498,7 +567,7 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
                 <ReviewRow k="Amount / snipe" v={`$${amountUsd}`} />
                 <ReviewRow k="Slippage" v={`${slippagePct}%`} />
                 <ReviewRow k="Priority fee" v={priorityFee != null ? String(priorityFee) : '—'} />
-                <ReviewRow k="MEV protect" v={mevProtect ? 'on' : 'off'} />
+                <ReviewRow k="Anti-MEV" v={mevProtect ? 'on' : 'off'} />
                 <ReviewRow k="Take profit" v={tp === '' ? '—' : `+${tp}%`} />
                 <ReviewRow k="Stop loss" v={sl === '' ? '—' : `-${sl}%`} />
                 <ReviewRow k="Trailing stop" v={trailingStop === '' ? '—' : `${trailingStop}%`} />
@@ -513,14 +582,14 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
                 <div className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">{error}</div>
               )}
               <div className="mt-5 flex items-center justify-end gap-2">
-                <button onClick={() => setShowReview(false)} disabled={saving} className="px-4 py-2 rounded-lg bg-white/[0.05] border border-white/10 font-semibold text-xs hover:bg-white/[0.1] transition disabled:opacity-50">Back to edit</button>
+                <button onClick={() => setShowReview(false)} disabled={saving} className="nl-button nl-button--ghost !text-xs">Back to edit</button>
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="px-5 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-800 font-bold text-xs hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2"
+                  className="nl-btn-neon !px-5 !text-xs font-bold"
                 >
                   {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
-                  {saving ? 'Saving…' : 'Confirm &amp; create'}
+                  {saving ? 'Saving…' : 'Snipe Now'}
                 </button>
               </div>
             </div>
@@ -542,6 +611,28 @@ function ReviewRow({ k, v, highlight }: { k: string; v: string; highlight?: bool
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+// Shared input styling — translucent glass field, no raw hex boxes.
+const INPUT_CLS = 'w-full px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/10 text-white placeholder:text-white/40 focus:border-[var(--nl-blue,#0066FF)] focus:outline-none transition';
+
+// Segmented / selectable button styling shared by chains, triggers, wallet
+// mode, and launchpad chips.
+function SEG_CLS(active: boolean): string {
+  return `px-3 py-2 rounded-lg border transition ${
+    active
+      ? 'border-[var(--nl-blue,#0066FF)]/60 bg-[var(--nl-blue,#0066FF)]/15 text-blue-100'
+      : 'border-white/10 bg-white/[0.03] text-white/70 hover:border-white/20'
+  }`;
+}
+
+// nl-card field-group wrapper carrying the blue-stride ring.
+function Panel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="nl-card p-4" style={BLUE_STRIDE}>
+      {children}
+    </div>
+  );
+}
+
 function Field({ label, hint, required, children }: { label: string; hint?: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div>
@@ -556,37 +647,26 @@ function Field({ label, hint, required, children }: { label: string; hint?: stri
   );
 }
 
-function Toggle({ label, hint, value, onChange, disabled, icon: Icon, compact, color = 'blue' }: { label: string; hint?: string; value: boolean; onChange: (v: boolean) => void; disabled?: boolean; icon?: React.ComponentType<{ className?: string }>; compact?: boolean; color?: 'blue' | 'amber' | 'red' }) {
-  const colorMap = {
-    blue: 'bg-blue-500',
-    amber: 'bg-amber-500',
-    red: 'bg-red-500',
-  };
+// Row wrapper around the shared square Toggle (components/ui/Toggle).
+function ToggleRow({ label, hint, checked, onChange, disabled, icon: Icon, compact }: { label: string; hint?: string; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean; icon?: React.ComponentType<{ className?: string }>; compact?: boolean }) {
   return (
-    <button
-      type="button"
-      onClick={() => !disabled && onChange(!value)}
-      disabled={disabled}
-      className={`w-full flex items-center justify-between gap-3 ${compact ? 'px-3 py-2' : 'px-4 py-3'} rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.05] transition disabled:opacity-50 disabled:cursor-not-allowed`}
-    >
+    <div className={`w-full flex items-center justify-between gap-3 ${compact ? 'px-3 py-2' : 'px-4 py-3'} rounded-lg border border-white/10 bg-white/[0.03] ${disabled ? 'opacity-50' : ''}`}>
       <div className="flex items-center gap-2.5 min-w-0 text-start">
         {Icon && <Icon className="w-4 h-4 text-white/60 flex-shrink-0" />}
         <div className="min-w-0">
           <div className="text-sm font-semibold">{label}</div>
-          {hint && <div className="text-[11px] text-white/50 truncate">{hint}</div>}
+          {hint && <div className="text-[11px] text-white/50">{hint}</div>}
         </div>
       </div>
-      <div className={`relative w-10 h-5 rounded-full transition flex-shrink-0 ${value ? colorMap[color] : 'bg-white/10'}`}>
-        <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${value ? 'translate-x-5' : 'translate-x-0.5'}`} />
-      </div>
-    </button>
+      <SquareToggle checked={checked} onChange={onChange} disabled={disabled} label={label} />
+    </div>
   );
 }
 
 function Section({ title, expanded, onToggle, children }: { title: string; expanded: boolean; onToggle: () => void; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.02]">
-      <button onClick={onToggle} className="w-full flex items-center justify-between px-4 py-3 text-sm font-bold uppercase tracking-wider text-white/80 hover:bg-white/[0.03] transition">
+    <div className="nl-card" style={BLUE_STRIDE}>
+      <button onClick={onToggle} className="w-full flex items-center justify-between px-4 py-3 text-sm font-bold uppercase tracking-wider text-white/80 hover:bg-white/[0.03] transition rounded-t-xl">
         {title}
         {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
       </button>
