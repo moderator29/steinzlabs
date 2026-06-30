@@ -1,4 +1,16 @@
-import { Repeat, Shield, Crosshair, Zap, AlertTriangle, ArrowRight, ArrowDown } from 'lucide-react';
+import { Repeat, Shield, Crosshair, Zap, AlertTriangle, ArrowRight, ArrowDown, LineChart } from 'lucide-react';
+
+const MM_STEPS = [
+  { n: '1', title: 'Pick a token & strategy', desc: 'Choose the token, chain, and a strategy (Grid or Range). Set your spread, levels, order size, budget, max inventory and slippage.' },
+  { n: '2', title: 'Reference price', desc: 'The bot tracks a live market reference (DexScreener) or a manual price you set, and builds buy rungs below it and sell rungs above it.' },
+  { n: '3', title: 'Fund & activate', desc: 'Fund your non-custodial kernel account and flip the strategy to Active. Until then it stays paused and trades nothing.' },
+  { n: '4', title: 'Work the spread', desc: 'Every cycle the engine places at most one capped swap through your session key — buying at/below a buy rung, selling at/above a sell rung — recording each fill and net PnL.' },
+];
+
+const MM_STRATEGIES = [
+  { title: 'Grid', desc: 'A symmetric ladder of buy rungs below and sell rungs above the reference — accumulate on dips, distribute on rips, capturing the oscillation.' },
+  { title: 'Range', desc: 'Accumulate at/below a lower bound and distribute at/above an upper bound you set — for tokens you expect to trade in a band.' },
+];
 
 const SWAP_CHAINS = [
   { name: 'Solana',    note: 'Best route across every major Solana DEX.' },
@@ -200,6 +212,57 @@ export function DocsSection07() {
         <div className="flex items-start gap-2 p-3 nl-glass rounded-xl mt-2">
           <Shield className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0 mt-0.5" />
           <p className="text-xs text-gray-400">The Sniper Bot is a <span className="text-white font-semibold">Max tier</span> feature. Free, Mini, and Pro tiers can preview the dashboard but cannot arm a sniper.</p>
+        </div>
+      </div>
+
+      {/* Market Maker Bot */}
+      <div id="market-maker" className="scroll-mt-20 mt-10">
+        <h3 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
+          <LineChart className="w-4 h-4 text-[#0066FF]" />Market Maker Bot
+        </h3>
+        <p className="text-xs text-gray-400 leading-relaxed mb-4">
+          An <span className="text-white font-semibold">EVM-only, non-custodial</span> automated market maker. It places two-sided swaps around a reference price to work a spread on a token you choose — buying dips, selling rips — entirely within caps you sign for. It is a trading tool, not a yield product.
+        </p>
+
+        {/* How it works */}
+        <div className="space-y-2 mb-4">
+          {MM_STEPS.map((s) => (
+            <div key={s.n} className="flex gap-3 p-3 nl-glass rounded-xl">
+              <div className="w-6 h-6 rounded-full bg-[#0066FF]/15 flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-bold text-[#4D6BFF]">{s.n}</span>
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-white">{s.title}</div>
+                <div className="text-xs text-gray-500 mt-0.5">{s.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Strategies */}
+        <div className="grid sm:grid-cols-2 gap-2 mb-4">
+          {MM_STRATEGIES.map((f) => (
+            <div key={f.title} className="nl-glass rounded-xl p-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.15)' }}>
+              <div className="text-xs font-semibold text-white">{f.title}</div>
+              <div className="text-xs text-gray-500 mt-0.5 leading-relaxed">{f.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Non-custodial + caps */}
+        <div className="nl-glass rounded-xl p-4 mb-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.22)' }}>
+          <div className="flex items-center gap-2 mb-2">
+            <Shield className="w-4 h-4 text-[#0066FF]" />
+            <span className="text-sm font-semibold text-white">Non-Custodial &amp; Bounded</span>
+          </div>
+          <p className="text-xs text-gray-400 leading-relaxed">
+            The bot trades through the same <span className="text-white font-semibold">EIP-712 session key</span> you sign for the sniper — Naka Labs never holds your keys or funds, and execution is bounded on every side: a per-strategy <span className="text-white font-semibold">budget</span> (a true lifetime spend ceiling), a <span className="text-white font-semibold">max inventory</span> cap, a server-side <span className="text-white font-semibold">slippage</span> clamp, and your signed <span className="text-white font-semibold">per-trade + daily USD caps</span> (shared across the sniper and market maker). New strategies are created <span className="text-white font-semibold">paused</span> — nothing trades until you fund the kernel and activate, and Pause/Stop halts it before the next fill.
+        </p>
+        </div>
+
+        <div className="flex items-start gap-2 p-3 bg-[#F59E0B]/[0.05] border border-[#F59E0B]/20 rounded-xl">
+          <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B] flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-gray-400">Market making can lose money — impermanent loss, adverse selection, and gas all eat into a spread. PnL shown is net of cost basis, and there are no guaranteed returns. Start small. (CLMM/LP-range and volume strategies are intentionally not offered.)</p>
         </div>
       </div>
     </section>
