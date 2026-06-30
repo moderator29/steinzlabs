@@ -243,7 +243,13 @@ function ArticleView({ post, onBack }: { post: ResearchPost; onBack: () => void 
       <p className="text-[13px] text-gray-400 leading-relaxed mb-5 pb-5 border-b border-white/[0.06]">
         {post.summary}
       </p>
-      <div className="text-[13px] text-gray-300 leading-relaxed whitespace-pre-wrap">{post.content}</div>
+      {/* Briefs ship as HTML; admin posts may be plain text. Render each
+          correctly so HTML markup is never shown as raw text. */}
+      {/<\/?[a-z][\s\S]*>/i.test(post.content) ? (
+        <div className="nl-research-content text-[13px]" dangerouslySetInnerHTML={{ __html: post.content }} />
+      ) : (
+        <div className="text-[13px] text-gray-300 leading-relaxed whitespace-pre-wrap">{post.content}</div>
+      )}
       {post.url && (
         <div className="mt-5">
           <a
