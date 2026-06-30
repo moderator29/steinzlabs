@@ -660,17 +660,45 @@ export default function WalletIntelligencePage() {
                           <div className="text-sm font-bold font-mono mt-0.5 text-white">{p.averageHoldDays >= 1 ? `${p.averageHoldDays.toFixed(1)}d` : `${Math.round(p.averageHoldDays * 24)}h`}</div>
                         </div>
                       </div>
-                      {p.byToken.length > 0 && (
-                        <div className="mt-3 space-y-1">
-                          <div className="text-[10px] text-gray-500 uppercase tracking-wider">Top tokens by realized PnL</div>
-                          {p.byToken.slice(0, 3).map((t) => (
-                            <div key={t.token} className="flex items-center justify-between text-xs py-1 border-b border-[#1a1f2e]/40 last:border-0">
-                              <span className="font-semibold text-white truncate max-w-[140px]">{t.tokenSymbol || `${t.token.slice(0, 6)}…${t.token.slice(-4)}`}</span>
-                              <span className={t.totalRealizedUsd >= 0 ? 'text-emerald-400 font-mono' : 'text-red-400 font-mono'}>{fmtPnl(t.totalRealizedUsd)}</span>
+                      {p.byToken.length > 0 && (() => {
+                        const best = p.byToken[0];
+                        const worst = p.byToken[p.byToken.length - 1];
+                        const showWorst = p.byToken.length > 1 && worst.totalRealizedUsd < 0;
+                        const sym = (t: { tokenSymbol: string | null; token: string }) => t.tokenSymbol || `${t.token.slice(0, 6)}…${t.token.slice(-4)}`;
+                        return (
+                          <>
+                            {/* Best & worst trade highlights */}
+                            <div className="grid grid-cols-2 gap-2 mt-3">
+                              <div className="bg-emerald-500/[0.08] border border-emerald-500/20 rounded-lg p-2.5">
+                                <div className="text-[9px] uppercase tracking-wider text-emerald-300/70">Best trade</div>
+                                <div className="text-xs font-semibold text-white truncate mt-0.5">{sym(best)}</div>
+                                <div className="text-sm font-mono font-bold text-emerald-400 mt-0.5">{fmtPnl(best.totalRealizedUsd)}</div>
+                              </div>
+                              {showWorst ? (
+                                <div className="bg-red-500/[0.08] border border-red-500/20 rounded-lg p-2.5">
+                                  <div className="text-[9px] uppercase tracking-wider text-red-300/70">Worst trade</div>
+                                  <div className="text-xs font-semibold text-white truncate mt-0.5">{sym(worst)}</div>
+                                  <div className="text-sm font-mono font-bold text-red-400 mt-0.5">{fmtPnl(worst.totalRealizedUsd)}</div>
+                                </div>
+                              ) : (
+                                <div className="bg-black/20 border border-[#1a1f2e] rounded-lg p-2.5 flex flex-col justify-center">
+                                  <div className="text-[9px] uppercase tracking-wider text-gray-500">Losing trades</div>
+                                  <div className="text-xs font-semibold text-emerald-300 mt-0.5">None in window</div>
+                                </div>
+                              )}
                             </div>
-                          ))}
-                        </div>
-                      )}
+                            <div className="mt-3 space-y-1">
+                              <div className="text-[10px] text-gray-500 uppercase tracking-wider">Top tokens by realized PnL</div>
+                              {p.byToken.slice(0, 3).map((t) => (
+                                <div key={t.token} className="flex items-center justify-between text-xs py-1 border-b border-[#1a1f2e]/40 last:border-0">
+                                  <span className="font-semibold text-white truncate max-w-[140px]">{sym(t)} <span className="text-[10px] text-gray-500 font-normal">{t.winRate}% win</span></span>
+                                  <span className={t.totalRealizedUsd >= 0 ? 'text-emerald-400 font-mono' : 'text-red-400 font-mono'}>{fmtPnl(t.totalRealizedUsd)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   );
                 })()}
