@@ -37,9 +37,9 @@ export function isCopyTradeable(t: Pick<TraderCardData, 'entity_type' | 'active_
 }
 
 function fmtUsd(v: string | number | null): string {
-  if (v === null || v === undefined) return '—';
+  if (v === null || v === undefined) return 'n/a';
   const n = typeof v === 'number' ? v : parseFloat(v);
-  if (!isFinite(n) || n === 0) return '—';
+  if (!isFinite(n) || n === 0) return 'n/a';
   const abs = Math.abs(n);
   const sign = n < 0 ? '-' : '';
   if (abs >= 1e9) return `${sign}$${(abs / 1e9).toFixed(2)}B`;
@@ -146,13 +146,13 @@ export default function TraderCard({ trader, watched, onOpen, onFollow, onToggle
       {custodial ? (
         <div className="mt-4">
           <Metric label="Holdings" value={fmtUsd(trader.portfolio_value_usd)} />
-          <p className="text-[9px] text-slate-500 mt-1.5">Custodial wallet — PnL / win-rate not applicable</p>
+          <p className="text-[9px] text-slate-500 mt-1.5">Custodial wallet · PnL and win rate not applicable</p>
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-2 mt-4">
           <Metric label="Vol 7d" value={fmtUsd(trader.volume_7d_usd)} tone={trader.volume_7d_usd ? 'green' : 'neutral'} />
           <Metric label="PnL 30d" value={fmtUsd(trader.pnl_30d_usd)} Icon={pnl !== 0 ? (pnl >= 0 ? TrendingUp : TrendingDown) : undefined} tone={pnl > 0 ? 'green' : pnl < 0 ? 'red' : 'neutral'} />
-          <Metric label="Win rate" value={trader.win_rate ? `${Math.round(Number(trader.win_rate))}%` : '—'} />
+          <Metric label="Win rate" value={trader.win_rate ? `${Math.round(Number(trader.win_rate))}%` : 'n/a'} />
         </div>
       )}
 

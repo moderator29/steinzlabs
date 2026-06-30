@@ -1,7 +1,7 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getDomainSecurity } from '@/lib/services/goplus';
+import { analyzeDomain } from '@/lib/services/domainShield';
 
 const schema = z.object({
   url: z.string().trim().min(1).max(500),
@@ -16,25 +16,18 @@ export async function POST(req: NextRequest) {
     }
 
     let url = parsed.data.url.trim();
-    // Normalize URL
+    // Normalize URL — add a scheme so URL parsing and downstream lookups work.
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       url = 'https://' + url;
     }
 
-    const result = await getDomainSecurity(url);
+    // Multi-source verdict: GoPlus + MetaMask blocklist + RDAP age
+    // (+ Google Safe Browsing when configured). Every number traces to a real
+    // signal; no fabricated risk percentages.
+    const result = await analyzeDomain(url);
 
-    return NextResponse.json({
-      url,
-      verdict: result.verdict,
-      confidenceScore: result.confidenceScore,
-      isPhishing: result.isPhishing,
-      isMalicious: result.isMalicious,
-      description: result.description,
-      signals: result.signals,
-      scannedAt: new Date().toISOString(),
-    });
-  } catch (err) {
-
+    return NextResponse.json(result);
+  } catch {
     return NextResponse.json({ error: 'Scan failed. Please try again.' }, { status: 500 });
   }
 }

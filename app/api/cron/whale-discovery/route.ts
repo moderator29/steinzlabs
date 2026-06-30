@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { verifyCron, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { isEvmAddress } from "@/lib/utils/addressNormalize";
+import { isEvmAddress, normalizeAddress } from "@/lib/utils/addressNormalize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -109,14 +109,18 @@ export async function GET(request: NextRequest) {
       const eoas = await discoverFromRouter(pair);
       if (eoas.length === 0) continue;
 
-      const addrs = eoas.map((e) => e.address);
+      // Normalize to the canonical stored form (EVM routers → lowercase) so we
+      // never write a mixed-case duplicate and the unique (address,chain) key
+      // dedups reliably.
+      const addrs = eoas.map((e) => normalizeAddress(e.address, pair.chain));
       const { data: existing } = await supabase.from("whales").select("address").in("address", addrs);
-      const seen = new Set((existing ?? []).map((r) => (r as { address: string }).address.toLowerCase()));
+      const seen = new Set((existing ?? []).map((r) => (r as { address: string }).address));
 
       const rows = eoas
-        .filter((e) => !seen.has(e.address.toLowerCase()))
-        .map((e) => ({
-          address: e.address,
+        .map((e) => ({ e, addr: normalizeAddress(e.address, pair.chain) }))
+        .filter(({ addr }) => !seen.has(addr))
+        .map(({ e, addr }) => ({
+          address: addr,
           chain: pair.chain,
           label: `Active ${pair.key} trader`,
           entity_type: "trader",
@@ -131,7 +135,15 @@ export async function GET(request: NextRequest) {
         }));
 
       if (rows.length > 0) {
-        const { data, error } = await supabase.from("whales").insert(rows).select("id");
+        // Upsert with ignoreDuplicates so a concurrent tick (or the Bitquery
+        // discovery path) inserting the same address can't make the WHOLE batch
+        // fail the unique (address,chain) constraint and silently drop every new
+        // whale. Colliding rows are skipped; the rest insert; select returns
+        // only the rows this call actually wrote.
+        const { data, error } = await supabase
+          .from("whales")
+          .upsert(rows, { onConflict: "address,chain", ignoreDuplicates: true })
+          .select("id");
         if (!error) inserted += (data ?? []).length;
       }
     }

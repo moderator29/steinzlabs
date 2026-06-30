@@ -238,8 +238,8 @@ export async function handleWhalesTop(ctx: CmdContext): Promise<void> {
     const name = (w.label as string | null) ?? `${(w.address as string).slice(0, 6)}…${(w.address as string).slice(-4)}`;
     const verified = w.verified ? " ✓" : "";
     const pnl = w.pnl_30d_usd != null ? fmtUSD(Number(w.pnl_30d_usd), { sign: true }) : "—";
-    const wr = w.win_rate != null ? `${(Number(w.win_rate) * 100).toFixed(0)}%` : "—";
-    return `${i + 1}. *${escapeMd(name)}*${verified} · ${pnl} · WR ${wr} · ${w.chain ?? "—"}`;
+    const wr = w.win_rate != null ? `${Math.round(Number(w.win_rate))}%` : "n/a";
+    return `${i + 1}. *${escapeMd(name)}*${verified} · ${pnl} · WR ${wr} · ${w.chain ?? "n/a"}`;
   });
 
   await sendTelegramMessage(
@@ -288,7 +288,7 @@ export async function handleWhaleLookup(ctx: CmdContext): Promise<void> {
     `Whale score: *${w.whale_score ?? "—"}/100*\n` +
     `Followers: *${w.follower_count ?? 0}*\n` +
     `Portfolio: *${w.portfolio_value_usd != null ? fmtUSD(Number(w.portfolio_value_usd)) : "—"}*\n` +
-    `Win rate: *${w.win_rate != null ? (Number(w.win_rate) * 100).toFixed(1) + "%" : "—"}*\n\n` +
+    `Win rate: *${w.win_rate != null ? Math.round(Number(w.win_rate)) + "%" : "n/a"}*\n\n` +
     `*PnL*\n` +
     `• 7d:  ${w.pnl_7d_usd != null ? fmtUSD(Number(w.pnl_7d_usd), { sign: true }) : "—"}\n` +
     `• 30d: ${w.pnl_30d_usd != null ? fmtUSD(Number(w.pnl_30d_usd), { sign: true }) : "—"}\n` +

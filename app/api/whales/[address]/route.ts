@@ -4,6 +4,19 @@ import { withTierGate } from '@/lib/subscriptions/apiTierGate';
 import { getAssetTransfers } from '@/lib/services/alchemy';
 
 export const runtime = 'nodejs';
+export const maxDuration = 30;
+
+// Resolve `promise` but never let it hang the request: if it doesn't settle
+// within `ms`, fall back to `fallback` so the whale always loads even when an
+// external enrichment source (Arkham / Alchemy / Helius) is slow or down. This
+// is the fix for "whale loads then fails after a few seconds" — an un-timed-out
+// enrichment fetch was running past the function limit and 504-ing the route.
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    promise.catch(() => fallback),
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
 
 // Phase 6 — whale detail endpoint.
 // Returns DB record + Arkham-enriched entity label + activity feed.
@@ -117,10 +130,15 @@ export const GET = withTierGate('mini', async (
   const supabase = getSupabaseAdmin();
 
   try {
-    // 1) DB whale row
-    let query = supabase.from('whales').select('*').eq('address', address).eq('is_active', true);
+    // 1) DB whale row. EVM addresses are case-insensitive on-chain, so a
+    //    checksummed-vs-lowercase mismatch between the link and the stored row
+    //    must NOT 404 the whale; match EVM with ilike (no wildcards in a hex
+    //    address) and Solana exactly (base58 is case-sensitive).
+    const isEvm = /^0x[a-fA-F0-9]{40}$/.test(address);
+    let query = supabase.from('whales').select('*').eq('is_active', true);
+    query = isEvm ? query.ilike('address', address) : query.eq('address', address);
     if (chain) query = query.eq('chain', chain);
-    const { data: whale } = await query.maybeSingle();
+    const { data: whale } = await query.limit(1).maybeSingle();
 
     if (!whale) {
       // Even if not in DB, try Arkham — users can submit addresses and we shouldn't 404.
@@ -147,13 +165,19 @@ export const GET = withTierGate('mini', async (
       .select('user_id', { count: 'exact', head: true })
       .eq('whale_address', address);
 
-    // 4) Arkham + live activity (parallel, best-effort)
+    // 4) Arkham + live activity (parallel, best-effort, each time-boxed so a
+    //    slow/down external source can never hang the whole route past the
+    //    function limit and 504 the page).
     const [arkham, liveActivity] = await Promise.all([
-      fetchArkhamLabel(address, whale.chain),
+      withTimeout(fetchArkhamLabel(address, whale.chain), 6000, null),
       !storedActivity || storedActivity.length === 0
-        ? whale.chain === 'solana'
-          ? fetchLiveActivitySolana(address)
-          : fetchLiveActivityEvm(address, whale.chain)
+        ? withTimeout(
+            whale.chain === 'solana'
+              ? fetchLiveActivitySolana(address)
+              : fetchLiveActivityEvm(address, whale.chain),
+            8000,
+            [] as any[],
+          )
         : Promise.resolve([] as any[]),
     ]);
 

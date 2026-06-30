@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useFeatureUsageLog } from "@/lib/hooks/useFeatureUsageLog";
 import { LABEL_META, canonicalAction, type WhaleLabel } from "@/lib/whales/labels";
+import { addressesEqual } from "@/lib/utils/addressNormalize";
 // Naka Labs brand icons — swap what's in the library, lucide-fallback
 // for icons not yet available (BellOff, ArrowUpRight, ArrowDownLeft,
 // ArrowLeftRight, Telescope) — they remain visually consistent with the
@@ -299,8 +300,10 @@ export default function WhaleTrackerPage() {
 
   const isWatched = (address: string, chain: string) =>
     watchlist.some(
-      (w) =>
-        w.whale_address.toLowerCase() === address.toLowerCase() && w.chain === chain,
+      // Chain-aware comparison: EVM is case-insensitive, Solana is
+      // case-sensitive. A raw .toLowerCase() collapsed distinct Solana
+      // addresses and lit the bell for the wrong whale.
+      (w) => w.chain === chain && addressesEqual(w.whale_address, address, chain),
     );
 
   const toggleWatch = async (address: string, chain: string) => {
@@ -536,7 +539,7 @@ export default function WhaleTrackerPage() {
                 aria-label="Load new whale activity"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                {newRowsAvailable} new {newRowsAvailable === 1 ? 'whale' : 'whales'} — refresh
+                {newRowsAvailable} new {newRowsAvailable === 1 ? 'whale' : 'whales'} · refresh
               </button>
             )}
           </div>

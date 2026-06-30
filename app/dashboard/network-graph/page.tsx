@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import BackButton from '@/components/ui/BackButton';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { networkGraphHowItWorks } from '@/lib/howItWorks/content/network-graph';
 import {
   Network,
   Search,
@@ -12,8 +14,8 @@ import {
   Loader2,
 } from 'lucide-react';
 import * as d3 from 'd3';
-import { HowItWorksButton } from '@/components/common/HowItWorks';
-import { networkGraphHowItWorks } from '@/lib/howItWorks/content/network-graph';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
+import { TiltCard } from '@/components/brand/TiltCard';
 import type { NetworkNode, NetworkEdge, NetworkStats, NetworkGraphResponse } from '@/app/api/network-graph/route';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -33,6 +35,31 @@ const NODE_COLORS: Record<NetworkNode['type'], string> = {
   'smart-money':   '#FBBF24',
   'new-wallet':    '#94A3B8',
 };
+
+// Community-detection palette. Nodes are colored by their detected cluster
+// (real label-propagation result from the API) when a clusterId is present.
+// These are distinct, brand-adjacent hues cycled by cluster index.
+const CLUSTER_COLORS = [
+  '#0066FF', // brand blue
+  '#8B7CFF', // brand violet
+  '#10D9B0', // teal
+  '#F59E0B', // amber
+  '#EC4899', // pink
+  '#22D3EE', // cyan
+  '#A855F7', // purple
+  '#84CC16', // lime
+  '#FB7185', // rose
+  '#38BDF8', // sky
+];
+
+// Color a node by its detected community when one exists, otherwise fall back
+// to its entity-type color. Cluster color reflects REAL detected structure.
+function nodeColor(node: { clusterId?: number; type: NetworkNode['type'] }): string {
+  if (typeof node.clusterId === 'number') {
+    return CLUSTER_COLORS[node.clusterId % CLUSTER_COLORS.length];
+  }
+  return NODE_COLORS[node.type];
+}
 
 const LEGEND_ITEMS: { type: NetworkNode['type']; label: string }[] = [
   { type: 'usdc',          label: 'USDC Transfer' },
@@ -279,12 +306,13 @@ function ForceGraph({
       .attr('stroke-width', 1)
       .attr('opacity', 0.2);
 
-    // Main circles
+    // Main circles — filled by detected community color (real cluster) when
+    // available, otherwise by entity type.
     nodeEls.append('circle')
       .attr('class', 'main-circle')
       .attr('r', d => d.radius)
-      .attr('fill', d => `${NODE_COLORS[d.type]}22`)
-      .attr('stroke', d => NODE_COLORS[d.type])
+      .attr('fill', d => `${nodeColor(d)}22`)
+      .attr('stroke', d => nodeColor(d))
       .attr('stroke-width', d => (d.type === 'high-activity' || d.type === 'bridge') ? 2 : 1.2)
       .attr('filter', d => (d.type === 'high-activity' || d.type === 'bridge') ? 'url(#glow-strong)' : 'url(#glow)');
 
@@ -380,8 +408,8 @@ function ForceGraph({
       const el = d3.select(this);
       const isHighlighted = highlightIds.size === 0 || highlightIds.has(d.id);
       el.select('.main-circle')
-        .attr('fill', isHighlighted ? `${NODE_COLORS[d.type]}33` : `${NODE_COLORS[d.type]}08`)
-        .attr('stroke', isHighlighted ? NODE_COLORS[d.type] : '#374151')
+        .attr('fill', isHighlighted ? `${nodeColor(d)}33` : `${nodeColor(d)}08`)
+        .attr('stroke', isHighlighted ? nodeColor(d) : '#374151')
         .attr('stroke-width', d.id === selectedNodeId ? 3 : (d.type === 'high-activity' || d.type === 'bridge') ? 2 : 1.2);
       el.select('text')
         .attr('fill', isHighlighted ? '#9CA3AF' : '#374151');
@@ -489,7 +517,7 @@ export default function NetworkGraphPage() {
   const nodes = data?.nodes || [];
   const edges = data?.edges || [];
   const stats: NetworkStats = data?.stats || {
-    clusters: 0, avgDegree: 0, density: 0,
+    clusters: null, avgDegree: 0, density: 0,
     usdcTxns: 0, usdtTxns: 0, totalVolume: 0, timelineData: [],
   };
 
@@ -509,13 +537,14 @@ export default function NetworkGraphPage() {
   const tooltipY = tooltip ? tooltip.screenY - 20 : 0;
 
   return (
-    <div className="min-h-screen text-white flex flex-col">
+    <AuroraBackground fullHeight className="text-white flex flex-col nl-fade-up">
 
       {/* ── Header ── */}
-      <div className="sticky top-0 z-40 nl-glass backdrop-blur-md border-b border-white/[0.06] px-4 py-3 flex items-center gap-3 flex-shrink-0">
+      <div className="sticky top-0 z-40 bg-[#0A0E27]/80 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 flex items-center gap-3 flex-shrink-0">
         <BackButton className="flex-shrink-0" />
         <Network className="w-4 h-4 text-[#0066FF] flex-shrink-0" />
         <h1 className="font-bold text-sm flex-1 truncate">Network Graph</h1>
+        <HowItWorksButton content={networkGraphHowItWorks} className="ms-auto shrink-0" />
 
         <div className="flex items-center gap-2 flex-shrink-0">
           <span className="flex items-center gap-1.5 text-[10px] text-gray-400">
@@ -525,12 +554,10 @@ export default function NetworkGraphPage() {
           <span className="text-white/20 text-xs">|</span>
           <span className="text-[10px] text-gray-400">Edges {edges.length}</span>
         </div>
-
-        <HowItWorksButton content={networkGraphHowItWorks} className="ms-auto shrink-0" />
       </div>
 
       {/* ── Search bar ── */}
-      <div className="flex-shrink-0 px-3 py-2.5 border-b border-white/[0.06] nl-glass">
+      <div className="flex-shrink-0 px-3 py-2.5 border-b border-white/[0.06] bg-[#0D1117]/60 backdrop-blur-md">
         <div className="flex gap-2 max-w-2xl mx-auto">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
@@ -540,13 +567,13 @@ export default function NetworkGraphPage() {
               onChange={e => setWalletInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAnalyze()}
               placeholder="Enter wallet address or token CA..."
-              className="w-full nl-card rounded-lg ps-8 pe-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none transition-all"
+              className="w-full nl-glass rounded-lg ps-8 pe-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-[#0066FF]/50 transition-all"
             />
           </div>
           <button
             onClick={handleAnalyze}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg nl-btn-neon text-xs font-semibold disabled:opacity-50 flex-shrink-0 whitespace-nowrap"
+            className="nl-btn-neon flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold flex-shrink-0 whitespace-nowrap"
           >
             {loading ? (
               <Loader2 className="w-3 h-3 animate-spin" />
@@ -563,7 +590,7 @@ export default function NetworkGraphPage() {
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden min-h-0">
 
         {/* ── Left Panel ── */}
-        <aside className="lg:w-56 flex-shrink-0 nl-glass border-b lg:border-b-0 lg:border-r border-white/[0.06] flex flex-col overflow-hidden">
+        <aside className="lg:w-60 flex-shrink-0 bg-[#0D1117]/50 backdrop-blur-md border-b lg:border-b-0 lg:border-r border-white/[0.06] flex flex-col overflow-hidden">
           {/* Mobile toggle */}
           <button
             className="lg:hidden flex items-center justify-between px-4 py-2.5 border-b border-white/[0.05] text-xs text-gray-400 hover:text-white transition-colors"
@@ -573,75 +600,93 @@ export default function NetworkGraphPage() {
             {panelOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
 
-          <div className={`${panelOpen ? 'flex' : 'hidden'} lg:flex flex-col gap-0 overflow-y-auto flex-1 p-3 pt-2`}>
+          <div className={`${panelOpen ? 'flex' : 'hidden'} lg:flex flex-col gap-3 overflow-y-auto flex-1 p-3 pt-3`}>
 
-            {/* Network Overview */}
-            <SideSection title="Network Overview">
-              <div className="space-y-0">
-                {[
-                  { label: 'Clusters',   value: stats.clusters },
-                  { label: 'Avg Degree', value: stats.avgDegree },
-                  { label: 'Density',    value: stats.density },
-                  { label: 'USDC Txns',  value: stats.usdcTxns },
-                  { label: 'USDT Txns',  value: stats.usdtTxns },
-                ].map(({ label, value }) => (
-                  <div key={label} className="flex items-center justify-between py-1.5 border-b border-white/[0.04]">
-                    <span className="text-[10px] text-gray-500">{label}</span>
-                    <span className="text-[10px] font-semibold text-white tabular-nums">
-                      {typeof value === 'number' ? value.toLocaleString() : value}
-                    </span>
+            {/* Network Overview — hero stat card */}
+            <TiltCard max={5} className="nl-fade-up nl-fade-up-1">
+              <div className="nl-glass rounded-xl px-3 py-2">
+                <SideSection title="Network Overview">
+                  <div className="space-y-0">
+                    {[
+                      // Clusters is real community-detection output. When the API
+                      // could not cluster honestly (too few nodes) it returns null
+                      // and we omit the row entirely rather than show a fake value.
+                      ...(stats.clusters !== null
+                        ? [{ label: 'Clusters', value: stats.clusters, accent: true }]
+                        : []),
+                      { label: 'Avg Degree', value: stats.avgDegree, accent: false },
+                      { label: 'Density',    value: stats.density, accent: false },
+                      { label: 'USDC Txns',  value: stats.usdcTxns, accent: false },
+                      { label: 'USDT Txns',  value: stats.usdtTxns, accent: false },
+                    ].map(({ label, value, accent }) => (
+                      <div key={label} className="flex items-center justify-between py-1.5 border-b border-white/[0.04]">
+                        <span className="text-[10px] text-gray-500">{label}</span>
+                        <span className={`text-[10px] font-semibold tabular-nums ${accent ? 'text-[#8B7CFF]' : 'text-white'}`}>
+                          {value.toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </SideSection>
               </div>
-            </SideSection>
+            </TiltCard>
 
             {/* Top Wallets */}
-            <SideSection title="Top Wallets by Connections">
-              <div className="space-y-0">
-                {topWallets.length === 0 ? (
-                  <p className="text-[10px] text-gray-600 italic">No data</p>
-                ) : topWallets.map(w => (
-                  <div key={w.id} className="flex items-center justify-between py-1.5 border-b border-white/[0.04] gap-1">
-                    <span className="text-[10px] font-mono text-gray-400 truncate">
-                      {shortAddr(w.address)}
-                    </span>
-                    <span className="text-[9px] font-bold text-[#4F8EF7] flex-shrink-0">
-                      {w.linkCount} links
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </SideSection>
+            <div className="nl-glass rounded-xl px-3 py-2 nl-fade-up nl-fade-up-2">
+              <SideSection title="Top Wallets by Connections">
+                <div className="space-y-0">
+                  {topWallets.length === 0 ? (
+                    <p className="text-[10px] text-gray-600 italic">No data</p>
+                  ) : topWallets.map(w => (
+                    <div key={w.id} className="flex items-center justify-between py-1.5 border-b border-white/[0.04] gap-1">
+                      <span className="text-[10px] font-mono text-gray-400 truncate">
+                        {shortAddr(w.address)}
+                      </span>
+                      <span className="text-[9px] font-bold text-[#4F8EF7] flex-shrink-0">
+                        {w.linkCount} links
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </SideSection>
+            </div>
 
             {/* Transfer Timeline */}
-            <SideSection title="Transfer Timeline" defaultOpen={false}>
-              {stats.timelineData && stats.timelineData.length > 0 ? (
-                <MiniBarChart data={stats.timelineData} />
-              ) : (
-                <div className="h-10 flex items-center">
-                  <span className="text-[10px] text-gray-600 italic">No timeline data</span>
-                </div>
-              )}
-            </SideSection>
+            <div className="nl-glass rounded-xl px-3 py-2 nl-fade-up nl-fade-up-3">
+              <SideSection title="Transfer Timeline" defaultOpen={false}>
+                {stats.timelineData && stats.timelineData.length > 0 ? (
+                  <MiniBarChart data={stats.timelineData} />
+                ) : (
+                  <div className="h-10 flex items-center">
+                    <span className="text-[10px] text-gray-600 italic">No timeline data</span>
+                  </div>
+                )}
+              </SideSection>
+            </div>
 
             {/* Legend */}
-            <SideSection title="Legend">
-              <div className="space-y-2 pt-0.5">
-                {LEGEND_ITEMS.map(({ type, label }) => (
-                  <div key={type} className="flex items-center gap-2">
-                    <div
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: NODE_COLORS[type] }}
-                    />
-                    <span className="text-[10px] text-gray-400 leading-tight">{label}</span>
-                  </div>
-                ))}
-              </div>
-            </SideSection>
+            <div className="nl-glass rounded-xl px-3 py-2 nl-fade-up nl-fade-up-4">
+              <SideSection title="Legend">
+                <div className="space-y-2 pt-0.5">
+                  <p className="text-[9px] text-gray-500 leading-snug">
+                    Fill color marks the detected community · ring &amp; label mark entity type.
+                  </p>
+                  {LEGEND_ITEMS.map(({ type, label }) => (
+                    <div key={type} className="flex items-center gap-2">
+                      <div
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: NODE_COLORS[type] }}
+                      />
+                      <span className="text-[10px] text-gray-400 leading-tight">{label}</span>
+                    </div>
+                  ))}
+                </div>
+              </SideSection>
+            </div>
 
             {/* Source badge */}
             {data?.source && (
-              <div className="mt-auto pt-3">
+              <div className="mt-auto pt-1">
                 <span className="text-[9px] text-gray-700 uppercase tracking-widest">
                   Source: {data.source}
                 </span>
@@ -699,7 +744,7 @@ export default function NetworkGraphPage() {
                 <div className="flex items-center gap-2 mt-1">
                   <span
                     className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: NODE_COLORS[tooltip.node.type] }}
+                    style={{ backgroundColor: nodeColor(tooltip.node) }}
                   />
                   <span className="text-[10px] text-gray-400 capitalize">{tooltip.node.type}</span>
                 </div>
@@ -712,12 +757,12 @@ export default function NetworkGraphPage() {
 
           {/* Selected node side panel */}
           {selectedNode && !loading && (
-            <div className="absolute top-3 right-3 z-20 w-52 nl-glass rounded-xl p-3 shadow-2xl" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+            <div className="absolute top-3 right-3 z-20 w-52 nl-glass rounded-xl p-3 shadow-2xl nl-fade-up">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
                   <div
                     className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: NODE_COLORS[selectedNode.type] }}
+                    style={{ backgroundColor: nodeColor(selectedNode) }}
                   />
                   <span className="text-[10px] font-semibold capitalize text-white">
                     {selectedNode.type}
@@ -752,6 +797,18 @@ export default function NetworkGraphPage() {
                     {edges.filter(e => e.source === selectedNode.id || e.target === selectedNode.id).length}
                   </span>
                 </div>
+                {typeof selectedNode.clusterId === 'number' && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Cluster</span>
+                    <span className="font-bold flex items-center gap-1.5">
+                      <span
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{ backgroundColor: nodeColor(selectedNode) }}
+                      />
+                      <span className="text-white tabular-nums">#{selectedNode.clusterId + 1}</span>
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -759,7 +816,7 @@ export default function NetworkGraphPage() {
           {/* Zoom hint */}
           {!loading && nodes.length > 0 && (
             <div className="absolute bottom-3 left-3 z-10">
-              <span className="text-[9px] text-gray-700 nl-glass px-2 py-1 rounded-lg">
+              <span className="text-[9px] text-gray-700 bg-[#0D1117]/80 px-2 py-1 rounded-lg border border-white/[0.04]">
                 Scroll to zoom · Drag to pan · Click node to select
               </span>
             </div>
@@ -769,7 +826,7 @@ export default function NetworkGraphPage() {
           {!loading && (
             <button
               onClick={() => fetchData(walletInput.trim() || undefined)}
-              className="absolute bottom-3 right-3 z-10 flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] text-gray-500 hover:text-gray-300 nl-glass rounded-lg transition-all"
+              className="absolute bottom-3 right-3 z-10 flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] text-gray-500 hover:text-gray-300 bg-[#0D1117]/80 border border-white/[0.06] rounded-lg hover:border-white/[0.12] transition-all"
             >
               <RefreshCw className="w-3 h-3" />
               <span className="hidden sm:inline">Refresh</span>
@@ -777,6 +834,6 @@ export default function NetworkGraphPage() {
           )}
         </div>
       </div>
-    </div>
+    </AuroraBackground>
   );
 }

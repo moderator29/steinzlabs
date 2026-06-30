@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { verifyCron, logCronExecution } from '../_shared';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { buildDailyBrief, buildDigestEmailHtml } from '@/lib/research/dailyBrief';
+import { buildDailyBrief, buildDigestEmailHtml, briefEdition } from '@/lib/research/dailyBrief';
 import { sendBatch } from '@/lib/services/resend';
 
 export const runtime = 'nodejs';
@@ -13,12 +13,13 @@ const NAME = 'research-daily-brief';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://nakalabs.xyz';
 
 /**
- * research-daily-brief — once a day, assembles a real market brief (CoinGecko
- * movers + global vibe + the platform's own whale feed) and publishes it to
+ * research-daily-brief — runs every 12h (Morning 00:00 UTC / Evening 12:00 UTC)
+ * via the twice-daily dispatch group. Assembles a real market brief (CoinGecko
+ * movers + global vibe + the platform's own whale feed), publishes it to
  * Research Labs as a styled post, then emails a rich preview digest to every
- * user who hasn't opted out of email. Idempotent: it publishes at most one
- * brief per UTC day, so a duplicate dispatch tick can't double post or
- * double send. Real data only; if every source is down it publishes nothing.
+ * user who hasn't opted out of email. Idempotent per edition: a duplicate
+ * dispatch tick can't double post or double send the same edition. Real data
+ * only; if every source is down it publishes nothing.
  */
 export async function GET(request: NextRequest) {
   const auth = verifyCron(request);
@@ -28,9 +29,11 @@ export async function GET(request: NextRequest) {
   try {
     const sb = getSupabaseAdmin();
     const now = new Date();
-    const slug = `daily-market-brief-${now.toISOString().slice(0, 10)}`;
+    // Two editions per UTC day (Morning 00:00 / Evening 12:00). The slug encodes
+    // the edition so the 12h cadence yields two distinct posts.
+    const slug = briefEdition(now).slug;
 
-    // Idempotency — already published today?
+    // Idempotency — already published this edition?
     const { data: existing } = await sb
       .from('research_posts')
       .select('id')

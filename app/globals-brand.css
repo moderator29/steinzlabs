@@ -370,3 +370,82 @@
 .nl-research-content table { width: 100%; border-collapse: collapse; }
 .nl-research-content ul, .nl-research-content ol { margin: 0 0 16px; padding-left: 20px; }
 .nl-research-content li { margin: 4px 0; }
+
+/* ─── Research Labs motion layer ────────────────────────────────────────────
+   Depth + entrance animation for the brief detail page and research list.
+   GPU-friendly transforms only; everything below honours reduced motion. */
+
+@keyframes nl-fade-up { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes nl-aurora-drift {
+  0%   { transform: translate3d(0,0,0) scale(1);   opacity: .55; }
+  50%  { transform: translate3d(4%,-3%,0) scale(1.12); opacity: .9; }
+  100% { transform: translate3d(0,0,0) scale(1);   opacity: .55; }
+}
+@keyframes nl-shimmer { 0% { background-position: -180% 0; } 100% { background-position: 180% 0; } }
+
+/* Staggered entrance */
+.nl-fade-up   { animation: nl-fade-up .65s cubic-bezier(.22,1,.36,1) both; }
+.nl-fade-up-1 { animation-delay: .06s; }
+.nl-fade-up-2 { animation-delay: .14s; }
+.nl-fade-up-3 { animation-delay: .22s; }
+.nl-fade-up-4 { animation-delay: .30s; }
+
+/* Animated aurora glow halo — sits behind a hero/cover via a positioned parent */
+.nl-hero-glow { position: relative; isolation: isolate; }
+.nl-hero-glow::before {
+  content: ''; position: absolute; inset: -30% -10% -20%; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(40% 50% at 25% 30%, rgba(0,102,255,.55), transparent 70%),
+    radial-gradient(45% 55% at 80% 25%, rgba(139,124,255,.45), transparent 72%),
+    radial-gradient(40% 50% at 60% 90%, rgba(40,160,240,.35), transparent 70%);
+  filter: blur(54px); animation: nl-aurora-drift 16s ease-in-out infinite;
+}
+
+/* 3D tilt card (driven by TiltCard.tsx custom props --rx/--ry/--gx/--gy/--tz) */
+.nl-tilt {
+  --rx: 0deg; --ry: 0deg; --tz: 0; --gx: 50%; --gy: 50%;
+  transform-style: preserve-3d;
+  transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry)) translateZ(calc(var(--tz) * 10px));
+  transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s ease, border-color .35s ease;
+  will-change: transform;
+}
+.nl-tilt:hover { box-shadow: 0 24px 60px -24px rgba(0,102,255,.5), 0 0 0 1px rgba(111,126,255,.25); }
+/* moving specular glare */
+.nl-tilt--glare { position: relative; }
+.nl-tilt--glare::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(220px circle at var(--gx) var(--gy), rgba(255,255,255,.16), transparent 45%);
+  opacity: 0; transition: opacity .35s ease; z-index: 2;
+}
+.nl-tilt--glare:hover::after { opacity: 1; }
+
+/* animated gradient hairline that sweeps a card border on hover */
+.nl-sheen { position: relative; overflow: hidden; }
+.nl-sheen::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(111,126,255,.9), transparent);
+  background-size: 200% 100%; opacity: 0; transition: opacity .3s ease;
+  animation: nl-shimmer 2.4s linear infinite;
+}
+.nl-sheen:hover::before { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nl-fade-up { animation: none; }
+  .nl-hero-glow::before { animation: none; }
+  .nl-tilt { transition: none; transform: none; }
+  .nl-sheen::before { animation: none; }
+}
+@media (hover: none) {
+  .nl-tilt { transform: none; }
+}
+
+/* Brief content micro-interactions — lift the stat cards (14px radius) and
+   whale-move rows (12px radius) on hover. Web only; emails ignore these. */
+.nl-research-content div[style*="border-radius:14px"] { transition: transform .25s cubic-bezier(.22,1,.36,1), box-shadow .25s ease; }
+.nl-research-content div[style*="border-radius:14px"]:hover { transform: translateY(-3px); box-shadow: 0 14px 34px -14px rgba(0,102,255,.45); }
+.nl-research-content div[style*="border-radius:12px"] { transition: transform .2s ease, border-color .2s ease; }
+.nl-research-content div[style*="border-radius:12px"]:hover { transform: translateX(3px); border-color: rgba(111,126,255,.35) !important; }
+@media (prefers-reduced-motion: reduce) {
+  .nl-research-content div[style*="border-radius:14px"]:hover,
+  .nl-research-content div[style*="border-radius:12px"]:hover { transform: none; }
+}

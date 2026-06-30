@@ -4,6 +4,7 @@
     { "path": "/api/cron/dispatch/half-hourly", "schedule": "*/30 * * * *" },
     { "path": "/api/cron/dispatch/hourly",      "schedule": "0 * * * *" },
     { "path": "/api/cron/dispatch/six-hourly",  "schedule": "0 */6 * * *" },
+    { "path": "/api/cron/dispatch/twice-daily", "schedule": "0 0,12 * * *" },
     { "path": "/api/cron/dispatch/daily",       "schedule": "0 3 * * *" }
   ]
 }

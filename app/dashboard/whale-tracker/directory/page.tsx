@@ -133,9 +133,9 @@ const VOLUME_PILLS = [
 const CUSTODIAL_ENTITIES = new Set(['exchange', 'cex', 'bridge', 'institutional']);
 
 function fmtUsd(v: string | number | null): string {
-  if (v === null || v === undefined) return '—';
+  if (v === null || v === undefined) return 'n/a';
   const n = typeof v === 'number' ? v : parseFloat(v);
-  if (!isFinite(n) || n === 0) return '—';
+  if (!isFinite(n) || n === 0) return 'n/a';
   const abs = Math.abs(n);
   const sign = n < 0 ? '-' : '';
   if (abs >= 1e9) return `${sign}$${(abs / 1e9).toFixed(2)}B`;
@@ -432,7 +432,7 @@ export default function WhaleDirectoryPage() {
       <div className="max-w-7xl mx-auto px-4 mt-4 grid grid-cols-2 md:grid-cols-4 gap-2">
         <StatTile label="Whales tracked" value={total.toLocaleString()} />
         <StatTile label="Combined portfolio (page)" value={fmtUsd(aggregatePortfolio)} />
-        <StatTile label="Avg whale score" value={avgWhaleScore ? `${avgWhaleScore}/100` : '—'} />
+        <StatTile label="Avg whale score" value={avgWhaleScore ? `${avgWhaleScore}/100` : 'n/a'} />
         <StatTile label="Chains covered" value={String(Object.keys(facets.byChain).length)} />
       </div>
 
@@ -494,7 +494,7 @@ export default function WhaleDirectoryPage() {
             >
               Prev
             </button>
-            <span className="text-xs text-slate-500">{offset + 1}–{Math.min(offset + 24, total)} of {total}</span>
+            <span className="text-xs text-slate-500">{offset + 1} to {Math.min(offset + 24, total)} of {total}</span>
             <button
               disabled={offset + 24 >= total}
               onClick={() => setOffset(offset + 24)}
@@ -585,10 +585,10 @@ function WhaleCard({ row, watched, onOpen, onFollow, onToggleWatch, onCopy }: {
       {custodial ? (
         // Exchange / bridge / CEX wallets are custodial flow accounts — realized
         // PnL and win-rate are meaningless for them, so show holdings + an honest
-        // note instead of a row of "—".
+        // note instead of a row of "n/a".
         <div className="mt-4">
           <Metric label="Holdings" value={fmtUsd(row.portfolio_value_usd)} />
-          <p className="text-[9px] text-slate-500 mt-1.5">Custodial wallet — PnL / win-rate not applicable</p>
+          <p className="text-[9px] text-slate-500 mt-1.5">Custodial wallet · PnL and win rate not applicable</p>
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-2 mt-4">
@@ -599,7 +599,7 @@ function WhaleCard({ row, watched, onOpen, onFollow, onToggleWatch, onCopy }: {
             Icon={pnl !== 0 ? (pnlPositive ? TrendingUp : TrendingDown) : undefined}
             tone={pnl > 0 ? 'green' : pnl < 0 ? 'red' : 'neutral'}
           />
-          <Metric label="Win rate" value={row.win_rate ? `${Math.round(Number(row.win_rate))}%` : '—'} />
+          <Metric label="Win rate" value={row.win_rate ? `${Math.round(Number(row.win_rate))}%` : 'n/a'} />
         </div>
       )}
 

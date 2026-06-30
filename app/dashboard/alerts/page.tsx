@@ -1,32 +1,45 @@
 'use client';
 
-// Naka Labs brand icons — Whale aliased to Fish (same semantic). Rocket
-// kept on lucide (use the chamber Sigil component elsewhere for true cult
-// rocket). ToggleLeft/Right not yet in brand library.
+// Naka Labs brand icons — Whale aliased to Fish (same semantic).
 import {
   Bell, Plus, Trash2, TrendingUp, Activity, X,
-  Search, CheckCircle as Check, AlertTriangle, Play,
+  Search, CheckCircle as Check, AlertTriangle,
   Whale as Fish,
 } from '@/components/icons/brand';
 import { ToggleLeft, ToggleRight, Rocket, History } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
-import { useRouter } from 'next/navigation';
-import { useNavState } from '@/lib/nav/useNavState';
-import { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  loadSmartAlerts, saveSmartAlerts, loadAlertHistory,
-  addAlertHistory, useAlertMonitor,
-  type SmartAlert, type WhaleAlert, type PriceAlert,
-  type NewLaunchAlert, type WalletActivityAlert, type AlertChain,
-} from '@/lib/hooks/useAlertMonitor';
-import { addLocalNotification } from '@/lib/notifications';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { alertsHowItWorks } from '@/lib/howItWorks/content/alerts';
+import { useNavState } from '@/lib/nav/useNavState';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
+import { TiltCard } from '@/components/brand/TiltCard';
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Types (client mirror of the server alert model) ──────────────────────────
 
 type TabType = 'alerts' | 'history';
 type CreateTab = 'whale' | 'price' | 'launch' | 'wallet_activity';
+type AlertChain = 'solana' | 'ethereum' | 'bsc' | 'base';
+
+interface ServerAlert {
+  id: string;
+  type: CreateTab;
+  name: string;
+  active: boolean;
+  triggered: boolean;
+  triggerCount: number;
+  lastTriggered?: number;
+  createdAt: string;
+  condition: Record<string, unknown>;
+}
+
+interface HistoryEntry {
+  id: string;
+  alertName: string;
+  alertType: string;
+  message: string;
+  triggeredAt: number;
+}
 
 interface CoinOption {
   id: string;
@@ -34,6 +47,13 @@ interface CoinOption {
   name: string;
   thumb?: string;
 }
+
+// Payloads POSTed to /api/alerts (discriminated by `type`).
+type NewAlertPayload =
+  | { type: 'price'; tokenId: string; tokenSymbol: string; direction: 'above' | 'below'; targetPrice: number; label?: string }
+  | { type: 'whale'; walletAddress: string; threshold: number; chain: AlertChain; label?: string }
+  | { type: 'wallet_activity'; walletAddress: string; chain: AlertChain; label?: string }
+  | { type: 'launch'; minLiquidity: number; minHolders: number; chain: 'solana' | 'any'; keywords: string[]; label?: string };
 
 // ── Icon + Color maps ────────────────────────────────────────────────────────
 
@@ -52,7 +72,7 @@ function getAlertColor(type: string): string {
     case 'whale': return '#0066FF';
     case 'price': return '#10B981';
     case 'launch': return '#F59E0B';
-    case 'wallet_activity': return '#8B5CF6';
+    case 'wallet_activity': return '#8B7CFF';
     default: return '#6B7280';
   }
 }
@@ -67,16 +87,20 @@ function getAlertTypeName(type: string): string {
   }
 }
 
-function alertConditionSummary(alert: SmartAlert): string {
+function alertConditionSummary(alert: ServerAlert): string {
+  const c = alert.condition || {};
+  const short = (a: unknown) => (typeof a === 'string' ? `${a.slice(0, 6)}…${a.slice(-4)}` : '');
   switch (alert.type) {
     case 'whale':
-      return `${alert.walletAddress.slice(0, 6)}...${alert.walletAddress.slice(-4)} >= $${alert.threshold.toLocaleString()} on ${alert.chain.toUpperCase()}`;
+      return `${short(c.walletAddress)} over $${Number(c.threshold || 0).toLocaleString()} on ${String(c.chain || '').toUpperCase()}`;
     case 'price':
-      return `${alert.tokenSymbol.toUpperCase()} ${alert.direction} $${alert.targetPrice.toLocaleString()}`;
-    case 'launch':
-      return `Liq >= $${alert.minLiquidity.toLocaleString()} · Holders >= ${alert.minHolders}${alert.keywords.length ? ` · "${alert.keywords.join(', ')}"` : ''}`;
+      return `${String(c.tokenSymbol || '').toUpperCase()} ${String(c.direction || '')} $${Number(c.targetPrice || 0).toLocaleString()}`;
+    case 'launch': {
+      const kw = Array.isArray(c.keywords) ? (c.keywords as string[]) : [];
+      return `Liq over $${Number(c.minLiquidity || 0).toLocaleString()} · Holders over ${Number(c.minHolders || 0)}${kw.length ? ` · "${kw.join(', ')}"` : ''}`;
+    }
     case 'wallet_activity':
-      return `${alert.walletAddress.slice(0, 6)}...${alert.walletAddress.slice(-4)} any activity on ${alert.chain.toUpperCase()}`;
+      return `${short(c.walletAddress)} any activity on ${String(c.chain || '').toUpperCase()}`;
     default:
       return '';
   }
@@ -90,10 +114,6 @@ function timeAgo(ts: number): string {
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
-}
-
-function genId(): string {
-  return `alert-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 }
 
 // ── Delete Confirm ───────────────────────────────────────────────────────────
@@ -111,22 +131,19 @@ function DeleteConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCance
 // ── Alert Card ───────────────────────────────────────────────────────────────
 
 function AlertCard({
-  alert,
-  onToggle,
-  onDelete,
-  onTest,
+  alert, onToggle, onDelete, busy,
 }: {
-  alert: SmartAlert;
+  alert: ServerAlert;
   onToggle: () => void;
   onDelete: () => void;
-  onTest: () => void;
+  busy: boolean;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const Icon = getAlertIcon(alert.type);
   const color = getAlertColor(alert.type);
 
   return (
-    <div className={`nl-glass rounded-xl p-4 border transition-all ${alert.active ? 'border-white/10' : 'border-white/5 opacity-60'}`}>
+    <div className={`nl-glass nl-glass--interactive rounded-xl p-4 transition-all ${alert.active ? '' : 'opacity-60'}`}>
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}20` }}>
@@ -138,14 +155,7 @@ function AlertCard({
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0 ms-2">
-          <button
-            onClick={onTest}
-            title="Test alert"
-            className="p-1 hover:bg-white/10 rounded text-gray-500 hover:text-yellow-400 transition-colors"
-          >
-            <Play className="w-3 h-3" />
-          </button>
-          <button onClick={onToggle}>
+          <button onClick={onToggle} disabled={busy} title={alert.active ? 'Pause alert' : 'Resume alert'} className="disabled:opacity-40">
             {alert.active
               ? <ToggleRight className="w-6 h-6 text-[#10B981]" />
               : <ToggleLeft className="w-6 h-6 text-gray-600" />}
@@ -153,7 +163,7 @@ function AlertCard({
           {confirmDelete ? (
             <DeleteConfirm onConfirm={onDelete} onCancel={() => setConfirmDelete(false)} />
           ) : (
-            <button onClick={() => setConfirmDelete(true)} className="p-1 hover:bg-white/10 rounded">
+            <button onClick={() => setConfirmDelete(true)} className="p-1 hover:bg-white/10 rounded" disabled={busy}>
               <Trash2 className="w-3.5 h-3.5 text-gray-600" />
             </button>
           )}
@@ -207,38 +217,17 @@ function ChainSelector({ value, onChange }: { value: AlertChain; onChange: (c: A
 
 // ── Whale Tracker Form ───────────────────────────────────────────────────────
 
-function WhaleTrackerForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
+function WhaleTrackerForm({ onSave, saving }: { onSave: (a: NewAlertPayload) => void; saving: boolean }) {
   const [wallet, setWallet] = useState('');
   const [threshold, setThreshold] = useState('10000');
   const [chain, setChain] = useState<AlertChain>('ethereum');
   const [name, setName] = useState('');
 
   useEffect(() => {
-    if (wallet.length > 10) {
-      setName(`Whale Watch: ${wallet.slice(0, 6)}...${wallet.slice(-4)}`);
-    } else {
-      setName('');
-    }
+    setName(wallet.length > 10 ? `Whale Watch · ${wallet.slice(0, 6)}…${wallet.slice(-4)}` : '');
   }, [wallet]);
 
   const valid = wallet.length > 10 && parseFloat(threshold) > 0;
-
-  const save = () => {
-    if (!valid) return;
-    const alert: WhaleAlert = {
-      id: genId(),
-      type: 'whale',
-      name: name || `Whale Watch: ${wallet.slice(0, 6)}...${wallet.slice(-4)}`,
-      walletAddress: wallet,
-      threshold: parseFloat(threshold),
-      chain,
-      active: true,
-      lastChecked: 0,
-      createdAt: new Date().toISOString(),
-      triggerCount: 0,
-    };
-    onSave(alert);
-  };
 
   return (
     <div className="space-y-4">
@@ -273,16 +262,16 @@ function WhaleTrackerForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
         <input
           value={name}
           onChange={e => setName(e.target.value)}
-          placeholder="Whale Watch: 0x1234..."
+          placeholder="Whale Watch · 0x1234…"
           className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#0066FF]/40 placeholder-gray-600"
         />
       </div>
       <button
-        onClick={save}
-        disabled={!valid}
-        className="nl-btn-neon w-full py-3 rounded-xl font-bold text-sm disabled:opacity-40"
+        onClick={() => valid && onSave({ type: 'whale', walletAddress: wallet, threshold: parseFloat(threshold), chain, label: name || undefined })}
+        disabled={!valid || saving}
+        className="nl-btn-neon w-full py-3 rounded-xl font-bold text-sm"
       >
-        Save Alert
+        {saving ? 'Saving…' : 'Save Alert'}
       </button>
     </div>
   );
@@ -290,7 +279,7 @@ function WhaleTrackerForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
 
 // ── Price Alert Form ─────────────────────────────────────────────────────────
 
-function PriceAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
+function PriceAlertForm({ onSave, saving }: { onSave: (a: NewAlertPayload) => void; saving: boolean }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<CoinOption[]>([]);
   const [selected, setSelected] = useState<CoinOption | null>(null);
@@ -303,22 +292,12 @@ function PriceAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
     if (q.length < 2) { setResults([]); return; }
     setSearching(true);
     try {
-      // Route through our unified resolve endpoint so the call goes via the
-      // service layer (same cache + counter as Market page search) and so
-      // contract addresses also work, not just tickers.
-      const res = await fetch(`/api/market/resolve?q=${encodeURIComponent(q)}`, {
-        signal: AbortSignal.timeout(8_000),
-      });
+      const res = await fetch(`/api/market/resolve?q=${encodeURIComponent(q)}`, { signal: AbortSignal.timeout(8_000) });
       if (!res.ok) return;
       const data = await res.json() as { matches: { id: string | null; symbol: string; name: string; image: string | null }[] };
       setResults((data.matches || []).slice(0, 8)
-        .filter((m) => m.id) // alerts need a coingecko id to track
-        .map((m) => ({
-          id: m.id as string,
-          symbol: m.symbol,
-          name: m.name,
-          thumb: m.image ?? '',
-        })));
+        .filter((m) => m.id)
+        .map((m) => ({ id: m.id as string, symbol: m.symbol, name: m.name, thumb: m.image ?? '' })));
     } catch {
       // ignore
     } finally {
@@ -332,28 +311,8 @@ function PriceAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
     return () => { if (searchRef.current) clearTimeout(searchRef.current); };
   }, [query, searchCoins]);
 
-  const autoName = selected
-    ? `${selected.symbol.toUpperCase()} ${direction} $${targetPrice || '...'}`
-    : '';
-
-  const valid = selected && parseFloat(targetPrice) > 0;
-
-  const save = () => {
-    if (!valid || !selected) return;
-    const alert: PriceAlert = {
-      id: genId(),
-      type: 'price',
-      name: autoName || `${selected.symbol.toUpperCase()} price alert`,
-      tokenId: selected.id,
-      tokenSymbol: selected.symbol,
-      direction,
-      targetPrice: parseFloat(targetPrice),
-      active: true,
-      createdAt: new Date().toISOString(),
-      triggerCount: 0,
-    };
-    onSave(alert);
-  };
+  const autoName = selected ? `${selected.symbol.toUpperCase()} ${direction} $${targetPrice || '…'}` : '';
+  const valid = !!selected && parseFloat(targetPrice) > 0;
 
   return (
     <div className="space-y-4">
@@ -376,11 +335,11 @@ function PriceAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="Search token by name or symbol..."
+              placeholder="Search token by name or symbol…"
               className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 ps-9 text-sm focus:outline-none focus:border-[#0066FF]/40 placeholder-gray-600"
             />
             {results.length > 0 && (
-              <div className="nl-glass absolute top-full mt-1 left-0 right-0 border border-white/10 rounded-xl overflow-hidden z-20 shadow-xl">
+              <div className="absolute top-full mt-1 left-0 right-0 bg-[#0D1117] border border-white/10 rounded-xl overflow-hidden z-20 shadow-xl">
                 {results.map(coin => (
                   <button
                     key={coin.id}
@@ -447,11 +406,11 @@ function PriceAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
       )}
 
       <button
-        onClick={save}
-        disabled={!valid}
-        className="nl-btn-neon w-full py-3 rounded-xl font-bold text-sm disabled:opacity-40"
+        onClick={() => valid && selected && onSave({ type: 'price', tokenId: selected.id, tokenSymbol: selected.symbol, direction, targetPrice: parseFloat(targetPrice), label: autoName || undefined })}
+        disabled={!valid || saving}
+        className="nl-btn-neon w-full py-3 rounded-xl font-bold text-sm"
       >
-        Save Alert
+        {saving ? 'Saving…' : 'Save Alert'}
       </button>
     </div>
   );
@@ -459,34 +418,15 @@ function PriceAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
 
 // ── Launch Alert Form ────────────────────────────────────────────────────────
 
-function LaunchAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
+function LaunchAlertForm({ onSave, saving }: { onSave: (a: NewAlertPayload) => void; saving: boolean }) {
   const [minLiquidity, setMinLiquidity] = useState('10000');
   const [minHolders, setMinHolders] = useState('10');
   const [chain, setChain] = useState<'solana' | 'any'>('solana');
   const [keywordsRaw, setKeywordsRaw] = useState('');
 
   const keywords = keywordsRaw.split(',').map(k => k.trim()).filter(Boolean);
-  const name = `New launch > $${parseInt(minLiquidity || '0').toLocaleString()} liq${keywords.length ? ` · ${keywords.slice(0, 2).join(', ')}` : ''}`;
-
+  const name = `New launch over $${parseInt(minLiquidity || '0').toLocaleString()} liq${keywords.length ? ` · ${keywords.slice(0, 2).join(', ')}` : ''}`;
   const valid = parseFloat(minLiquidity) >= 0 && parseInt(minHolders) >= 0;
-
-  const save = () => {
-    if (!valid) return;
-    const alert: NewLaunchAlert = {
-      id: genId(),
-      type: 'launch',
-      name,
-      minLiquidity: parseFloat(minLiquidity),
-      minHolders: parseInt(minHolders),
-      chain,
-      keywords,
-      active: true,
-      lastChecked: 0,
-      createdAt: new Date().toISOString(),
-      triggerCount: 0,
-    };
-    onSave(alert);
-  };
 
   return (
     <div className="space-y-4">
@@ -549,11 +489,11 @@ function LaunchAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
       </div>
 
       <button
-        onClick={save}
-        disabled={!valid}
-        className="nl-btn-neon w-full py-3 rounded-xl font-bold text-sm disabled:opacity-40"
+        onClick={() => valid && onSave({ type: 'launch', minLiquidity: parseFloat(minLiquidity), minHolders: parseInt(minHolders), chain, keywords, label: name })}
+        disabled={!valid || saving}
+        className="nl-btn-neon w-full py-3 rounded-xl font-bold text-sm"
       >
-        Save Alert
+        {saving ? 'Saving…' : 'Save Alert'}
       </button>
     </div>
   );
@@ -561,36 +501,16 @@ function LaunchAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
 
 // ── Wallet Activity Form ─────────────────────────────────────────────────────
 
-function WalletActivityForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
+function WalletActivityForm({ onSave, saving }: { onSave: (a: NewAlertPayload) => void; saving: boolean }) {
   const [wallet, setWallet] = useState('');
   const [chain, setChain] = useState<AlertChain>('ethereum');
   const [name, setName] = useState('');
 
   useEffect(() => {
-    if (wallet.length > 10) {
-      setName(`Activity: ${wallet.slice(0, 6)}...${wallet.slice(-4)}`);
-    } else {
-      setName('');
-    }
+    setName(wallet.length > 10 ? `Activity · ${wallet.slice(0, 6)}…${wallet.slice(-4)}` : '');
   }, [wallet]);
 
   const valid = wallet.length > 10;
-
-  const save = () => {
-    if (!valid) return;
-    const alert: WalletActivityAlert = {
-      id: genId(),
-      type: 'wallet_activity',
-      name: name || `Activity: ${wallet.slice(0, 6)}...${wallet.slice(-4)}`,
-      walletAddress: wallet,
-      chain,
-      active: true,
-      lastChecked: 0,
-      createdAt: new Date().toISOString(),
-      triggerCount: 0,
-    };
-    onSave(alert);
-  };
 
   return (
     <div className="space-y-4">
@@ -607,9 +527,9 @@ function WalletActivityForm({ onSave }: { onSave: (alert: SmartAlert) => void })
         <label className="text-xs text-gray-400 block mb-1.5">Chain</label>
         <ChainSelector value={chain} onChange={setChain} />
       </div>
-      <div className="flex items-center gap-3 bg-[#8B5CF6]/10 border border-[#8B5CF6]/20 rounded-xl px-3 py-2.5">
-        <Check className="w-4 h-4 text-[#8B5CF6] shrink-0" />
-        <span className="text-xs text-gray-300">Alert on <span className="text-white font-semibold">all activity</span> — any new transaction will trigger</span>
+      <div className="flex items-center gap-3 bg-[#8B7CFF]/10 border border-[#8B7CFF]/20 rounded-xl px-3 py-2.5">
+        <Check className="w-4 h-4 text-[#8B7CFF] shrink-0" />
+        <span className="text-xs text-gray-300">Alert on <span className="text-white font-semibold">all activity</span> · any new transaction will trigger</span>
       </div>
       {name && (
         <div className="nl-glass rounded-lg px-3 py-2 text-xs text-gray-400">
@@ -617,11 +537,11 @@ function WalletActivityForm({ onSave }: { onSave: (alert: SmartAlert) => void })
         </div>
       )}
       <button
-        onClick={save}
-        disabled={!valid}
-        className="nl-btn-neon w-full py-3 rounded-xl font-bold text-sm disabled:opacity-40"
+        onClick={() => valid && onSave({ type: 'wallet_activity', walletAddress: wallet, chain, label: name || undefined })}
+        disabled={!valid || saving}
+        className="nl-btn-neon w-full py-3 rounded-xl font-bold text-sm"
       >
-        Save Alert
+        {saving ? 'Saving…' : 'Save Alert'}
       </button>
     </div>
   );
@@ -633,21 +553,21 @@ const CREATE_TABS: { id: CreateTab; label: string; icon: React.ElementType; colo
   { id: 'whale', label: 'Whale Tracker', icon: Fish, color: '#0066FF', desc: 'Track large wallet movements' },
   { id: 'price', label: 'Price Target', icon: TrendingUp, color: '#10B981', desc: 'Alert on price levels' },
   { id: 'launch', label: 'New Launch', icon: Rocket, color: '#F59E0B', desc: 'New token launches' },
-  { id: 'wallet_activity', label: 'Wallet Activity', icon: Activity, color: '#8B5CF6', desc: 'Any wallet transaction' },
+  { id: 'wallet_activity', label: 'Wallet Activity', icon: Activity, color: '#8B7CFF', desc: 'Any wallet transaction' },
 ];
 
-function CreateModal({ onClose, onSave }: { onClose: () => void; onSave: (alert: SmartAlert) => void }) {
+function CreateModal({ onClose, onSave, saving, error }: {
+  onClose: () => void;
+  onSave: (a: NewAlertPayload) => void;
+  saving: boolean;
+  error: string | null;
+}) {
   const [tab, setTab] = useState<CreateTab>('whale');
 
-  const handleSave = (alert: SmartAlert) => {
-    onSave(alert);
-    onClose();
-  };
-
   return (
-    <div className="fixed inset-0 z-[100] flex items-end">
+    <div className="fixed inset-0 z-[100] flex items-end" data-overlay>
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full nl-glass rounded-t-2xl border-t border-white/[0.06] z-10 max-h-[90vh] overflow-y-auto pb-8">
+      <div className="relative w-full bg-[#0D1117] rounded-t-2xl border-t border-white/[0.06] z-10 max-h-[90vh] overflow-y-auto pb-8">
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 bg-white/20 rounded-full" />
         </div>
@@ -686,11 +606,17 @@ function CreateModal({ onClose, onSave }: { onClose: () => void; onSave: (alert:
             })}
           </div>
 
+          {error && (
+            <div className="mb-4 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+              {error}
+            </div>
+          )}
+
           {/* Forms */}
-          {tab === 'whale' && <WhaleTrackerForm onSave={handleSave} />}
-          {tab === 'price' && <PriceAlertForm onSave={handleSave} />}
-          {tab === 'launch' && <LaunchAlertForm onSave={handleSave} />}
-          {tab === 'wallet_activity' && <WalletActivityForm onSave={handleSave} />}
+          {tab === 'whale' && <WhaleTrackerForm onSave={onSave} saving={saving} />}
+          {tab === 'price' && <PriceAlertForm onSave={onSave} saving={saving} />}
+          {tab === 'launch' && <LaunchAlertForm onSave={onSave} saving={saving} />}
+          {tab === 'wallet_activity' && <WalletActivityForm onSave={onSave} saving={saving} />}
         </div>
       </div>
     </div>
@@ -699,23 +625,23 @@ function CreateModal({ onClose, onSave }: { onClose: () => void; onSave: (alert:
 
 // ── History Tab ──────────────────────────────────────────────────────────────
 
-function HistoryTab() {
-  const [history, setHistory] = useState(() => loadAlertHistory());
-
-  useEffect(() => {
-    const handler = () => setHistory(loadAlertHistory());
-    window.addEventListener('steinz_alert_triggered', handler);
-    return () => window.removeEventListener('steinz_alert_triggered', handler);
-  }, []);
+function HistoryTab({ history, loading }: { history: HistoryEntry[]; loading: boolean }) {
+  if (loading) {
+    return (
+      <div className="nl-glass rounded-xl p-8 text-center mt-4">
+        <div className="w-6 h-6 border-2 border-[#0066FF] border-t-transparent rounded-full animate-spin mx-auto" />
+      </div>
+    );
+  }
 
   if (history.length === 0) {
     return (
-      <div className="nl-glass rounded-xl p-8 border border-white/10 text-center mt-4">
+      <div className="nl-glass rounded-xl p-8 text-center mt-4 nl-fade-up">
         <History className="w-10 h-10 text-gray-600 mx-auto mb-3" />
         <p className="text-sm font-semibold mb-1">No history yet</p>
         <p className="text-xs text-gray-500">
           Your alert triggers will appear here once they fire. Use the
-          <span className="text-slate-200 font-semibold"> + Create </span>
+          <span className="text-slate-200 font-semibold"> Create </span>
           button in the header to set up your first alert.
         </p>
       </div>
@@ -728,7 +654,7 @@ function HistoryTab() {
         const Icon = getAlertIcon(entry.alertType);
         const color = getAlertColor(entry.alertType);
         return (
-          <div key={entry.id} className="nl-glass rounded-xl p-3.5 border border-white/[0.08]">
+          <div key={entry.id} className="nl-glass rounded-xl p-3.5">
             <div className="flex items-start gap-2.5">
               <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: `${color}20` }}>
                 <Icon className="w-3.5 h-3.5" style={{ color }} />
@@ -751,62 +677,110 @@ function HistoryTab() {
 // ── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AlertsPage() {
-  const router = useRouter();
-  const [alerts, setAlerts] = useState<SmartAlert[]>([]);
-  const [initialized, setInitialized] = useState(false);
+  const [alerts, setAlerts] = useState<ServerAlert[]>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('alerts');
 
-  // PDF S3 — preserve activeTab so alerts → alert detail → back lands on
-  // the same tab the user was reading.
   useNavState(
     'alerts',
     () => ({ activeTab }),
     (s) => { if (typeof s.activeTab === 'string') setActiveTab(s.activeTab as TabType); },
   );
 
-  // Start polling all alert conditions (price, whale, wallet activity, launches)
-  useAlertMonitor();
-
-  useEffect(() => {
-    setAlerts(loadSmartAlerts());
-    setInitialized(true);
+  const loadAlerts = useCallback(async () => {
+    try {
+      const res = await fetch('/api/alerts', { cache: 'no-store' });
+      if (res.status === 401) { setLoadError('Sign in to manage your alerts.'); setAlerts([]); return; }
+      if (!res.ok) { setLoadError('Could not load alerts.'); return; }
+      const data = await res.json() as { alerts: ServerAlert[] };
+      // This page owns the four smart-alert types; ignore legacy rows created
+      // by the older /alerts surface so we never render an unknown type.
+      const known: CreateTab[] = ['price', 'whale', 'launch', 'wallet_activity'];
+      setAlerts((data.alerts || []).filter(a => known.includes(a.type)));
+      setLoadError(null);
+    } catch {
+      setLoadError('Could not load alerts.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  useEffect(() => {
-    if (initialized) saveSmartAlerts(alerts);
-  }, [alerts, initialized]);
-
-  // Refresh alert list when a trigger fires (updates triggerCount/lastTriggered)
-  useEffect(() => {
-    const handler = () => setAlerts(loadSmartAlerts());
-    window.addEventListener('steinz_alert_triggered', handler);
-    return () => window.removeEventListener('steinz_alert_triggered', handler);
+  const loadHistory = useCallback(async () => {
+    try {
+      const res = await fetch('/api/alerts/history', { cache: 'no-store' });
+      if (!res.ok) { setHistory([]); return; }
+      const data = await res.json() as { history: HistoryEntry[] };
+      setHistory(data.history || []);
+    } catch {
+      setHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
   }, []);
 
-  const toggleAlert = (id: string) => {
-    setAlerts(prev => prev.map(a => a.id === id ? { ...a, active: !a.active } : a));
+  useEffect(() => { loadAlerts(); loadHistory(); }, [loadAlerts, loadHistory]);
+
+  const addAlert = async (payload: NewAlertPayload) => {
+    setSaving(true);
+    setCreateError(null);
+    try {
+      const res = await fetch('/api/alerts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as { error?: string };
+        setCreateError(err.error || 'Failed to save alert.');
+        return;
+      }
+      const data = await res.json() as { alert: ServerAlert };
+      setAlerts(prev => [data.alert, ...prev]);
+      setShowCreate(false);
+    } catch {
+      setCreateError('Failed to save alert.');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const deleteAlert = (id: string) => {
-    setAlerts(prev => prev.filter(a => a.id !== id));
+  const toggleAlert = async (alert: ServerAlert) => {
+    setBusyId(alert.id);
+    const next = !alert.active;
+    setAlerts(prev => prev.map(a => a.id === alert.id ? { ...a, active: next } : a));
+    try {
+      const res = await fetch('/api/alerts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: alert.id, active: next }),
+      });
+      if (!res.ok) setAlerts(prev => prev.map(a => a.id === alert.id ? { ...a, active: alert.active } : a));
+    } catch {
+      setAlerts(prev => prev.map(a => a.id === alert.id ? { ...a, active: alert.active } : a));
+    } finally {
+      setBusyId(null);
+    }
   };
 
-  const addAlert = (alert: SmartAlert) => {
-    setAlerts(prev => [...prev, alert]);
-  };
-
-  const testAlert = (alert: SmartAlert) => {
-    const msg = `Test: ${alertConditionSummary(alert)}`;
-    addLocalNotification({ type: 'alert', title: `[TEST] ${alert.name}`, message: msg });
-    addAlertHistory({
-      alertId: alert.id,
-      alertName: alert.name,
-      alertType: alert.type,
-      message: `[TEST] ${msg}`,
-      triggeredAt: Date.now(),
-    });
-    window.dispatchEvent(new CustomEvent('steinz_alert_triggered'));
+  const deleteAlert = async (id: string) => {
+    setBusyId(id);
+    const prev = alerts;
+    setAlerts(p => p.filter(a => a.id !== id));
+    try {
+      const res = await fetch(`/api/alerts?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!res.ok) setAlerts(prev);
+    } catch {
+      setAlerts(prev);
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const activeCount = alerts.filter(a => a.active).length;
@@ -814,21 +788,21 @@ export default function AlertsPage() {
   const totalFired = alerts.reduce((sum, a) => sum + (a.triggerCount || 0), 0);
 
   return (
-    <div className="min-h-screen text-white pb-20">
+    <AuroraBackground fullHeight className="text-white pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 nl-glass backdrop-blur-xl border-b border-white/10">
+      <div className="sticky top-0 z-40 nl-glass backdrop-blur-xl border-b border-white/10" data-overlay>
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
           <Bell className="w-5 h-5 text-[#0066FF]" />
           <h1 className="text-sm font-heading font-bold">Smart Alerts</h1>
+          <HowItWorksButton content={alertsHowItWorks} className="shrink-0" />
           <button
-            onClick={() => setShowCreate(true)}
+            onClick={() => { setCreateError(null); setShowCreate(true); }}
             className="nl-btn-neon ms-auto px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold"
           >
             <Plus className="w-3.5 h-3.5" />
             Create
           </button>
-          <HowItWorksButton content={alertsHowItWorks} className="shrink-0" />
         </div>
 
         {/* Tabs */}
@@ -852,24 +826,31 @@ export default function AlertsPage() {
 
       <div className="p-4 space-y-4">
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-2">
-          <div className="nl-glass rounded-xl p-3 border border-white/10 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
-            <div className="text-lg font-bold text-[#0066FF]">{activeCount}</div>
-            <div className="text-[10px] text-gray-500">Active</div>
+        <TiltCard className="nl-fade-up">
+          <div className="grid grid-cols-3 gap-2">
+            <div className="nl-glass rounded-xl p-3 text-center">
+              <div className="text-lg font-bold text-[#0066FF]">{activeCount}</div>
+              <div className="text-[10px] text-gray-500">Active</div>
+            </div>
+            <div className="nl-glass rounded-xl p-3 text-center">
+              <div className="text-lg font-bold text-gray-400">{pausedCount}</div>
+              <div className="text-[10px] text-gray-500">Paused</div>
+            </div>
+            <div className="nl-glass rounded-xl p-3 text-center">
+              <div className="text-lg font-bold text-[#F59E0B]">{totalFired}</div>
+              <div className="text-[10px] text-gray-500">Triggered</div>
+            </div>
           </div>
-          <div className="nl-glass rounded-xl p-3 border border-white/10 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
-            <div className="text-lg font-bold text-gray-400">{pausedCount}</div>
-            <div className="text-[10px] text-gray-500">Paused</div>
-          </div>
-          <div className="nl-glass rounded-xl p-3 border border-white/10 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
-            <div className="text-lg font-bold text-[#F59E0B]">{totalFired}</div>
-            <div className="text-[10px] text-gray-500">Triggered</div>
-          </div>
-        </div>
+        </TiltCard>
+
+        {/* Server-evaluated assurance line */}
+        <p className="text-[10px] text-gray-500 nl-fade-up nl-fade-up-1">
+          Alerts run on Naka servers · they keep watching after you close the tab and sync across your devices.
+        </p>
 
         {/* Alert type legend */}
         {activeTab === 'alerts' && (
-          <div className="flex gap-3 flex-wrap">
+          <div className="flex gap-3 flex-wrap nl-fade-up nl-fade-up-1">
             {CREATE_TABS.map(t => {
               const Icon = t.icon;
               return (
@@ -885,27 +866,36 @@ export default function AlertsPage() {
         {/* Alerts tab */}
         {activeTab === 'alerts' && (
           <>
-            {alerts.length === 0 ? (
-              <div className="nl-glass rounded-xl p-8 border border-white/10 text-center">
-                <Bell className="w-10 h-10 text-gray-600 mx-auto mb-3" />
-                <p className="text-sm font-semibold mb-1">No alerts yet</p>
-                <p className="text-xs text-gray-500 mb-4">Create smart alerts to monitor whale wallets, price targets, new launches, and wallet activity</p>
-                <button
-                  onClick={() => setShowCreate(true)}
-                  className="nl-btn-neon px-5 py-2.5 rounded-xl text-xs font-bold"
-                >
-                  Create First Alert
-                </button>
+            {loadError && (
+              <div className="nl-glass rounded-xl p-4 text-center text-xs text-amber-300">{loadError}</div>
+            )}
+            {loading ? (
+              <div className="nl-glass rounded-xl p-8 text-center">
+                <div className="w-6 h-6 border-2 border-[#0066FF] border-t-transparent rounded-full animate-spin mx-auto" />
               </div>
+            ) : alerts.length === 0 && !loadError ? (
+              <TiltCard className="nl-fade-up nl-fade-up-2">
+                <div className="nl-glass rounded-xl p-8 text-center">
+                  <Bell className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+                  <p className="text-sm font-semibold mb-1">No alerts yet</p>
+                  <p className="text-xs text-gray-500 mb-4">Create smart alerts to monitor whale wallets, price targets, new launches, and wallet activity</p>
+                  <button
+                    onClick={() => { setCreateError(null); setShowCreate(true); }}
+                    className="nl-btn-neon px-5 py-2.5 rounded-xl text-xs font-bold"
+                  >
+                    Create First Alert
+                  </button>
+                </div>
+              </TiltCard>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2 nl-fade-up nl-fade-up-2">
                 {alerts.map(alert => (
                   <AlertCard
                     key={alert.id}
                     alert={alert}
-                    onToggle={() => toggleAlert(alert.id)}
+                    busy={busyId === alert.id}
+                    onToggle={() => toggleAlert(alert)}
                     onDelete={() => deleteAlert(alert.id)}
-                    onTest={() => testAlert(alert)}
                   />
                 ))}
               </div>
@@ -914,13 +904,18 @@ export default function AlertsPage() {
         )}
 
         {/* History tab */}
-        {activeTab === 'history' && <HistoryTab />}
+        {activeTab === 'history' && <HistoryTab history={history} loading={historyLoading} />}
       </div>
 
       {/* Create Modal */}
       {showCreate && (
-        <CreateModal onClose={() => setShowCreate(false)} onSave={addAlert} />
+        <CreateModal
+          onClose={() => setShowCreate(false)}
+          onSave={addAlert}
+          saving={saving}
+          error={createError}
+        />
       )}
-    </div>
+    </AuroraBackground>
   );
 }

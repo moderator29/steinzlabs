@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, use } from "react";
+import { useCallback, useEffect, useMemo, useState, use } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -84,7 +84,7 @@ function safeDateLabel(iso: unknown): string {
 
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
-  if (!isFinite(diff) || diff < 0) return "—";
+  if (!isFinite(diff) || diff < 0) return "n/a";
   const s = Math.floor(diff / 1000);
   if (s < 60) return `${s}s ago`;
   const m = Math.floor(s / 60);
@@ -93,11 +93,11 @@ function relativeTime(iso: string): string {
   if (h < 24) return `${h}h ago`;
   const d = Math.floor(h / 24);
   if (d < 30) return `${d}d ago`;
-  return safeDateLabel(iso) || "—";
+  return safeDateLabel(iso) || "n/a";
 }
 
 function fmtUsd(n: number | null): string {
-  if (n === null) return "—";
+  if (n === null) return "n/a";
   if (Math.abs(n) >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
   if (Math.abs(n) >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
   if (Math.abs(n) >= 1e3) return `$${(n / 1e3).toFixed(1)}K`;
@@ -113,10 +113,10 @@ function fmtUsd(n: number | null): string {
  * CAN sum value_usd of sells minus buys in the window. That's a real
  * indicative number — labelled as 'est.' so users don't mistake it for
  * audited PnL — and it ships immediately instead of leaving the row
- * showing '—' until the cron runs.
+ * showing 'n/a' until the cron runs.
  *
  * Returns null when activity is empty or no rows in window — caller
- * falls back to '—' as before.
+ * falls back to 'n/a' as before.
  */
 function estimateNetFlowUsd(
   activity: ReadonlyArray<{ action: string; value_usd: number | null; timestamp: string | null }>,
@@ -159,26 +159,58 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
   const [copyRuleOpen, setCopyRuleOpen] = useState(false);
 
   const [fetchError, setFetchError] = useState<'auth' | 'tier' | 'notfound' | 'network' | null>(null);
+  // True when we're showing the whale's last-known (cached) data because the
+  // live fetch failed — so we degrade to real saved data instead of the bare
+  // "Couldn't load this whale" error screen.
+  const [stale, setStale] = useState(false);
+
+  // Session cache of the last successful whale detail, keyed per whale. Lets us
+  // render the real card (with whatever data we last had) on a transient fetch
+  // failure instead of throwing the user to an error screen.
+  const cacheKey = `whale-detail:${chain}:${address}`;
+  const readCache = useCallback((): WhaleDetail | null => {
+    try {
+      const raw = sessionStorage.getItem(cacheKey);
+      return raw ? (JSON.parse(raw) as WhaleDetail) : null;
+    } catch { return null; }
+  }, [cacheKey]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // Paint instantly from cache if we have it (stale-while-revalidate).
+      const cached = readCache();
+      if (cached && !cancelled) { setData(cached); setLoading(false); }
       try {
         const res = await fetch(`/api/whales/${address}?chain=${encodeURIComponent(chain)}`);
         if (!res.ok) {
-          // Bug §2.4: previously a failing fetch silently left data=null, which
-          // rendered the bare "Whale not found" screen and users read it as a
-          // crash. Surface the real reason so we can show something useful.
-          if (res.status === 401) setFetchError('auth');
-          else if (res.status === 403) setFetchError('tier');
-          else if (res.status === 404) setFetchError('notfound');
-          else setFetchError('network');
+          // On failure, prefer the whale's last-known data over an error wall.
+          // Only surface the hard error when we have nothing cached to show.
+          const fallback = cached ?? readCache();
+          if (fallback) {
+            if (!cancelled) { setData(fallback); setStale(true); }
+          } else if (!cancelled) {
+            if (res.status === 401) setFetchError('auth');
+            else if (res.status === 403) setFetchError('tier');
+            else if (res.status === 404) setFetchError('notfound');
+            else setFetchError('network');
+          }
           return;
         }
         const json = (await res.json()) as WhaleDetail;
-        if (!cancelled) setData(json);
+        if (!cancelled) {
+          setData(json);
+          setStale(false);
+          setFetchError(null);
+          // Persist only when we actually have the whale row (don't cache a
+          // not-found shell as if it were real data).
+          if (json.whale) { try { sessionStorage.setItem(cacheKey, JSON.stringify(json)); } catch { /* quota */ } }
+        }
       } catch {
-        if (!cancelled) setFetchError('network');
+        const fallback = cached ?? readCache();
+        if (fallback) {
+          if (!cancelled) { setData(fallback); setStale(true); }
+        } else if (!cancelled) setFetchError('network');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -186,7 +218,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
     return () => {
       cancelled = true;
     };
-  }, [address, chain]);
+  }, [address, chain, cacheKey, readCache]);
 
   // Bug §5a — hydrate `following` from the server so the button reflects
   // reality on first paint, not the optimistic local default.
@@ -281,6 +313,11 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
 
   return (
     <div className="min-h-screen text-white pb-20">
+      {stale && (
+        <div className="bg-amber-500/10 border-b border-amber-500/20 text-amber-300/90 text-[11px] text-center py-1.5 px-4">
+          Showing this whale's last saved data · live refresh is taking a moment
+        </div>
+      )}
       <div className="sticky top-0 z-30 bg-[#0A0E27]/95 backdrop-blur-xl border-b border-slate-800">
         <div className="max-w-5xl mx-auto px-4 py-4">
           <div className="mb-3"><BackButton href="/dashboard/whale-tracker" label="Whale tracker" compact /></div>
@@ -445,25 +482,27 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
                   users see it's not audited PnL. */}
               {(() => {
                 const est7d = w.pnl_7d_usd === null ? estimateNetFlowUsd(data.activity ?? [], 7) : null;
-                const value = w.pnl_7d_usd !== null ? fmtUsd(w.pnl_7d_usd) : est7d !== null ? `${fmtUsd(est7d)} (est.)` : '—';
+                const value = w.pnl_7d_usd !== null ? fmtUsd(w.pnl_7d_usd) : est7d !== null ? `${fmtUsd(est7d)} (est.)` : 'n/a';
                 const tone = (w.pnl_7d_usd ?? est7d ?? 0) >= 0 ? 'up' : 'down';
                 return <StatCard label="7d PnL" value={value} tone={tone as 'up' | 'down'} />;
               })()}
               {(() => {
                 const est30d = w.pnl_30d_usd === null ? estimateNetFlowUsd(data.activity ?? [], 30) : null;
-                const value = w.pnl_30d_usd !== null ? fmtUsd(w.pnl_30d_usd) : est30d !== null ? `${fmtUsd(est30d)} (est.)` : '—';
+                const value = w.pnl_30d_usd !== null ? fmtUsd(w.pnl_30d_usd) : est30d !== null ? `${fmtUsd(est30d)} (est.)` : 'n/a';
                 const tone = (w.pnl_30d_usd ?? est30d ?? 0) >= 0 ? 'up' : 'down';
                 return <StatCard label="30d PnL" value={value} tone={tone as 'up' | 'down'} />;
               })()}
-              <StatCard label="Win rate" value={w.win_rate !== null ? `${(w.win_rate * 100).toFixed(0)}%` : "—"} />
-              <StatCard label="Trades (30d)" value={w.trade_count_30d?.toString() ?? "—"} />
+              {/* win_rate is stored 0..100 (see whale-backfill-pnl), so render
+                  it directly — multiplying by 100 showed e.g. "6500%". */}
+              <StatCard label="Win rate" value={w.win_rate !== null ? `${Math.round(w.win_rate)}%` : "n/a"} />
+              <StatCard label="Trades (30d)" value={w.trade_count_30d?.toString() ?? "n/a"} />
               {/* Deep-dive crash fix — followerCount can be undefined on
                   unbackfilled rows; .toLocaleString() on undefined throws. */}
               <StatCard label="Followers" value={(data.followerCount ?? 0).toLocaleString()} />
               <StatCard label="Entity" value={w.entity_type ?? "unknown"} />
               <StatCard label="Score" value={w.whale_score.toString()} />
-              <StatCard label="First seen" value={safeDateLabel(w.first_seen_at) || "—"} />
-              <StatCard label="Last active" value={w.last_active_at ? relativeTime(w.last_active_at) : "—"} />
+              <StatCard label="First seen" value={safeDateLabel(w.first_seen_at) || "n/a"} />
+              <StatCard label="Last active" value={w.last_active_at ? relativeTime(w.last_active_at) : "n/a"} />
             </div>
             <AiSummarySection address={w.address} chain={w.chain} />
           </>
@@ -510,14 +549,14 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
                   {data.activity.map((a) => (
                     <tr key={a.id} className="border-b border-slate-800/50 hover:bg-white/[0.02]">
                       <td className="px-3 py-2 uppercase text-[10px] text-slate-400">{a.action}</td>
-                      <td className="px-3 py-2 font-mono text-white">{a.token_symbol ?? "—"}</td>
-                      <td className="px-3 py-2 font-mono text-slate-300">{a.amount ?? "—"}</td>
+                      <td className="px-3 py-2 font-mono text-white">{a.token_symbol ?? "n/a"}</td>
+                      <td className="px-3 py-2 font-mono text-slate-300">{a.amount ?? "n/a"}</td>
                       <td className="px-3 py-2 font-mono text-slate-300">{fmtUsd(a.value_usd)}</td>
-                      <td className="px-3 py-2 text-slate-400 truncate max-w-[140px]">{a.counterparty_label ?? a.counterparty ?? "—"}</td>
+                      <td className="px-3 py-2 text-slate-400 truncate max-w-[140px]">{a.counterparty_label ?? a.counterparty ?? "n/a"}</td>
                       {/* Deep-dive crash fix — a.timestamp can be null on
                           live Alchemy/Helius rows; new Date(null) is Invalid
                           Date and .toLocaleString() throws on that. */}
-                      <td className="px-3 py-2 text-slate-500">{(() => { const t = a.timestamp ? new Date(a.timestamp).getTime() : NaN; return Number.isFinite(t) ? new Date(t).toLocaleString() : '—'; })()}</td>
+                      <td className="px-3 py-2 text-slate-500">{(() => { const t = a.timestamp ? new Date(a.timestamp).getTime() : NaN; return Number.isFinite(t) ? new Date(t).toLocaleString() : 'n/a'; })()}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -797,7 +836,7 @@ function HoldingsPanel({ address, chain }: { address: string; chain: string }) {
                     {h.balance < 1 ? h.balance.toFixed(6) : h.balance.toLocaleString(undefined, { maximumFractionDigits: 4 })}
                   </td>
                   <td className="px-3 py-2 text-end font-mono text-slate-400 tabular-nums">
-                    {h.priceUsd > 0 ? `$${h.priceUsd < 0.01 ? h.priceUsd.toExponential(2) : h.priceUsd.toFixed(4)}` : '—'}
+                    {h.priceUsd > 0 ? `$${h.priceUsd < 0.01 ? h.priceUsd.toExponential(2) : h.priceUsd.toFixed(4)}` : 'n/a'}
                   </td>
                   <td className="px-3 py-2 text-end font-mono text-white tabular-nums">{fmtUsd(h.valueUsd)}</td>
                   <td className="px-3 py-2 text-end">
@@ -901,7 +940,7 @@ function CounterpartiesPanel({ activity }: { activity: ActivityRow[] }) {
           {aggregates.map((a) => (
             <tr key={a.address} className="border-b border-slate-800/50 hover:bg-white/[0.02]">
               <td className="px-3 py-2">
-                <div className="text-slate-300">{a.label ?? '—'}</div>
+                <div className="text-slate-300">{a.label ?? 'n/a'}</div>
                 <div className="text-[10px] font-mono text-slate-500 truncate max-w-[200px]">{a.address}</div>
               </td>
               <td className="px-3 py-2 text-end font-mono text-white">{a.txCount}</td>

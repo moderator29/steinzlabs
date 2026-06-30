@@ -143,7 +143,7 @@ export function WalletIntelligenceTabs({ address }: { address: string }) {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Stat label="Portfolio" value={fmtUsd(whale.portfolio_value_usd)} />
             <Stat label="30d PnL" value={fmtUsd(whale.pnl_30d_usd)} tone={(whale.pnl_30d_usd ?? 0) >= 0 ? "up" : "down"} />
-            <Stat label="Win rate" value={whale.win_rate !== null ? `${(whale.win_rate * 100).toFixed(0)}%` : "—"} />
+            <Stat label="Win rate" value={whale.win_rate !== null ? `${Math.round(whale.win_rate)}%` : "n/a"} />
             <Stat label="Score" value={whale.whale_score.toString()} />
           </div>
           {report ? (
@@ -217,7 +217,7 @@ export function WalletIntelligenceTabs({ address }: { address: string }) {
           <Stat label="30d PnL" value={fmtUsd(whale.pnl_30d_usd)} tone={(whale.pnl_30d_usd ?? 0) >= 0 ? "up" : "down"} />
           <Stat label="90d PnL" value={fmtUsd(whale.pnl_90d_usd)} tone={(whale.pnl_90d_usd ?? 0) >= 0 ? "up" : "down"} />
           <Stat label="Trades (30d)" value={whale.trade_count_30d?.toString() ?? "—"} />
-          <Stat label="Win rate" value={whale.win_rate !== null ? `${(whale.win_rate * 100).toFixed(0)}%` : "—"} />
+          <Stat label="Win rate" value={whale.win_rate !== null ? `${Math.round(whale.win_rate)}%` : "n/a"} />
           <Stat label="Followers" value={whale.follower_count.toLocaleString()} />
         </div>
       )}
