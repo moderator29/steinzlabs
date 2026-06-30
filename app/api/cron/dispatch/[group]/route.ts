@@ -31,7 +31,7 @@ const GROUPS: Record<string, string[]> = {
   ],
   // Every ~30 minutes.
   'half-hourly': [
-    'whale-activity-poll', 'whale-activity-price', 'dca-executor', 'pending-trades-cleanup',
+    'whale-activity-poll', 'whale-activity-price', 'bitquery-activity-poll', 'dca-executor', 'pending-trades-cleanup',
     'receipt-reconciliation', 'notification-retry', 'telegram-retry-failures',
     'pumpfun-velocity-poll', 'cult-resolve-proposals', 'cult-ape-resolve', 'health-watch',
   ],
@@ -44,7 +44,7 @@ const GROUPS: Record<string, string[]> = {
   'six-hourly': [
     'cluster-analysis', 'security-monitor', 'notification-digest', 'telegram-heartbeat',
     'biz-mention-scrape', 'funding-rates-snapshot', 'reputation-feedback',
-    'whale-score-populator', 'whale-backfill-pnl', 'whale-discovery', 'market-pulse-warm', 'cult-refresh-treasury',
+    'whale-score-populator', 'whale-backfill-pnl', 'whale-discovery', 'bitquery-traders', 'market-pulse-warm', 'cult-refresh-treasury',
     'cult-conviction-score', 'cult-offering-draw',
   ],
   // Once daily (03:00 UTC).
@@ -108,8 +108,18 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ group: stri
             ? `blocked-${r.status}`
             : r.status;
         } catch (err) {
-          results[name] = err instanceof Error ? err.name : 'error';
-          Sentry.captureException(err, { tags: { cron: 'dispatch', group, target: name } });
+          const errName = err instanceof Error ? err.name : 'error';
+          results[name] = errName;
+          // A per-handler fetch timeout/abort is already recorded in `results`
+          // and rolled into the dispatch-<group> failed summary + cron_execution_log,
+          // so it stays observable. Don't ALSO page Sentry for it — an
+          // occasionally-slow non-critical handler (e.g. whale-activity-poll)
+          // overrunning the 60s budget is expected operational noise, not a bug.
+          // Real handler exceptions (non-timeout) still surface here.
+          const isTimeout = errName === 'TimeoutError' || errName === 'AbortError';
+          if (!isTimeout) {
+            Sentry.captureException(err, { tags: { cron: 'dispatch', group, target: name } });
+          }
         }
       }),
     );

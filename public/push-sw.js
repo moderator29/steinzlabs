@@ -18,9 +18,19 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
+// Bump on a deploy that must evict stale clients/caches.
+const SW_VERSION = '2026-06-28-1';
+
 self.addEventListener('activate', (event) => {
-  // Take control of any open tabs that match our scope.
-  event.waitUntil(self.clients.claim());
+  // Purge any stale Cache Storage (this SW precaches nothing) and take control
+  // of open tabs in scope.
+  event.waitUntil((async () => {
+    try {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    } catch (_) { /* nothing to purge */ }
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener('push', (event) => {

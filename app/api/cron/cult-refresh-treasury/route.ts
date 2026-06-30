@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { verifyCron, logCronExecution } from '../_shared';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { getTokenBalances } from '@/lib/services/alchemy';
+import { getTokenBalances, isTransientUpstreamError } from '@/lib/services/alchemy';
 import { getSolanaWalletTokens } from '@/lib/services/alchemy-solana';
 import { getDexPrice } from '@/lib/services/dexscreener';
 
@@ -111,6 +111,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: true, durationMs: duration, balanceNaka, balanceUsd });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    // A dropped RPC response (Alchemy "missing response"/timeout) is a transient
+    // upstream blip, not a bug. The treasury snapshot is non-critical and the
+    // next 6-hour tick will refresh it, so soft-skip instead of paging Sentry +
+    // returning 500 — that noise was the cult-refresh-treasury alert storm.
+    if (isTransientUpstreamError(err)) {
+      const duration = Date.now() - startedAt;
+      await logCronExecution(NAME, 'success', duration, `upstream_unavailable: ${msg}`, 0);
+      return NextResponse.json({ ok: true, durationMs: duration, skipped: 'upstream_unavailable' });
+    }
     Sentry.captureException(err, { tags: { cron: NAME } });
     await logCronExecution(NAME, 'failed', Date.now() - startedAt, msg, 0);
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });

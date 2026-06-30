@@ -10,6 +10,7 @@ import { Loader2, Power } from "lucide-react";
 import { SecurityBadge } from "@/components/security/SecurityBadge";
 import { toast } from "sonner";
 import NewCopyRuleModal from "./NewCopyRuleModal";
+import { AutoCopySessionModal } from "@/components/copy/AutoCopySessionModal";
 import { useNavState } from "@/lib/nav/useNavState";
 
 type CopyMode = "alerts_only" | "oneclick" | "auto_copy";
@@ -65,6 +66,7 @@ export default function CopyTradingPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"rules" | "trades">("rules");
   const [showNewRule, setShowNewRule] = useState(false);
+  const [showAutoSession, setShowAutoSession] = useState(false);
 
   // #9/#10 — one-click confirm from an alerts-only Telegram deep-link. The
   // matcher links here with action/whale/token/symbol/chain/tx/amount; when
@@ -226,12 +228,21 @@ export default function CopyTradingPage() {
               Three modes: Alerts, One-Click, Auto-Copy. Every trade passes GoPlus + your rules before the relayer touches it.
             </p>
           </div>
-          <button
-            onClick={() => setShowNewRule(true)}
-            className="nl-btn-neon inline-flex items-center gap-1.5 text-xs font-semibold !px-3 !py-1.5"
-          >
-            <Plus size={13} /> New rule
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setShowAutoSession(true)}
+              className="nl-btn-neon inline-flex items-center gap-1.5 !text-xs font-semibold"
+              title="Enable hands-off 24/7 auto-copy"
+            >
+              <Power size={13} /> 24/7 Auto
+            </button>
+            <button
+              onClick={() => setShowNewRule(true)}
+              className="nl-btn-neon inline-flex items-center gap-1.5 !text-xs font-semibold"
+            >
+              <Plus size={13} /> New rule
+            </button>
+          </div>
         </div>
 
         {stats && (
@@ -327,9 +338,9 @@ export default function CopyTradingPage() {
         ) : trades.length === 0 ? (
           <div className="py-12 text-center text-sm text-slate-500">No copy trades yet</div>
         ) : (
-          <div className="rounded-xl nl-glass overflow-x-auto">
+          <div className="rounded-xl border border-slate-800 overflow-x-auto">
             <table className="w-full min-w-[520px] text-xs">
-              <thead className="text-[10px] uppercase tracking-wide text-slate-500 nl-glass border-b border-slate-800">
+              <thead className="text-[10px] uppercase tracking-wide text-slate-500 bg-slate-900/30 border-b border-slate-800">
                 <tr>
                   <th className="text-start px-3 py-2">When</th>
                   <th className="text-start px-3 py-2">Whale</th>
@@ -368,7 +379,7 @@ export default function CopyTradingPage() {
           </div>
         )}
 
-        <div className="mt-8 p-4 rounded-xl nl-glass border border-blue-500/20 flex items-start gap-3">
+        <div className="mt-8 p-4 rounded-xl bg-blue-500/5 border border-blue-500/20 flex items-start gap-3">
           <Shield size={14} className="text-blue-300 flex-shrink-0 mt-0.5" />
           <div className="text-[11px] text-blue-200/80 leading-relaxed">
             <p className="font-semibold text-blue-200 mb-1">Non-custodial by design.</p>
@@ -377,6 +388,7 @@ export default function CopyTradingPage() {
         </div>
       </div>
 
+      {showAutoSession && <AutoCopySessionModal onClose={() => setShowAutoSession(false)} />}
       {showNewRule && (
         <NewCopyRuleModal onClose={() => setShowNewRule(false)} onSaved={load} />
       )}

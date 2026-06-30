@@ -32,14 +32,15 @@ export function LandingNav() {
         className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'border-b border-white/10' : ''}`}
         style={{ background: scrolled ? 'rgba(7,9,15,0.95)' : 'transparent', backdropFilter: scrolled ? 'blur(20px)' : 'none' }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-5 h-16 flex items-center justify-between gap-3">
-          <Link href="/" className="flex items-center gap-2 flex-shrink-0">
+        <div className="max-w-7xl mx-auto px-3 sm:px-5 h-16 flex items-center justify-between gap-2 sm:gap-3">
+          <Link href="/" className="flex items-center gap-2 min-w-0 flex-shrink">
             <SteinzLogo size={28} animated={false} />
             {/* §nav-polish — wordmark tracking dropped from 3px to 2px and
-                font-size scales up at sm+. Owner reported the 3px letter-
-                spacing on a 14px line pushed the wordmark wide enough that
-                the adjacent CULT pill touched it on mobile. */}
-            <span className="font-bold text-[13px] sm:text-[14px] text-white/90 whitespace-nowrap" style={{ letterSpacing: 2 }}>NAKA LABS</span>
+                font-size scales up at sm+. min-w-0 + truncate lets the wordmark
+                ellipsis on ultra-narrow screens instead of forcing the fixed
+                nav wider than the viewport (which read as a "zoomed-in" page
+                with a cut-off CTA on Brave/Android). */}
+            <span className="font-bold text-[13px] sm:text-[14px] text-white/90 truncate" style={{ letterSpacing: 2 }}>NAKA LABS</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-7">
@@ -81,9 +82,12 @@ export function LandingNav() {
                 tighter font on phones. text-[13px] on mobile keeps the
                 button compact next to the CULT pill + hamburger. */}
             <Link href="/signup"
-              className="h-10 sm:h-11 px-4 sm:px-5 rounded-xl text-[13px] sm:text-sm font-bold text-white flex items-center whitespace-nowrap transition-all hover:scale-[1.03]"
+              className="h-10 sm:h-11 px-3.5 sm:px-5 rounded-xl text-[13px] sm:text-sm font-bold text-white flex items-center whitespace-nowrap flex-shrink-0 transition-all hover:scale-[1.03]"
               style={{ background: 'linear-gradient(135deg,#0066FF,#3d57ff)', boxShadow: '0 0 20px rgba(0,102,255,.35)', letterSpacing: '0.01em' }}>
-              Get Started
+              {/* Compact label on phones so the fixed nav never overflows the
+                  viewport (full label returns at sm+). */}
+              <span className="sm:hidden">Start</span>
+              <span className="hidden sm:inline">Get Started</span>
             </Link>
             <button className="md:hidden text-white/60 hover:text-white" onClick={() => setOpen(true)}>
               <Menu className="w-5 h-5" />

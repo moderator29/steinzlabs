@@ -21,6 +21,7 @@
  */
 
 import * as Sentry from "@sentry/nextjs";
+import { parseUnits } from "ethers";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { executeTrade } from "@/lib/trading/relayer";
 import { sizeCopySell } from "@/lib/trading/copyTradeSell";
@@ -66,6 +67,12 @@ const USDC_BY_CHAIN: Record<string, string> = {
   optimism: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
   bsc: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
   solana: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+};
+
+// USDC decimals differ by chain — 6 on most EVM + Solana, but 18 for the
+// Binance-Peg USDC on BSC. Used to convert a human USD buy size to raw units.
+const USDC_DECIMALS: Record<string, number> = {
+  ethereum: 6, base: 6, polygon: 6, arbitrum: 6, optimism: 6, solana: 6, bsc: 18,
 };
 
 export interface CopyMatchOutcome {
@@ -257,7 +264,8 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
     let fromTokenSymbol: string | null;
     let toTokenAddress: string;
     let toTokenSymbol: string | null;
-    let amountIn: string;
+    let amountIn: string;     // indicative-route hint (human for buys)
+    let amountInRaw: string;  // RAW base units of from-token (for the firm 0x quote)
     if (isSell) {
       const sizing = await sizeCopySell({
         userId: rule.user_id,
@@ -272,7 +280,8 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
       fromTokenSymbol = event.token_symbol;
       toTokenAddress = usdcAddr;
       toTokenSymbol = "USDC";
-      amountIn = sizing.amountInRaw;
+      amountIn = sizing.amountInRaw;     // sizeCopySell already returns raw units
+      amountInRaw = sizing.amountInRaw;
     } else {
       fromTokenAddress = usdcAddr;
       fromTokenSymbol = "USDC";
@@ -281,11 +290,13 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
       // Pin to 6 dp (USDC unit) — String(Number) can drop precision (10.50 -> "10.5"),
       // matching the fix already in /api/copy-trading/execute.
       amountIn = Number(sizeUsd).toFixed(6);
+      // Raw base units (USDC is 6dp on most chains, 18 on BSC) for the firm quote.
+      amountInRaw = parseUnits(amountIn, USDC_DECIMALS[chainLower] ?? 6).toString();
     }
 
     // #13: atomic per-user cap claim instead of a bare insert + the racy
     // app-level cap reduce(). Null = the buy would breach daily_cap_usd.
-    const { data: claimedId } = await admin.rpc("claim_copy_trade", {
+    const { data: claimedId, error: claimErr } = await admin.rpc("claim_copy_trade", {
       p_user: rule.user_id,
       p_daily_cap: rule.daily_cap_usd ?? null,
       p_amount: isSell ? null : sizeUsd,
@@ -297,7 +308,19 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
       p_action: isSell ? "sell" : "buy",
       p_security_score: null,
     });
-    if (!claimedId) { out.blocked++; continue; }
+    if (!claimedId) {
+      // NULL = cap breach or duplicate (fail-closed). A non-null error here is a
+      // genuine RPC failure (e.g. lock timeout) — surface it instead of silently
+      // counting it as a normal block, so transient DB issues are observable.
+      if (claimErr) {
+        out.reasons.push(`claim_copy_trade error: ${claimErr.message}`);
+        Sentry.captureMessage(`claim_copy_trade failed: ${claimErr.message}`, {
+          tags: { user_id: rule.user_id, whale: event.whale_address },
+        });
+      }
+      out.blocked++;
+      continue;
+    }
     const inserted = { id: claimedId as string };
 
     const result = await executeTrade({
@@ -313,9 +336,27 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
       reason: "copy_trade",
       sourceOrderId: (inserted as { id: string } | null)?.id ?? null,
       sourceOrderTable: "user_copy_trades",
+      // auto_copy → eligible for 24/7 session-key execution (gated by the signer
+      // flag + a funded session key; falls back to pending otherwise).
+      autoConfirm: rule.mode === "auto_copy",
+      sourceTxHash: event.tx_hash,
+      tradeUsd: isSell ? null : sizeUsd,
+      amountInRaw,
     });
 
-    if (result.awaitingUserConfirmation) {
+    if (result.success && result.broadcastTxHash && !result.awaitingUserConfirmation) {
+      // Headless session-key auto-execution already broadcast on-chain — mark
+      // the claimed copy-trade row success (not stuck pending), record the hash,
+      // and account the spend so sibling rules in this batch see it.
+      if (inserted) {
+        await admin
+          .from("user_copy_trades")
+          .update({ status: "success", copied_tx_hash: result.broadcastTxHash })
+          .eq("id", (inserted as { id: string }).id);
+      }
+      if (!isSell) spentMap.set(rule.user_id, spentToday + sizeUsd);
+      out.triggered++;
+    } else if (result.awaitingUserConfirmation) {
       if (!isSell) spentMap.set(rule.user_id, spentToday + sizeUsd);
       out.triggered++;
     } else if (result.securityBlocked) {

@@ -2515,7 +2515,11 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
     } catch (e: any) {
       const msg = (e?.shortMessage || e?.message || 'Transaction failed') as string;
       if (/decrypt|password|bad key/i.test(msg)) { setPwError('Wrong wallet password.'); setStep('password'); return; }
-      if (/insufficient/i.test(msg)) setError('Insufficient balance for amount + gas.');
+      // Translate common RPC failures into something the user can act on.
+      if (/insufficient/i.test(msg)) setError(`Insufficient ${chain.symbol} for amount + gas. Lower the amount or top up.`);
+      else if (/nonce/i.test(msg)) setError('You have a pending transaction on this wallet. Wait for it to confirm, then retry.');
+      else if (/gas|underpriced|fee too low/i.test(msg)) setError('Network fee too low right now. Try again with Fast speed.');
+      else if (/network|timeout|could not detect|failed to fetch|connection/i.test(msg)) setError('Network error reaching the chain. Check your connection and retry.');
       else setError(msg.slice(0, 200));
       setStep('confirm');
     }
@@ -2595,7 +2599,7 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
               <input type="number" value={amount} onChange={e => setAmount(e.target.value)} step="0.001" className={`${fieldCls} font-mono`} style={fieldStyle} placeholder="0.01" />
               <div className="flex items-center justify-between mt-1.5">
                 <span className="text-[11px] text-slate-500">{usdValue != null ? `≈ $${usdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : ''}</span>
-                {overBalance && <span className="text-[11px] font-semibold text-[#EF4444]">Amount exceeds your balance</span>}
+                {overBalance && <span className="text-[11px] font-semibold text-[#EF4444]">Insufficient {chain.symbol}: you have {balNum.toFixed(4)}, tried {amtNum.toFixed(4)}</span>}
               </div>
             </div>
             <button onClick={goConfirm} disabled={!canProceed} style={canProceed ? primaryStyle : undefined} className="w-full py-3.5 rounded-2xl font-bold text-sm disabled:opacity-40 disabled:bg-white/[0.05]">

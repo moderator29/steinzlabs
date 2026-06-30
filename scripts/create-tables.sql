@@ -52,18 +52,8 @@ CREATE TABLE IF NOT EXISTS threats (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS followed_entities (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id),
-  entity_id TEXT NOT NULL,
-  entity_name TEXT NOT NULL,
-  entity_type TEXT,
-  wallets JSONB DEFAULT '[]'::jsonb,
-  notify_trades BOOLEAN DEFAULT TRUE,
-  notify_large_moves BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(user_id, entity_id)
-);
+-- followed_entities retired — Money Radar follows live on user_whale_follows
+-- now (migration 2026_06_28_drop_followed_entities.sql).
 
 CREATE TABLE IF NOT EXISTS alerts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -93,6 +83,5 @@ CREATE INDEX IF NOT EXISTS idx_scans_token ON scans(token_address);
 CREATE INDEX IF NOT EXISTS idx_positions_user ON positions(user_id);
 CREATE INDEX IF NOT EXISTS idx_threats_user ON threats(user_id);
 CREATE INDEX IF NOT EXISTS idx_threats_unack ON threats(user_id, acknowledged);
-CREATE INDEX IF NOT EXISTS idx_followed_user ON followed_entities(user_id);
 CREATE INDEX IF NOT EXISTS idx_alerts_user ON alerts(user_id);
 CREATE INDEX IF NOT EXISTS idx_entity_cache_id ON entity_cache(entity_id);

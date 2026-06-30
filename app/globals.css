@@ -1642,6 +1642,12 @@ html body {
    default + comfortable resolve to 16px, i.e. today's behaviour. */
 html {
   font-size: calc(var(--nl-root-size, 16px) * var(--nl-density-scale, 1));
+  /* Safety net against any stray wide element causing a horizontal scroll /
+     "zoomed-in" page on mobile. Pairs with body { overflow-x: hidden } — needed
+     on html too because some mobile engines size the layout viewport off the
+     documentElement, not body. */
+  overflow-x: hidden;
+  max-width: 100%;
 }
 :root[data-text="small"]   { --nl-root-size: 15px; }
 :root[data-text="default"] { --nl-root-size: 16px; }

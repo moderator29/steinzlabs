@@ -42,6 +42,42 @@ function getAlchemy(chain: string): Alchemy {
   return clients.get(key)!;
 }
 
+/**
+ * True when an error is a TRANSIENT upstream/network failure (no HTTP response,
+ * timeout, reset, or a 429/5xx) rather than a real bug. The Alchemy SDK surfaces
+ * these as ethers `missing response` / `SERVER_ERROR`, which is exactly the
+ * cult-refresh-treasury Sentry noise — a dropped JSON-RPC response. Callers can
+ * retry on these and treat the final failure as a soft skip, not a page.
+ */
+export function isTransientUpstreamError(err: unknown): boolean {
+  const msg = (err instanceof Error ? err.message : String(err ?? '')).toLowerCase();
+  const code = (err as { code?: string } | null)?.code ?? '';
+  return (
+    /missing response|timeout|timed out|econnreset|etimedout|enotfound|socket hang up|network|fetch failed|503|502|504|429|too many requests|rate limit/i.test(msg) ||
+    ['SERVER_ERROR', 'TIMEOUT', 'NETWORK_ERROR', 'ETIMEDOUT', 'ECONNRESET'].includes(String(code))
+  );
+}
+
+/**
+ * Run an Alchemy SDK call with a small exponential backoff on TRANSIENT
+ * upstream errors only. The SDK does not retry a dropped JSON-RPC response, so a
+ * single network blip would otherwise bubble up as a hard failure. Non-transient
+ * errors (bad address, auth) rethrow immediately so we don't mask real bugs.
+ */
+async function withAlchemyRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (!isTransientUpstreamError(err) || i === attempts - 1) throw err;
+      await new Promise(r => setTimeout(r, 250 * 2 ** i)); // 250ms, 500ms
+    }
+  }
+  throw lastErr;
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface TokenBalance {
@@ -105,11 +141,13 @@ export async function getTokenBalances(
     const allBalances: TokenBalance[] = [];
     let pageKey: string | undefined;
 
-    // Paginate through ALL token balances (Alchemy returns ~100 per page)
+    // Paginate through ALL token balances (Alchemy returns ~100 per page).
+    // Each page is retried on transient upstream drops (the "missing response"
+    // that was paging cult-refresh-treasury).
     do {
-      const result = pageKey
-        ? await alchemy.core.getTokenBalances(walletAddress, { type: TokenBalanceType.ERC20, pageKey })
-        : await alchemy.core.getTokenBalances(walletAddress);
+      const result = await withAlchemyRetry(() => (pageKey
+        ? alchemy.core.getTokenBalances(walletAddress, { type: TokenBalanceType.ERC20, pageKey })
+        : alchemy.core.getTokenBalances(walletAddress)));
 
       allBalances.push(...result.tokenBalances.map(b => ({
         contractAddress: b.contractAddress,

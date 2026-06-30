@@ -146,16 +146,25 @@ async function fetchEvmDNA(address: string) {
   }, 0);
 
   const txCount = intel.txCount;
-  const txPerWeek = txCount / 4;
-
-  const totalBuys = Math.floor(txCount * 0.6);
-  const totalSells = Math.floor(txCount * 0.4);
-  const archetype = computeArchetype(txCount, txPerWeek, memePercent, holdings.length);
+  // Real activity rate from the wallet's actual active span (firstSeen→
+  // lastActive), NOT a fixed "÷4 weeks" assumption. Null when the window is too
+  // short/unknown to bound — we report "unknown" rather than inventing a rate.
+  // Buy/sell counts were previously fabricated (txCount×0.6 / ×0.4) with no
+  // direction data; they are removed entirely rather than guessed.
+  const spanMs = intel.firstSeen && intel.lastActive
+    ? new Date(intel.lastActive).getTime() - new Date(intel.firstSeen).getTime()
+    : 0;
+  const weeksActive = Number.isFinite(spanMs) && spanMs > 0 ? spanMs / (7 * 24 * 3600 * 1000) : 0;
+  const txPerWeek = weeksActive >= 0.5 ? Math.round((txCount / weeksActive) * 10) / 10 : null;
+  const archetype = computeArchetype(txCount, txPerWeek ?? 0, memePercent, holdings.length);
 
   return {
     chain: intel.chainName, address, holdings, totalBalanceUsd: totalBalance,
     txCount, firstSeen: intel.firstSeen, lastActive: intel.lastActive,
-    txPerWeek: Math.round(txPerWeek * 10) / 10, totalBuys, totalSells,
+    txPerWeek,
+    // EVM has no per-tx buy/sell direction here, so these are honestly null
+    // (the Solana path fills real counts parsed from Helius swaps).
+    totalBuys: null as number | null, totalSells: null as number | null,
     blueChipPercent: Math.round(blueChipPercent), memePercent: Math.round(memePercent),
     diversificationScore: Math.round((1 - hhi) * 100), archetype,
     archetypeDescription: archetypeDescription(archetype),
@@ -172,27 +181,39 @@ async function fetchEvmDNA(address: string) {
 
 // ─── AI Analysis ──────────────────────────────────────────────────────────────
 
+// Strip newlines / braces / quotes from token-supplied strings before they go
+// into the prompt — a token symbol from an external API could otherwise carry
+// an injected instruction ("}}\n\nIgnore previous instructions…").
+function sanitizeForPrompt(s: string): string {
+  return String(s ?? '').replace(/[\n\r{}"]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 24);
+}
+
 async function buildAIAnalysis(data: {
   address: string; chain: string; holdings: Holding[]; totalBalanceUsd: number;
   txCount: number; firstSeen: string | null; lastActive: string | null;
-  archetype: WalletArchetype; archetypeDescription: string; txPerWeek: number; totalBuys: number; totalSells: number;
+  archetype: WalletArchetype; archetypeDescription: string; txPerWeek: number | null;
   blueChipPercent: number; memePercent: number; diversificationScore: number;
 }) {
   const holdingsText = data.holdings.length > 0
-    ? data.holdings.slice(0, 30).map(h => `${h.symbol}: ${h.balance}${h.valueUsd ? ` ($${h.valueUsd})` : ''}`).join(', ')
+    ? data.holdings.slice(0, 30).map(h => `${sanitizeForPrompt(h.symbol)}: ${sanitizeForPrompt(h.balance)}${h.valueUsd ? ` ($${h.valueUsd})` : ''}`).join(', ')
     : 'No holdings detected';
 
-  const prompt = `You are a professional crypto intelligence analyst. Analyze this wallet's DNA. Base ALL analysis STRICTLY on the data provided — never invent numbers.
+  // Only GROUNDED facts go in. We do NOT pass buy/sell counts (no direction data)
+  // and we do NOT ask the model to score timing/risk-management/consistency/
+  // conviction — there is no entry/exit or PnL data to ground those, so asking
+  // for them forced fabrication. The output contract is qualitative assessment
+  // of the REAL holdings/activity only.
+  const prompt = `You are a professional crypto intelligence analyst. Analyze this wallet's on-chain DNA STRICTLY from the data below. Never invent numbers, prices, PnL, win rates, or trade outcomes that are not given. If something is unknown, say "unknown" — do not estimate it. Qualitative judgments (style, strengths, risks) are allowed but must be justified by the holdings/activity shown.
 
 Wallet: ${data.address} | Chain: ${data.chain}
-Archetype: ${data.archetype} — ${data.archetypeDescription}
+Archetype (rule-based): ${data.archetype} — ${data.archetypeDescription}
 Portfolio Value: $${data.totalBalanceUsd.toFixed(2)} | Holdings (${data.holdings.length} total): ${holdingsText}
-TX Count: ${data.txCount} | TX/Week: ${data.txPerWeek} | Buys: ${data.totalBuys} | Sells: ${data.totalSells}
+TX Count: ${data.txCount} | TX/Week: ${data.txPerWeek ?? 'unknown'}
 Blue Chip %: ${data.blueChipPercent}% | Meme Token %: ${data.memePercent}% | Diversification: ${data.diversificationScore}/100
 First Seen: ${data.firstSeen || 'Unknown'} | Last Active: ${data.lastActive || 'Unknown'}
 
-Return ONLY this JSON:
-{"personalityProfile":"2-3 sentence description citing real holdings","tradingStyle":"Day Trader|Swing Trader|HODLer|DeFi Farmer|Degen|Scalper","riskProfile":"Conservative|Moderate|Aggressive|Ultra Aggressive","overallScore":0,"portfolioGrade":"A+|A|B+|B|C+|C|D|F","strengths":["s1","s2","s3"],"weaknesses":["w1","w2","w3"],"recommendations":["r1","r2","r3","r4","r5"],"personalityTraits":["t1","t2","t3"],"marketOutlook":"1-2 sentences","topInsight":"One key actionable insight","sectorBreakdown":{"memecoins":0,"defi":0,"stablecoins":0,"layer1layer2":0},"riskClassification":"DEGEN|BALANCED|CONSERVATIVE|WHALE|SMART MONEY","metrics":{"diversification":0,"timing":0,"riskManagement":0,"consistency":0,"conviction":0}}`;
+Return ONLY this JSON (no other fields):
+{"personalityProfile":"2-3 sentences citing the real holdings/activity above","tradingStyle":"Day Trader|Swing Trader|HODLer|DeFi Farmer|Degen|Scalper","riskProfile":"Conservative|Moderate|Aggressive|Ultra Aggressive","strengths":["s1","s2","s3"],"weaknesses":["w1","w2","w3"],"recommendations":["r1","r2","r3"],"marketOutlook":"1-2 sentences, qualitative only","topInsight":"One key insight grounded in the data above","sectorBreakdown":{"memecoins":0,"defi":0,"stablecoins":0,"layer1layer2":0},"riskClassification":"DEGEN|BALANCED|CONSERVATIVE|WHALE|SMART MONEY","metrics":{"diversification":${data.diversificationScore}}}`;
 
   try {
     const text = await vtxAnalyze(prompt, 1800);
@@ -202,6 +223,25 @@ Return ONLY this JSON:
       return m ? JSON.parse(m[0]) : null;
     }
   } catch { return null; }
+}
+
+/**
+ * Grounded portfolio score — a TRANSPARENT formula over real signals, not an
+ * LLM guess. Diversification (HHI-derived) + blue-chip quality + holdings
+ * breadth + whether the wallet is actually active. This replaces the previously
+ * LLM-invented overallScore (which varied run-to-run with no rubric).
+ */
+function computeGroundedScore(data: {
+  diversificationScore: number; blueChipPercent: number; holdings: unknown[]; txCount: number;
+}): { score: number; grade: string } {
+  const diversification = Math.max(0, Math.min(100, data.diversificationScore || 0));
+  const quality = Math.max(0, Math.min(100, data.blueChipPercent || 0));
+  const breadth = Math.min(100, (Array.isArray(data.holdings) ? data.holdings.length : 0) * 10);
+  const active = data.txCount > 0 ? 100 : 0;
+  const score = Math.round(0.40 * diversification + 0.30 * quality + 0.15 * breadth + 0.15 * active);
+  const grade = score >= 90 ? 'A+' : score >= 80 ? 'A' : score >= 70 ? 'B+' : score >= 60 ? 'B'
+    : score >= 50 ? 'C+' : score >= 40 ? 'C' : score >= 30 ? 'D' : 'F';
+  return { score, grade };
 }
 
 // ─── Coins Worth Watching ─────────────────────────────────────────────────────
@@ -249,10 +289,23 @@ export const GET = withTierGate('mini', async (request: NextRequest) => {
       data.holdings.filter(h => h.contractAddress).map(h => h.contractAddress!.toLowerCase())
     );
 
-    const [coinsWorthWatching, aiAnalysis] = await Promise.all([
+    const [coinsWorthWatching, aiAnalysisRaw] = await Promise.all([
       chainType === 'SOL' ? fetchCoinsWorthWatching(data.archetype, heldAddresses) : Promise.resolve([]),
       buildAIAnalysis(data),
     ]);
+
+    // Numbers come from CODE (transparent, grounded), narrative from the LLM.
+    // We overwrite any model-supplied score/grade/metrics so the gauge can never
+    // show an invented number; the only metric we expose is real diversification.
+    const grounded = computeGroundedScore(data);
+    const aiAnalysis = aiAnalysisRaw
+      ? {
+          ...(aiAnalysisRaw as Record<string, unknown>),
+          overallScore: grounded.score,
+          portfolioGrade: grounded.grade,
+          metrics: { diversification: data.diversificationScore },
+        }
+      : null;
 
     return NextResponse.json({
       address, chain: data.chain, holdings: data.holdings, totalBalanceUsd: data.totalBalanceUsd,

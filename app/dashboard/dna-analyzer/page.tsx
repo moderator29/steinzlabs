@@ -392,6 +392,19 @@ export default function DNAAnalyzerPage() {
     }
   };
 
+  // Auto-run when arriving with ?address= (e.g. the "DNA Scan" button on a whale
+  // card/profile deep-links here). Read from the URL directly to avoid needing a
+  // Suspense boundary for useSearchParams. Runs once on mount.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const qp = new URLSearchParams(window.location.search).get('address');
+    if (qp && qp.trim()) {
+      setInputAddress(qp.trim());
+      void runAnalysis(qp.trim());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const connectAndAnalyze = async () => {
     try {
       const addr = await connectAuto();

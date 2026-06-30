@@ -15,6 +15,9 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getAllRoutes, type RouteQuote } from "@/lib/services/swap-aggregator";
 import { getTokenSecurity } from "@/lib/services/goplus";
 import { notifyPendingTrade, type TradeNotificationReason } from "@/lib/trading/notifications";
+import { executeWithSessionKey, sessionKeySignerEnabled } from "@/lib/trading/sessionKeySigner";
+import { executeSolanaWithSessionKey, solanaSessionKeySignerEnabled } from "@/lib/trading/solanaSessionKeySigner";
+import { isEvmChain } from "@/lib/utils/addressNormalize";
 
 export type WalletSource = "external_evm" | "external_solana" | "builtin";
 
@@ -40,6 +43,13 @@ export interface TradeIntent {
    * path. Only set this for builtin-wallet auto_copy rules.
    */
   autoConfirm?: boolean;
+  /** Originating whale tx hash — idempotency key for session-key auto-execution. */
+  sourceTxHash?: string | null;
+  /** USD size of this copy, for session-key daily-cap accounting. */
+  tradeUsd?: number | null;
+  /** RAW base units of the from-token — used by the session-key signer's firm
+   *  0x quote (the human-decimal amountIn is only an indicative-route hint). */
+  amountInRaw?: string | null;
 }
 
 export interface TradeResult {
@@ -49,6 +59,9 @@ export interface TradeResult {
   securityBlocked?: boolean;
   failureReason?: string;
   route?: RouteQuote | null;
+  /** Set when the trade was auto-executed headlessly (session key) — the
+   *  on-chain broadcast hash. Distinguishes an executed trade from a pending one. */
+  broadcastTxHash?: string;
 }
 
 const HONEYPOT_BLOCK_TRUST_FLOOR = 40; // trustScore below this + honeypot = block
@@ -106,6 +119,46 @@ export async function executeTrade(intent: TradeIntent): Promise<TradeResult> {
       if (!bestRoute) {
         return { success: false, failureReason: "No viable swap route found" };
       }
+    }
+
+    // LAYER 2.5 — 24/7 non-custodial auto-execution via a delegated session key.
+    // Gated: only fires for auto_copy intents when SESSION_KEY_SIGNER_ENABLED and
+    // a valid funded session key exists. On success the trade is broadcast now
+    // (no pending row); on null it falls through to the manual pending flow, so
+    // with the flag OFF behavior is exactly as before. Never throws into here.
+    const signerReady = isEvmChain(intent.chain) ? sessionKeySignerEnabled() : solanaSessionKeySignerEnabled();
+    if (intent.autoConfirm && intent.sourceTxHash && intent.amountInRaw && signerReady) {
+      const signParams = {
+        userId: intent.userId,
+        chain: intent.chain,
+        fromTokenAddress: intent.fromTokenAddress,
+        toTokenAddress: intent.toTokenAddress,
+        amountInRaw: intent.amountInRaw,
+        amountUsd: intent.tradeUsd ?? 0,
+        sourceTxHash: intent.sourceTxHash,
+        slippageBps: intent.slippageBps,
+      };
+      // EVM signs via 0x calldata + ethers; Solana via Jupiter + a signed
+      // VersionedTransaction. Both share the scope/atomic-cap/never-release
+      // guarantees and both return null to fall back to the pending flow.
+      const auto = isEvmChain(intent.chain)
+        ? await executeWithSessionKey(signParams)
+        : await executeSolanaWithSessionKey(signParams);
+      if (auto?.executed) {
+        // The trade is already on-chain — do NOT send the pending "tap Confirm
+        // within 10 minutes or it expires" template (nothing to confirm). Write
+        // a correct "executed" notification with the broadcast hash.
+        await getSupabaseAdmin().from("notifications").insert({
+          user_id: intent.userId,
+          type: "copy.executed",
+          title: `🤖 Auto-Copy executed`,
+          body: `Mirrored ${intent.toTokenSymbol ?? "token"} on ${intent.chain}.`,
+          metadata: { broadcast_tx_hash: auto.broadcastTxHash, chain: intent.chain, reason: intent.reason },
+          read: false,
+        }).then(() => {}, () => { /* notify is best-effort */ });
+        return { success: true, awaitingUserConfirmation: false, route: bestRoute, broadcastTxHash: auto.broadcastTxHash };
+      }
+      // else: no usable session key / out of scope / failed ⇒ manual fallback.
     }
 
     // LAYER 3 — Record pending trade. Client will fetch a firm quote + sign at

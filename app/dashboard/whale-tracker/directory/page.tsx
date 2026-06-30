@@ -21,8 +21,9 @@ import {
   Building2,
   Code2,
   Loader2,
+  Star,
+  Copy as CopyIcon,
 } from 'lucide-react';
-import WhaleDetailDrawer from '@/components/whales/WhaleDetailDrawer';
 import FollowWhaleModal from '@/components/whales/FollowWhaleModal';
 import { SelectMenu, type SelectOption } from '@/components/ui/SelectMenu';
 import { getChainMeta } from '@/lib/chains/chainMeta';
@@ -40,6 +41,8 @@ interface WhaleRow {
   win_rate: string | number | null;
   whale_score: number | null;
   trade_count_30d: number | null;
+  volume_7d_usd: string | number | null;
+  active_days_7d: number | null;
   follower_count: number | null;
   x_handle: string | null;
   verified: boolean;
@@ -79,11 +82,27 @@ const ENTITY_PILLS: Array<{ id: string; label: string; Icon: typeof Users }> = [
 
 const SORT_OPTIONS = [
   { id: 'score', label: 'Whale Score' },
+  { id: 'volume', label: 'DEX Volume 7d' },
   { id: 'portfolio', label: 'Portfolio Value' },
   { id: 'pnl_30d', label: 'PnL 30d' },
   { id: 'win_rate', label: 'Win Rate' },
   { id: 'recent_activity', label: 'Recently Active' },
 ];
+
+// Activity filter — daily traders (active >=4/7d) are the copy-trade targets;
+// "barely active" surfaces dormant wallets. Real-time, server-side.
+const ACTIVITY_PILLS = [
+  { id: '', label: 'All activity' },
+  { id: 'daily', label: 'Daily active' },
+  { id: 'barely', label: 'Barely active' },
+];
+
+// A genuinely copy-tradeable trader: active most days and NOT a custodial
+// exchange/bridge omnibus wallet (you can't mirror an exchange hot wallet).
+function isCopyTradeable(row: WhaleRow): boolean {
+  const custodial = CUSTODIAL_ENTITIES.has((row.entity_type || '').toLowerCase());
+  return !custodial && (row.active_days_7d ?? 0) >= 4;
+}
 
 // §2.10 filter pills
 const TIMEFRAME_PILLS = [
@@ -108,8 +127,10 @@ const VOLUME_PILLS = [
   { id: 1000000, label: '>$1M' },
 ];
 
-// Custodial entity types where realized PnL / win-rate don't apply.
-const CUSTODIAL_ENTITIES = new Set(['exchange', 'cex', 'bridge']);
+// Custodial / non-copy-tradeable entity types where realized PnL / win-rate
+// don't apply and copy-trading makes no sense — exchanges, bridges, and
+// institutional (CEX cold / market-maker omnibus) wallets.
+const CUSTODIAL_ENTITIES = new Set(['exchange', 'cex', 'bridge', 'institutional']);
 
 function fmtUsd(v: string | number | null): string {
   if (v === null || v === undefined) return '—';
@@ -177,9 +198,10 @@ export default function WhaleDirectoryPage() {
   const [timeframe, setTimeframe] = useState('30d');
   const [performance, setPerformance] = useState('');
   const [minPortfolio, setMinPortfolio] = useState(0);
+  const [activity, setActivity] = useState('');
   const [offset, setOffset] = useState(0);
-  const [selected, setSelected] = useState<WhaleRow | null>(null);
   const [followTarget, setFollowTarget] = useState<WhaleRow | null>(null);
+  const [watched, setWatched] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -190,6 +212,7 @@ export default function WhaleDirectoryPage() {
       if (q.trim()) p.set('q', q.trim());
       if (minScore > 0) p.set('min_score', String(minScore));
       if (minPortfolio > 0) p.set('min_portfolio_usd', String(minPortfolio));
+      if (activity) p.set('activity', activity);
       if (timeframe && timeframe !== '30d') p.set('timeframe', timeframe);
       // Performance pill wins over sort dropdown when set
       const effectiveSort = performance || sort;
@@ -205,9 +228,62 @@ export default function WhaleDirectoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [chain, entityType, q, sort, minScore, minPortfolio, timeframe, performance, offset]);
+  }, [chain, entityType, q, sort, minScore, minPortfolio, activity, timeframe, performance, offset]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // Restore the user's watchlist so the ★ reflects current state.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/whale-tracker/watchlist', { signal: AbortSignal.timeout(10_000) });
+        if (!res.ok || cancelled) return;
+        const d = (await res.json()) as { watchlist?: Array<{ whale_address?: string; chain?: string }> };
+        const keys = new Set((d.watchlist ?? []).map((w) => `${(w.chain ?? '').toLowerCase()}:${w.whale_address ?? ''}`).filter(Boolean));
+        if (!cancelled) setWatched(keys);
+      } catch { /* non-fatal */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const watchKey = (r: WhaleRow) => `${r.chain.toLowerCase()}:${r.address}`;
+  const toggleWatch = useCallback(async (r: WhaleRow) => {
+    const key = watchKey(r);
+    const isWatched = watched.has(key);
+    // Optimistic toggle.
+    setWatched((prev) => {
+      const next = new Set(prev);
+      if (isWatched) next.delete(key); else next.add(key);
+      return next;
+    });
+    try {
+      if (isWatched) {
+        await fetch(`/api/whale-tracker/watchlist?whale_address=${encodeURIComponent(r.address)}&chain=${encodeURIComponent(r.chain)}`, { method: 'DELETE' });
+      } else {
+        await fetch('/api/whale-tracker/watchlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ whale_address: r.address, chain: r.chain, label: r.label ?? null }),
+        });
+      }
+    } catch {
+      // Roll back on failure.
+      setWatched((prev) => {
+        const next = new Set(prev);
+        if (isWatched) next.add(key); else next.delete(key);
+        return next;
+      });
+    }
+  }, [watched]);
+
+  const openProfile = useCallback((r: WhaleRow) => {
+    router.push(`/dashboard/whale-tracker/${encodeURIComponent(r.address)}?chain=${encodeURIComponent(r.chain)}`);
+  }, [router]);
+
+  const startCopy = useCallback((r: WhaleRow) => {
+    router.push(`/dashboard/copy-trading?whale=${encodeURIComponent(r.address)}&chain=${encodeURIComponent(r.chain)}&label=${encodeURIComponent(r.label ?? '')}`);
+  }, [router]);
 
   const aggregatePortfolio = useMemo(
     () => rows.reduce((s, r) => s + (Number(r.portfolio_value_usd) || 0), 0),
@@ -241,7 +317,7 @@ export default function WhaleDirectoryPage() {
       {/* Top bar */}
       <div className="sticky top-0 z-30 nl-glass backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
-          <BackButton />
+          <BackButton compact />
           <div>
             {/* Bug §2.13: header was text-lg with default font; user wanted
                 smaller, cleaner. text-sm + tracking-tight + font-sans keeps
@@ -249,14 +325,13 @@ export default function WhaleDirectoryPage() {
             <h1 className="text-sm font-semibold tracking-tight font-sans">Whale Directory</h1>
             <p className="text-[10px] text-slate-500">On-chain whale intelligence</p>
           </div>
-          <div className="ms-auto flex items-center gap-2">
-            <Link href="/dashboard/whale-tracker" className="nl-btn-neon !px-3 !py-1.5 !text-[11px]">
-              Live Feed
-            </Link>
-            <Link href="/dashboard/whale-tracker/submit" className="nl-btn-neon !px-3 !py-1.5 !text-[11px]">
-              Submit
-            </Link>
-          </div>
+          <nav className="ms-auto flex items-center gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1">
+            <Link href="/dashboard/whale-tracker" className="shrink-0 px-3 py-1.5 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-white bg-white/[0.04] border border-white/10 hover:border-white/20 transition-colors">Live Feed</Link>
+            <span className="shrink-0 nl-btn-neon !px-3 !py-1.5 !text-[11px] !border-[#0066FF]/90 cursor-default">Directory</span>
+            <Link href="/dashboard/whale-tracker/watchlist" className="shrink-0 px-3 py-1.5 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-white bg-white/[0.04] border border-white/10 hover:border-white/20 transition-colors">Watchlist</Link>
+            <Link href="/dashboard/whale-tracker/copy-trade" className="shrink-0 px-3 py-1.5 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-white bg-white/[0.04] border border-white/10 hover:border-white/20 transition-colors">Copy Trade</Link>
+            <Link href="/dashboard/whale-tracker/submit" className="shrink-0 px-3 py-1.5 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-white bg-white/[0.04] border border-white/10 hover:border-white/20 transition-colors">Submit</Link>
+          </nav>
         </div>
 
         {/* Filters */}
@@ -333,6 +408,23 @@ export default function WhaleDirectoryPage() {
               accentClass="text-purple-300"
             />
           </div>
+
+          {/* Activity filter — daily-active traders are the copy-trade targets. */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {ACTIVITY_PILLS.map((a) => (
+              <button
+                key={a.id || 'all'}
+                onClick={() => { setActivity(a.id); setOffset(0); }}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-colors ${
+                  activity === a.id
+                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                    : 'bg-white/[0.04] text-slate-400 border-white/10 hover:text-white'
+                }`}
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -382,8 +474,11 @@ export default function WhaleDirectoryPage() {
               <WhaleCard
                 key={w.id}
                 row={w}
-                onOpen={() => setSelected(w)}
+                watched={watched.has(watchKey(w))}
+                onOpen={() => openProfile(w)}
                 onFollow={() => setFollowTarget(w)}
+                onToggleWatch={() => toggleWatch(w)}
+                onCopy={() => startCopy(w)}
               />
             ))}
           </div>
@@ -411,13 +506,6 @@ export default function WhaleDirectoryPage() {
         )}
       </div>
 
-      {selected && (
-        <WhaleDetailDrawer
-          whale={selected as any}
-          onClose={() => setSelected(null)}
-          onFollow={() => { setFollowTarget(selected); setSelected(null); }}
-        />
-      )}
       {followTarget && (
         <FollowWhaleModal
           whale={followTarget as any}
@@ -438,11 +526,20 @@ function StatTile({ label, value }: { label: string; value: string }) {
   );
 }
 
-function WhaleCard({ row, onOpen, onFollow }: { row: WhaleRow; onOpen: () => void; onFollow: () => void }) {
+function WhaleCard({ row, watched, onOpen, onFollow, onToggleWatch, onCopy }: {
+  row: WhaleRow;
+  watched: boolean;
+  onOpen: () => void;
+  onFollow: () => void;
+  onToggleWatch: () => void;
+  onCopy: () => void;
+}) {
   const c = chainColor(row.chain);
   const score = row.whale_score ?? 0;
   const pnl = Number(row.pnl_30d_usd || 0);
   const pnlPositive = pnl >= 0;
+  const custodial = CUSTODIAL_ENTITIES.has((row.entity_type || '').toLowerCase());
+  const copyable = isCopyTradeable(row);
 
   return (
     <div className="group nl-glass nl-glass--interactive rounded-xl p-5 cursor-pointer" onClick={onOpen}>
@@ -455,19 +552,37 @@ function WhaleCard({ row, onOpen, onFollow }: { row: WhaleRow; onOpen: () => voi
           </div>
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
             <span className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-semibold ${c.bg} ${c.fg}`}><ChainLogo chain={row.chain} size={11} />{row.chain.toUpperCase()}</span>
-            {row.archetype && <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 truncate max-w-[140px]">{row.archetype}</span>}
+            {(row.active_days_7d ?? 0) > 0 && (
+              <span className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-semibold bg-emerald-500/12 text-emerald-300 border border-emerald-500/25">{row.active_days_7d}/7d</span>
+            )}
+            {row.archetype && <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 truncate max-w-[120px]">{row.archetype}</span>}
           </div>
           <div className="text-[10px] text-slate-500 font-mono mt-1.5 truncate">{short(row.address)}</div>
         </div>
-        <div className="text-end shrink-0 ps-2">
-          <div className="text-[9px] uppercase tracking-wider text-slate-500">Score</div>
-          <div className={`text-lg font-black font-mono leading-tight ${score >= 90 ? 'text-emerald-400' : score >= 75 ? 'text-[#8FA3FF]' : 'text-slate-400'}`}>
-            {score}
+        <div className="flex items-start gap-1.5 shrink-0 ps-2">
+          {/* Watchlist ★ — top-right of the card, always available. */}
+          <button
+            type="button"
+            aria-label={watched ? 'Remove from watchlist' : 'Add to watchlist'}
+            onClick={(e) => { e.stopPropagation(); onToggleWatch(); }}
+            className={`inline-flex items-center justify-center h-7 w-7 rounded-md border transition-colors ${
+              watched
+                ? 'bg-amber-400/15 border-amber-400/40 text-amber-300'
+                : 'bg-white/[0.04] border-white/10 text-slate-400 hover:text-amber-300 hover:border-amber-400/30'
+            }`}
+          >
+            <Star className="w-3.5 h-3.5" fill={watched ? 'currentColor' : 'none'} />
+          </button>
+          <div className="text-end">
+            <div className="text-[9px] uppercase tracking-wider text-slate-500">Score</div>
+            <div className={`text-lg font-black font-mono leading-tight ${score >= 90 ? 'text-emerald-400' : score >= 75 ? 'text-[#8FA3FF]' : 'text-slate-400'}`}>
+              {score}
+            </div>
           </div>
         </div>
       </div>
 
-      {CUSTODIAL_ENTITIES.has((row.entity_type || '').toLowerCase()) ? (
+      {custodial ? (
         // Exchange / bridge / CEX wallets are custodial flow accounts — realized
         // PnL and win-rate are meaningless for them, so show holdings + an honest
         // note instead of a row of "—".
@@ -477,7 +592,7 @@ function WhaleCard({ row, onOpen, onFollow }: { row: WhaleRow; onOpen: () => voi
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-2 mt-4">
-          <Metric label="Portfolio" value={fmtUsd(row.portfolio_value_usd)} />
+          <Metric label="Vol 7d" value={fmtUsd(row.volume_7d_usd)} tone={row.volume_7d_usd ? 'green' : 'neutral'} />
           <Metric
             label="PnL 30d"
             value={fmtUsd(row.pnl_30d_usd)}
@@ -488,14 +603,26 @@ function WhaleCard({ row, onOpen, onFollow }: { row: WhaleRow; onOpen: () => voi
         </div>
       )}
 
-      {/* Footer — followers / Follow / View each in its own contained chip,
-          fixed heights so the Follow button never overlaps View. */}
+      {/* Footer — followers chip on the left; actions on the right. Fixed heights
+          + shrink-0 so nothing overlaps even on narrow cards. The copy-trade
+          icon only appears for genuinely active, non-custodial traders. */}
       <div className="flex items-center gap-2 mt-4 pt-3 border-t border-white/5">
         <div className="inline-flex items-center gap-1 h-7 px-2 rounded-md bg-white/[0.04] border border-white/10 text-[10px] text-slate-400 min-w-0">
           <Users className="w-3 h-3 shrink-0" />
           <span className="truncate tabular-nums">{(row.follower_count || 0).toLocaleString()}</span>
         </div>
-        <div className="ms-auto flex items-center gap-2 shrink-0">
+        <div className="ms-auto flex items-center gap-1.5 shrink-0">
+          {copyable && (
+            <button
+              type="button"
+              aria-label="Copy trade this whale"
+              onClick={(e) => { e.stopPropagation(); onCopy(); }}
+              className="inline-flex items-center justify-center h-7 w-7 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 transition-colors"
+              title="Copy trade"
+            >
+              <CopyIcon className="w-3.5 h-3.5" />
+            </button>
+          )}
           <button
             onClick={(e) => { e.stopPropagation(); onFollow(); }}
             className="inline-flex items-center justify-center h-7 px-3 rounded-md bg-[#0066FF]/15 hover:bg-[#0066FF]/25 border border-[#0066FF]/35 text-[#8FA3FF] text-[11px] font-semibold transition-colors"

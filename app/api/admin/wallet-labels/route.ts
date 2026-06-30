@@ -4,22 +4,28 @@ import { z } from 'zod';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
 import { logAdminAction } from '@/lib/admin/auditLog';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
+
+/**
+ * Admin wallet labels — curated address labels live on the canonical `whales`
+ * table (label + entity_type), discriminated by manual_label=true, so labels an
+ * admin sets actually surface in the feed/directory/clusters (which all read
+ * whales). Replaces the old, write-only whale_addresses registry that nothing
+ * read. `category` maps to whales.entity_type. Manual rows are is_active=false
+ * so a bare label doesn't appear in the tracked-whale directory.
+ */
 
 const CreateBody = z.object({
   address: z.string().min(8).max(128),
   chain: z.string().min(2).max(32),
   label: z.string().min(1).max(120),
   category: z.string().min(1).max(64),
-  notes: z.string().max(2_000).nullish(),
   verified: z.boolean().optional(),
 });
 
 const PatchBody = z.object({
-  address: z.string().min(8).max(128).optional(),
-  chain: z.string().min(2).max(32).optional(),
   label: z.string().min(1).max(120).optional(),
   category: z.string().min(1).max(64).optional(),
-  notes: z.string().max(2_000).nullish(),
   verified: z.boolean().optional(),
 }).strict();
 
@@ -30,16 +36,21 @@ export async function GET(request: Request) {
   try {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
-      .from('whale_addresses')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .from('whales')
+      .select('id, address, chain, label, entity_type, verified, updated_at')
+      .eq('manual_label', true)
+      .order('updated_at', { ascending: false });
 
     if (error) {
       console.error('[admin/wallet-labels GET] Query error:', error);
       return NextResponse.json({ labels: [] });
     }
-
-    return NextResponse.json({ labels: data || [] });
+    // Surface entity_type as `category` for the existing UI contract.
+    const labels = (data ?? []).map((r) => ({
+      id: r.id, address: r.address, chain: r.chain, label: r.label,
+      category: r.entity_type, verified: r.verified, updated_at: r.updated_at,
+    }));
+    return NextResponse.json({ labels });
   } catch (err) {
     console.error('[admin/wallet-labels GET] Failed:', err);
     return NextResponse.json({ labels: [] });
@@ -58,26 +69,30 @@ export async function POST(request: Request) {
     }
     const body = parsed.data;
     const supabase = getSupabaseAdmin();
+    // Upsert onto the canonical entity row (address,chain unique). If the whale
+    // is already tracked we only stamp the label fields; a label-only address
+    // lands as is_active=false so it isn't listed as a tracked whale.
     const { data, error } = await supabase
-      .from('whale_addresses')
-      .insert([{
-        address: body.address,
+      .from('whales')
+      .upsert({
+        address: normalizeAddress(body.address, body.chain),
         chain: body.chain,
         label: body.label,
-        category: body.category,
-        notes: body.notes ?? null,
+        entity_type: body.category,
         verified: body.verified ?? false,
-      }])
-      .select()
+        manual_label: true,
+        is_active: false,
+      }, { onConflict: 'address,chain' })
+      .select('id, address, chain, label, entity_type, verified')
       .single();
 
     if (error) {
-      console.error('[admin/wallet-labels POST] Insert error:', error);
+      console.error('[admin/wallet-labels POST] Upsert error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     void logAdminAction({ adminId, action: 'wallet_label_set', details: { id: data?.id, address: body.address, chain: body.chain, label: body.label, category: body.category } });
-    return NextResponse.json({ label: data });
+    return NextResponse.json({ label: { ...data, category: data?.entity_type } });
   } catch (err) {
     console.error('[admin/wallet-labels POST] Failed:', err);
     return NextResponse.json({ error: 'Failed to create label' }, { status: 500 });
@@ -99,21 +114,22 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Invalid request body', details: parsed.error.issues }, { status: 400 });
     }
     const body = parsed.data;
-    if (Object.keys(body).length === 0) {
+    const update: Record<string, unknown> = {};
+    if (body.label !== undefined) update.label = body.label;
+    if (body.category !== undefined) update.entity_type = body.category;
+    if (body.verified !== undefined) update.verified = body.verified;
+    if (Object.keys(update).length === 0) {
       return NextResponse.json({ error: 'No updatable fields' }, { status: 400 });
     }
     const supabase = getSupabaseAdmin();
-    const { error } = await supabase
-      .from('whale_addresses')
-      .update(body)
-      .eq('id', id);
+    const { error } = await supabase.from('whales').update(update).eq('id', id);
 
     if (error) {
       console.error('[admin/wallet-labels PATCH] Update error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    void logAdminAction({ adminId, action: 'wallet_label_set', details: { id, fields: Object.keys(body) } });
+    void logAdminAction({ adminId, action: 'wallet_label_set', details: { id, fields: Object.keys(update) } });
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('[admin/wallet-labels PATCH] Failed:', err);
@@ -131,10 +147,15 @@ export async function DELETE(request: Request) {
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
     const supabase = getSupabaseAdmin();
-    const { error } = await supabase.from('whale_addresses').delete().eq('id', id);
+    // Clear the curated label rather than delete the entity row — the address
+    // may also be a tracked analytics whale whose metrics we must not destroy.
+    const { error } = await supabase
+      .from('whales')
+      .update({ label: null, manual_label: false, verified: false })
+      .eq('id', id);
 
     if (error) {
-      console.error('[admin/wallet-labels DELETE] Delete error:', error);
+      console.error('[admin/wallet-labels DELETE] Update error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
