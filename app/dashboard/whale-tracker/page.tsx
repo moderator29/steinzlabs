@@ -24,6 +24,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { BackButton } from "@/components/ui/BackButton";
+import { HowItWorksButton } from "@/components/common/HowItWorks";
+import { whaleTrackerHowItWorks } from "@/lib/howItWorks/content/whale-tracker";
 import { ChainLogo } from "@/components/common/ChainLogo";
 import { NakaLoader } from "@/components/brand/NakaLoader";
 import { WhaleAvatar } from "@/components/whales/WhaleAvatar";
@@ -388,6 +390,7 @@ export default function WhaleTrackerPage() {
             <Link href="/dashboard/whale-tracker/copy-trade" className="shrink-0 px-3 py-1.5 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-white bg-white/[0.04] border border-white/10 hover:border-white/20 transition-colors">Copy Trade</Link>
             <Link href="/dashboard/whale-tracker/submit" className="shrink-0 px-3 py-1.5 text-[11px] font-semibold rounded-lg text-slate-400 hover:text-white bg-white/[0.04] border border-white/10 hover:border-white/20 transition-colors">Submit</Link>
           </nav>
+          <HowItWorksButton content={whaleTrackerHowItWorks} className="ms-auto shrink-0" />
         </div>
 
         {/* Filters */}
