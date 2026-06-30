@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { getTokenSecurity } from '@/lib/services/goplus';
 import { buildSolanaWalletIntelligence } from '@/lib/services/solana-intelligence';
 import { buildEvmWalletIntelligence, EVM_CHAIN_CONFIG, KNOWN_TOKEN_LOGOS } from '@/lib/services/evm-intelligence';
+import { buildWalletRealizedPnl } from '@/lib/walletIntel/walletPnl';
 import type { TokenSecurityResult } from '@/lib/security/goplusService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -237,7 +238,15 @@ export async function GET(request: Request) {
       });
     }
 
-    return NextResponse.json({ ...walletData, contractSecurity: contractSecurityMap }, {
+    // Realized PnL from REAL Bitquery DEX trades (trade-time USD → FIFO). Null
+    // when Bitquery is off or the wallet has no priced trades in the window.
+    const pnlChain = detectedType === 'SOL'
+      ? 'solana'
+      : (chainParam !== 'auto' && EVM_CHAIN_CONFIG[chainParam] ? chainParam : 'ethereum');
+    const sinceIso = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
+    const realizedPnl = await buildWalletRealizedPnl(pnlChain, address, sinceIso);
+
+    return NextResponse.json({ ...walletData, contractSecurity: contractSecurityMap, realizedPnl }, {
       headers: { 'Cache-Control': 'public, max-age=30' },
     });
   } catch (error: unknown) {

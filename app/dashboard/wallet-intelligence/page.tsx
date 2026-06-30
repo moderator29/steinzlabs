@@ -56,6 +56,16 @@ interface WalletData {
   tokenDistribution?: { symbol: string; percentage: number }[];
   isWhale?: boolean;
   whaleScore?: number;
+  // Realized PnL from real Bitquery DEX trades (90d), FIFO cost basis.
+  realizedPnl?: {
+    byToken: Array<{ token: string; tokenSymbol: string | null; totalRealizedUsd: number; winRate: number; lots: number }>;
+    totalRealizedUsd: number;
+    totalProceedsUsd: number;
+    totalCostBasisUsd: number;
+    closedLots: number;
+    winRate: number;
+    averageHoldDays: number;
+  } | null;
 }
 
 // ─── Recent Transactions ───────────────────────────────────────────────────────
@@ -620,6 +630,50 @@ export default function WalletIntelligencePage() {
                   </div>
                 </div>
 
+
+                {/* Realized PnL (90d) — real FIFO cost basis from Bitquery DEX
+                    trades. Only shown when there are priced trades to report. */}
+                {walletData.realizedPnl && walletData.realizedPnl.closedLots > 0 && (() => {
+                  const p = walletData.realizedPnl!;
+                  const pos = p.totalRealizedUsd >= 0;
+                  const fmtPnl = (n: number) => n >= 0
+                    ? `+$${Math.round(n).toLocaleString()}`
+                    : `($${Math.round(Math.abs(n)).toLocaleString()})`;
+                  return (
+                    <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-bold text-sm">Realized PnL <span className="text-[10px] text-gray-500 font-normal">· 90d · FIFO</span></h3>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#0066FF]/10 text-[#6F7EFF] border border-[#0066FF]/25 font-semibold">REAL TRADE DATA</span>
+                      </div>
+                      <div className={`text-2xl font-bold ${pos ? 'text-emerald-400' : 'text-red-400'}`}>{fmtPnl(p.totalRealizedUsd)}</div>
+                      <div className="grid grid-cols-3 gap-2 mt-3">
+                        <div className="bg-black/20 rounded-lg p-2">
+                          <div className="text-[9px] uppercase tracking-wider text-gray-500">Win rate</div>
+                          <div className={`text-sm font-bold font-mono mt-0.5 ${p.winRate >= 50 ? 'text-emerald-400' : 'text-gray-300'}`}>{p.winRate}%</div>
+                        </div>
+                        <div className="bg-black/20 rounded-lg p-2">
+                          <div className="text-[9px] uppercase tracking-wider text-gray-500">Closed trades</div>
+                          <div className="text-sm font-bold font-mono mt-0.5 text-white">{p.closedLots}</div>
+                        </div>
+                        <div className="bg-black/20 rounded-lg p-2">
+                          <div className="text-[9px] uppercase tracking-wider text-gray-500">Avg hold</div>
+                          <div className="text-sm font-bold font-mono mt-0.5 text-white">{p.averageHoldDays >= 1 ? `${p.averageHoldDays.toFixed(1)}d` : `${Math.round(p.averageHoldDays * 24)}h`}</div>
+                        </div>
+                      </div>
+                      {p.byToken.length > 0 && (
+                        <div className="mt-3 space-y-1">
+                          <div className="text-[10px] text-gray-500 uppercase tracking-wider">Top tokens by realized PnL</div>
+                          {p.byToken.slice(0, 3).map((t) => (
+                            <div key={t.token} className="flex items-center justify-between text-xs py-1 border-b border-[#1a1f2e]/40 last:border-0">
+                              <span className="font-semibold text-white truncate max-w-[140px]">{t.tokenSymbol || `${t.token.slice(0, 6)}…${t.token.slice(-4)}`}</span>
+                              <span className={t.totalRealizedUsd >= 0 ? 'text-emerald-400 font-mono' : 'text-red-400 font-mono'}>{fmtPnl(t.totalRealizedUsd)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* All Holdings */}
                 <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
