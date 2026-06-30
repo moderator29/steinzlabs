@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { isEvmAddress, isSolanaAddress } from '@/lib/utils/addressNormalize';
+import { RelatedTokensPanels } from '@/components/security/RelatedTokensPanels';
 
 interface Socials { twitter?: string; telegram?: string; website?: string }
 interface Launchpad { id: string; label: string }
@@ -610,6 +611,14 @@ function ContractAnalyzerInner() {
                 </div>
               </div>
             </div>
+
+            {/* MEVX-parity: similar tokens (shared ticker) + related wallets
+                (creator/owner/top holders). Read-only, real provider data. */}
+            <RelatedTokensPanels
+              address={result.address}
+              chain={result.chain}
+              symbol={result.dexData?.symbol || undefined}
+            />
 
             <button onClick={() => { setResult(null); setInput(''); }}
               className="w-full nl-btn-neon py-2.5 rounded-xl text-xs text-gray-400 hover:text-white transition-all">
