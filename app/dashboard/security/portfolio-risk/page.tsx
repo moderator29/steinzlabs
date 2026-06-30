@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { PieChart, AlertTriangle, CheckCircle, Loader2, ShieldAlert } from 'lucide-react';
 import { useNakaWallet } from '@/lib/hooks/useNakaWallet';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
+import { TiltCard } from '@/components/brand/TiltCard';
 
 interface RiskRow {
   contractAddress: string;
@@ -86,9 +88,13 @@ export default function PortfolioRiskPage() {
 
   if (!naka.address) {
     return (
-      <div className="p-4 text-center text-sm text-gray-400">
-        Connect a wallet to analyse portfolio risk.
-      </div>
+      <AuroraBackground fullHeight className="text-white">
+        <div className="p-4">
+          <div className="nl-glass rounded-2xl p-6 text-center text-sm text-gray-400 nl-fade-up">
+            Connect a wallet to analyse portfolio risk.
+          </div>
+        </div>
+      </AuroraBackground>
     );
   }
 
@@ -96,6 +102,7 @@ export default function PortfolioRiskPage() {
   const rows = data ? Object.values(data.results) : [];
 
   return (
+    <AuroraBackground fullHeight className="text-white">
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -108,10 +115,10 @@ export default function PortfolioRiskPage() {
               key={c.id}
               type="button"
               onClick={() => setChainId(c.id)}
-              className={`rounded-lg px-2.5 py-1 text-[10px] font-semibold border ${
+              className={`rounded-lg px-2.5 py-1 text-[10px] font-semibold border transition-colors ${
                 chainId === c.id
                   ? 'bg-[#0066FF]/15 border-[#0066FF]/40 text-white'
-                  : 'bg-[#0f1320] border-[#1a1f2e] text-gray-400 hover:text-white'
+                  : 'bg-white/[0.03] border-white/10 text-gray-400 hover:text-white'
               }`}
             >
               {c.label}
@@ -121,31 +128,32 @@ export default function PortfolioRiskPage() {
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center gap-2 py-12 text-xs text-gray-400">
+        <div className="nl-glass rounded-2xl flex items-center justify-center gap-2 py-12 text-xs text-gray-400 nl-fade-up">
           <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
           Scanning every holding against GoPlus…
         </div>
       )}
 
       {error && !loading && (
-        <div className="rounded-2xl border border-red-500/20 bg-[#0f1320] p-4 text-center text-xs text-red-400">
+        <div className="nl-glass rounded-2xl border border-red-500/20 p-4 text-center text-xs text-red-400 nl-fade-up">
           {error}
         </div>
       )}
 
       {summary && !loading && (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 nl-fade-up">
             <SummaryStat label="Scanned" value={summary.scanned} tone="neutral" />
             <SummaryStat label="Safe" value={summary.safe} tone="safe" />
             <SummaryStat label="Warning" value={summary.warning} tone="warning" />
             <SummaryStat label="Danger" value={summary.danger} tone="danger" />
           </div>
-          <div className={`rounded-2xl p-4 border ${
-            summary.portfolioRisk === 'critical' ? 'border-red-500/40 bg-red-500/[0.05]'
-            : summary.portfolioRisk === 'high' ? 'border-orange-500/40 bg-orange-500/[0.05]'
-            : summary.portfolioRisk === 'moderate' ? 'border-yellow-500/40 bg-yellow-500/[0.05]'
-            : 'border-green-500/40 bg-green-500/[0.05]'
+          <TiltCard className="nl-fade-up nl-fade-up-1">
+          <div className={`nl-glass rounded-2xl p-4 border ${
+            summary.portfolioRisk === 'critical' ? 'border-red-500/40'
+            : summary.portfolioRisk === 'high' ? 'border-orange-500/40'
+            : summary.portfolioRisk === 'moderate' ? 'border-yellow-500/40'
+            : 'border-green-500/40'
           }`}>
             <div className="flex items-center justify-between">
               <span className="text-xs uppercase tracking-wider text-gray-400">Portfolio risk</span>
@@ -155,20 +163,21 @@ export default function PortfolioRiskPage() {
               {summary.portfolioRisk}
             </div>
           </div>
+          </TiltCard>
 
-          <div className="space-y-2">
+          <div className="space-y-2 nl-fade-up nl-fade-up-2">
             {rows.length === 0 ? (
-              <div className="rounded-xl border border-[#1a1f2e] bg-[#0f1320] p-6 text-center text-xs text-gray-500">
+              <div className="nl-glass rounded-xl p-6 text-center text-xs text-gray-500">
                 No scannable tokens returned.
               </div>
             ) : rows
               .sort((a, b) => a.score - b.score)
               .map((r) => (
-                <div key={r.contractAddress} className={`rounded-xl border p-3 ${
-                  r.riskLevel === 'danger' ? 'border-red-500/40 bg-[#0f1320]'
-                  : r.riskLevel === 'warning' ? 'border-yellow-500/40 bg-[#0f1320]'
-                  : r.riskLevel === 'safe' ? 'border-green-500/30 bg-[#0f1320]'
-                  : 'border-[#1a1f2e] bg-[#0f1320]'
+                <div key={r.contractAddress} className={`nl-glass rounded-xl border p-3 ${
+                  r.riskLevel === 'danger' ? 'border-red-500/40'
+                  : r.riskLevel === 'warning' ? 'border-yellow-500/40'
+                  : r.riskLevel === 'safe' ? 'border-green-500/30'
+                  : 'border-white/10'
                 }`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -194,6 +203,7 @@ export default function PortfolioRiskPage() {
         </>
       )}
     </div>
+    </AuroraBackground>
   );
 }
 
@@ -204,7 +214,7 @@ function SummaryStat({ label, value, tone }: { label: string; value: number; ton
     : tone === 'danger' ? 'text-red-400'
     : 'text-white';
   return (
-    <div className="rounded-xl border border-[#1a1f2e] bg-[#0f1320] p-3 text-center">
+    <div className="nl-glass rounded-xl p-3 text-center">
       <div className="text-[10px] uppercase tracking-wider text-gray-500">{label}</div>
       <div className={`text-lg font-bold ${color}`}>{value}</div>
     </div>

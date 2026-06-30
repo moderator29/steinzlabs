@@ -27,6 +27,11 @@ import { cacheGet } from '@/lib/cache/redis';
 import { evaluateExpression } from '@/lib/alerts/evaluateComposite';
 import { fanOutNotification } from '@/lib/notifications/channels';
 import { getDexPrice } from '@/lib/services/dexscreener';
+import {
+  evaluatePrice, evaluateWallet, evaluateLaunch, resetLaunchCache,
+  type AlertCursor, type PriceCondition, type WhaleCondition,
+  type WalletActivityCondition, type LaunchCondition,
+} from '@/lib/alerts/smartAlerts';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -193,8 +198,18 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Smart Alerts (public.alerts): the four alert types created on
+  // /dashboard/alerts — price, whale, wallet_activity, launch. These used to
+  // run client-side off localStorage (died on tab close, never synced). Now
+  // they're server-evaluated here against real free sources. Each evaluator
+  // returns a fire message (or null), an advanced cursor, and a `cold` flag;
+  // cold rows are skipped WITHOUT stamping so they re-attempt next tick and we
+  // never persist a decision made on missing data.
+  resetLaunchCache();
+  const smartResult = await evaluateSmartAlerts(admin);
+
   try {
-    await logCronExecution(NAME, 'success', Date.now() - startedAt, undefined, fired + compositeFired);
+    await logCronExecution(NAME, 'success', Date.now() - startedAt, undefined, fired + compositeFired + smartResult.fired);
   } catch (err) {
     Sentry.captureException(err, { tags: { cron: NAME } });
   }
@@ -205,5 +220,99 @@ export async function GET(request: NextRequest) {
     composite_scanned: composites?.length ?? 0,
     composite_fired: compositeFired,
     composite_cold_skipped: compositeColdSkipped,
+    smart_scanned: smartResult.scanned,
+    smart_fired: smartResult.fired,
+    smart_cold_skipped: smartResult.cold,
   });
+}
+
+type Admin = ReturnType<typeof getSupabaseAdmin>;
+
+interface SmartAlertRow {
+  id: string;
+  user_id: string;
+  alert_type: string;
+  label: string;
+  condition: Record<string, unknown>;
+  active: boolean;
+}
+
+/**
+ * Evaluate every active Smart Alert and fire real notifications. Returns the
+ * scan/fire/cold tallies for the cron response. A fired alert (a) writes a
+ * notifications row tagged metadata.source='smart_alert' so the in-app bell +
+ * /api/alerts/history light up, (b) persists the advanced cursor (trigger
+ * count, lastChecked, lastTxHash) back into condition, and (c) deactivates
+ * one-shot price alerts. Per-row failures are isolated so one bad row can't
+ * abort the whole sweep.
+ */
+async function evaluateSmartAlerts(admin: Admin): Promise<{ scanned: number; fired: number; cold: number }> {
+  const { data: rows, error } = await admin
+    .from('alerts')
+    .select('id, user_id, alert_type, label, condition, active')
+    .in('alert_type', ['price', 'whale', 'wallet_activity', 'launch'])
+    .eq('active', true)
+    .limit(1000);
+
+  if (error || !rows) return { scanned: 0, fired: 0, cold: 0 };
+
+  let fired = 0;
+  let cold = 0;
+  const nowIso = new Date().toISOString();
+
+  for (const raw of rows as SmartAlertRow[]) {
+    const condition = (raw.condition ?? {}) as Record<string, unknown>;
+    const cursor = (condition.cursor ?? { lastChecked: 0, triggerCount: 0 }) as AlertCursor;
+
+    try {
+      let result;
+      switch (raw.alert_type) {
+        case 'price':
+          result = await evaluatePrice({ ...(condition as unknown as PriceCondition), cursor });
+          break;
+        case 'whale':
+          result = await evaluateWallet({ ...(condition as unknown as WhaleCondition), cursor }, 'whale');
+          break;
+        case 'wallet_activity':
+          result = await evaluateWallet({ ...(condition as unknown as WalletActivityCondition), cursor }, 'wallet_activity');
+          break;
+        case 'launch':
+          result = await evaluateLaunch({ ...(condition as unknown as LaunchCondition), cursor });
+          break;
+        default:
+          continue;
+      }
+
+      if (result.cold) { cold++; continue; }
+
+      const nextCondition = { ...condition, cursor: result.cursor };
+      const update: Record<string, unknown> = { condition: nextCondition };
+
+      if (result.fire) {
+        if (result.fire.oneShot) {
+          update.active = false;
+          update.triggered = true;
+          update.triggered_at = nowIso;
+        }
+        await admin.from('notifications').insert({
+          user_id: raw.user_id,
+          title: raw.label,
+          body: result.fire.message,
+          type: raw.alert_type === 'price' ? 'price'
+            : raw.alert_type === 'launch' ? 'new_launch'
+              : raw.alert_type === 'whale' ? 'whale' : 'wallet_activity',
+          read: false,
+          url: '/dashboard/alerts',
+          metadata: { source: 'smart_alert', smart_alert_id: raw.id, smart_alert_type: raw.alert_type },
+        });
+        fired++;
+      }
+
+      await admin.from('alerts').update(update).eq('id', raw.id).eq('user_id', raw.user_id);
+    } catch (err) {
+      Sentry.captureException(err, { tags: { cron: NAME, smart_alert_id: raw.id } });
+    }
+  }
+
+  return { scanned: rows.length, fired, cold };
 }

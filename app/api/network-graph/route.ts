@@ -31,6 +31,11 @@ export interface NetworkNode {
     ofac?: boolean;
     tornado_adjacent?: boolean;
   };
+  // Real community-detection assignment. Computed by label-propagation over
+  // the actual edge set (see detectCommunities). Nodes in the same detected
+  // community share a clusterId; the UI colors by it. Absent when clustering
+  // could not be run (too few nodes) — never fabricated.
+  clusterId?: number;
   x?: number;
   y?: number;
 }
@@ -48,7 +53,10 @@ export interface NetworkEdge {
 }
 
 export interface NetworkStats {
-  clusters: number;
+  // Real count of communities detected by label-propagation over the edge set.
+  // null when clustering could not be run honestly (fewer than the minimum
+  // node count). The UI omits the stat entirely when null — never invented.
+  clusters: number | null;
   avgDegree: number;
   density: number;
   usdcTxns: number;
@@ -91,6 +99,103 @@ function classifyNode(address: string, volume: number, txCount: number): Network
   return 'regular';
 }
 
+// ─── Real community detection (label propagation) ───────────────────────────
+// The previous `clusters = Math.floor(n / 5)` was fabricated. We now compute a
+// real community count by running label propagation over the OBSERVED edge set.
+//
+// Note on lib/services/cluster-detection.ts: that module answers a different
+// question — given a known set of suspect wallets plus per-trade data (block
+// numbers, buy/sell side, USD-valued transfers), does it look coordinated. The
+// network-graph route only has aggregated transfer edges (no per-trade side /
+// block data), so feeding detectCluster would require inventing trade events,
+// which CLAUDE.md forbids. Community detection over the actual graph topology is
+// the honest, source-faithful way to produce a real cluster count here.
+//
+// Minimum number of nodes before a cluster count is meaningful. Below this we
+// return null and the UI omits the stat rather than inventing a value.
+const MIN_NODES_FOR_CLUSTERING = 4;
+
+/**
+ * Detects communities in the actual transfer graph using synchronous label
+ * propagation (Raghavan et al. 2007). This is a real, deterministic graph
+ * algorithm run over the observed edge set — no fabricated numbers.
+ *
+ * Returns a map from node id to a dense, 0-based community id, plus the count
+ * of distinct communities. Edges are treated as undirected and weighted by
+ * transfer count so heavier links pull nodes together. Returns null when there
+ * are too few nodes for the result to be meaningful.
+ */
+function detectCommunities(
+  nodeIds: string[],
+  edges: Array<{ source: string; target: string; count: number }>,
+): { labels: Map<string, number>; count: number } | null {
+  if (nodeIds.length < MIN_NODES_FOR_CLUSTERING) return null;
+
+  // Weighted undirected adjacency.
+  const adjacency = new Map<string, Map<string, number>>();
+  for (const id of nodeIds) adjacency.set(id, new Map());
+  for (const e of edges) {
+    if (e.source === e.target) continue;
+    const a = adjacency.get(e.source);
+    const b = adjacency.get(e.target);
+    if (!a || !b) continue;
+    const w = Math.max(1, e.count);
+    a.set(e.target, (a.get(e.target) ?? 0) + w);
+    b.set(e.source, (b.get(e.source) ?? 0) + w);
+  }
+
+  // Initialise each node with its own label.
+  const labels = new Map<string, number>();
+  nodeIds.forEach((id, i) => labels.set(id, i));
+
+  // Deterministic processing order (sorted) keeps the result stable across
+  // requests so the same graph always yields the same cluster count.
+  const order = [...nodeIds].sort();
+
+  const MAX_ITERS = 20;
+  for (let iter = 0; iter < MAX_ITERS; iter++) {
+    let changed = false;
+    for (const node of order) {
+      const neighbors = adjacency.get(node)!;
+      if (neighbors.size === 0) continue;
+
+      // Tally neighbour labels weighted by edge weight.
+      const tally = new Map<number, number>();
+      for (const [neighbor, weight] of neighbors) {
+        const lbl = labels.get(neighbor)!;
+        tally.set(lbl, (tally.get(lbl) ?? 0) + weight);
+      }
+
+      // Pick the highest-weighted label; break ties by lowest label id for
+      // determinism.
+      let bestLabel = labels.get(node)!;
+      let bestWeight = -1;
+      for (const [lbl, weight] of tally) {
+        if (weight > bestWeight || (weight === bestWeight && lbl < bestLabel)) {
+          bestWeight = weight;
+          bestLabel = lbl;
+        }
+      }
+
+      if (labels.get(node) !== bestLabel) {
+        labels.set(node, bestLabel);
+        changed = true;
+      }
+    }
+    if (!changed) break;
+  }
+
+  // Re-index labels into a dense 0-based range and count distinct communities.
+  const remap = new Map<number, number>();
+  for (const id of order) {
+    const raw = labels.get(id)!;
+    if (!remap.has(raw)) remap.set(raw, remap.size);
+    labels.set(id, remap.get(raw)!);
+  }
+
+  return { labels, count: remap.size };
+}
+
 // ─── Empty fallback when APIs are unavailable ────────────────────────────────
 // No static / mock data is shipped per CLAUDE.md "Mock Data — Forbidden".
 // If both Alchemy Solana and DexScreener fail, we return an empty graph with
@@ -101,7 +206,7 @@ function emptyResponse(): NetworkGraphResponse {
     nodes: [],
     edges: [],
     stats: {
-      clusters: 0,
+      clusters: null,
       avgDegree: 0,
       density: 0,
       usdcTxns: 0,
@@ -248,6 +353,20 @@ async function fetchSolanaGraphData(wallet: string): Promise<NetworkGraphRespons
     const degreeSum = edges.length * 2;
     const avgDegree = parseFloat((degreeSum / Math.max(n, 1)).toFixed(2));
 
+    // Real community detection over the observed edge set. Tags each node with
+    // its detected community so the UI can color by cluster. When too few nodes
+    // exist to cluster meaningfully, communities is null and the stat is omitted.
+    const communities = detectCommunities(
+      nodes.map(nd => nd.id),
+      edges.map(e => ({ source: e.source, target: e.target, count: e.count })),
+    );
+    if (communities) {
+      for (const nd of nodes) {
+        const lbl = communities.labels.get(nd.id);
+        if (lbl !== undefined) nd.clusterId = lbl;
+      }
+    }
+
     // Build timelineData from actual tx timestamps
     // 8 buckets × 3h each = last 24h; index 7 = most recent, index 0 = oldest
     const bucketMs = 3 * 60 * 60 * 1000;
@@ -270,7 +389,7 @@ async function fetchSolanaGraphData(wallet: string): Promise<NetworkGraphRespons
       nodes,
       edges,
       stats: {
-        clusters: Math.max(1, Math.floor(n / 5)),
+        clusters: communities ? communities.count : null,
         avgDegree,
         density,
         usdcTxns,
@@ -351,10 +470,14 @@ async function fetchDexScreenerData(query: string): Promise<NetworkGraphResponse
         const key = `${baseAddr}||${quoteAddr}`;
         if (!edgeSet.has(key)) {
           edgeSet.add(key);
+          // Symbol-based stablecoin classification. DexScreener gives us the
+          // quote token's symbol directly; we compare symbols (not raw
+          // addresses) so we never lower-case a case-sensitive Solana address.
+          const quoteSymbol = String(pair.quoteToken?.symbol || '').toUpperCase();
           edges.push({
             source: `node-${addrIndex.get(baseAddr)}`,
             target: `node-${addrIndex.get(quoteAddr)}`,
-            type: quoteAddr.toLowerCase().includes('usdc') ? 'usdc' : 'usdt',
+            type: quoteSymbol.includes('USDT') ? 'usdt' : 'usdc',
             amount: vol,
             count: txCount,
           });
@@ -381,6 +504,18 @@ async function fetchDexScreenerData(query: string): Promise<NetworkGraphResponse
     const maxEdges = n * (n - 1);
     const density = maxEdges > 0 ? parseFloat((edges.length / maxEdges).toFixed(4)) : 0;
 
+    // Real community detection over the observed pair graph.
+    const communities = detectCommunities(
+      nodes.map(nd => nd.id),
+      edges.map(e => ({ source: e.source, target: e.target, count: e.count })),
+    );
+    if (communities) {
+      for (const nd of nodes) {
+        const lbl = communities.labels.get(nd.id);
+        if (lbl !== undefined) nd.clusterId = lbl;
+      }
+    }
+
     // Build timelineData from actual DexScreener h1/h6/h24 transaction counts
     // 8 buckets × 3h each = last 24h; index 7 = most recent (0-3h), index 0 = oldest (21-24h)
     let totalH1 = 0, totalH6 = 0, totalH24 = 0;
@@ -406,7 +541,7 @@ async function fetchDexScreenerData(query: string): Promise<NetworkGraphResponse
       nodes,
       edges,
       stats: {
-        clusters: Math.max(1, Math.floor(n / 4)),
+        clusters: communities ? communities.count : null,
         avgDegree: parseFloat(((edges.length * 2) / Math.max(n, 1)).toFixed(2)),
         density,
         usdcTxns,

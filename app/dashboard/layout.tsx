@@ -1,6 +1,5 @@
 import { ReactNode } from 'react';
 import type { Metadata } from 'next';
-import AlertMonitorProvider from '@/components/AlertMonitorProvider';
 import SessionGuardProvider from '@/components/SessionGuardProvider';
 import PlatformEventMonitor from '@/components/PlatformEventMonitor';
 // §header-scope — FloatingNotificationBell removed from the dashboard
@@ -30,7 +29,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           + landing pages outside this layout stay 1px. */}
       <div className="naka-thick-borders contents">
         <SessionGuardProvider />
-        <AlertMonitorProvider />
         <PlatformEventMonitor />
         <PendingSignerProvider />
         <PendingTradesBanner />
