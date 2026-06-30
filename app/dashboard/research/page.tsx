@@ -13,6 +13,8 @@ import {
 import { BookOpen, Tag, Loader2, SlidersHorizontal, Zap } from 'lucide-react';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { TiltCard } from '@/components/brand/TiltCard';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { researchHowItWorks } from '@/lib/howItWorks/content/research';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface ResearchPost {
@@ -418,6 +420,7 @@ export default function ResearchPage() {
             <p className="text-[11px] text-gray-500">On-chain newsroom · real-time market intel</p>
           </div>
           <div className="flex items-center gap-2">
+            <HowItWorksButton content={researchHowItWorks} className="shrink-0" />
             {lastUpdated && (
               <span className="text-[10px] text-gray-600 flex items-center gap-1 whitespace-nowrap">
                 <RefreshCw className={`w-2.5 h-2.5 ${refreshing ? 'animate-spin text-[#0066FF]' : ''}`} />
