@@ -6,6 +6,8 @@ import {
   detectContract,
   type DetectorResult,
 } from '@/lib/services/contractDetector';
+import { isEvmChain } from '@/lib/utils/addressNormalize';
+import type { HoneypotResult } from '@/lib/services/honeypot';
 
 const schema = z.object({
   address: z.string().trim().min(1).max(100),
@@ -29,9 +31,9 @@ function buildScore(det: DetectorResult): { overallScore: number; riskFlags: str
   let overallScore = 100;
 
   if (token) {
-    if (token.isHoneypot) { riskFlags.push('Honeypot — tokens cannot be sold'); overallScore -= 45; }
+    if (token.isHoneypot) { riskFlags.push('Honeypot: tokens cannot be sold'); overallScore -= 45; }
     if (!token.isOpenSource) { riskFlags.push('Contract source code not verified'); overallScore -= 15; }
-    if (token.isMintable) { riskFlags.push('Mint function active — supply can be inflated'); overallScore -= 10; }
+    if (token.isMintable) { riskFlags.push('Mint function active: supply can be inflated'); overallScore -= 10; }
     if (token.hasHiddenOwner) { riskFlags.push('Hidden owner detected'); overallScore -= 12; }
     if (token.canTakeBackOwnership) { riskFlags.push('Owner can reclaim contract control'); overallScore -= 15; }
     if (token.ownerCanChangeBalance) { riskFlags.push('Owner can modify token balances'); overallScore -= 15; }
@@ -57,6 +59,153 @@ function buildScore(det: DetectorResult): { overallScore: number; riskFlags: str
   return { overallScore: Math.max(0, Math.min(100, overallScore)), riskFlags };
 }
 
+type SourceVerdict = 'honeypot' | 'sellable' | 'unknown' | 'unavailable';
+
+interface HoneypotReconciliation {
+  /** Combined, honest conclusion across every source we actually have. */
+  conclusion: 'honeypot' | 'likely_safe' | 'caution' | 'unknown';
+  /** Plain-language one-liner describing the combined picture. */
+  summary: string;
+  /** true ⇒ sources disagree (e.g. GoPlus clear, live sim says cannot sell). */
+  conflict: boolean;
+  /** GoPlus static-flag opinion. */
+  goplus: {
+    verdict: SourceVerdict;
+    buyTax: number | null;
+    sellTax: number | null;
+  };
+  /** Honeypot.is live-simulation opinion (EVM only). */
+  honeypot: {
+    verdict: SourceVerdict;
+    /** Only set for EVM. null ⇒ not an EVM chain, so Honeypot.is is N/A. */
+    applicable: boolean;
+    reason: string | null;
+    buyTax: number | null;
+    sellTax: number | null;
+    transferTax: number | null;
+    simulationSuccess: boolean;
+    flags: string[];
+  };
+}
+
+function pctLabel(frac: number | null): string | null {
+  if (frac == null) return null;
+  return (frac * 100).toFixed(frac * 100 < 10 ? 1 : 0) + '%';
+}
+
+/**
+ * Reconcile GoPlus's static honeypot flag with Honeypot.is's live buy/sell
+ * simulation into one honest conclusion. We surface BOTH source verdicts and
+ * never collapse to a single static flag: a token is only called "honeypot"
+ * when a source proves it cannot be sold, and any disagreement is flagged as a
+ * conflict so the user sees the real, unresolved picture.
+ */
+function reconcileHoneypot(
+  det: DetectorResult,
+): HoneypotReconciliation {
+  const token = det.token;
+  const hp: HoneypotResult | null = det.honeypot;
+  const evm = isEvmChain(det.chain);
+
+  // ── GoPlus side ──────────────────────────────────────────────────────────
+  let goVerdict: SourceVerdict = 'unavailable';
+  let goBuyTax: number | null = null;
+  let goSellTax: number | null = null;
+  if (token) {
+    goBuyTax = Number.isFinite(token.buyTax) ? token.buyTax : null;
+    goSellTax = Number.isFinite(token.sellTax) ? token.sellTax : null;
+    if (token.isHoneypot || token.cannotSellAll) goVerdict = 'honeypot';
+    else goVerdict = 'sellable';
+  }
+
+  // ── Honeypot.is side (EVM only) ──────────────────────────────────────────
+  let hpVerdict: SourceVerdict = evm ? 'unavailable' : 'unavailable';
+  let hpReason: string | null = null;
+  if (!evm) {
+    hpVerdict = 'unavailable';
+    hpReason = 'Live simulation is EVM only';
+  } else if (hp && hp.available) {
+    if (hp.isHoneypot === true) {
+      hpVerdict = 'honeypot';
+      hpReason = hp.honeypotReason ?? 'Simulation could not sell the token';
+    } else if (hp.isHoneypot === false && hp.simulationSuccess) {
+      hpVerdict = 'sellable';
+      hpReason = 'Buy and sell simulation succeeded';
+    } else {
+      hpVerdict = 'unknown';
+      hpReason = hp.honeypotReason ?? 'Simulation inconclusive';
+    }
+  } else if (hp && !hp.available) {
+    hpVerdict = 'unavailable';
+    hpReason =
+      hp.unavailableReason === 'no_pair'
+        ? 'No tradable pair to simulate yet'
+        : hp.unavailableReason === 'unsupported_chain'
+        ? 'Chain not supported by live simulator'
+        : 'Live simulator unavailable';
+  } else {
+    hpReason = 'Live simulation did not run';
+  }
+
+  // ── Combine ──────────────────────────────────────────────────────────────
+  const verdicts = [goVerdict, hpVerdict];
+  const anyHoneypot = verdicts.includes('honeypot');
+  const goClear = goVerdict === 'sellable';
+  const hpClear = hpVerdict === 'sellable';
+  const conflict =
+    (goVerdict === 'honeypot' && hpVerdict === 'sellable') ||
+    (goVerdict === 'sellable' && hpVerdict === 'honeypot');
+
+  let conclusion: HoneypotReconciliation['conclusion'];
+  let summary: string;
+
+  if (anyHoneypot) {
+    conclusion = 'honeypot';
+    if (conflict) {
+      const flagged = goVerdict === 'honeypot' ? 'static analysis' : 'live simulation';
+      const cleared = goVerdict === 'honeypot' ? 'live simulation' : 'static analysis';
+      summary = `Sources disagree: ${flagged} flags a honeypot while ${cleared} could sell. Treat as unsafe until resolved.`;
+    } else if (goVerdict === 'honeypot' && hpVerdict === 'honeypot') {
+      summary = 'Both static analysis and live simulation agree the token cannot be sold. Confirmed honeypot.';
+    } else {
+      const who = goVerdict === 'honeypot' ? 'Static analysis' : 'Live simulation';
+      summary = `${who} flags this token as a honeypot (cannot sell).`;
+    }
+  } else if (goClear && hpClear) {
+    conclusion = 'likely_safe';
+    summary = 'Both static analysis and a live buy plus sell simulation could sell the token. No honeypot detected.';
+  } else if (goClear || hpClear) {
+    const who = hpClear ? 'A live buy plus sell simulation' : 'Static analysis';
+    const other = hpClear
+      ? 'static analysis is unavailable'
+      : evm
+      ? 'a live simulation could not run'
+      : 'live simulation is EVM only';
+    conclusion = 'likely_safe';
+    summary = `${who} could sell the token and no honeypot was found, though ${other}.`;
+  } else {
+    conclusion = 'unknown';
+    summary = 'Neither static analysis nor live simulation could confirm whether this token can be sold.';
+  }
+
+  return {
+    conclusion,
+    summary,
+    conflict,
+    goplus: { verdict: goVerdict, buyTax: goBuyTax, sellTax: goSellTax },
+    honeypot: {
+      verdict: hpVerdict,
+      applicable: evm,
+      reason: hpReason,
+      buyTax: hp?.buyTax ?? null,
+      sellTax: hp?.sellTax ?? null,
+      transferTax: hp?.transferTax ?? null,
+      simulationSuccess: hp?.simulationSuccess ?? false,
+      flags: hp?.flags ?? [],
+    },
+  };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -70,7 +219,7 @@ export async function POST(req: NextRequest) {
 
     // ── INVALID / UNKNOWN ────────────────────────────────────────────────
     // Wrong address format for the chain, or no on-chain / security / market
-    // data from ANY source. Return a clear "no response" — never a fake report.
+    // data from ANY source. Return a clear "no response": never a fake report.
     if (!det.found) {
       return NextResponse.json({
         found: false,
@@ -81,7 +230,35 @@ export async function POST(req: NextRequest) {
     }
 
     const { token, addr, market, feed } = det;
-    const { overallScore, riskFlags } = buildScore(det);
+    const base = buildScore(det);
+    const honeypotVerdict = reconcileHoneypot(det);
+
+    // Fold the live simulation into the score so it is never just a static
+    // GoPlus flag. Only apply NEW signal the static scan did not already
+    // penalize (buildScore already handled token.isHoneypot/cannotSellAll).
+    let overallScore = base.overallScore;
+    const riskFlags = base.riskFlags;
+    const hp = honeypotVerdict.honeypot;
+    const goWasHoneypot = honeypotVerdict.goplus.verdict === 'honeypot';
+
+    if (hp.verdict === 'honeypot' && !goWasHoneypot) {
+      riskFlags.push('Live simulation could not sell the token (honeypot)');
+      overallScore -= 45;
+    }
+    if (honeypotVerdict.conflict) {
+      riskFlags.push('Honeypot sources disagree: treat as unsafe until resolved');
+      overallScore -= 15;
+    }
+    // High simulated sell tax that the static scan under-reported.
+    if (
+      hp.verdict === 'sellable' &&
+      hp.sellTax != null && hp.sellTax > 0.15 &&
+      (token == null || token.sellTax <= 0.15)
+    ) {
+      riskFlags.push(`Live simulation sell tax ${(hp.sellTax * 100).toFixed(0)}%`);
+      overallScore -= 12;
+    }
+    overallScore = Math.max(0, Math.min(100, overallScore));
 
     let verdict: string;
     let verdictColor: string;
@@ -139,10 +316,40 @@ export async function POST(req: NextRequest) {
       labels: addr.labels,
     } : null;
 
+    // Reconciled, dual-source honeypot block for the UI. Both source verdicts
+    // plus a single honest conclusion and the live-simulation tax figures.
+    const honeypotPanel = {
+      conclusion: honeypotVerdict.conclusion,
+      summary: honeypotVerdict.summary,
+      conflict: honeypotVerdict.conflict,
+      sources: {
+        // GoPlus static analysis (shown to users as "Static Analysis").
+        static: token
+          ? {
+              available: true,
+              verdict: honeypotVerdict.goplus.verdict,
+              buyTax: pctLabel(honeypotVerdict.goplus.buyTax),
+              sellTax: pctLabel(honeypotVerdict.goplus.sellTax),
+            }
+          : { available: false, verdict: 'unavailable' as SourceVerdict },
+        // Honeypot.is live buy/sell simulation (EVM only).
+        simulation: {
+          available: hp.applicable && hp.simulationSuccess,
+          applicable: hp.applicable,
+          verdict: hp.verdict,
+          reason: hp.reason,
+          buyTax: pctLabel(hp.buyTax),
+          sellTax: pctLabel(hp.sellTax),
+          transferTax: pctLabel(hp.transferTax),
+          flags: hp.flags,
+        },
+      },
+    };
+
     // ── TOO EARLY ────────────────────────────────────────────────────────
     // Token exists (security record / fresh pair / feed row) but is brand-new:
     // pair age < ~15 min OR no meaningful liquidity / market yet. Return only
-    // the light context we genuinely have — no fabricated report.
+    // the light context we genuinely have: no fabricated report.
     if (det.tooEarly) {
       return NextResponse.json({
         found: true,
@@ -159,11 +366,13 @@ export async function POST(req: NextRequest) {
         // brand-new SPL) so the user still gets a heads-up.
         earlyFlags: riskFlags,
         tokenSecurity,
+        // A live sim can already prove sellability even pre-market: surface it.
+        honeypotVerdict: honeypotPanel,
         analyzedAt: new Date().toISOString(),
       });
     }
 
-    // ── VALID — full report ──────────────────────────────────────────────
+    // ── VALID: full report ──────────────────────────────────────────────
     const result: Record<string, unknown> = {
       found: true,
       address: det.address,
@@ -174,6 +383,7 @@ export async function POST(req: NextRequest) {
       riskFlags,
       tokenSecurity,
       addressIntel,
+      honeypotVerdict: honeypotPanel,
       dexData,
       launchpad,
       socials,
@@ -181,7 +391,7 @@ export async function POST(req: NextRequest) {
       analyzedAt: new Date().toISOString(),
     };
 
-    // AI verdict (2-3 sentences) — best-effort, non-critical.
+    // AI verdict (2-3 sentences): best-effort, non-critical.
     try {
       const tokenInfo = token ? `
 Token: ${market?.name || token.raw?.token_name || token.raw?.name || address.slice(0, 10)} (${market?.symbol || token.raw?.token_symbol || token.raw?.symbol || '?'}) | Score: ${overallScore}/100 | ${riskFlags.length} risk flags
@@ -194,8 +404,11 @@ Holder Count: ${tokenSecurity?.holderCount ?? token.holderCount} | Flags: ${risk
       const addrInfo = addr
         ? `\nAddress Risk: ${addr.riskLevel} | Blacklisted: ${addr.isBlacklisted} | Malicious: ${addr.isMalicious} | Phishing: ${addr.isPhishing}`
         : '';
+      // Dual-source honeypot signal so the model reasons over BOTH the static
+      // scan and the live simulation, not a single flag.
+      const hpInfo = `\nHoneypot (static analysis): ${honeypotVerdict.goplus.verdict} | Honeypot (live simulation${hp.applicable ? '' : ', N/A non-EVM'}): ${hp.verdict}${hp.sellTax != null ? ` (sim sell tax ${(hp.sellTax * 100).toFixed(0)}%)` : ''} | Combined: ${honeypotVerdict.conclusion}${honeypotVerdict.conflict ? ' [SOURCES CONFLICT]' : ''}`;
       const aiText = await vtxAnalyze(
-        `Crypto contract analysis — give a concise expert verdict:\n${tokenInfo}${marketInfo}${addrInfo}\n\nReply with:\nASSESSMENT: (2 sentences)\nKEY RISKS: (bullet list or "None detected")\nVERDICT: (SAFE/CAUTION/WARNING/DANGER — one sentence why)`,
+        `Crypto contract analysis: give a concise expert verdict:\n${tokenInfo}${marketInfo}${addrInfo}${hpInfo}\n\nReply with:\nASSESSMENT: (2 sentences)\nKEY RISKS: (bullet list or "None detected")\nVERDICT: (SAFE/CAUTION/WARNING/DANGER: one sentence why)`,
         280
       );
       if (aiText) result.aiAnalysis = aiText;

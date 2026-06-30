@@ -13,6 +13,7 @@
 
 import { useState } from 'react';
 import { ShieldAlert, Loader2, ExternalLink } from 'lucide-react';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 
 interface ApprovalRow {
   tokenAddress: string;
@@ -98,8 +99,9 @@ export default function ApprovalsPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 text-white">
-      <div className="flex items-center gap-2 mb-6">
+    <AuroraBackground fullHeight className="text-white">
+    <div className="max-w-3xl mx-auto px-4 py-8">
+      <div className="flex items-center gap-2 mb-6 nl-fade-up">
         <ShieldAlert className="w-5 h-5 text-[#EF4444]" />
         <h1 className="text-2xl font-bold">Approval Audit</h1>
       </div>
@@ -186,5 +188,6 @@ export default function ApprovalsPage() {
         Revoke broadcasts approve(spender, 0) from your connected wallet.
       </div>
     </div>
+    </AuroraBackground>
   );
 }

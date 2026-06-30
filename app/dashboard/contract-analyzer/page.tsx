@@ -5,7 +5,8 @@ import { useSearchParams } from 'next/navigation';
 import {
   Code, Search, AlertTriangle, CheckCircle, XCircle,
   Loader2, Info, ChevronDown, ChevronUp, Brain, ThumbsUp, ThumbsDown,
-  TrendingUp, TrendingDown, ExternalLink, Clock, Rocket, Twitter, Send, Globe
+  TrendingUp, TrendingDown, ExternalLink, Clock, Rocket, Twitter, Send, Globe,
+  ShieldCheck, ShieldAlert, FlaskConical, ScanLine, HelpCircle, GitCompareArrows
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { isEvmAddress, isSolanaAddress } from '@/lib/utils/addressNormalize';
@@ -15,6 +16,32 @@ import { contractAnalyzerHowItWorks } from '@/lib/howItWorks/content/contract-an
 
 interface Socials { twitter?: string; telegram?: string; website?: string }
 interface Launchpad { id: string; label: string }
+
+type SourceVerdict = 'honeypot' | 'sellable' | 'unknown' | 'unavailable';
+
+interface HoneypotVerdict {
+  conclusion: 'honeypot' | 'likely_safe' | 'caution' | 'unknown';
+  summary: string;
+  conflict: boolean;
+  sources: {
+    static: {
+      available: boolean;
+      verdict: SourceVerdict;
+      buyTax?: string | null;
+      sellTax?: string | null;
+    };
+    simulation: {
+      available: boolean;
+      applicable: boolean;
+      verdict: SourceVerdict;
+      reason?: string | null;
+      buyTax?: string | null;
+      sellTax?: string | null;
+      transferTax?: string | null;
+      flags?: string[];
+    };
+  };
+}
 
 interface AnalysisResult {
   found?: boolean;
@@ -60,6 +87,7 @@ interface AnalysisResult {
     isMixer: boolean;
     labels: string[];
   } | null;
+  honeypotVerdict?: HoneypotVerdict | null;
   dexData?: {
     price: number;
     priceChange24h: number;
@@ -91,6 +119,140 @@ function isValidForChain(addr: string, chain: string): boolean {
   if (!a) return false;
   if (chain === 'solana') return isSolanaAddress(a);
   return isEvmAddress(a);
+}
+
+const VERDICT_STYLE: Record<SourceVerdict, { label: string; color: string; Icon: typeof ShieldCheck }> = {
+  honeypot: { label: 'Cannot sell', color: '#EF4444', Icon: ShieldAlert },
+  sellable: { label: 'Sellable', color: '#10B981', Icon: ShieldCheck },
+  unknown: { label: 'Inconclusive', color: '#F59E0B', Icon: HelpCircle },
+  unavailable: { label: 'No data', color: '#94A3B8', Icon: HelpCircle },
+};
+
+const CONCLUSION_STYLE: Record<HoneypotVerdict['conclusion'], { label: string; color: string }> = {
+  honeypot: { label: 'Honeypot', color: '#EF4444' },
+  likely_safe: { label: 'Likely sellable', color: '#10B981' },
+  caution: { label: 'Caution', color: '#F59E0B' },
+  unknown: { label: 'Unknown', color: '#94A3B8' },
+};
+
+/**
+ * Dual-source honeypot panel. Shows the GoPlus static verdict and the
+ * Honeypot.is live-simulation verdict side by side, plus one reconciled
+ * conclusion. Honest empty states per source; never collapses to one flag.
+ */
+function HoneypotVerdictPanel({ data }: { data: HoneypotVerdict }) {
+  const { static: stat, simulation: sim } = data.sources;
+  const concl = CONCLUSION_STYLE[data.conclusion];
+
+  const renderSource = (
+    title: string,
+    sub: string,
+    Badge: typeof ScanLine,
+    verdict: SourceVerdict,
+    available: boolean,
+    rows: { label: string; value: string | null | undefined }[],
+    note?: string | null,
+  ) => {
+    const vs = VERDICT_STYLE[verdict];
+    return (
+      <div className="flex-1 min-w-0 bg-white/[0.03] rounded-xl p-3 border border-white/5">
+        <div className="flex items-center gap-2 mb-2">
+          <Badge className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-gray-200 leading-tight">{title}</p>
+            <p className="text-[9px] text-gray-500 leading-tight">{sub}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 mb-2">
+          <vs.Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: vs.color }} />
+          <span className="text-xs font-bold" style={{ color: vs.color }}>
+            {available || verdict === 'honeypot' ? vs.label : 'No data'}
+          </span>
+        </div>
+        {(available || verdict === 'honeypot') && rows.some((r) => r.value) && (
+          <div className="grid grid-cols-2 gap-1.5">
+            {rows.filter((r) => r.value).map((r) => (
+              <div key={r.label}>
+                <p className="text-[8px] text-gray-500 uppercase tracking-wide">{r.label}</p>
+                <p className="text-[11px] font-mono font-semibold text-gray-200">{r.value}</p>
+              </div>
+            ))}
+          </div>
+        )}
+        {note && <p className="text-[9px] text-gray-500 mt-2 leading-snug">{note}</p>}
+      </div>
+    );
+  };
+
+  return (
+    <div
+      className="nl-glass rounded-2xl p-4 nl-fade-up"
+      style={{
+        boxShadow: data.conflict
+          ? '0 0 0 1px rgba(245,158,11,.45), 0 0 18px rgba(245,158,11,.2)'
+          : `0 0 0 1px ${concl.color}55, 0 0 18px ${concl.color}25`,
+      }}
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${concl.color}20` }}>
+          <FlaskConical className="w-4 h-4" style={{ color: concl.color }} />
+        </div>
+        <span className="font-bold text-sm">Honeypot Verdict</span>
+        <span
+          className="ms-auto text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider"
+          style={{ color: concl.color, backgroundColor: `${concl.color}15`, borderColor: `${concl.color}40` }}
+        >
+          {concl.label}
+        </span>
+      </div>
+
+      {data.conflict && (
+        <div className="flex items-center gap-2 mb-3 px-2.5 py-1.5 rounded-lg bg-[#F59E0B]/10 border border-[#F59E0B]/30">
+          <GitCompareArrows className="w-3.5 h-3.5 text-[#F59E0B] flex-shrink-0" />
+          <span className="text-[10px] font-semibold text-[#F59E0B]">Sources disagree</span>
+        </div>
+      )}
+
+      <div className="flex gap-2 mb-3 flex-col sm:flex-row">
+        {renderSource(
+          'Static Analysis',
+          'Bytecode and permission flags',
+          ScanLine,
+          stat.verdict,
+          stat.available,
+          [
+            { label: 'Buy tax', value: stat.buyTax },
+            { label: 'Sell tax', value: stat.sellTax },
+          ],
+        )}
+        {renderSource(
+          'Live Simulation',
+          sim.applicable ? 'Real buy plus sell on chain' : 'EVM only',
+          FlaskConical,
+          sim.verdict,
+          sim.available,
+          [
+            { label: 'Buy tax', value: sim.buyTax },
+            { label: 'Sell tax', value: sim.sellTax },
+            { label: 'Transfer tax', value: sim.transferTax },
+          ],
+          !sim.available ? sim.reason : null,
+        )}
+      </div>
+
+      <p className="text-[11px] text-gray-300 leading-relaxed">{data.summary}</p>
+
+      {sim.flags && sim.flags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          {sim.flags.map((f) => (
+            <span key={f} className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              {f}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function ContractAnalyzerInner() {
@@ -171,7 +333,7 @@ function ContractAnalyzerInner() {
         <div className="nl-glass bg-gradient-to-br from-[#0066FF]/5 to-transparent rounded-2xl p-3 flex items-start gap-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           <Info className="w-4 h-4 text-[#0066FF] mt-0.5 flex-shrink-0" />
           <p className="text-[11px] text-gray-400 leading-relaxed">
-            Analyze any smart contract or token address for honeypot risk, dangerous permissions, high taxes, and malicious patterns.
+            Analyze any smart contract or token address for honeypot risk, dangerous permissions, high taxes, and malicious patterns. EVM tokens get a second opinion from a live buy plus sell simulation.
           </p>
         </div>
 
@@ -225,7 +387,7 @@ function ContractAnalyzerInner() {
             <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-white/[0.04] flex items-center justify-center">
               <XCircle className="w-7 h-7 text-gray-500" />
             </div>
-            <p className="text-sm font-semibold text-gray-300">No data — not a valid/known contract on <span className="capitalize">{result.chain}</span>.</p>
+            <p className="text-sm font-semibold text-gray-300">No data: not a valid/known contract on <span className="capitalize">{result.chain}</span>.</p>
             <p className="text-[11px] text-gray-600 mt-2 max-w-[280px] mx-auto">
               We could not find on-chain, security, or market data for this address from any source. Double-check the address and the selected chain.
             </p>
@@ -246,7 +408,7 @@ function ContractAnalyzerInner() {
                   <Rocket className="w-5 h-5 text-[#F59E0B]" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-[#F59E0B]">Too early — this coin just launched</p>
+                  <p className="text-sm font-bold text-[#F59E0B]">Too early: this coin just launched</p>
                   <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
                     Limited data so far. Honeypot simulation, holder distribution, and reliable market metrics need a tradable pool and a little time to populate.
                   </p>
@@ -303,6 +465,11 @@ function ContractAnalyzerInner() {
                 </div>
               )}
             </div>
+
+            {/* Live simulation can already prove sellability pre-market */}
+            {result.honeypotVerdict && result.honeypotVerdict.sources.simulation.available && (
+              <HoneypotVerdictPanel data={result.honeypotVerdict} />
+            )}
 
             <button onClick={() => { setResult(null); setInput(''); }}
               className="w-full nl-btn-neon py-2.5 rounded-xl text-xs text-gray-400 hover:text-white transition-all">
@@ -426,6 +593,9 @@ function ContractAnalyzerInner() {
                 </div>
               </div>
             </div>
+
+            {/* Dual-source honeypot reconciliation (GoPlus + Honeypot.is) */}
+            {result.honeypotVerdict && <HoneypotVerdictPanel data={result.honeypotVerdict} />}
 
             {/* Risk Flags */}
             {result.riskFlags.length > 0 && (

@@ -3,12 +3,15 @@
 import { useMemo, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Shield, KeyRound, PieChart, Wallet, Plug } from 'lucide-react';
+import { Shield, KeyRound, PieChart, Wallet, Plug, Search, Fingerprint, Gavel } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { useTabListKeys } from '@/hooks/useTabListKeys';
 
 const TABS = [
-  { slug: 'health',          label: 'Health',          href: '/dashboard/security',                  Icon: Shield },
+  { slug: 'health',          label: 'Hub',             href: '/dashboard/security',                  Icon: Shield },
+  { slug: 'token-scanner',   label: 'Token Scanner',   href: '/dashboard/security/token-scanner',    Icon: Search },
+  { slug: 'clone-scan',      label: 'Clone Scan',      href: '/dashboard/security/clone-scan',       Icon: Fingerprint },
+  { slug: 'sanctions',       label: 'Sanctions',       href: '/dashboard/security/sanctions',        Icon: Gavel },
   { slug: 'approvals',       label: 'Approvals',       href: '/dashboard/security/approvals',        Icon: KeyRound },
   { slug: 'portfolio-risk',  label: 'Portfolio Risk',  href: '/dashboard/security/portfolio-risk',   Icon: PieChart },
   { slug: 'wallet-analysis', label: 'Wallet Analysis', href: '/dashboard/security/wallet-analysis',  Icon: Wallet },
@@ -18,6 +21,9 @@ const TABS = [
 type TabSlug = typeof TABS[number]['slug'];
 
 function activeFromPath(pathname: string): TabSlug {
+  if (pathname.startsWith('/dashboard/security/token-scanner')) return 'token-scanner';
+  if (pathname.startsWith('/dashboard/security/clone-scan')) return 'clone-scan';
+  if (pathname.startsWith('/dashboard/security/sanctions')) return 'sanctions';
   if (pathname.startsWith('/dashboard/security/approvals')) return 'approvals';
   if (pathname.startsWith('/dashboard/security/portfolio-risk')) return 'portfolio-risk';
   if (pathname.startsWith('/dashboard/security/wallet-analysis')) return 'wallet-analysis';

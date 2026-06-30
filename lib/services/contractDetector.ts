@@ -1,5 +1,10 @@
 import 'server-only';
 import { getTokenSecurity, getAddressSecurity } from '@/lib/services/goplus';
+import {
+  getHoneypotSimulation,
+  honeypotSupported,
+  type HoneypotResult,
+} from '@/lib/services/honeypot';
 import { getTokenPairs, type DexPair } from '@/lib/services/dexscreener';
 import { getNewEvmPairs } from '@/lib/services/geckoterminal';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
@@ -75,6 +80,13 @@ export interface DetectorResult {
   addr: AddressScanResult | null;
   market: DetectedMarket | null;
   feed: DetectedFeed | null;
+  /**
+   * Live buy/sell simulation from Honeypot.is (FREE, no-key, EVM-only).
+   * Independent second opinion to GoPlus's static honeypot flag. null on
+   * Solana / unsupported chains; `available: false` inside on EVM when the
+   * provider could not simulate (no pair / error).
+   */
+  honeypot: HoneypotResult | null;
 }
 
 function extractSocials(
@@ -186,21 +198,30 @@ export async function detectContract(
       addr: null,
       market: null,
       feed: null,
+      honeypot: null,
     };
   }
 
-  // 2. Pull every source in parallel.
-  const [tokenScan, addressScan, dexScan, feedScan] = await Promise.allSettled([
-    getTokenSecurity(address, chain),
-    getAddressSecurity(address, chain),
-    getTokenPairs(address),
-    fetchFeedRow(address, chain),
-  ]);
+  // 2. Pull every source in parallel. Honeypot.is is EVM-only — only fan it out
+  //    when the address+chain are actually simulatable, otherwise skip cleanly.
+  const honeypotPromise: Promise<HoneypotResult | null> = honeypotSupported(address, chain)
+    ? getHoneypotSimulation(address, chain)
+    : Promise.resolve(null);
+
+  const [tokenScan, addressScan, dexScan, feedScan, honeypotScan] =
+    await Promise.allSettled([
+      getTokenSecurity(address, chain),
+      getAddressSecurity(address, chain),
+      getTokenPairs(address),
+      fetchFeedRow(address, chain),
+      honeypotPromise,
+    ]);
 
   const token = tokenScan.status === 'fulfilled' ? tokenScan.value : null;
   const addr = addressScan.status === 'fulfilled' ? addressScan.value : null;
   const dexPairs = dexScan.status === 'fulfilled' ? dexScan.value : [];
   const feed = feedScan.status === 'fulfilled' ? feedScan.value : null;
+  const honeypot = honeypotScan.status === 'fulfilled' ? honeypotScan.value : null;
 
   let bestPair = pickBestPair(dexPairs, address, chain);
   let market: DetectedMarket | null = bestPair ? pairToMarket(bestPair, 'dexscreener') : null;
@@ -237,9 +258,12 @@ export async function detectContract(
   const hasAddrIntel = !!addr && (addr.labels?.length > 0 || addr.riskScore > 0);
   const hasFeedRecord = !!feed;
   const hasMarket = !!market;
+  // A successful Honeypot.is simulation is a real on-chain signal the token
+  // exists and is tradable, even when GoPlus/DexScreener have no record yet.
+  const hasHoneypotSim = !!honeypot && honeypot.available && honeypot.simulationSuccess;
 
   // INVALID — nothing anywhere.
-  if (!hasSecurityRecord && !hasAddrIntel && !hasFeedRecord && !hasMarket) {
+  if (!hasSecurityRecord && !hasAddrIntel && !hasFeedRecord && !hasMarket && !hasHoneypotSim) {
     return {
       address,
       chain,
@@ -249,6 +273,7 @@ export async function detectContract(
       addr: null,
       market: null,
       feed: null,
+      honeypot: null,
     };
   }
 
@@ -277,5 +302,6 @@ export async function detectContract(
     addr,
     market,
     feed,
+    honeypot,
   };
 }
