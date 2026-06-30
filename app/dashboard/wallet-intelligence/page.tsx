@@ -56,6 +56,16 @@ interface WalletData {
   tokenDistribution?: { symbol: string; percentage: number }[];
   isWhale?: boolean;
   whaleScore?: number;
+  // Top counterparties derived from real recent transactions.
+  counterparties?: Array<{
+    address: string;
+    count: number;
+    inbound: number;
+    outbound: number;
+    label: string | null;
+    category: string | null;
+    parent: string | null;
+  }>;
   // Realized PnL from real Bitquery DEX trades (90d), FIFO cost basis.
   realizedPnl?: {
     byToken: Array<{ token: string; tokenSymbol: string | null; totalRealizedUsd: number; winRate: number; lots: number }>;
@@ -309,6 +319,85 @@ function ActivityHeatmap({ transactions }: { transactions: RecentTx[] }) {
       </div>
       <div className="mt-3 text-[10px] text-gray-500">
         Most active <span className="text-gray-300 font-semibold">{HEATMAP_DAYS[peakDay]}</span> around <span className="text-gray-300 font-semibold">{HEATMAP_BLOCK_RANGE[peakBlock]} UTC</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Counterparty Links ─────────────────────────────────────────────────────
+// Who this wallet trades with most, from real recent transactions. Known
+// entities (CEX / DEX / bridge / mixer) get a coloured category tag; unknown
+// addresses link out to the explorer.
+const CP_CATEGORY_STYLE: Record<string, { label: string; color: string; bg: string }> = {
+  cex: { label: 'CEX', color: '#F0B90B', bg: 'rgba(240,185,11,0.12)' },
+  dex: { label: 'DEX', color: '#6F7EFF', bg: 'rgba(111,126,255,0.12)' },
+  bridge: { label: 'Bridge', color: '#28A0F0', bg: 'rgba(40,160,240,0.12)' },
+  mixer: { label: 'Mixer', color: '#EF4444', bg: 'rgba(239,68,68,0.12)' },
+  'market-maker': { label: 'Market Maker', color: '#10B981', bg: 'rgba(16,185,129,0.12)' },
+  lending: { label: 'Lending', color: '#8B7CFF', bg: 'rgba(139,124,255,0.12)' },
+};
+
+function CounterpartyLinks({
+  counterparties, chain,
+}: {
+  counterparties: NonNullable<WalletData['counterparties']>;
+  chain: string;
+}) {
+  if (!counterparties || counterparties.length === 0) return null;
+  const explorerBase = chain === 'Solana' ? 'https://solscan.io/account/' : 'https://etherscan.io/address/';
+  const maxCount = Math.max(...counterparties.map(c => c.count));
+
+  return (
+    <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <GitCompare className="w-4 h-4 text-[#7C3AED]" />
+          <h3 className="font-bold text-sm">Top Counterparties</h3>
+        </div>
+        <span className="text-[10px] text-gray-500">most frequent</span>
+      </div>
+      <div className="space-y-2">
+        {counterparties.map((cp) => {
+          const style = cp.category ? CP_CATEGORY_STYLE[cp.category] : null;
+          const name = cp.label || `${cp.address.slice(0, 6)}…${cp.address.slice(-4)}`;
+          return (
+            <a
+              key={cp.address}
+              href={`${explorerBase}${cp.address}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block group"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs font-semibold text-white truncate group-hover:text-[#6F7EFF] transition-colors">{name}</span>
+                  {style && (
+                    <span className="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded font-bold flex-shrink-0"
+                      style={{ color: style.color, backgroundColor: style.bg }}>
+                      {style.label}
+                    </span>
+                  )}
+                  {cp.parent && cp.parent !== cp.label && (
+                    <span className="text-[9px] text-gray-500 flex-shrink-0">{cp.parent}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-[9px] text-gray-500 font-mono">
+                    <span className="text-emerald-400">{cp.inbound}↓</span> <span className="text-red-400">{cp.outbound}↑</span>
+                  </span>
+                  <span className="text-xs font-mono font-bold text-gray-300 w-6 text-end">{cp.count}</span>
+                </div>
+              </div>
+              <div className="h-1 rounded-full bg-black/30 mt-1 overflow-hidden">
+                <div className="h-full rounded-full"
+                  style={{ width: `${(cp.count / maxCount) * 100}%`, backgroundColor: style?.color ?? '#6F7EFF' }} />
+              </div>
+            </a>
+          );
+        })}
+      </div>
+      <div className="mt-2.5 text-[9px] text-gray-600">
+        <span className="text-emerald-400">↓</span> received from · <span className="text-red-400">↑</span> sent to · from recent transactions
       </div>
     </div>
   );
@@ -878,6 +967,11 @@ export default function WalletIntelligencePage() {
 
                 {/* Activity heatmap — when (UTC) this wallet transacts, from real tx timestamps */}
                 <ActivityHeatmap transactions={walletData.recentTransactions ?? []} />
+
+                {/* Top counterparties — who this wallet trades with most */}
+                {walletData.counterparties && walletData.counterparties.length > 0 && (
+                  <CounterpartyLinks counterparties={walletData.counterparties} chain={walletData.chain} />
+                )}
 
                 {/* All Holdings */}
                 <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">

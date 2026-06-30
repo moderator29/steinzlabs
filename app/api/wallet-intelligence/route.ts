@@ -4,6 +4,8 @@ import { getTokenSecurity } from '@/lib/services/goplus';
 import { buildSolanaWalletIntelligence } from '@/lib/services/solana-intelligence';
 import { buildEvmWalletIntelligence, EVM_CHAIN_CONFIG, KNOWN_TOKEN_LOGOS } from '@/lib/services/evm-intelligence';
 import { buildWalletRealizedPnl } from '@/lib/walletIntel/walletPnl';
+import { lookupEntity } from '@/lib/clusters/entityRegistry';
+import { normalizeAddress, isEvmAddress } from '@/lib/utils/addressNormalize';
 import type { TokenSecurityResult } from '@/lib/security/goplusService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -72,6 +74,62 @@ function toContractSecurity(sec: TokenSecurityResult): ContractSecurity {
     trustLevel: sec.safetyLevel,
     flags,
   };
+}
+
+// ─── Counterparty Links ─────────────────────────────────────────────────────
+// Who this wallet transacts with most, derived purely from the real recent
+// transactions already fetched. The counterparty is whichever side of a
+// transfer isn't the wallet itself; we tally interaction frequency and tag
+// known entities (CEX / DEX / bridge / mixer) from the on-chain registry.
+
+interface TxSide { from?: string; to?: string }
+
+export interface CounterpartyLink {
+  address: string;
+  count: number;
+  inbound: number;
+  outbound: number;
+  label: string | null;
+  category: string | null;
+  parent: string | null;
+}
+
+function buildCounterparties(txs: TxSide[], wallet: string): CounterpartyLink[] {
+  const self = normalizeAddress(wallet);
+  const map = new Map<string, { count: number; inbound: number; outbound: number }>();
+
+  for (const tx of txs) {
+    const from = tx.from ? normalizeAddress(tx.from) : '';
+    const to = tx.to ? normalizeAddress(tx.to) : '';
+    let cp = '';
+    let inbound = false;
+    if (from && from === self && to && to !== self) { cp = to; inbound = false; }
+    else if (to && to === self && from && from !== self) { cp = from; inbound = true; }
+    else continue; // self-transfer, contract self-call, or missing side
+    if (!cp || cp === self) continue;
+
+    const e = map.get(cp) ?? { count: 0, inbound: 0, outbound: 0 };
+    e.count++;
+    if (inbound) e.inbound++; else e.outbound++;
+    map.set(cp, e);
+  }
+
+  return Array.from(map.entries())
+    .map(([address, c]) => {
+      // Registry is EVM-keyed; only look up EVM-shaped counterparties.
+      const ent = isEvmAddress(address) ? lookupEntity(address) : null;
+      return {
+        address,
+        count: c.count,
+        inbound: c.inbound,
+        outbound: c.outbound,
+        label: ent?.name ?? null,
+        category: ent?.category ?? null,
+        parent: ent?.parent ?? null,
+      };
+    })
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6);
 }
 
 // ─── EVM Data Fetcher (uses shared evm-intelligence.ts) ──────────────────────
@@ -246,7 +304,11 @@ export async function GET(request: Request) {
     const sinceIso = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
     const realizedPnl = await buildWalletRealizedPnl(pnlChain, address, sinceIso);
 
-    return NextResponse.json({ ...walletData, contractSecurity: contractSecurityMap, realizedPnl }, {
+    // Top counterparties from the real recent transactions already fetched.
+    const txs = (walletData.recentTransactions as TxSide[] | undefined) ?? [];
+    const counterparties = buildCounterparties(txs, address);
+
+    return NextResponse.json({ ...walletData, contractSecurity: contractSecurityMap, realizedPnl, counterparties }, {
       headers: { 'Cache-Control': 'public, max-age=30' },
     });
   } catch (error: unknown) {
