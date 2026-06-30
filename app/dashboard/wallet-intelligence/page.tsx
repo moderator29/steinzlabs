@@ -75,7 +75,7 @@ function RecentTransactions({ transactions, chain, walletAddress }: { transactio
   const explorerBase = chain === 'Solana' ? 'https://solscan.io/tx/' : 'https://etherscan.io/tx/';
 
   function formatTime(blockTime: string | null) {
-    if (!blockTime) return '—';
+    if (!blockTime) return 'unknown';
     const d = new Date(blockTime);
     const diff = Date.now() - d.getTime();
     const mins = Math.floor(diff / 60000);
@@ -154,6 +154,84 @@ function RecentTransactions({ transactions, chain, walletAddress }: { transactio
           )}
         </>
       )}
+    </div>
+  );
+}
+
+// ─── Activity Heatmap ──────────────────────────────────────────────────────────
+// When (UTC) this wallet actually transacts, bucketed from real on-chain tx
+// timestamps into a 7-day x 4-block grid. No synthetic fill — cells reflect
+// only observed transactions, and the whole card hides when the sample is too
+// thin to be meaningful.
+const HEATMAP_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+// 6-hour blocks labelled by their start hour (no dash ranges — clean axis).
+const HEATMAP_BLOCKS = ['00h', '06h', '12h', '18h'];
+const HEATMAP_BLOCK_RANGE = ['00:00→06:00', '06:00→12:00', '12:00→18:00', '18:00→24:00'];
+
+function ActivityHeatmap({ transactions }: { transactions: RecentTx[] }) {
+  const stamped = transactions.filter(t => t.blockTime);
+  if (stamped.length < 4) return null;
+
+  // grid[day][block] = count. Day 0 = Sunday to match Date.getUTCDay().
+  const grid: number[][] = Array.from({ length: 7 }, () => [0, 0, 0, 0]);
+  let total = 0;
+  for (const tx of stamped) {
+    const d = new Date(tx.blockTime as string);
+    if (Number.isNaN(d.getTime())) continue;
+    const day = d.getUTCDay();
+    const block = Math.min(3, Math.floor(d.getUTCHours() / 6));
+    grid[day][block]++;
+    total++;
+  }
+  if (total < 4) return null;
+
+  const max = Math.max(...grid.flat());
+  // Peak window for a one-line human summary.
+  let peakDay = 0, peakBlock = 0, peakCount = 0;
+  grid.forEach((row, di) => row.forEach((c, bi) => { if (c > peakCount) { peakCount = c; peakDay = di; peakBlock = bi; } }));
+
+  const cellColor = (count: number) => {
+    if (count === 0) return 'rgba(255,255,255,0.03)';
+    const t = max > 0 ? count / max : 0;
+    // Blue→purple ramp matching the Naka palette; alpha scales with intensity.
+    return `rgba(${Math.round(0 + t * 90)}, ${Math.round(102 - t * 30)}, ${Math.round(255 - t * 40)}, ${0.18 + t * 0.72})`;
+  };
+
+  return (
+    <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4 text-[#0066FF]" />
+          <h3 className="font-bold text-sm">Activity Heatmap <span className="text-[10px] text-gray-500 font-normal">· UTC</span></h3>
+        </div>
+        <span className="text-[10px] text-gray-500">{total} tx</span>
+      </div>
+      <div className="flex flex-col gap-1">
+        <div className="grid grid-cols-[28px_repeat(4,1fr)] gap-1 items-center">
+          <div />
+          {HEATMAP_BLOCKS.map(b => (
+            <div key={b} className="text-[8px] text-gray-500 text-center font-mono">{b}</div>
+          ))}
+        </div>
+        {grid.map((row, di) => (
+          <div key={di} className="grid grid-cols-[28px_repeat(4,1fr)] gap-1 items-center">
+            <div className="text-[9px] text-gray-500 font-mono">{HEATMAP_DAYS[di]}</div>
+            {row.map((count, bi) => (
+              <div
+                key={bi}
+                className="h-6 rounded-md flex items-center justify-center transition-colors"
+                style={{ backgroundColor: cellColor(count) }}
+                title={`${HEATMAP_DAYS[di]} ${HEATMAP_BLOCK_RANGE[bi]} UTC · ${count} tx`}
+              >
+                {count > 0 && <span className="text-[9px] font-mono font-semibold text-white/90">{count}</span>}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 text-[10px] text-gray-500">
+        Most active <span className="text-gray-300 font-semibold">{HEATMAP_DAYS[peakDay]}</span> around <span className="text-gray-300 font-semibold">{HEATMAP_BLOCK_RANGE[peakBlock]} UTC</span>
+      </div>
     </div>
   );
 }
@@ -703,6 +781,9 @@ export default function WalletIntelligencePage() {
                   );
                 })()}
 
+                {/* Activity heatmap — when (UTC) this wallet transacts, from real tx timestamps */}
+                <ActivityHeatmap transactions={walletData.recentTransactions ?? []} />
+
                 {/* All Holdings */}
                 <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
                   <div className="flex items-center justify-between mb-3">
@@ -756,7 +837,7 @@ export default function WalletIntelligencePage() {
                               )}
                               <div className="text-end">
                                 <div className="text-xs font-semibold">
-                                  {h.valueUsd && parseFloat(h.valueUsd) > 0 ? `$${parseFloat(h.valueUsd).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '—'}
+                                  {h.valueUsd && parseFloat(h.valueUsd) > 0 ? `$${parseFloat(h.valueUsd).toLocaleString(undefined, { maximumFractionDigits: 2 })}` : 'No price'}
                                 </div>
                                 <div className="text-[10px] text-gray-500">{parseFloat(h.balance) > 1000 ? parseFloat(h.balance).toLocaleString(undefined, { maximumFractionDigits: 0 }) : h.balance} {h.symbol}</div>
                               </div>
