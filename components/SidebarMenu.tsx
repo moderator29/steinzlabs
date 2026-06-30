@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/lib/theme/ThemeProvider';
+import { GlobalWhatsNewButton } from '@/components/common/GlobalWhatsNew';
 
 interface SidebarMenuProps {
   onClose: () => void;
@@ -213,6 +214,7 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
         {/* §3.2 — theme toggle lives at the bottom of the side nav (the spot
             the equivalent control sits on X), moved out of the top header. */}
         <div className="px-3 py-3 border-t border-white/[0.06] flex-shrink-0 space-y-2">
+          <GlobalWhatsNewButton />
           <ThemeFooterToggle />
           <div className="text-[10px] text-gray-600 font-mono px-1">NAKA LABS v1.0.0-beta</div>
         </div>
