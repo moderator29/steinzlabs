@@ -7,6 +7,8 @@ import {
   XCircle, Shield, Loader2, Clock, Info, Brain, ThumbsUp, ThumbsDown, ShieldAlert
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { domainShieldHowItWorks } from '@/lib/howItWorks/content/domain-shield';
 
 interface ScanResult {
   url: string;
@@ -101,6 +103,7 @@ export default function DomainShieldPage() {
             <h1 className="text-sm font-heading font-bold">Domain Shield</h1>
             <p className="text-[10px] text-gray-500">Phishing detection and domain verification</p>
           </div>
+          <HowItWorksButton content={domainShieldHowItWorks} className="ms-auto shrink-0" />
         </div>
       </div>
 

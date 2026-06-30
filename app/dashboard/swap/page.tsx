@@ -24,6 +24,8 @@ import SwapRoutePreview from '@/components/swap/SwapRoutePreview';
 import { RouteComparison } from '@/components/swap/RouteComparison';
 import SwapDuneStrip from '@/components/trading/SwapDuneStrip';
 import { OrderForm } from '@/components/trading/OrderForm';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { swapHowItWorks } from '@/lib/howItWorks/content/swap';
 
 // §12 — Safari private mode and some locked-down enterprise browsers
 // throw SecurityError on every localStorage read. The swap signing path
@@ -1263,6 +1265,7 @@ export default function SwapPage() {
             })()}
             <h1 className="text-lg font-heading font-bold text-white">Swap</h1>
             <div className="flex items-center gap-1.5">
+              <HowItWorksButton content={swapHowItWorks} className="ms-auto shrink-0" />
               {/* Multi-leg batch flow — queue several swaps, sign each separately. */}
               <button
                 onClick={() => router.push('/dashboard/swap/batch')}

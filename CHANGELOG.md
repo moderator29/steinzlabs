@@ -8,6 +8,13 @@ the top.
 
 ## [Unreleased]
 
+### In-app "How it works" panels (June 2026)
+
+- **Per-feature help button** — every feature in the side navigation and the bottom menu now carries a small "How it works" button tucked into its header. It opens a branded glass panel on the aurora canvas with four tabs: How it works, How to use it, Why it matters, and What's new. The panel is portaled to the body, traps focus, locks page scroll, and closes on Escape, backdrop click, or the close button.
+- **Grounded, dash-free copy** — content for each feature was written from the real implementation (and the changelog) so it reflects what the feature actually does. Copy avoids dash punctuation, fabricated names, numbers, and dates, and never describes admin-only or operator internals. Surfaces covered include Dashboard, Portfolio, Notifications, Discover, Messages, Market, Swap, Transactions, DNA Analyzer, Wallet Intelligence, Wallet Clusters, On-Chain Trends, Smart Money, Network Metrics, Whale Tracker, Bubble Map, Security Center, Domain Shield, Signature Insight, Contract Analyzer, Approval Manager, Risk Scanner, Wallet, VTX Agent, Sniper Bot, Market Maker, Network Graph, Alerts, Research Lab, Archive, Pricing, and Profile.
+- **Platform-wide What's new** — the side navigation footer gained a "What's new" button that opens a changelog-style panel grouping recent platform updates by period, matching the per-feature styling.
+- **Shared primitives** — new `lib/howItWorks/types.ts` (content shape), `components/common/HowItWorks.tsx` (button + panel), and `components/common/GlobalWhatsNew.tsx`, with per-feature copy under `lib/howItWorks/content/`.
+
 ### Daily Research Brief engine (June 2026)
 
 - **Automated daily market brief** — new `research-daily-brief` cron (daily dispatch group, 03:00 UTC) assembles a real market read from CoinGecko (top gainers/losers among the top 100 by cap, global market vibe, trending searches) and the platform's own `whale_activity` feed (biggest priced moves, last 24h), publishes it to Research Labs as a styled post, and emails a rich preview digest to every user who hasn't opted out (`notification_settings.email_enabled`). Idempotent per UTC day; publishes nothing when every data source is down (no empty shells, no fabricated numbers). Kill switch: `RESEARCH_DIGEST_EMAIL=false` publishes web-only.

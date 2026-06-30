@@ -3,6 +3,8 @@
 import { Search, Wallet, TrendingUp, Clock, DollarSign, Activity, ExternalLink, Loader2, AlertCircle, Shield, PieChart, FileCode, ArrowRight, Copy, CheckCircle, XCircle, AlertTriangle, ChevronDown, ChevronUp, Send, ArrowDownLeft, RefreshCw, Zap, Brain, GitCompare } from 'lucide-react';
 import Link from 'next/link';
 import BackButton from '@/components/ui/BackButton';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { walletIntelligenceHowItWorks } from '@/lib/howItWorks/content/wallet-intelligence';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useNavState } from '@/lib/nav/useNavState';
@@ -758,6 +760,7 @@ export default function WalletIntelligencePage() {
           >
             Wallet scan →
           </Link>
+          <HowItWorksButton content={walletIntelligenceHowItWorks} className="shrink-0" />
         </div>
       </div>
 

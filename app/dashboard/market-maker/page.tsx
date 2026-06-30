@@ -21,6 +21,8 @@ import { ChainLogo } from '@/components/common/ChainLogo';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { BackgroundSnipingCard } from '@/components/sniper/BackgroundSnipingCard';
 import { CreateStrategyModal } from '@/components/marketMaker/CreateStrategyModal';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { marketMakerHowItWorks } from '@/lib/howItWorks/content/market-maker';
 
 // Inline blue-stride ring — brand neon-blue edge glow.
 const BLUE_STRIDE = { boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' } as const;
@@ -141,6 +143,7 @@ export default function MarketMakerPage() {
               <button onClick={() => setShowCreate(true)} className="nl-btn-neon inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs">
                 <Plus className="w-4 h-4" /> New Strategy
               </button>
+              <HowItWorksButton content={marketMakerHowItWorks} className="ms-auto shrink-0" />
             </div>
           </div>
 

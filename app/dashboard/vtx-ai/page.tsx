@@ -3,6 +3,8 @@
 import { Send, Sparkles, TrendingUp, Shield, BarChart3, User, Copy, Check, Trash2, Globe, Lock, Settings, Wrench, Search, Target, Eye, ChevronDown, X, Wallet, Network, MessageSquarePlus, History, ChevronRight, Clock } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import SteinzLogo from '@/components/ui/SteinzLogo';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { vtxAgentHowItWorks } from '@/lib/howItWorks/content/vtx-ai';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useRef, useEffect, Suspense } from 'react';
 import SteinzLogoSpinner from '@/components/SteinzLogoSpinner';
@@ -822,6 +824,7 @@ function VtxAiPageInner() {
           </div>
 
           <div className="flex items-center gap-1">
+            <HowItWorksButton content={vtxAgentHowItWorks} iconOnly className="mr-0.5" />
             <button onClick={clearChat} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors" title={!isPro ? `New chat · ${dailyUsage.remaining}/${dailyUsage.limit} messages left today` : "New chat"}>
               <MessageSquarePlus className="w-4 h-4 text-gray-500" />
             </button>

@@ -20,6 +20,8 @@ import {
   type NewLaunchAlert, type WalletActivityAlert, type AlertChain,
 } from '@/lib/hooks/useAlertMonitor';
 import { addLocalNotification } from '@/lib/notifications';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { alertsHowItWorks } from '@/lib/howItWorks/content/alerts';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -826,6 +828,7 @@ export default function AlertsPage() {
             <Plus className="w-3.5 h-3.5" />
             Create
           </button>
+          <HowItWorksButton content={alertsHowItWorks} className="shrink-0" />
         </div>
 
         {/* Tabs */}

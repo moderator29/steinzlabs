@@ -2,6 +2,8 @@
 
 import { Shield, Search, AlertTriangle, CheckCircle, XCircle, Clock, Loader2, ExternalLink, Copy, Wallet, ArrowRight, Brain, ThumbsUp, ThumbsDown, ShieldAlert } from 'lucide-react';
 import { SecurityHealthCard } from '@/components/security/SecurityHealthCard';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { securityCenterHowItWorks } from '@/lib/howItWorks/content/security';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useNavState } from '@/lib/nav/useNavState';
@@ -132,6 +134,12 @@ export default function SecurityPage() {
 
   return (
     <div className="p-4 space-y-4">
+        <div className="flex items-center gap-2">
+          <h1 className="text-base font-bold flex items-center gap-2">
+            <Shield className="w-4 h-4 text-[#0066FF]" /> Security Center
+          </h1>
+          <HowItWorksButton content={securityCenterHowItWorks} className="ms-auto shrink-0" />
+        </div>
         {/* SC1 + SC2 + SC3: composite health score, HIBP breach banner,
             and the 2FA-enable CTA, all live above the existing token
             scanner. */}

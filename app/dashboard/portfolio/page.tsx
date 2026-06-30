@@ -17,6 +17,8 @@ import * as Sentry from "@sentry/nextjs";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useNakaWallet } from "@/lib/hooks/useNakaWallet";
 import { useNavState } from "@/lib/nav/useNavState";
+import { HowItWorksButton } from "@/components/common/HowItWorks";
+import { portfolioHowItWorks } from "@/lib/howItWorks/content/portfolio";
 
 type Timeframe = "1D" | "7D" | "30D" | "90D" | "ALL";
 type TabId = "holdings" | "performance" | "alpha";
@@ -258,6 +260,7 @@ export default function PortfolioPage() {
             {address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Connect a wallet to track your holdings"}
           </p>
         </div>
+        <HowItWorksButton content={portfolioHowItWorks} className="ms-auto shrink-0" />
       </div>
 
       {/* HERO */}

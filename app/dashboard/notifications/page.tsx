@@ -6,6 +6,8 @@ import {
   Bell, AlertTriangle, Flame, ShieldAlert, Send, Info, ArrowLeftRight, CheckCheck,
 } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { notificationsHowItWorks } from '@/lib/howItWorks/content/notifications';
 import { getLocalNotifications, markAllNotificationsRead } from '@/lib/notifications';
 
 /**
@@ -114,14 +116,17 @@ export default function NotificationsPage() {
         showBack
         backTo="/dashboard"
         actions={
-          unread ? (
-            <button
-              onClick={markAll}
-              className="nl-button--ghost inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition-colors"
-            >
-              <CheckCheck className="w-3.5 h-3.5" /> Mark all read
-            </button>
-          ) : null
+          <>
+            {unread ? (
+              <button
+                onClick={markAll}
+                className="nl-button--ghost inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition-colors"
+              >
+                <CheckCheck className="w-3.5 h-3.5" /> Mark all read
+              </button>
+            ) : null}
+            <HowItWorksButton content={notificationsHowItWorks} className="ms-auto shrink-0" />
+          </>
         }
       />
 
