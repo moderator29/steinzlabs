@@ -17,12 +17,9 @@ const GROUPS: RoadmapGroup[] = [
     icon: Wallet,
     title: 'Naka Wallet upgrades',
     items: [
-      { name: 'Watchlist tab', desc: 'A dedicated tab inside the wallet for tokens you track but do not yet hold.' },
-      { name: 'NFT tab', desc: 'Multi-chain NFT gallery with floor-price and rarity at a glance.' },
-      { name: 'dApp browser', desc: 'In-wallet connection to DeFi apps with permission review and a kill switch.' },
-      { name: 'Scan QR', desc: 'Scan any payment address directly from the wallet header.' },
-      { name: 'Biometric unlock', desc: 'Face ID / Touch ID for wallet actions on mobile browsers that support it.' },
-      { name: 'Manage crypto', desc: 'Toggle which tokens show up in the list and pin your favourites.' },
+      { name: 'Bitcoin send & receive', desc: 'Native BTC send/receive (BIP-84 bech32). The wallet already derives the address path; full broadcast support is in progress — see the Naka Wallet section for what ships today.' },
+      { name: 'Solana name (.sol) sending', desc: 'Resolve SNS .sol domains when sending on Solana, matching the ENS support that already works on EVM.' },
+      { name: 'WalletConnect Discover feed for Solana', desc: 'Browse new Solana launches in the Sniper Discover feed directly (Solana already flows through armed auto-snipers today).' },
     ],
   },
   {
@@ -32,7 +29,6 @@ const GROUPS: RoadmapGroup[] = [
     items: [
       { name: 'DCA bots', desc: 'Schedule recurring buys of any token across any chain we support.' },
       { name: 'Take-profit ladders', desc: 'Multi-step profit taking on a single position without manually placing each order.' },
-      { name: 'Cross-chain swap routing', desc: 'Bridge + swap in a single click when the best price lives on another chain.' },
       { name: 'Trading competitions', desc: 'Tier-gated leaderboards for weekly P&L competitions.' },
     ],
   },
@@ -53,7 +49,7 @@ export function DocsSection12() {
   return (
     <section id="coming-soon" className="mb-16 scroll-mt-20">
       <div className="flex items-baseline gap-3 mb-1">
-        <span className="text-5xl font-black text-white/[0.04] font-mono select-none leading-none">12</span>
+        <span className="text-5xl font-black text-white/[0.04] font-mono select-none leading-none">13</span>
         <h2 className="text-xl sm:text-2xl font-bold text-white">Coming Soon</h2>
       </div>
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">

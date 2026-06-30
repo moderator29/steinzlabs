@@ -42,31 +42,38 @@ export const DOC_SECTIONS: DocSection[] = [
     { id: 'swap-engine', label: 'Multi-Chain Swap' },
     { id: 'copy-trading', label: 'Copy Trading' },
     { id: 'sniper-bot', label: 'Sniper Bot' },
+    { id: 'background-sniping', label: 'Background (AA) Sniping' },
     { id: 'market-maker', label: 'Market Maker Bot' },
   ]},
-  { id: 'smart-money', number: '08', label: 'Smart Money & Whales', subsections: [
+  { id: 'naka-wallet', number: '08', label: 'Naka Wallet', subsections: [
+    { id: 'wallet-custody', label: 'Non-Custodial Design' },
+    { id: 'wallet-basics', label: 'The Basics' },
+    { id: 'wallet-security', label: 'Security & Control' },
+    { id: 'wallet-advanced', label: 'Fiat, Hardware & dApps' },
+  ]},
+  { id: 'smart-money', number: '09', label: 'Smart Money & Whales', subsections: [
     { id: 'smart-money-tracking', label: 'Smart Money Tracking' },
     { id: 'whale-tracker', label: 'Whale Tracker' },
   ]},
-  { id: 'portfolio', number: '09', label: 'Portfolio & Analytics', subsections: [
+  { id: 'portfolio', number: '10', label: 'Portfolio & Analytics', subsections: [
     { id: 'portfolio-tracker', label: 'Portfolio Tracker' },
     { id: 'predictions', label: 'Predictions' },
   ]},
-  { id: 'alerts-notifications', number: '10', label: 'Alerts & Notifications', subsections: [
+  { id: 'alerts-notifications', number: '11', label: 'Alerts & Notifications', subsections: [
     { id: 'price-alerts', label: 'Price Alerts' },
     { id: 'push-notifications', label: 'Push Notifications' },
   ]},
-  { id: 'telegram-bot', number: '11', label: 'Telegram Bot', subsections: [
+  { id: 'telegram-bot', number: '12', label: 'Telegram Bot', subsections: [
     { id: 'bot-connect', label: 'Connecting Your Account' },
     { id: 'bot-commands', label: 'Commands by Tier' },
     { id: 'bot-notifications', label: 'Automatic Notifications' },
   ]},
-  { id: 'coming-soon', number: '12', label: 'Coming Soon', subsections: [
+  { id: 'coming-soon', number: '13', label: 'Coming Soon', subsections: [
     { id: 'roadmap-wallet', label: 'Naka Wallet upgrades' },
     { id: 'roadmap-trading', label: 'Advanced trading' },
     { id: 'roadmap-social', label: 'Social & sharing' },
   ]},
-  { id: 'about', number: '13', label: 'About & Support', subsections: [
+  { id: 'about', number: '14', label: 'About & Support', subsections: [
     { id: 'about-mission', label: 'Our mission' },
     { id: 'about-what-we-do', label: 'What Naka Labs does' },
     { id: 'about-wallet', label: 'Naka Wallet' },
