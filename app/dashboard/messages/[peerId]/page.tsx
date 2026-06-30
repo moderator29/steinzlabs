@@ -205,9 +205,16 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
             const opened = await openConversationKey(sealed, keys.publicKey, keys.privateKey);
             if (!cancelled) setConvKey(opened);
           } catch {
-            // Can't open the stored key — surface as not-encrypted-readable
-            // rather than claiming encryption we can't actually perform.
-            if (!cancelled) { setPlaintext(true); setIsEncrypted(false); }
+            // Can't open the stored key on this device (key rotation / lost
+            // device). Do NOT downgrade to plaintext — that would send cleartext
+            // into a thread the peer reads as encrypted. Keep it locked: leave
+            // convKey null + plaintext false so the composer stays disabled, and
+            // surface why. History stays unreadable here (correct — the key is
+            // genuinely unavailable on this device).
+            if (!cancelled) {
+              setIsEncrypted(true);
+              setError('This encrypted conversation can’t be unlocked on this device.');
+            }
           }
         }
       } else {
