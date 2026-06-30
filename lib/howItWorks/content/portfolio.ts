@@ -25,7 +25,7 @@ export const portfolioHowItWorks: HowItWorksContent = {
     {
       date: 'June 2026',
       tag: 'NEW',
-      text: 'The performance view now highlights your single most profitable and most painful closed position, with an honest empty state when you have no losers in the window.',
+      text: 'The performance view surfaces your best and worst tokens by realized profit and loss, alongside win rate, average hold time, and total gas spent across your closed trades.',
     },
   ],
 };

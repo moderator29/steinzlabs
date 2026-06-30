@@ -4,7 +4,7 @@ export const dashboardHowItWorks: HowItWorksContent = {
   title: 'Dashboard',
   tagline: 'Your live home base for the market and your activity.',
   howItWorks: [
-    'The Dashboard is your home base. The top row shows live platform stats, followed by a Top Gainers panel and a Heating Up panel drawn from real market data.',
+    'The Dashboard is your home base. The top row shows live market stats like total market cap, 24h volume, and BTC dominance, followed by a Top Gainers panel and a Heating Up panel drawn from real market data.',
     'Below the market panels, a toggle lets you switch between an Overview of your activity, the Context Feed of on-chain signals, and a Market view.',
     'Everything is sourced from live data, so the numbers reflect the current market rather than a stored snapshot.',
   ],
@@ -21,10 +21,10 @@ export const dashboardHowItWorks: HowItWorksContent = {
     {
       date: 'June 2026',
       tag: 'IMPROVED',
-      text: 'The Context Feed updates in real time, and its market pulse is generated once and shared so it loads fast and stays fresh.',
+      text: 'The Overview now follows your saved widget order, so the home screen leads with the cards you care about most.',
     },
     {
-      date: '2026',
+      date: 'June 2026',
       tag: 'NEW',
       text: 'Top Gainers and Heating Up panels bring a live market overview to the home screen.',
     },
