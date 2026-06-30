@@ -29,6 +29,7 @@ interface StopLossRow {
   exit_to_token_symbol: string | null;
   slippage_bps: number;
   wallet_source: "external_evm" | "external_solana" | "builtin";
+  expires_at: string | null;
 }
 
 export async function GET(request: NextRequest) {
@@ -41,14 +42,26 @@ export async function GET(request: NextRequest) {
   }
 
   const admin = getSupabaseAdmin();
+  const nowIso = new Date().toISOString();
   let triggered = 0;
   let skipped = 0;
   let failed = 0;
 
+  // Expire trailing/SL orders past their optional deadline before evaluating,
+  // mirroring limit-order-monitor. NULL expires_at = good-til-cancelled.
+  const { data: expiredRows } = await admin
+    .from("stop_loss_orders")
+    .update({ status: "expired", updated_at: nowIso })
+    .eq("status", "active")
+    .lt("expires_at", nowIso)
+    .not("expires_at", "is", null)
+    .select("id");
+  const expired = expiredRows?.length ?? 0;
+
   const { data: orders, error } = await admin
     .from("stop_loss_orders")
     .select(
-      "id,user_id,chain,token_address,token_symbol,position_amount,entry_price_usd,stop_loss_price_usd,take_profit_price_usd,trailing_stop_percent,highest_price_seen,exit_to_token_address,exit_to_token_symbol,slippage_bps,wallet_source",
+      "id,user_id,chain,token_address,token_symbol,position_amount,entry_price_usd,stop_loss_price_usd,take_profit_price_usd,trailing_stop_percent,highest_price_seen,exit_to_token_address,exit_to_token_symbol,slippage_bps,wallet_source,expires_at",
     )
     .eq("status", "active")
     .limit(500)
@@ -81,16 +94,20 @@ export async function GET(request: NextRequest) {
 
     let triggerKind: TriggerKind | null = null;
 
-    // Update trailing-stop high-water mark first.
+    // Update trailing-stop high-water mark first, then evaluate drawdown off the
+    // peak — mirroring evaluatePosition() in lib/sniper/autosell.ts. The trailing
+    // stop only ARMS after price has moved above entry (otherwise a freshly-set
+    // trail would fire immediately on any tick below entry).
     if (order.trailing_stop_percent != null) {
-      const highest = order.highest_price_seen ?? order.entry_price_usd ?? currentPrice;
-      if (currentPrice > (highest ?? 0)) {
+      const entry = order.entry_price_usd ?? null;
+      const priorPeak = order.highest_price_seen ?? entry ?? currentPrice;
+      if (currentPrice > priorPeak) {
         await admin
           .from("stop_loss_orders")
           .update({ highest_price_seen: currentPrice, updated_at: new Date().toISOString() })
           .eq("id", order.id);
-      } else if (highest && highest > 0) {
-        const drawdownPct = ((highest - currentPrice) / highest) * 100;
+      } else if (priorPeak > 0 && (entry == null || priorPeak > entry)) {
+        const drawdownPct = ((priorPeak - currentPrice) / priorPeak) * 100;
         if (drawdownPct >= Number(order.trailing_stop_percent)) {
           triggerKind = "trail_stop";
         }
@@ -181,5 +198,6 @@ export async function GET(request: NextRequest) {
     triggered,
     skipped,
     failed,
+    expired,
   });
 }
