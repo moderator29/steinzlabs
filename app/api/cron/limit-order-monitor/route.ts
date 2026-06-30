@@ -4,8 +4,8 @@ import { verifyCron, cronResponse, cronHasWork } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getDexPrice } from "@/lib/services/dexscreener";
 import { executeTrade } from "@/lib/trading/relayer";
-import { usdcForChain } from "@/lib/trading/usdc";
-import { getEvmTokenDecimals } from "@/lib/sniper/priceFeed";
+import { usdcForChain, usdToUsdcBaseUnits } from "@/lib/trading/usdc";
+import { getTokenDecimalsForSizing } from "@/lib/sniper/priceFeed";
 
 const isEvmAddress = (v: string) => /^0x[a-fA-F0-9]{40}$/.test(v);
 
@@ -107,8 +107,20 @@ export async function GET(request: NextRequest) {
     const fromAddr = isEvmAddress(order.from_token_address)
       ? order.from_token_address
       : (usdcForChain(order.chain) ?? order.from_token_address);
-    const fromDecimals = await getEvmTokenDecimals(order.chain, fromAddr);
-    const amountInBase = (BigInt(Math.round(Number(order.from_amount) * 1e6)) * (BigInt(10) ** BigInt(fromDecimals)) / BigInt(1e6)).toString();
+    // Size the spend leg. USDC → deterministic per-chain helper (no RPC); a
+    // wrong default-18 on a 6-dp USDC chain would over-scale the order by 1e12.
+    // Non-USDC from-token → resolve real decimals and SKIP on failure, never 18.
+    let amountInBase: string;
+    if (fromAddr === usdcForChain(order.chain)) {
+      amountInBase = usdToUsdcBaseUnits(Number(order.from_amount), order.chain);
+    } else {
+      const dec = await getTokenDecimalsForSizing(order.chain, fromAddr);
+      if (dec == null) {
+        Sentry.captureMessage(`limit-order-monitor: from-token decimals unavailable for ${order.chain}:${fromAddr} — skipping order ${order.id} this tick`);
+        continue;
+      }
+      amountInBase = (BigInt(Math.round(Number(order.from_amount) * 1e6)) * (BigInt(10) ** BigInt(dec)) / BigInt(1e6)).toString();
+    }
 
     const result = await executeTrade({
       userId: order.user_id,

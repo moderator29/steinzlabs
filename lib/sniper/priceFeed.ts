@@ -111,6 +111,19 @@ export async function getSolanaTokenDecimals(mint: string): Promise<number | nul
   return null;
 }
 
+/**
+ * Decimals for SIZING a swap's from-token, dispatched by chain. EVM reads
+ * on-chain decimals (strict — null on RPC failure); Solana reads the SPL mint
+ * decimals from the Jupiter list. Returns null when unresolved so money-path
+ * callers SKIP the order rather than assuming a wrong default (assuming 18 for a
+ * 6-dp USDC spend leg over-scales the order by 1e12).
+ */
+export async function getTokenDecimalsForSizing(chain: string, tokenAddress: string): Promise<number | null> {
+  return chain.toLowerCase() === 'solana'
+    ? getSolanaTokenDecimals(tokenAddress)
+    : getEvmTokenDecimalsStrict(chain, tokenAddress);
+}
+
 async function priceUsdSolana(mint: string): Promise<number | null> {
   try {
     const p = await jupiterGetTokenPrice(mint);
