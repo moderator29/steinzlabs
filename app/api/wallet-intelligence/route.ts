@@ -231,7 +231,9 @@ export async function GET(request: Request) {
       );
       evmTokens.forEach((h, i) => {
         const r = secResults[i];
-        contractSecurityMap[h.contractAddress] = r.status === 'fulfilled' ? toContractSecurity(r.value) : null;
+        // Key by lowercased address (EVM is case-insensitive) so the page's
+        // lookup matches regardless of checksum casing from the holdings source.
+        contractSecurityMap[h.contractAddress.toLowerCase()] = r.status === 'fulfilled' ? toContractSecurity(r.value) : null;
       });
     }
 

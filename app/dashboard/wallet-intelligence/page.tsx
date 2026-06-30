@@ -635,7 +635,7 @@ export default function WalletIntelligencePage() {
                         const val = h.valueUsd ? parseFloat(h.valueUsd) : 0;
                         const pct = totalUsd > 0 && val > 0 ? (val / totalUsd * 100) : 0;
                         // Per-holding GoPlus security (already fetched by the API) — flag risky bags.
-                        const sec = h.contractAddress ? walletData.contractSecurity?.[h.contractAddress] : null;
+                        const sec = h.contractAddress ? walletData.contractSecurity?.[h.contractAddress.toLowerCase()] : null;
                         const risky = !!sec && (sec.isHoneypot || sec.trustLevel === 'DANGER' || sec.trustLevel === 'WARNING' || (sec.flags?.length ?? 0) > 0);
                         return (
                           <div key={`${h.symbol}-${i}`} className="flex items-center justify-between py-2 border-b border-[#1a1f2e]/40 last:border-0">
@@ -749,13 +749,18 @@ export default function WalletIntelligencePage() {
                           <h3 className="font-bold text-sm">Performance Metrics</h3>
                         </div>
                         <div className="space-y-3">
+                          {/* Only render metrics with a REAL value. The analyzer
+                              now grounds only `diversification` (timing/risk/
+                              conviction/consistency were ungrounded LLM guesses
+                              and were removed) — so the empty bars are filtered
+                              out instead of showing 0%/undefined. */}
                           {[
-                            { label: 'Diversification', value: aiAnalysis.metrics.diversification, color: aiAnalysis.metrics.diversification >= 60 ? 'var(--nl-success)' : aiAnalysis.metrics.diversification >= 35 ? 'var(--nl-blue)' : 'var(--nl-error)' },
-                            { label: 'Timing', value: aiAnalysis.metrics.timing, color: aiAnalysis.metrics.timing >= 60 ? 'var(--nl-blue)' : 'var(--nl-warning)' },
-                            { label: 'Risk Management', value: aiAnalysis.metrics.riskManagement, color: aiAnalysis.metrics.riskManagement >= 60 ? 'var(--nl-success)' : 'var(--nl-error)' },
+                            { label: 'Diversification', value: aiAnalysis.metrics.diversification, color: (aiAnalysis.metrics.diversification ?? 0) >= 60 ? 'var(--nl-success)' : (aiAnalysis.metrics.diversification ?? 0) >= 35 ? 'var(--nl-blue)' : 'var(--nl-error)' },
+                            { label: 'Timing', value: aiAnalysis.metrics.timing, color: (aiAnalysis.metrics.timing ?? 0) >= 60 ? 'var(--nl-blue)' : 'var(--nl-warning)' },
+                            { label: 'Risk Management', value: aiAnalysis.metrics.riskManagement, color: (aiAnalysis.metrics.riskManagement ?? 0) >= 60 ? 'var(--nl-success)' : 'var(--nl-error)' },
                             { label: 'Conviction', value: aiAnalysis.metrics.conviction, color: 'var(--nl-success)' },
                             { label: 'Consistency', value: aiAnalysis.metrics.consistency, color: 'var(--nl-purple)' },
-                          ].map(m => (
+                          ].filter(m => typeof m.value === 'number').map(m => (
                             <div key={m.label}>
                               <div className="flex justify-between text-[10px] mb-1">
                                 <span className="text-gray-400">{m.label}</span>
