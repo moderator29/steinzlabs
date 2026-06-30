@@ -66,6 +66,7 @@ interface StopBody {
   exit_to_token_address: string;
   exit_to_token_symbol?: string;
   slippage_bps?: number;
+  expires_at?: string | null;
   wallet_source: "external_evm" | "external_solana" | "builtin";
 }
 
@@ -123,6 +124,7 @@ export async function POST(request: NextRequest) {
       exit_to_token_address: body.exit_to_token_address,
       exit_to_token_symbol: body.exit_to_token_symbol ?? null,
       slippage_bps: body.slippage_bps ?? 100,
+      expires_at: body.expires_at ?? null,
       wallet_source: body.wallet_source,
     })
     .select()

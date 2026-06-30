@@ -65,9 +65,9 @@ export function AlertModal({ tokenId, symbol, currentPrice, onAdd, onClose }: Al
         {price && <p className="text-gray-500 text-xs mb-4">Alert when {symbol} goes {direction} ${parseFloat(price || '0').toFixed(4)} — delivered to your in-app notifications.</p>}
 
         <div className="flex gap-2">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-lg text-sm text-gray-400 border border-[#1E2433] hover:text-white transition-colors">Cancel</button>
+          <button onClick={onClose} className="nl-button--ghost flex-1 py-2.5 rounded-lg text-sm">Cancel</button>
           <button onClick={handleSubmit} disabled={!price || loading}
-            className="flex-1 py-2.5 rounded-lg text-sm font-semibold bg-[#0066FF] text-white hover:bg-[#0052CC] disabled:opacity-50 transition-colors">
+            className="nl-button flex-1 py-2.5 rounded-lg text-sm">
             {loading ? 'Setting...' : 'Set Alert'}
           </button>
         </div>

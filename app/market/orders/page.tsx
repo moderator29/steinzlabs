@@ -104,7 +104,7 @@ function EmptyState({ tab }: { tab: Tab }) {
   };
   const c = copy[tab];
   return (
-    <div className="py-16 px-6 rounded-xl border border-slate-800/70 bg-slate-900/30 text-center">
+    <div className="nl-glass py-16 px-6 rounded-xl text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
       <p className="font-semibold text-slate-200 mb-1">{c.title}</p>
       <p className="text-xs text-slate-500 max-w-md mx-auto">{c.body}</p>
     </div>
@@ -162,7 +162,7 @@ function Table({ tab, rows }: { tab: Tab; rows: any[] }) {
   const activeCols = cols[tab];
 
   return (
-    <div className="rounded-xl border border-slate-800/70 overflow-hidden overflow-x-auto">
+    <div className="nl-glass rounded-xl overflow-hidden overflow-x-auto" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
       <table className="w-full text-xs">
         <thead className="bg-slate-900/60 border-b border-slate-800">
           <tr>

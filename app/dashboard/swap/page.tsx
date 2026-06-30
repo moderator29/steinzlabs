@@ -24,6 +24,8 @@ import SwapRoutePreview from '@/components/swap/SwapRoutePreview';
 import { RouteComparison } from '@/components/swap/RouteComparison';
 import SwapDuneStrip from '@/components/trading/SwapDuneStrip';
 import { OrderForm } from '@/components/trading/OrderForm';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { swapHowItWorks } from '@/lib/howItWorks/content/swap';
 
 // §12 — Safari private mode and some locked-down enterprise browsers
 // throw SecurityError on every localStorage read. The swap signing path
@@ -251,7 +253,7 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={onClose} />
-      <div className="relative w-full max-w-[420px] bg-[#0f1320] border border-[#1a1f2e] rounded-t-2xl sm:rounded-2xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl">
+      <div className="relative w-full max-w-[420px] nl-glass rounded-t-2xl sm:rounded-2xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
           <h3 className="font-bold text-sm text-white">Select a token</h3>
           <button onClick={onClose} aria-label="Close token picker" className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"><X className="w-4 h-4 text-gray-400" aria-hidden="true" /></button>
@@ -369,8 +371,8 @@ function SettingsPanel({ slippage, setSlippage, mevProtect, setMevProtect, mevAu
               onClick={() => { setSlippage(s); setCustomSlippage(''); }}
               className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                 slippage === s && !customSlippage
-                  ? 'bg-[#0066FF] text-white shadow-lg shadow-[#0066FF]/20'
-                  : 'bg-[#060A12] text-gray-400 hover:text-white hover:bg-[#060A12]/80'
+                  ? 'nl-button'
+                  : 'nl-button--ghost'
               }`}
             >
               {s}%
@@ -1037,13 +1039,13 @@ export default function SwapPage() {
         // bespoke decrypt assumed a legacy iv-separated format with a raw
         // password-as-key, which never matched the real payload and
         // failed every built-in swap.
-        const storedWallets = safeLocalParse<Array<{ address?: string; encryptedKey?: string }>>('steinz_wallets', []);
+        const storedWallets = safeLocalParse<Array<{ address?: string; encryptedKey?: string; importMethod?: string; derivationPath?: string }>>('steinz_wallets', []);
         const activeAddr = safeLocalGet('steinz_active_wallet_address') || connectedAddress;
         // Solana is case-sensitive — compare via the shared normalizer
         // rather than raw toLowerCase.
         const storedWallet = storedWallets.find(w => w.address && activeAddr && addressesEqual(w.address, activeAddr, 'ethereum'));
-        if (!storedWallet?.encryptedKey) {
-          throw new Error('No Naka wallet keys found on this device. Re-import your wallet from the Wallet page to sign transactions.');
+        if (!storedWallet) {
+          throw new Error('No Naka wallet found on this device. Re-import your wallet from the Wallet page to sign transactions.');
         }
         if (!swapData.transaction) {
           // The built-in signer here is EVM-only; Solana swaps need a
@@ -1053,6 +1055,30 @@ export default function SwapPage() {
               ? 'Swapping on Solana with the built-in Naka wallet isn’t supported yet — connect Phantom for Solana swaps.'
               : 'The router did not return a transaction to sign. Refresh the quote and try again.',
           );
+        }
+        const chainRpcsForLedger: Record<string, string> = {
+          ethereum: 'https://eth.llamarpc.com', base: 'https://mainnet.base.org',
+          arbitrum: 'https://arb1.arbitrum.io/rpc', polygon: 'https://polygon-rpc.com',
+          bsc: 'https://bsc-dataseed.binance.org', avalanche: 'https://api.avax.network/ext/bc/C/rpc',
+          optimism: 'https://mainnet.optimism.io',
+        };
+        // #44 — Ledger hardware wallet: sign the swap on the device (no
+        // stored key to decrypt).
+        if (storedWallet.importMethod === 'ledger') {
+          const { sendLedgerEvmTx } = await import('@/lib/wallet/ledger');
+          hash = await sendLedgerEvmTx({
+            path: storedWallet.derivationPath ?? "44'/60'/0'/0/0",
+            rpcUrl: chainRpcsForLedger[chain] || chainRpcsForLedger.ethereum,
+            tx: {
+              to: swapData.transaction.to,
+              data: swapData.transaction.data,
+              value: swapData.transaction.value ? BigInt(swapData.transaction.value) : undefined,
+            },
+          });
+          // Skip the password/decrypt path below — Ledger already broadcast.
+        } else {
+        if (!storedWallet.encryptedKey) {
+          throw new Error('No Naka wallet keys found on this device. Re-import your wallet from the Wallet page to sign transactions.');
         }
         const { ethers } = await import('ethers');
         const pwd = getWalletSessionKey() || '';
@@ -1092,6 +1118,7 @@ export default function SwapPage() {
         const signer = new ethers.Wallet(pk, provider);
         const tx = await signer.sendTransaction(swapData.transaction);
         hash = tx.hash;
+        } // end non-Ledger built-in signing
       } else {
         throw new Error('Please connect a wallet (MetaMask, Phantom, or built-in) to execute swaps.');
       }
@@ -1209,7 +1236,7 @@ export default function SwapPage() {
   }, [hasQuote, toToken, chain, fromAmountUsd]);
 
   return (
-    <div className="min-h-screen bg-[#060A12] text-white">
+    <div className="min-h-screen bg-transparent text-white">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#0066FF]/[0.03] rounded-full blur-[120px]" />
       </div>
@@ -1238,6 +1265,7 @@ export default function SwapPage() {
             })()}
             <h1 className="text-lg font-heading font-bold text-white">Swap</h1>
             <div className="flex items-center gap-1.5">
+              <HowItWorksButton content={swapHowItWorks} className="ms-auto shrink-0" />
               {/* Multi-leg batch flow — queue several swaps, sign each separately. */}
               <button
                 onClick={() => router.push('/dashboard/swap/batch')}
@@ -1360,7 +1388,7 @@ export default function SwapPage() {
                 />
                 <button
                   onClick={() => setShowTokenSelect('from')}
-                  className="flex items-center gap-2 bg-[#060A12] hover:bg-[#0D1117] px-3 py-2 rounded-xl text-sm font-bold border border-white/[0.06] transition-all hover:border-[#1a1f2e] shrink-0 group"
+                  className="nl-card flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all shrink-0 group"
                 >
                   <TokenBadge symbol={fromToken} size={24} />
                   <span className="text-white">{fromToken}</span>
@@ -1386,7 +1414,7 @@ export default function SwapPage() {
               </div>
             </div>
 
-            <div className="p-4 sm:p-5 bg-[#0D1117]/60">
+            <div className="nl-card p-4 sm:p-5">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs text-gray-500 font-medium">You receive</span>
                 <span className="text-xs text-gray-600">Balance: {connectedAddress ? (walletBalance[toToken]?.toFixed(4) || '0.00') : '--'}</span>
@@ -1408,7 +1436,7 @@ export default function SwapPage() {
                 )}
                 <button
                   onClick={() => setShowTokenSelect('to')}
-                  className="flex items-center gap-2 bg-[#060A12] hover:bg-[#0D1117] px-3 py-2 rounded-xl text-sm font-bold border border-white/[0.06] transition-all hover:border-[#1a1f2e] shrink-0 group"
+                  className="nl-card flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all shrink-0 group"
                 >
                   <TokenBadge symbol={toToken} size={24} />
                   <span className="text-white">{toToken}</span>
@@ -1478,7 +1506,7 @@ export default function SwapPage() {
 
           {/* Gasless Toggle */}
           {chain !== 'solana' && (
-            <div className="mt-3 flex items-center justify-between bg-[#0f1320] rounded-xl px-4 py-3 border border-white/[0.06]">
+            <div className="mt-3 flex items-center justify-between nl-glass rounded-xl px-4 py-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4 text-yellow-400" />
                 <div>
@@ -1554,14 +1582,14 @@ export default function SwapPage() {
                 {walletMode === 'naka' ? (
                   <button
                     onClick={() => router.push('/dashboard/wallet-page')}
-                    className="shrink-0 px-3 py-1.5 bg-[#0066FF] rounded-lg text-[11px] font-bold text-white hover:bg-[#0918CC] transition-colors"
+                    className="nl-button shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold"
                   >
                     Create
                   </button>
                 ) : HAS_APPKIT ? (
                   <button
                     onClick={() => openAppKitModal()}
-                    className="shrink-0 px-3 py-1.5 bg-[#0066FF] rounded-lg text-[11px] font-bold text-white hover:bg-[#0918CC] transition-colors"
+                    className="nl-button shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold"
                   >
                     Connect
                   </button>
@@ -1592,8 +1620,8 @@ export default function SwapPage() {
               disabled={!fromAmount || parseFloat(fromAmount) <= 0 || swapping || fetchingQuote}
               className={`w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 ${
                 fromAmount && parseFloat(fromAmount) > 0 && !swapping && !fetchingQuote
-                  ? 'bg-[#0066FF] hover:bg-[#0918CC] active:scale-[0.98] text-white shadow-lg shadow-[#0066FF]/20'
-                  : 'bg-[#0f1320] text-gray-600 cursor-not-allowed border border-white/[0.04]'
+                  ? 'nl-button active:scale-[0.98]'
+                  : 'nl-card text-gray-600 cursor-not-allowed'
               }`}
             >
               {swapping ? (
@@ -1775,7 +1803,8 @@ export default function SwapPage() {
         return (
           <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4" onClick={() => setShowReview(false)}>
             <div
-              className="w-full max-w-[460px] bg-[#0a0f1a] border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200"
+              className="w-full max-w-[460px] nl-glass rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200"
+              style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between">
@@ -1809,7 +1838,7 @@ export default function SwapPage() {
                 </div>
               </div>
 
-              <div className="bg-[#0f1320] rounded-2xl p-4 space-y-3 border border-white/5">
+              <div className="nl-card rounded-2xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-sm font-bold">{fromToken.slice(0, 2)}</div>
@@ -1963,7 +1992,7 @@ export default function SwapPage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowReview(false)}
-                  className="flex-1 py-3.5 rounded-2xl bg-white/5 hover:bg-white/10 text-sm font-semibold text-white transition-colors"
+                  className="nl-button--ghost flex-1 py-3.5 rounded-2xl text-sm font-semibold"
                 >
                   Cancel
                 </button>
@@ -1973,7 +2002,7 @@ export default function SwapPage() {
                   className={`flex-1 py-3.5 rounded-2xl text-sm font-bold transition-all ${
                     piBlocked || securityBlocking
                       ? 'bg-red-500/20 text-red-400 cursor-not-allowed'
-                      : 'bg-[#0066FF] hover:bg-[#0918CC] text-white active:scale-[0.98]'
+                      : 'nl-button active:scale-[0.98]'
                   }`}
                 >
                   {piBlocked || securityBlocking ? 'Blocked' : 'Confirm swap'}

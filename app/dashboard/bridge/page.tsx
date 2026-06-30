@@ -217,7 +217,10 @@ export default function BridgePage() {
         <span className="text-[10px] uppercase px-2 py-0.5 bg-white/[0.06] rounded text-slate-400">LiFi</span>
       </div>
 
-      <div className="rounded-2xl bg-[#0F172A]/80 border border-white/10 p-5 space-y-4">
+      <div
+        className="nl-glass rounded-2xl p-5 space-y-4"
+        style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
+      >
         <ChainPicker label="From" value={fromChain} onChange={setFromChain} />
         <TokenField label="Token (from)" value={fromToken} onChange={setFromToken} placeholder="0x... or 0xEeeE...EeeE for native" />
         <AmountField value={amount} onChange={setAmount} nativeSymbol={fromChain.nativeSymbol} />
@@ -227,7 +230,7 @@ export default function BridgePage() {
         <button
           onClick={fetchQuote}
           disabled={quoting || executing}
-          className="w-full py-3 rounded-xl bg-[#0066FF] hover:bg-[#0066FF]/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold flex items-center justify-center gap-2"
+          className="nl-btn-neon w-full py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold flex items-center justify-center gap-2"
         >
           {quoting ? <><Loader2 className="w-4 h-4 animate-spin" /> Fetching route…</> : 'Get route'}
         </button>
@@ -235,7 +238,7 @@ export default function BridgePage() {
         {error && <div className="text-xs text-[#EF4444] bg-[#EF4444]/10 rounded-lg px-3 py-2">{error}</div>}
 
         {quote && (
-          <div className="rounded-xl bg-black/30 border border-white/[0.06] p-4 space-y-2">
+          <div className="nl-card rounded-xl p-4 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-400">Route</span>
               <span className="font-semibold">{quote.toolDetails?.name ?? quote.tool ?? 'LiFi'}</span>
@@ -251,7 +254,7 @@ export default function BridgePage() {
             <button
               onClick={executeBridge}
               disabled={executing}
-              className="w-full mt-2 py-3 rounded-xl bg-[#10B981] hover:bg-[#10B981]/90 disabled:opacity-50 text-sm font-bold flex items-center justify-center gap-2"
+              className="nl-btn-neon w-full mt-2 py-3 rounded-xl disabled:opacity-50 text-sm font-bold flex items-center justify-center gap-2"
             >
               {executing ? <><Loader2 className="w-4 h-4 animate-spin" /> Sign in wallet…</> : 'Bridge now'}
             </button>
@@ -259,7 +262,7 @@ export default function BridgePage() {
         )}
 
         {txHash && (
-          <div className="rounded-xl bg-black/30 border border-white/[0.06] p-4 space-y-2 text-xs">
+          <div className="nl-card rounded-xl p-4 space-y-2 text-xs">
             <div className="flex items-center justify-between">
               <span className="text-slate-400">Source tx</span>
               <span className="font-mono truncate max-w-[60%]">{txHash}</span>
@@ -313,7 +316,7 @@ function ChainPicker({ label, value, onChange }: { label: string; value: ChainOp
             const next = CHAINS.find((c) => c.key === e.target.value);
             if (next) onChange(next);
           }}
-          className="w-full appearance-none bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 pr-8 text-sm font-semibold focus:outline-none focus:border-[#0066FF]"
+          className="nl-card w-full appearance-none rounded-xl px-3 py-2.5 pr-8 text-sm font-semibold focus:outline-none focus:border-[#0066FF]"
         >
           {CHAINS.map((c) => (
             <option key={c.key} value={c.key}>{c.label}</option>
@@ -334,7 +337,7 @@ function TokenField({ label, value, onChange, placeholder }: { label: string; va
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-[#0066FF]"
+        className="nl-card w-full rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-[#0066FF]"
       />
     </div>
   );
@@ -350,7 +353,7 @@ function AmountField({ value, onChange, nativeSymbol }: { value: string; onChang
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="0.0"
-          className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 pr-16 text-sm font-mono focus:outline-none focus:border-[#0066FF]"
+          className="nl-card w-full rounded-xl px-3 py-2.5 pr-16 text-sm font-mono focus:outline-none focus:border-[#0066FF]"
         />
         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] uppercase text-slate-500">{nativeSymbol}</span>
       </div>

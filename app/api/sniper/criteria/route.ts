@@ -39,6 +39,7 @@ interface CriteriaBody {
   max_age_hours?: number;
   min_security_score?: number;
   block_honeypots?: boolean;
+  launchpads_allowed?: string[] | null;
   trigger_whale_address?: string | null;
   trigger_price_target?: number | null;
   amount_per_snipe_usd: number;
@@ -187,6 +188,7 @@ export const POST = withTierGate("max", async (request: NextRequest) => {
     max_age_hours: body.max_age_hours ?? 48,
     min_security_score: body.min_security_score ?? 60,
     block_honeypots: body.block_honeypots ?? true,
+    launchpads_allowed: body.launchpads_allowed?.length ? body.launchpads_allowed : null,
     trigger_whale_address: body.trigger_whale_address ?? null,
     trigger_price_target: body.trigger_price_target ?? null,
     amount_per_snipe_usd: body.amount_per_snipe_usd,

@@ -76,7 +76,7 @@ export default function SecurityScannerPage() {
             <button
               onClick={() => setScanType("token")}
               className={`py-2 text-xs uppercase tracking-wide rounded-lg border transition ${
-                scanType === "token" ? "bg-blue-500/15 border-blue-500/40 text-blue-300" : "border-slate-800 text-slate-400 hover:border-slate-700"
+                scanType === "token" ? "bg-blue-500/15 border-blue-500/40 text-blue-300" : "nl-button--ghost text-slate-400"
               }`}
             >
               Token contract
@@ -84,7 +84,7 @@ export default function SecurityScannerPage() {
             <button
               onClick={() => setScanType("address")}
               className={`py-2 text-xs uppercase tracking-wide rounded-lg border transition ${
-                scanType === "address" ? "bg-blue-500/15 border-blue-500/40 text-blue-300" : "border-slate-800 text-slate-400 hover:border-slate-700"
+                scanType === "address" ? "bg-blue-500/15 border-blue-500/40 text-blue-300" : "nl-button--ghost text-slate-400"
               }`}
             >
               Wallet address
@@ -110,7 +110,7 @@ export default function SecurityScannerPage() {
             <button
               onClick={scan}
               disabled={loading}
-              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-sm font-semibold transition flex items-center gap-2"
+              className="nl-btn-neon px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2"
             >
               {loading && <Loader2 size={13} className="animate-spin" />}
               Scan
@@ -124,7 +124,7 @@ export default function SecurityScannerPage() {
               <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Risk report</p>
               <button
                 onClick={subscribe}
-                className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg bg-slate-900/60 hover:nl-glass hover:border-blue-500/30 text-slate-300 transition"
+                className="nl-button--ghost inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg text-slate-300 transition"
               >
                 <BellPlus size={11} /> Alert me on changes
               </button>

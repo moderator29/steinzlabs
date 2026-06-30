@@ -5,6 +5,8 @@ import { ArrowLeftRight, Crosshair, ExternalLink, Loader2, Filter, RefreshCw } f
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { PageHeader } from '@/components/common/PageHeader';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { transactionsHowItWorks } from '@/lib/howItWorks/content/transactions';
 import { formatTimeAgo, formatUSD } from '@/lib/formatters';
 import { useNavState } from '@/lib/nav/useNavState';
 
@@ -133,16 +135,22 @@ export default function TransactionsPage() {
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-5xl mx-auto">
-        <PageHeader title="Transactions" description="Your swap and snipe history across all chains" showBack backTo="/dashboard" />
+        <PageHeader
+          title="Transactions"
+          description="Your swap and snipe history across all chains"
+          showBack
+          backTo="/dashboard"
+          actions={<HowItWorksButton content={transactionsHowItWorks} className="ms-auto shrink-0" />}
+        />
 
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-1 bg-[#141824] border border-[#1E2433] rounded-lg p-1">
+          <div className="flex items-center gap-1 nl-card rounded-lg p-1">
             {(['all', 'swap', 'snipe'] as TxType[]).map(f => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
                 className={`px-3 py-1.5 text-xs font-medium rounded transition-colors capitalize ${
-                  filter === f ? 'bg-[#0066FF] text-white' : 'text-gray-400 hover:text-white'
+                  filter === f ? 'nl-btn-neon' : 'text-gray-400 hover:text-white'
                 }`}
               >
                 {f === 'all' ? 'All' : f === 'swap' ? 'Swaps' : 'Snipes'}
@@ -152,7 +160,7 @@ export default function TransactionsPage() {
           <button
             onClick={load}
             disabled={loading}
-            className="flex items-center gap-2 text-xs text-gray-400 hover:text-white border border-[#1E2433] rounded-lg px-3 py-1.5 hover:border-[#2E3443] transition-colors"
+            className="nl-button--ghost flex items-center gap-2 text-xs rounded-lg px-3 py-1.5"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -165,13 +173,13 @@ export default function TransactionsPage() {
             <span className="text-sm text-gray-500">Loading transactions...</span>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-12 text-center">
+          <div className="nl-glass rounded-xl p-12 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <Filter className="w-10 h-10 text-gray-700 mx-auto mb-3" />
             <p className="text-sm text-gray-400">No transactions yet</p>
             <p className="text-xs text-gray-600 mt-1">Your swap and snipe history will appear here</p>
           </div>
         ) : (
-          <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden divide-y divide-[#1E2433]">
+          <div className="nl-glass rounded-xl overflow-hidden divide-y divide-[#1E2433]" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             {filtered.map(tx => (
               <div key={tx.id} className="flex items-center gap-4 px-4 py-3 hover:bg-[#1E2433]/30 transition-colors">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${tx.type === 'swap' ? 'bg-[#0066FF]/10' : 'bg-[#F59E0B]/10'}`}>

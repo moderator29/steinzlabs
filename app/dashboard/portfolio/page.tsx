@@ -17,6 +17,8 @@ import * as Sentry from "@sentry/nextjs";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useNakaWallet } from "@/lib/hooks/useNakaWallet";
 import { useNavState } from "@/lib/nav/useNavState";
+import { HowItWorksButton } from "@/components/common/HowItWorks";
+import { portfolioHowItWorks } from "@/lib/howItWorks/content/portfolio";
 
 type Timeframe = "1D" | "7D" | "30D" | "90D" | "ALL";
 type TabId = "holdings" | "performance" | "alpha";
@@ -258,10 +260,14 @@ export default function PortfolioPage() {
             {address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Connect a wallet to track your holdings"}
           </p>
         </div>
+        <HowItWorksButton content={portfolioHowItWorks} className="ms-auto shrink-0" />
       </div>
 
       {/* HERO */}
-      <div className="rounded-2xl border border-slate-800/50 bg-slate-950/80 backdrop-blur-xl p-6">
+      <div
+        className="nl-glass rounded-2xl p-6"
+        style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
+      >
         <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
           Total Portfolio Value
         </div>
@@ -308,8 +314,8 @@ export default function PortfolioPage() {
               onClick={() => setTimeframe(t)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                 timeframe === t
-                  ? "bg-[#0066FF] text-white"
-                  : "bg-slate-900/50 text-slate-400 hover:text-white hover:bg-slate-900"
+                  ? "nl-button"
+                  : "nl-button--ghost"
               }`}
             >
               {t}
@@ -319,7 +325,10 @@ export default function PortfolioPage() {
       </div>
 
       {!address && !loadingIntel && (
-        <div className="rounded-xl border border-slate-800/50 bg-slate-950/60 p-8 text-center text-slate-400">
+        <div
+          className="nl-glass rounded-xl p-8 text-center text-slate-400"
+          style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
+        >
           Portfolio tracking begins with your first trade. Connect a wallet to get started.
         </div>
       )}
@@ -332,7 +341,10 @@ export default function PortfolioPage() {
 
       {/* ALLOCATION + RISKY */}
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-slate-800/50 bg-slate-950/80 backdrop-blur-xl p-5">
+        <div
+          className="nl-glass rounded-2xl p-5"
+          style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
+        >
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-white">Asset Allocation</h2>
             <span className="text-[11px] text-slate-500">{donutData.length} tokens</span>
@@ -353,7 +365,10 @@ export default function PortfolioPage() {
           )}
         </div>
 
-        <div className="rounded-2xl border border-slate-800/50 bg-slate-950/80 backdrop-blur-xl p-5">
+        <div
+          className="nl-glass rounded-2xl p-5"
+          style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
+        >
           {riskyHoldings.length > 0 ? (
             <>
               <div className="flex items-center gap-2 mb-3">
@@ -384,7 +399,10 @@ export default function PortfolioPage() {
       </div>
 
       {/* TABS */}
-      <div className="rounded-2xl border border-slate-800/50 bg-slate-950/80 backdrop-blur-xl overflow-hidden">
+      <div
+        className="nl-glass rounded-2xl overflow-hidden"
+        style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
+      >
         <div className="flex items-center border-b border-slate-800/50">
           {(
             [
@@ -769,7 +787,7 @@ function PerformanceTab({ stats, loading }: { stats: PerformanceStats | null; lo
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-slate-800/50 bg-slate-900/30 p-3">
+    <div className="nl-card rounded-lg p-3">
       <div className="text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
       <div className="text-sm font-semibold text-white mt-1 truncate">{value}</div>
     </div>

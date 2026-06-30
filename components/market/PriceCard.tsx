@@ -53,7 +53,7 @@ export interface PriceCardProps {
 
 function Stat({ label, value, sub, tile = false }: { label: string; value: string; sub?: React.ReactNode; tile?: boolean }) {
   return (
-    <div className={`min-w-0 ${tile ? 'rounded-xl border border-[#1E2433]/60 bg-[#0B0F1A]/50 px-3 py-2 transition-colors hover:border-[#1E2433]' : ''}`}>
+    <div className={`min-w-0 ${tile ? 'nl-card rounded-xl px-3 py-2' : ''}`}>
       <div className="text-[10px] uppercase tracking-wide text-gray-500">{label}</div>
       <div className="mt-0.5 text-sm font-semibold text-gray-100 font-mono tabular-nums truncate">{value}</div>
       {sub != null && <div className="text-[10px] mt-0.5">{sub}</div>}

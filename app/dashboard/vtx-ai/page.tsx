@@ -3,6 +3,8 @@
 import { Send, Sparkles, TrendingUp, Shield, BarChart3, User, Copy, Check, Trash2, Globe, Lock, Settings, Wrench, Search, Target, Eye, ChevronDown, X, Wallet, Network, MessageSquarePlus, History, ChevronRight, Clock } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import SteinzLogo from '@/components/ui/SteinzLogo';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { vtxAgentHowItWorks } from '@/lib/howItWorks/content/vtx-ai';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useRef, useEffect, Suspense } from 'react';
 import SteinzLogoSpinner from '@/components/SteinzLogoSpinner';
@@ -781,7 +783,7 @@ function VtxAiPageInner() {
   return (
     /* §VTX-layout — h-[100dvh] (dynamic viewport height) so iOS Safari and
        Chrome mobile chrome bars don't push 100vh past the visible area. */
-    <div className="h-[100dvh] max-h-[100dvh] bg-[#060A12] text-white flex flex-col lg:flex-row overflow-hidden">
+    <div className="h-[100dvh] max-h-[100dvh] text-white flex flex-col lg:flex-row overflow-hidden">
       {/* Desktop only: persistent left rail with chat history */}
       <VtxConversationsRail
         sessions={chatSessions.map(s => ({ id: s.id, date: s.date, preview: s.preview }))}
@@ -804,7 +806,7 @@ function VtxAiPageInner() {
           Settings saved
         </div>
       )}
-      <div className="sticky top-0 z-40 bg-[#060A12]/95 backdrop-blur-xl border-b border-white/[0.04] flex-shrink-0">
+      <div className="sticky top-0 z-40 bg-black/40 backdrop-blur-xl border-b border-white/[0.04] flex-shrink-0">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
 
@@ -822,6 +824,7 @@ function VtxAiPageInner() {
           </div>
 
           <div className="flex items-center gap-1">
+            <HowItWorksButton content={vtxAgentHowItWorks} iconOnly className="mr-0.5" />
             <button onClick={clearChat} className="p-2 hover:bg-white/[0.06] rounded-lg transition-colors" title={!isPro ? `New chat · ${dailyUsage.remaining}/${dailyUsage.limit} messages left today` : "New chat"}>
               <MessageSquarePlus className="w-4 h-4 text-gray-500" />
             </button>
@@ -835,7 +838,7 @@ function VtxAiPageInner() {
         </div>
 
         {showHistory && (
-          <div className="px-4 py-3 border-t border-white/[0.04] bg-[#0A0E16] max-h-60 overflow-y-auto">
+          <div className="px-4 py-3 border-t border-white/[0.04] nl-card max-h-60 overflow-y-auto">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-gray-300">Chat History</span>
               <div className="flex items-center gap-1">
@@ -874,7 +877,7 @@ function VtxAiPageInner() {
         )}
 
         {showSettings && (
-          <div className="px-4 py-3 border-t border-white/[0.04] bg-[#0A0E16] max-h-[70vh] overflow-y-auto">
+          <div className="px-4 py-3 border-t border-white/[0.04] nl-card max-h-[70vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-gray-300">Agent Settings</span>
               <button onClick={() => setShowSettings(false)} aria-label="Close agent settings" className="p-1 hover:bg-white/[0.06] rounded"><X className="w-3.5 h-3.5 text-gray-500" aria-hidden="true" /></button>
@@ -889,7 +892,7 @@ function VtxAiPageInner() {
                   <select
                     value={settings.personality}
                     onChange={(e) => updateSettings({ personality: e.target.value as AgentSettings['personality'] })}
-                    className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0066FF]/40"
+                    className="w-full nl-card rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0066FF]/40"
                   >
                     <option value="professional">Professional Analyst</option>
                     <option value="degen">Degen Trader</option>
@@ -918,7 +921,7 @@ function VtxAiPageInner() {
                   <select
                     value={settings.language}
                     onChange={(e) => updateSettings({ language: e.target.value })}
-                    className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0066FF]/40"
+                    className="w-full nl-card rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0066FF]/40"
                   >
                     <option value="English">English</option>
                     <option value="Spanish">Spanish</option>
@@ -959,7 +962,7 @@ function VtxAiPageInner() {
                   <select
                     value={settings.defaultChain}
                     onChange={(e) => updateSettings({ defaultChain: e.target.value as AgentSettings['defaultChain'] })}
-                    className="w-full bg-[#111827] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0066FF]/40"
+                    className="w-full nl-card rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-[#0066FF]/40"
                   >
                     <option value="solana">Solana</option>
                     <option value="ethereum">Ethereum</option>
@@ -1201,7 +1204,7 @@ function VtxAiPageInner() {
                 )}
               </div>
               {msg.role === 'user' && (
-                <div className="w-7 h-7 bg-[#111827] rounded-lg flex items-center justify-center flex-shrink-0 mt-1 ms-2 border border-white/[0.06]">
+                <div className="w-7 h-7 nl-card rounded-lg flex items-center justify-center flex-shrink-0 mt-1 ms-2">
                   <User className="w-3.5 h-3.5 text-gray-500" />
                 </div>
               )}
@@ -1223,7 +1226,7 @@ function VtxAiPageInner() {
         </div>
       </div>
 
-      <div className="sticky bottom-0 bg-[#060A12]/95 backdrop-blur-xl border-t border-white/[0.04] p-3 space-y-2">
+      <div className="sticky bottom-0 bg-black/40 backdrop-blur-xl border-t border-white/[0.04] p-3 space-y-2">
         {rateLimited && !isPro && (
           <div className="flex items-center gap-3 p-3 bg-[#0066FF]/[0.05] border border-[#0066FF]/15 rounded-xl">
             <Lock className="w-4 h-4 text-[#0066FF] flex-shrink-0" />
@@ -1318,7 +1321,7 @@ export default function VtxAiPage() {
   return (
     <Suspense
       fallback={
-        <div className="h-[100dvh] flex items-center justify-center bg-[#060A12] text-slate-500 text-sm gap-3">
+        <div className="h-[100dvh] flex items-center justify-center text-slate-500 text-sm gap-3">
           <div className="w-5 h-5 border-2 border-[#0066FF]/30 border-t-[#0066FF] rounded-full animate-spin" />
           <span>Loading VTX Agent…</span>
         </div>

@@ -14,9 +14,11 @@ import {
   Dna, Link2, Trophy, Radio, ArrowLeftRight, Bot, Target, PieChart, DollarSign,
   Archive, Circle, FileCode, FlaskConical, BookOpen, FileSearch, CheckSquare,
   Crosshair, Network, Globe, History, MessageCircle, Compass, Sun, Moon, Gem,
+  LineChart,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/lib/theme/ThemeProvider';
+import { GlobalWhatsNewButton } from '@/components/common/GlobalWhatsNew';
 
 interface SidebarMenuProps {
   onClose: () => void;
@@ -88,6 +90,7 @@ const NAV_CATEGORIES: NavCategory[] = [
       { icon: Wallet, label: 'Wallet', path: '/dashboard/wallet-page', badge: 'NEW' },
       { icon: Bot, label: 'VTX Agent', path: '/dashboard/vtx-ai' },
       { icon: Crosshair, label: 'Sniper Bot', path: '/dashboard/sniper' },
+      { icon: LineChart, label: 'Market Maker', path: '/dashboard/market-maker', badge: 'NEW' },
       { icon: Network, label: 'Network Graph', path: '/dashboard/network-graph', badge: 'NEW' },
       { icon: Bell, label: 'Alerts', path: '/dashboard/alerts' },
       { icon: FlaskConical, label: 'Research Lab', path: '/dashboard/research', badge: 'NEW' },
@@ -211,6 +214,7 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
         {/* §3.2 — theme toggle lives at the bottom of the side nav (the spot
             the equivalent control sits on X), moved out of the top header. */}
         <div className="px-3 py-3 border-t border-white/[0.06] flex-shrink-0 space-y-2">
+          <GlobalWhatsNewButton />
           <ThemeFooterToggle />
           <div className="text-[10px] text-gray-600 font-mono px-1">NAKA LABS v1.0.0-beta</div>
         </div>

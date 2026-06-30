@@ -7,11 +7,13 @@ export const dynamic = "force-dynamic";
 
 interface ExpiredPendingRow {
   id: string;
+  source_reason: string | null;
   source_order_table:
     | "limit_orders"
     | "dca_bots"
     | "stop_loss_orders"
     | "user_copy_trades"
+    | "sniper_executions"
     | null;
   source_order_id: string | null;
 }
@@ -34,7 +36,7 @@ export async function GET(request: NextRequest) {
     .update({ status: "expired", failure_reason: "confirmation_window_expired" })
     .eq("status", "pending")
     .lt("expires_at", nowIso)
-    .select("id,source_order_table,source_order_id")
+    .select("id,source_reason,source_order_table,source_order_id")
     .returns<ExpiredPendingRow[]>();
 
   const rows = expired ?? [];
@@ -75,6 +77,30 @@ export async function GET(request: NextRequest) {
         break;
       case "dca_bots":
         // DCA schedule already advanced — self-healing on next interval.
+        break;
+      case "sniper_executions":
+        if (row.source_reason === "sniper_autosell") {
+          // A protective sell expired unconfirmed. Clear the dangling sell
+          // pointer so autosell (which only re-evaluates rows where
+          // sell_pending_trade_id IS NULL) retries the TP/SL exit next tick —
+          // otherwise the position is stuck unprotected forever.
+          await admin
+            .from("sniper_executions")
+            .update({ sell_pending_trade_id: null, sell_dispatched_at: null })
+            .eq("id", row.source_order_id)
+            .eq("sell_pending_trade_id", row.id);
+          restored++;
+        } else {
+          // An un-confirmed BUY (sniper_buy) left an orphan position stuck at
+          // 'pending'. Mark it failed so it doesn't pollute history (pending
+          // rows are already excluded from the AA daily-cap count post-R4).
+          await admin
+            .from("sniper_executions")
+            .update({ status: "failed" })
+            .eq("id", row.source_order_id)
+            .eq("status", "pending");
+          restored++;
+        }
         break;
     }
   }

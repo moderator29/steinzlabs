@@ -313,9 +313,9 @@ export default function WhaleDirectoryPage() {
   const volumeOptions: SelectOption[] = VOLUME_PILLS.map((v) => ({ id: String(v.id), label: v.label }));
 
   return (
-    <div className="min-h-screen bg-[#05081E] text-white pb-20">
+    <div className="min-h-screen text-white pb-20">
       {/* Top bar */}
-      <div className="sticky top-0 z-30 bg-[#05081E]/90 backdrop-blur-xl border-b border-white/5">
+      <div className="sticky top-0 z-30 nl-glass backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
           <BackButton compact />
           <div>

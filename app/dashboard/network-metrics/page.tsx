@@ -2,6 +2,8 @@
 
 import { Radio, Activity, Cpu, HardDrive, Zap, Globe, Loader2, RefreshCw } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { networkMetricsHowItWorks } from '@/lib/howItWorks/content/network-metrics';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 
@@ -33,24 +35,25 @@ export default function NetworkMetricsPage() {
 
   return (
     <div className="min-h-screen text-white pb-20">
-      <div className="sticky top-0 z-40 glass backdrop-blur-xl border-b border-white/10">
+      <div className="sticky top-0 z-40 nl-glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
           <Radio className="w-5 h-5 text-[#0066FF]" />
           <h1 className="text-sm font-heading font-bold">Network Metrics</h1>
+          <HowItWorksButton content={networkMetricsHowItWorks} className="ms-auto shrink-0" />
         </div>
       </div>
 
       <div className="p-4 space-y-4">
         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
           {chains.map((chain) => (
-            <button key={chain} onClick={() => setSelectedChain(chain)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${selectedChain === chain ? 'bg-gradient-to-r from-[#0066FF] to-[#7C3AED] text-white' : 'bg-[#111827] text-gray-400'}`}>
+            <button key={chain} onClick={() => setSelectedChain(chain)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${selectedChain === chain ? 'nl-button' : 'nl-button--ghost'}`}>
               {chain}
             </button>
           ))}
         </div>
 
-        <div className="glass rounded-xl p-4 border border-white/10 text-center">
+        <div className="nl-glass rounded-xl p-4 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           <div className="w-16 h-16 bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center mx-auto mb-2">
             <Globe className="w-8 h-8 text-[#0066FF]" />
           </div>
@@ -68,7 +71,7 @@ export default function NetworkMetricsPage() {
             { icon: HardDrive, label: 'Latest Block', value: m.blocks, color: '#0066FF' },
             { icon: Globe, label: 'Status', value: loading ? 'Fetching...' : 'Live', color: '#10B981' },
           ].map((item) => (
-            <div key={item.label} className="glass rounded-xl p-3 border border-white/10">
+            <div key={item.label} className="nl-glass rounded-xl p-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <div className="flex items-center gap-1.5 mb-1">
                 <item.icon className="w-3.5 h-3.5" style={{ color: item.color }} />
                 <span className="text-[10px] text-gray-500">{item.label}</span>
@@ -78,7 +81,7 @@ export default function NetworkMetricsPage() {
           ))}
         </div>
 
-        <div className="glass rounded-xl p-4 border border-white/10">
+        <div className="nl-glass rounded-xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           <h3 className="font-bold text-sm mb-3">Network Stats</h3>
           <div className="space-y-3">
             <div className="flex justify-between py-2 border-b border-white/5">

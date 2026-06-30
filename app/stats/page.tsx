@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, Zap, Activity } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import BackButton from '@/components/ui/BackButton';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 
 interface StatsData {
   totalTrades: number;
@@ -68,7 +69,8 @@ export default function StatsPage() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-[#0a0b0f] text-white">
+    <AuroraBackground fullHeight>
+    <div className="min-h-screen text-white">
       <div className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center gap-3 mb-8">
           <BackButton />
@@ -85,7 +87,10 @@ export default function StatsPage() {
         ) : (
           <div className="space-y-6">
             {/* Volume + Period Toggle */}
-            <div className="bg-[#0f1320] rounded-2xl p-6 border border-[#1a1f2e]">
+            <div
+              className="nl-glass rounded-2xl p-6"
+              style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
+            >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <BarChart3 className="w-5 h-5 text-[#0066FF]" />
@@ -94,7 +99,7 @@ export default function StatsPage() {
                 <div className="flex gap-1">
                   {(['24h', '7d', '30d', 'all'] as const).map(p => (
                     <button key={p} onClick={() => setPeriod(p)}
-                      className={`px-3 py-1 text-xs rounded-lg ${period === p ? 'bg-[#0066FF] text-white' : 'bg-white/5 text-gray-400'}`}
+                      className={`px-3 py-1 text-xs rounded-lg ${period === p ? 'nl-btn-neon' : 'nl-button--ghost'}`}
                     >{p === 'all' ? 'All Time' : p}</button>
                   ))}
                 </div>
@@ -105,22 +110,34 @@ export default function StatsPage() {
 
             {/* Key Metrics */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-[#0f1320] rounded-xl p-4 border border-[#1a1f2e]">
+              <div
+                className="nl-glass rounded-xl p-4"
+                style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
+              >
                 <TrendingUp className="w-4 h-4 text-green-400 mb-1" />
                 <div className="text-xs text-gray-400">Standard Swaps</div>
                 <div className="text-lg font-bold">{stats.standardCount}</div>
               </div>
-              <div className="bg-[#0f1320] rounded-xl p-4 border border-[#1a1f2e]">
+              <div
+                className="nl-glass rounded-xl p-4"
+                style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
+              >
                 <Zap className="w-4 h-4 text-yellow-400 mb-1" />
                 <div className="text-xs text-gray-400">Gasless Swaps</div>
                 <div className="text-lg font-bold">{stats.gaslessCount}</div>
               </div>
-              <div className="bg-[#0f1320] rounded-xl p-4 border border-[#1a1f2e]">
+              <div
+                className="nl-glass rounded-xl p-4"
+                style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
+              >
                 <Activity className="w-4 h-4 text-purple-400 mb-1" />
                 <div className="text-xs text-gray-400">Gasless Adoption</div>
                 <div className="text-lg font-bold">{(stats.gaslessRatio * 100).toFixed(1)}%</div>
               </div>
-              <div className="bg-[#0f1320] rounded-xl p-4 border border-[#1a1f2e]">
+              <div
+                className="nl-glass rounded-xl p-4"
+                style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
+              >
                 <BarChart3 className="w-4 h-4 text-blue-400 mb-1" />
                 <div className="text-xs text-gray-400">Top Pairs</div>
                 <div className="text-lg font-bold">{stats.topPairs.length}</div>
@@ -129,7 +146,10 @@ export default function StatsPage() {
 
             {/* Top Pairs */}
             {stats.topPairs.length > 0 && (
-              <div className="bg-[#0f1320] rounded-2xl p-5 border border-[#1a1f2e]">
+              <div
+                className="nl-glass rounded-2xl p-5"
+                style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
+              >
                 <h3 className="font-bold text-sm mb-3">Top Traded Pairs</h3>
                 <div className="space-y-2">
                   {stats.topPairs.map((p, i) => (
@@ -144,7 +164,10 @@ export default function StatsPage() {
 
             {/* Recent Trades Ticker */}
             {stats.recentTrades.length > 0 && (
-              <div className="bg-[#0f1320] rounded-2xl p-5 border border-[#1a1f2e]">
+              <div
+                className="nl-glass rounded-2xl p-5"
+                style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
+              >
                 <h3 className="font-bold text-sm mb-3">Recent Trades</h3>
                 <div className="space-y-2">
                   {stats.recentTrades.map((t, i) => (
@@ -167,5 +190,6 @@ export default function StatsPage() {
         )}
       </div>
     </div>
+    </AuroraBackground>
   );
 }

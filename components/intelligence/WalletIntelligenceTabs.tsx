@@ -117,7 +117,7 @@ export function WalletIntelligenceTabs({ address }: { address: string }) {
           <SecurityBadge score={whale.whale_score} size="md" />
           <button
             onClick={createAlert}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-900/60 hover:nl-glass hover:border-blue-500/30 text-[11px] text-slate-300 transition"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg nl-btn-neon text-[11px] transition"
           >
             <BellPlus size={11} /> Alert
           </button>
@@ -152,7 +152,7 @@ export function WalletIntelligenceTabs({ address }: { address: string }) {
             <button
               onClick={generateReport}
               disabled={reportLoading}
-              className="w-full p-5 rounded-2xl border border-dashed border-blue-500/30 bg-blue-500/5 text-sm text-blue-300 hover:bg-blue-500/10 transition flex items-center justify-center gap-2"
+              className="w-full p-5 rounded-2xl nl-btn-neon text-sm transition flex items-center justify-center gap-2"
             >
               {reportLoading ? <Loader2 size={13} className="animate-spin" /> : null}
               Generate Alpha Intelligence Report via VTX
@@ -162,7 +162,7 @@ export function WalletIntelligenceTabs({ address }: { address: string }) {
       )}
 
       {tab === "activity" && (
-        <div className="rounded-xl border border-slate-800 overflow-hidden">
+        <div className="rounded-xl nl-glass overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           {activity.length === 0 ? (
             <div className="py-12 text-center text-sm text-slate-500">
               No recorded activity yet. The whale-activity-poll cron populates this as new on-chain events arrive.
@@ -197,13 +197,13 @@ export function WalletIntelligenceTabs({ address }: { address: string }) {
       )}
 
       {tab === "holdings" && (
-        <div className="p-8 text-center text-sm text-slate-500 rounded-xl border border-slate-800">
+        <div className="p-8 text-center text-sm text-slate-500 rounded-xl nl-glass" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           Token holdings surface once the on-chain indexer ships in Session 5B-2.
         </div>
       )}
 
       {tab === "counterparties" && (
-        <div className="p-8 text-center text-sm text-slate-500 rounded-xl border border-slate-800">
+        <div className="p-8 text-center text-sm text-slate-500 rounded-xl nl-glass" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           Counterparty analysis uses wallet_edges data.{" "}
           <Link href={`/dashboard/wallet-clusters/${address}`} className="text-blue-400 hover:underline">
             Explore cluster →
@@ -223,11 +223,11 @@ export function WalletIntelligenceTabs({ address }: { address: string }) {
       )}
 
       {tab === "clusters" && (
-        <div className="p-6 rounded-xl border border-slate-800 text-center">
+        <div className="p-6 rounded-xl nl-glass text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           <p className="text-sm text-slate-400 mb-3">Explore this wallet&apos;s cluster graph.</p>
           <Link
             href={`/dashboard/wallet-clusters/${address}`}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-sm font-semibold transition"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg nl-button text-sm font-semibold transition"
           >
             Open cluster explorer →
           </Link>

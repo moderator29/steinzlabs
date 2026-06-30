@@ -1,6 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import { Users, Bell, ArrowRight, MessageCircle, Trophy, TrendingUp } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
+
+const PANEL_GLOW = { boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' };
 
 export default function CommunityPage() {
   return (
@@ -23,7 +28,7 @@ export default function CommunityPage() {
         </p>
 
         <div className="grid md:grid-cols-3 gap-6 mb-12 text-start">
-          <div className="glass rounded-xl p-6 border border-white/10">
+          <div className="nl-card rounded-xl p-6">
             <MessageCircle className="w-10 h-10 text-[#0066FF] mb-3" />
             <h3 className="font-bold text-lg mb-2">Live Discussions</h3>
             <p className="text-sm text-gray-400">
@@ -31,7 +36,7 @@ export default function CommunityPage() {
             </p>
           </div>
 
-          <div className="glass rounded-xl p-6 border border-white/10">
+          <div className="nl-card rounded-xl p-6">
             <Trophy className="w-10 h-10 text-[#FFD700] mb-3" />
             <h3 className="font-bold text-lg mb-2">Leaderboards</h3>
             <p className="text-sm text-gray-400">
@@ -39,7 +44,7 @@ export default function CommunityPage() {
             </p>
           </div>
 
-          <div className="glass rounded-xl p-6 border border-white/10">
+          <div className="nl-card rounded-xl p-6">
             <TrendingUp className="w-10 h-10 text-[#10B981] mb-3" />
             <h3 className="font-bold text-lg mb-2">Signal Sharing</h3>
             <p className="text-sm text-gray-400">
@@ -48,32 +53,64 @@ export default function CommunityPage() {
           </div>
         </div>
 
-        <div className="glass rounded-2xl p-8 border border-[#0066FF]/30 max-w-md mx-auto">
+        <div className="nl-glass rounded-2xl p-8 max-w-md mx-auto" style={PANEL_GLOW}>
           <Bell className="w-8 h-8 text-[#0066FF] mx-auto mb-4" />
           <h3 className="font-bold text-xl mb-3">Join the Waitlist</h3>
           <p className="text-sm text-gray-400 mb-4">
             Be among the first to access the NAKA community when it launches.
           </p>
-          <div className="flex gap-2">
-            <input
-              type="email"
-              placeholder="Enter your email"
-              className="flex-1 bg-[#111827] border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-[#0066FF]/50 text-sm"
-            />
-            <button className="bg-gradient-to-r from-[#0066FF] to-[#7C3AED] px-6 py-3 rounded-lg font-semibold hover:scale-105 transition-transform">
-              Notify Me
-            </button>
-          </div>
+          <WaitlistForm feature="community" />
         </div>
 
         <div className="mt-8">
           <a href="/dashboard/pricing">
-            <button className="glass px-8 py-3 rounded-lg font-semibold hover:bg-white/10 transition-colors inline-flex items-center gap-2">
+            <button className="nl-button inline-flex items-center gap-2">
               View Pricing <ArrowRight className="w-4 h-4" />
             </button>
           </a>
         </div>
       </div>
     </div>
+  );
+}
+
+function WaitlistForm({ feature }: { feature: string }) {
+  const [email, setEmail] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || loading) return;
+    setLoading(true);
+    try {
+      await supabase.from('waitlist').insert({ email: email.trim().toLowerCase(), feature, created_at: new Date().toISOString() });
+      setSubmitted(true);
+      toast.success('You\'re on the waitlist!');
+    } catch (err) {
+      console.error('[Waitlist] Submit failed:', err instanceof Error ? err.message : err);
+      toast.error('Something went wrong. Try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (submitted) {
+    return <p className="text-green-400 text-sm">You are on the waitlist. We will notify you when this launches.</p>;
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex gap-2">
+      <input
+        type="email"
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+        placeholder="Enter your email"
+        className="flex-1 nl-glass rounded-lg px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/50"
+      />
+      <button type="submit" disabled={loading} className="nl-btn-neon px-6 py-3">
+        Notify Me
+      </button>
+    </form>
   );
 }

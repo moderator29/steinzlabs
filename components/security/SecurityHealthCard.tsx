@@ -40,7 +40,7 @@ export function SecurityHealthCard({ has2fa = false }: { has2fa?: boolean }) {
   }, []);
 
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.04] to-transparent p-5 mb-6">
+    <div className="nl-glass rounded-2xl p-5 mb-6" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
       <div className="flex items-start gap-5">
         <div className="relative shrink-0">
           {loading ? (
@@ -81,7 +81,7 @@ export function SecurityHealthCard({ has2fa = false }: { has2fa?: boolean }) {
       {!has2fa && (
         <Link
           href="/settings/security"
-          className="mt-4 flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/[0.05] p-3 text-sm hover:bg-blue-500/[0.08] transition-colors"
+          className="nl-glass nl-glass--interactive mt-4 flex items-center gap-2 rounded-xl p-3 text-sm transition-colors" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
         >
           <KeyRound className="w-4 h-4 text-blue-300" />
           <div className="flex-1">
@@ -97,7 +97,7 @@ export function SecurityHealthCard({ has2fa = false }: { has2fa?: boolean }) {
 
 function Metric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-lg bg-black/20 p-2">
+    <div className="nl-card rounded-lg p-2">
       <div className="text-[10px] uppercase tracking-wider text-slate-500">{label}</div>
       <div className="font-mono font-semibold text-base mt-0.5" style={{ color: ringColor(value) }}>{value}</div>
     </div>

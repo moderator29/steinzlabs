@@ -7,6 +7,8 @@ import {
   XCircle, Shield, Loader2, Info, ChevronDown, ChevronUp
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { signatureInsightHowItWorks } from '@/lib/howItWorks/content/signature-insight';
 
 interface DecodeResult {
   functionName: string;
@@ -85,24 +87,25 @@ export default function SignatureInsightPage() {
   const config = result ? RISK_CONFIG[result.riskLevel] : null;
 
   return (
-    <div className="min-h-screen bg-[#060A12] text-white pb-20">
+    <div className="min-h-screen text-white pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-[#060A12]/90 backdrop-blur-2xl border-b border-[#1a1f2e]">
+      <div className="sticky top-0 z-40 nl-glass backdrop-blur-2xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
-          <div className="w-8 h-8 bg-gradient-to-br from-[#7C3AED] to-[#0066FF] rounded-xl flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-[#1E90FF] to-[#0066FF] rounded-xl flex items-center justify-center">
             <FileCode className="w-4 h-4" />
           </div>
           <div>
             <h1 className="text-sm font-heading font-bold">Signature Insight</h1>
             <p className="text-[10px] text-gray-500">Decode and analyze transaction signatures</p>
           </div>
+          <HowItWorksButton content={signatureInsightHowItWorks} className="ms-auto shrink-0" />
         </div>
       </div>
 
       <div className="p-4 space-y-4">
         {/* Info Banner */}
-        <div className="bg-[#7C3AED]/5 border border-[#7C3AED]/20 rounded-2xl p-3 flex items-start gap-3">
+        <div className="nl-glass border border-[#7C3AED]/20 rounded-2xl p-3 flex items-start gap-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           <Info className="w-4 h-4 text-[#7C3AED] mt-0.5 flex-shrink-0" />
           <p className="text-[11px] text-gray-400 leading-relaxed">
             Paste any transaction calldata or signature to decode what it does in plain English.
@@ -116,10 +119,10 @@ export default function SignatureInsightPage() {
             <button
               key={c.id}
               onClick={() => setChain(c.id)}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
                 chain === c.id
-                  ? 'bg-[#7C3AED]/10 border-[#7C3AED]/30 text-[#7C3AED]'
-                  : 'bg-[#0f1320] border-[#1a1f2e] text-gray-500 hover:text-gray-300'
+                  ? 'nl-btn-neon'
+                  : 'nl-button--ghost text-gray-500 hover:text-gray-300'
               }`}
             >
               {c.label}
@@ -134,12 +137,12 @@ export default function SignatureInsightPage() {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Paste transaction calldata (e.g. 0x095ea7b3...)"
             rows={4}
-            className="w-full bg-[#0f1320] border border-[#1a1f2e] rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#7C3AED]/40 resize-none"
+            className="w-full nl-glass rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#7C3AED]/40 resize-none"
           />
           <button
             onClick={handleDecode}
             disabled={decoding || !input.trim()}
-            className="w-full bg-gradient-to-r from-[#7C3AED] to-[#0066FF] py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full nl-btn-neon py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {decoding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileCode className="w-3.5 h-3.5" />}
             {decoding ? 'Decoding...' : 'Decode Signature'}
@@ -154,7 +157,7 @@ export default function SignatureInsightPage() {
               <button
                 key={ex.label}
                 onClick={() => setInput(ex.data)}
-                className="w-full text-start bg-[#0f1320] border border-[#1a1f2e] hover:border-[#7C3AED]/20 rounded-xl p-3 transition-all"
+                className="w-full text-start nl-glass nl-glass--interactive rounded-xl p-3 transition-all"
               >
                 <p className="text-[11px] font-semibold text-gray-300 mb-1">{ex.label}</p>
                 <p className="text-[10px] text-gray-600 font-mono truncate">{ex.data.slice(0, 40)}...</p>
@@ -178,7 +181,7 @@ export default function SignatureInsightPage() {
 
         {/* Error */}
         {error && !decoding && (
-          <div className="bg-[#0f1320] rounded-2xl p-4 border border-red-500/20 text-center">
+          <div className="nl-glass nl-glass--crimson rounded-2xl p-4 text-center">
             <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-2" />
             <p className="text-sm text-red-400 font-semibold">{error}</p>
           </div>
@@ -188,7 +191,7 @@ export default function SignatureInsightPage() {
         {result && config && !decoding && (
           <>
             {/* Risk verdict */}
-            <div className={`rounded-2xl p-4 border ${config.border} ${config.bg}`}>
+            <div className={`nl-glass rounded-2xl p-4 border ${config.border} ${config.bg}`} style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <div className="flex items-start gap-3">
                 <config.icon className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: config.color }} />
                 <div>
@@ -205,14 +208,14 @@ export default function SignatureInsightPage() {
             </div>
 
             {/* Summary */}
-            <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+            <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <h3 className="font-bold text-sm mb-2">What this transaction does</h3>
               <p className="text-[12px] text-gray-400 leading-relaxed">{result.summary}</p>
             </div>
 
             {/* Risk Flags */}
             {result.riskFlags.length > 0 && (
-              <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+              <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-400" />
                   Risk Flags ({result.riskFlags.length})
@@ -230,7 +233,7 @@ export default function SignatureInsightPage() {
 
             {/* Parameters */}
             {result.params.length > 0 && (
-              <div className="bg-[#0f1320] rounded-2xl border border-[#1a1f2e] overflow-hidden">
+              <div className="nl-glass rounded-2xl overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <button
                   onClick={() => setShowParams(!showParams)}
                   className="w-full flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors"
@@ -239,9 +242,9 @@ export default function SignatureInsightPage() {
                   {showParams ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
                 </button>
                 {showParams && (
-                  <div className="px-4 pb-4 space-y-2 border-t border-[#1a1f2e]">
+                  <div className="px-4 pb-4 space-y-2 border-t border-white/10">
                     {result.params.map((p, i) => (
-                      <div key={i} className="bg-[#060A12] rounded-xl p-3">
+                      <div key={i} className="bg-white/[0.03] rounded-xl p-3">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-[10px] font-mono text-[#7C3AED]">{p.type}</span>
                           <span className="text-[11px] font-semibold text-gray-300">{p.name}</span>
@@ -255,7 +258,7 @@ export default function SignatureInsightPage() {
             )}
 
             {/* Safety Tips */}
-            <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+            <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
                 <Shield className="w-4 h-4 text-[#7C3AED]" />
                 Before Signing
@@ -277,7 +280,7 @@ export default function SignatureInsightPage() {
 
             <button
               onClick={() => { setResult(null); setInput(''); }}
-              className="w-full bg-[#0f1320] border border-[#1a1f2e] hover:border-[#7C3AED]/30 py-2.5 rounded-xl text-xs text-gray-400 hover:text-white transition-all"
+              className="w-full nl-btn-neon py-2.5 rounded-xl text-xs text-gray-400 hover:text-white transition-all"
             >
               Decode another signature
             </button>

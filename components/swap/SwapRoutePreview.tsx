@@ -110,7 +110,7 @@ export default function SwapRoutePreview(props: Props) {
   const summary = Array.from(grouped.entries()).sort((a, b) => b[1] - a[1]);
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-3 text-xs">
+    <div className="nl-card rounded-xl p-3 text-xs">
       <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-2">Route</div>
 
       {/* Token-flow line — first → last token in the path. Intermediate

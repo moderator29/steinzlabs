@@ -2,6 +2,8 @@
 
 import { Shield, Search, AlertTriangle, CheckCircle, XCircle, Clock, Loader2, ExternalLink, Copy, Wallet, ArrowRight, Brain, ThumbsUp, ThumbsDown, ShieldAlert } from 'lucide-react';
 import { SecurityHealthCard } from '@/components/security/SecurityHealthCard';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { securityCenterHowItWorks } from '@/lib/howItWorks/content/security';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useNavState } from '@/lib/nav/useNavState';
@@ -132,6 +134,12 @@ export default function SecurityPage() {
 
   return (
     <div className="p-4 space-y-4">
+        <div className="flex items-center gap-2">
+          <h1 className="text-base font-bold flex items-center gap-2">
+            <Shield className="w-4 h-4 text-[#0066FF]" /> Security Center
+          </h1>
+          <HowItWorksButton content={securityCenterHowItWorks} className="ms-auto shrink-0" />
+        </div>
         {/* SC1 + SC2 + SC3: composite health score, HIBP breach banner,
             and the 2FA-enable CTA, all live above the existing token
             scanner. */}
@@ -141,7 +149,7 @@ export default function SecurityPage() {
             <button
               key={chain.id}
               onClick={() => setSelectedChain(chain.key)}
-              className={`rounded-xl py-2 px-3 border transition-all text-center text-xs font-semibold ${selectedChain === chain.key ? 'bg-[#0066FF]/10 border-[#0066FF]/30 text-[#0066FF]' : 'bg-[#0f1320] border-[#1a1f2e] hover:border-[#0066FF]/20 text-gray-400'}`}
+              className={`rounded-xl py-2 px-3 border transition-all text-center text-xs font-semibold ${selectedChain === chain.key ? 'bg-[#0066FF]/10 border-[#0066FF]/30 text-[#0066FF]' : 'nl-button--ghost text-gray-400'}`}
             >
               {chain.label}
             </button>
@@ -155,12 +163,12 @@ export default function SecurityPage() {
             onChange={(e) => setScanInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleScan()}
             placeholder="Contract address only (0x...), not wallet addresses"
-            className="flex-1 bg-[#0f1320] border border-[#1a1f2e] rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/30"
+            className="flex-1 nl-glass rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/30"
           />
           <button
             onClick={handleScan}
             disabled={scanning || !scanInput.trim()}
-            className="bg-gradient-to-r from-[#0066FF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
+            className="nl-btn-neon px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
           >
             {scanning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
             Scan
@@ -180,7 +188,7 @@ export default function SecurityPage() {
         )}
 
         {walletRejection && !scanning && (
-          <div className="bg-[#0f1320] rounded-2xl p-6 border border-orange-500/30 text-center">
+          <div className="nl-glass rounded-2xl p-6 text-center" style={{ boxShadow: '0 0 0 1px rgba(249,115,22,.4), 0 0 16px rgba(249,115,22,.18)' }}>
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-orange-500/10 flex items-center justify-center">
               <Wallet className="w-8 h-8 text-orange-400" />
             </div>
@@ -189,7 +197,7 @@ export default function SecurityPage() {
             <p className="text-xs text-gray-500 mb-4">{walletRejection.suggestion}</p>
             <button
               onClick={() => router.push(`${walletRejection.redirectUrl}?address=${encodeURIComponent(scanInput.trim())}`)}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-2.5 rounded-lg text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+              className="nl-btn-neon inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white"
             >
               Go to DNA Analyzer <ArrowRight className="w-4 h-4" />
             </button>
@@ -200,7 +208,7 @@ export default function SecurityPage() {
         )}
 
         {error && !scanning && !walletRejection && (
-          <div className="bg-[#0f1320] rounded-2xl p-4 border border-red-500/20 text-center">
+          <div className="nl-glass nl-glass--crimson rounded-2xl p-4 text-center">
             <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-2" />
             <p className="text-sm text-red-400 font-semibold">{error}</p>
             <p className="text-[10px] text-gray-500 mt-1">Check the contract address and selected chain</p>
@@ -209,7 +217,7 @@ export default function SecurityPage() {
 
         {result && !scanning && (
           <>
-            <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+            <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <h2 className="text-base font-bold">{result.name}</h2>
@@ -232,7 +240,7 @@ export default function SecurityPage() {
               </div>
             </div>
 
-            <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e] text-center">
+            <div className="nl-glass rounded-2xl p-4 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <div className="relative w-24 h-24 mx-auto mb-3">
                 <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
                   <circle cx="50" cy="50" r="40" fill="none" stroke="#1A2235" strokeWidth="8" />
@@ -258,61 +266,61 @@ export default function SecurityPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <div className="bg-[#0f1320] rounded-2xl p-3 border border-[#1a1f2e]">
+              <div className="nl-card rounded-2xl p-3">
                 <p className="text-[10px] text-gray-500 mb-1">Holders</p>
                 <p className="text-sm font-bold">{result.holderCount.toLocaleString()}</p>
               </div>
-              <div className="bg-[#0f1320] rounded-2xl p-3 border border-[#1a1f2e]">
+              <div className="nl-card rounded-2xl p-3">
                 <p className="text-[10px] text-gray-500 mb-1">Honeypot</p>
                 <p className={`text-sm font-bold ${result.isHoneypot ? 'text-red-400' : 'text-green-400'}`}>
                   {result.isHoneypot ? 'YES [!]' : 'NO [ok]'}
                 </p>
               </div>
-              <div className="bg-[#0f1320] rounded-2xl p-3 border border-[#1a1f2e]">
+              <div className="nl-card rounded-2xl p-3">
                 <p className="text-[10px] text-gray-500 mb-1">Buy Tax</p>
                 <p className="text-sm font-bold">{result.buyTax}</p>
               </div>
-              <div className="bg-[#0f1320] rounded-2xl p-3 border border-[#1a1f2e]">
+              <div className="nl-card rounded-2xl p-3">
                 <p className="text-[10px] text-gray-500 mb-1">Sell Tax</p>
                 <p className="text-sm font-bold">{result.sellTax}</p>
               </div>
             </div>
 
             {result.dexData && (
-              <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+              <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <h3 className="font-bold text-sm mb-3">Market Data</h3>
                 <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-[#060A12] rounded-xl p-2.5">
+                  <div className="bg-white/[0.03] rounded-xl p-2.5">
                     <p className="text-[9px] text-gray-500">Price</p>
                     <p className="text-xs font-bold font-mono">
                       ${result.dexData.price < 0.01 ? result.dexData.price.toFixed(8) : result.dexData.price.toLocaleString(undefined, { maximumFractionDigits: 4 })}
                     </p>
                   </div>
-                  <div className="bg-[#060A12] rounded-xl p-2.5">
+                  <div className="bg-white/[0.03] rounded-xl p-2.5">
                     <p className="text-[9px] text-gray-500">24h</p>
                     <p className={`text-xs font-bold ${result.dexData.priceChange24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                       {result.dexData.priceChange24h >= 0 ? '+' : ''}{result.dexData.priceChange24h.toFixed(2)}%
                     </p>
                   </div>
-                  <div className="bg-[#060A12] rounded-xl p-2.5">
+                  <div className="bg-white/[0.03] rounded-xl p-2.5">
                     <p className="text-[9px] text-gray-500">MCap</p>
                     <p className="text-xs font-bold font-mono">
                       ${result.dexData.marketCap > 1e6 ? (result.dexData.marketCap / 1e6).toFixed(2) + 'M' : result.dexData.marketCap > 1000 ? (result.dexData.marketCap / 1000).toFixed(1) + 'K' : result.dexData.marketCap.toFixed(0)}
                     </p>
                   </div>
-                  <div className="bg-[#060A12] rounded-xl p-2.5">
+                  <div className="bg-white/[0.03] rounded-xl p-2.5">
                     <p className="text-[9px] text-gray-500">Volume</p>
                     <p className="text-xs font-bold font-mono">
                       ${result.dexData.volume24h > 1e6 ? (result.dexData.volume24h / 1e6).toFixed(2) + 'M' : result.dexData.volume24h > 1000 ? (result.dexData.volume24h / 1000).toFixed(1) + 'K' : result.dexData.volume24h.toFixed(0)}
                     </p>
                   </div>
-                  <div className="bg-[#060A12] rounded-xl p-2.5">
+                  <div className="bg-white/[0.03] rounded-xl p-2.5">
                     <p className="text-[9px] text-gray-500">Liquidity</p>
                     <p className="text-xs font-bold font-mono">
                       ${result.dexData.liquidity > 1e6 ? (result.dexData.liquidity / 1e6).toFixed(2) + 'M' : result.dexData.liquidity > 1000 ? (result.dexData.liquidity / 1000).toFixed(1) + 'K' : result.dexData.liquidity.toFixed(0)}
                     </p>
                   </div>
-                  <div className="bg-[#060A12] rounded-xl p-2.5">
+                  <div className="bg-white/[0.03] rounded-xl p-2.5">
                     <p className="text-[9px] text-gray-500">FDV</p>
                     <p className="text-xs font-bold font-mono">
                       ${result.dexData.fdv > 1e6 ? (result.dexData.fdv / 1e6).toFixed(2) + 'M' : result.dexData.fdv > 1000 ? (result.dexData.fdv / 1000).toFixed(1) + 'K' : result.dexData.fdv.toFixed(0)}
@@ -327,7 +335,7 @@ export default function SecurityPage() {
               </div>
             )}
 
-            <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+            <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <h3 className="font-bold text-sm mb-3">Security Checks</h3>
               <div className="space-y-2">
                 {result.checks.map((check) => {
@@ -346,7 +354,7 @@ export default function SecurityPage() {
               </div>
             </div>
 
-            <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+            <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <h3 className="font-bold text-sm mb-3">Contract Details</h3>
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between">
@@ -385,7 +393,7 @@ export default function SecurityPage() {
             </div>
 
             {/* AI Security Assessment */}
-            <div className="bg-[#0A0E1A] rounded-2xl p-4 border border-[#0066FF]/20 bg-gradient-to-br from-[#0066FF]/5 to-transparent">
+            <div className="nl-glass rounded-2xl p-4 bg-gradient-to-br from-[#0066FF]/5 to-transparent" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-7 h-7 bg-[#0066FF]/20 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Brain className="w-4 h-4 text-[#0066FF]" />

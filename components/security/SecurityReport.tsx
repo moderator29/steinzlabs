@@ -36,7 +36,7 @@ export function SecurityReport({
 }) {
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3 p-4 rounded-xl nl-glass">
+      <div className="flex items-start justify-between gap-3 p-4 rounded-xl nl-glass" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         <div className="flex-1 min-w-0">
           <p className="text-[10px] uppercase tracking-wide text-slate-500">{scanType} scan</p>
           <code className="text-sm font-mono text-white truncate block">{target}</code>
@@ -63,7 +63,7 @@ export function SecurityReport({
         </div>
       )}
 
-      <div className="rounded-xl border border-slate-800 divide-y divide-slate-800">
+      <div className="rounded-xl nl-glass divide-y divide-white/10" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         {Object.entries(assessment.sections).map(([key, section]) => (
           <div key={key} className="flex items-start gap-3 p-3 hover:bg-white/[0.02]">
             {section.ok ? (

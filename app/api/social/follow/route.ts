@@ -41,12 +41,24 @@ export async function POST(req: NextRequest) {
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // Resolve the follower's identity so the notification click-through links to
+  // their profile (/u/<username>) instead of the generic notifications page.
+  const { data: follower } = await sb
+    .from('profiles')
+    .select('username, avatar_url')
+    .eq('id', user.id)
+    .maybeSingle();
+
   // Fire the social notification (fire-and-forget; never block the follow).
   // A public account auto-accepts -> new_follower; a private one -> follow_request.
   void notifySocialEvent({
     recipient_id: targetId,
     event: status === 'pending' ? 'follow_request' : 'new_follower',
-    metadata: { follower_id: user.id },
+    metadata: {
+      follower_id: user.id,
+      follower_username: follower?.username ?? null,
+      follower_avatar_url: follower?.avatar_url ?? null,
+    },
   }).catch(() => {});
 
   return NextResponse.json({ follow: data });
@@ -96,5 +108,25 @@ export async function PATCH(req: NextRequest) {
     .eq('follower_id', parsed.data.follower_id)
     .eq('following_id', user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // On accept, tell the original requester their follow request went through.
+  // The recipient is the requester; the actor is the account owner who accepted,
+  // so the click-through links to the accepter's profile.
+  const { data: accepter } = await sb
+    .from('profiles')
+    .select('username, avatar_url')
+    .eq('id', user.id)
+    .maybeSingle();
+  void notifySocialEvent({
+    recipient_id: parsed.data.follower_id,
+    event: 'new_follower',
+    metadata: {
+      follower_id: user.id,
+      follower_username: accepter?.username ?? null,
+      follower_avatar_url: accepter?.avatar_url ?? null,
+      follow_request_accepted: true,
+    },
+  }).catch(() => {});
+
   return NextResponse.json({ ok: true });
 }

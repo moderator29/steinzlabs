@@ -17,9 +17,10 @@
 import { NextRequest } from "next/server";
 import { verifyCron, cronResponse, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { getCurrentTokenPriceUsd, getEvmTokenDecimals } from "@/lib/sniper/priceFeed";
-import { usdcForChain } from "@/lib/trading/usdc";
+import { getCurrentTokenPriceUsd, getEvmTokenDecimalsStrict, getSolanaTokenDecimals } from "@/lib/sniper/priceFeed";
+import { usdcForChain, usdcBaseUnitsToUsd } from "@/lib/trading/usdc";
 import { evaluatePosition } from "@/lib/sniper/autosell";
+import { tryExecuteSellViaSessionKey } from "@/lib/trading/sessionKeyExecutor";
 import type { SniperChain } from "@/lib/sniper/chains";
 
 export const runtime = "nodejs";
@@ -37,6 +38,7 @@ interface OpenPosition {
   tokens_received: number | null;
   entry_price_usd: number | null;
   peak_price_usd: number | null;
+  pnl_usd: number | null;
   wallet_address: string | null;
   sell_pending_trade_id: string | null;
 }
@@ -72,11 +74,23 @@ export async function GET(request: NextRequest) {
     return cronResponse("sniper-autosell", startedAt, { open: 0, noWork: true });
   }
 
+  // Audit #47 C1: serialize ticks so two overlapping invocations can't both
+  // pass a position's realized_at guard and double-sell. Atomic DB lock; if
+  // another tick holds it, exit. TTL matches maxDuration as a crash backstop.
+  const { data: lockOk } = await supabase.rpc("try_acquire_cron_lock", {
+    p_name: "sniper-autosell",
+    p_ttl_seconds: 280,
+  });
+  if (!lockOk) {
+    return cronResponse("sniper-autosell", startedAt, { open: count, skipped: "another tick is running" });
+  }
+  try {
+
   const { data: positions, error } = await supabase
     .from("sniper_executions")
     .select(
       "id,user_id,criteria_id,chain,token_address,token_symbol,amount_native," +
-        "tokens_received,entry_price_usd,peak_price_usd,wallet_address,sell_pending_trade_id",
+        "tokens_received,entry_price_usd,peak_price_usd,pnl_usd,wallet_address,sell_pending_trade_id",
     )
     .eq("status", "confirmed")
     .is("realized_at", null)
@@ -150,7 +164,19 @@ export async function GET(request: NextRequest) {
     // Resolve real on-chain decimals once — needed for both correct pricing
     // and base-unit sell sizing (the sell amount_in must be wei, not whole
     // tokens, or the swap sells ~nothing yet marks the position realized).
-    const decimals = await getEvmTokenDecimals(pos.chain as string, pos.token_address);
+    // A failed decimals read must SKIP this tick, never assume 18: the sell
+    // amount is scaled by 10**decimals and flows as base units straight into the
+    // aggregator (0x for EVM, Jupiter for Solana). Assuming 18 for a 6/8/9-dp
+    // token over-scales by 1e9–1e12x — the swap reverts on insufficient balance
+    // and the protective sell silently never fires. EVM reads on-chain decimals;
+    // Solana reads the SPL mint decimals from the Jupiter token list.
+    const decimals = pos.chain === "solana"
+      ? await getSolanaTokenDecimals(pos.token_address)
+      : await getEvmTokenDecimalsStrict(pos.chain as string, pos.token_address);
+    if (decimals == null) {
+      summary.push({ id: pos.id, action: "skip", reason: "token decimals unavailable — retry next tick" });
+      continue;
+    }
     const currentPriceUsd = await getCurrentTokenPriceUsd(
       pos.chain as SniperChain,
       pos.token_address,
@@ -210,6 +236,71 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
+    // tokens_received is a WHOLE-token count; the aggregator expects base
+    // units. Scale by 10**decimals (BigInt to avoid float drift on big mc).
+    const tokenAmountBaseUnits = (
+      BigInt(Math.round((pos.tokens_received ?? 0) * 1e6)) *
+      (BigInt(10) ** BigInt(decimals)) /
+      BigInt(1e6)
+    ).toString();
+
+    // AA fast-path (#45): if the user has an active, owner-approved session key
+    // on this chain, unwind the position right here as a background userOp
+    // (token → USDC) — no browser, no pending-trade round trip. On any miss
+    // (AA dormant, no session, over caps, quote failure) this returns null and
+    // we fall through to staging a one-tap pending sell below.
+    try {
+      const aa = await tryExecuteSellViaSessionKey({
+        userId: pos.user_id,
+        chain: pos.chain,
+        tokenAddress: pos.token_address,
+        tokenAmountBaseUnits,
+        slippageBps: c.max_slippage_bps ?? 200,
+      });
+      if (aa?.txHash) {
+        // The M3 balance cap can sell LESS than requested (stale/inflated
+        // tokens_received, or a partially-drained kernel). Use the ACTUAL sold
+        // amount, not tokens_received, for PnL — and only fully close the position
+        // when essentially all of it sold; otherwise decrement the remainder and
+        // leave it open so the next tick can finish unwinding it.
+        const soldBase = aa.sellAmountBaseUnits ? BigInt(aa.sellAmountBaseUnits) : BigInt(tokenAmountBaseUnits);
+        const reqBase = BigInt(tokenAmountBaseUnits);
+        const tokensSold = Number(soldBase) / 10 ** decimals;
+        const proceedsUsd = aa.buyAmountBaseUnits ? usdcBaseUnitsToUsd(aa.buyAmountBaseUnits, pos.chain) : null;
+        const realizedPnlUsd =
+          proceedsUsd != null && pos.entry_price_usd != null
+            ? proceedsUsd - pos.entry_price_usd * tokensSold
+            : pos.entry_price_usd != null
+              ? (currentPriceUsd - pos.entry_price_usd) * tokensSold
+              : null;
+        // Fully sold if not capped down (allow tiny rounding slack).
+        const fullySold = soldBase * BigInt(1000) >= reqBase * BigInt(999);
+        const remainingTokens = Math.max(0, (pos.tokens_received ?? 0) - tokensSold);
+        await supabase
+          .from("sniper_executions")
+          .update({
+            sell_tx_hash: aa.txHash,
+            sell_dispatched_at: new Date().toISOString(),
+            ...(fullySold ? { realized_at: new Date().toISOString() } : { tokens_received: remainingTokens }),
+            // Accumulate — a partial sell already recorded a chunk; don't overwrite
+            // it and lose the earlier chunk's realized PnL (it feeds reputation/stats).
+            ...(realizedPnlUsd != null ? { pnl_usd: (pos.pnl_usd ?? 0) + realizedPnlUsd } : {}),
+          })
+          .eq("id", pos.id)
+          .is("realized_at", null);
+
+        summary.push({
+          id: pos.id,
+          action: "sell",
+          reason: `${decision.reason ?? "trigger"} (AA session key${fullySold ? "" : ", partial"})`,
+          pnlPct: decision.pnlPct,
+        });
+        continue;
+      }
+    } catch {
+      // Fall back to pending-trade staging on any AA execution error.
+    }
+
     // Schema fix: pending_trades has from_token_address / to_token_address /
     // source_reason / source_order_id / source_order_table, NOT the older
     // token_in / token_out / source / source_id pair this route used to
@@ -227,9 +318,7 @@ export async function GET(request: NextRequest) {
         from_token_symbol: pos.token_symbol,
         to_token_address: usdcAddress,
         to_token_symbol: "USDC",
-        // tokens_received is a WHOLE-token count; the aggregator expects base
-        // units. Scale by 10**decimals (BigInt to avoid float drift on big mc).
-        amount_in: (BigInt(Math.round((pos.tokens_received ?? 0) * 1e6)) * (BigInt(10) ** BigInt(decimals)) / BigInt(1e6)).toString(),
+        amount_in: tokenAmountBaseUnits,
         slippage_bps: c.max_slippage_bps ?? 200,
         source_reason: "sniper_autosell",
         source_order_id: pos.id,
@@ -283,4 +372,7 @@ export async function GET(request: NextRequest) {
     sells,
     summary,
   });
+  } finally {
+    await supabase.rpc("release_cron_lock", { p_name: "sniper-autosell" });
+  }
 }

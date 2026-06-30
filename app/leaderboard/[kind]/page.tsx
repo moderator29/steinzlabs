@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Trophy } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { FollowButton } from '@/components/social/FollowButton';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 
 /**
  * /leaderboard/[kind] — top-100 dedicated page for any of the 8
@@ -82,13 +83,16 @@ export default function LeaderboardPage({ params }: { params: Promise<{ kind: st
 
   if (!meta) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-slate-400">
-        Unknown leaderboard. <Link href="/discover" className="ms-2 text-[var(--nl-blue,#0066FF)] underline">Back to Discover</Link>
-      </div>
+      <AuroraBackground fullHeight>
+        <div className="min-h-screen flex items-center justify-center text-slate-400">
+          Unknown leaderboard. <Link href="/discover" className="ms-2 text-[var(--nl-blue,#0066FF)] underline">Back to Discover</Link>
+        </div>
+      </AuroraBackground>
     );
   }
 
   return (
+    <AuroraBackground fullHeight>
     <div className="min-h-screen p-4 sm:p-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-3 mb-4">
         <BackButton />
@@ -133,5 +137,6 @@ export default function LeaderboardPage({ params }: { params: Promise<{ kind: st
         </ol>
       )}
     </div>
+    </AuroraBackground>
   );
 }

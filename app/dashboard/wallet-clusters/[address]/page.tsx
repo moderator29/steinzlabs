@@ -98,7 +98,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ addres
 
   return (
     <div className="min-h-screen text-white pb-20">
-      <div className="sticky top-0 z-30 bg-[#0A0E27]/95 backdrop-blur-xl border-b border-slate-800">
+      <div className="sticky top-0 z-30 bg-black/40 backdrop-blur-xl border-b border-white/[0.08]">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="mb-3">
             <BackButton href="/dashboard/wallet-clusters" label="Wallet clusters" />
@@ -141,9 +141,9 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ addres
         )}
 
         {tab === "members" && (
-          <div className="rounded-xl border border-slate-800 overflow-x-auto">
+          <div className="nl-glass rounded-xl overflow-x-auto" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <table className="w-full min-w-[560px] text-xs">
-              <thead className="text-[10px] uppercase tracking-wide text-slate-500 bg-slate-900/30 border-b border-slate-800">
+              <thead className="text-[10px] uppercase tracking-wide text-slate-500 bg-white/[0.03] border-b border-white/[0.08]">
                 <tr>
                   <th className="text-start px-3 py-2">Address</th>
                   <th className="text-start px-3 py-2">Label</th>
@@ -196,7 +196,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ addres
               <button
                 type="submit"
                 disabled={submitting || !labelForm.label.trim()}
-                className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-xs font-semibold transition"
+                className="nl-btn-neon px-3 py-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold transition"
               >
                 {submitting ? "Submitting…" : "Submit label"}
               </button>

@@ -91,7 +91,7 @@ export function CandlestickChart({ data, volumeData, height = 400, loading, enab
       {enableFullscreen && (
         <button
           onClick={() => setFullscreen(!fullscreen)}
-          className="absolute top-2 right-2 z-10 p-1.5 bg-[#141824] border border-[#1E2433] rounded text-gray-400 hover:text-white transition-colors"
+          className="nl-button--ghost absolute top-2 right-2 z-10 p-1.5 rounded"
         >
           {fullscreen ? <X size={14} /> : <Maximize2 size={14} />}
         </button>

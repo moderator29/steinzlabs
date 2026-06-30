@@ -1,6 +1,6 @@
 import {
   Brain, Shield, Zap, Network, TrendingUp, BarChart2,
-  Fingerprint, Target, type LucideIcon,
+  Fingerprint, Target, LineChart, type LucideIcon,
 } from 'lucide-react';
 import type { BadgeType } from './ContainerBadge';
 
@@ -72,6 +72,17 @@ export const FEATURE_CARDS: CardData[] = [
     icon: Target,
     gradient: 'linear-gradient(135deg,#1a0505 0%,#7F1D1D 50%,#991B1B 100%)',
     cta: 'Configure Bot →', href: '/dashboard/sniper',
+  },
+  {
+    tag: 'Automated', title: 'Market Maker Bot',
+    description: 'Non-custodial automated market making — work a spread around a token with bounded, capped two-sided swaps.',
+    bullets: ['Grid + Range strategies', 'Budget, inventory + slippage caps you sign for', 'Net PnL tracking · pause/stop kill switch'],
+    pills: ['Non-Custodial', 'Grid + Range', 'Capped'],
+    badge: 'NEW',
+    badgePosition: 'top-right',
+    icon: LineChart,
+    gradient: 'linear-gradient(135deg,#0b1f4d 0%,#0c22e0 55%,#050ea8 100%)',
+    cta: 'Open Market Maker →', href: '/dashboard/market-maker',
   },
   {
     tag: 'For Intelligence', title: 'On-Chain Trend Detection',

@@ -14,8 +14,12 @@ import type { DexPair } from './dexscreener';
 const BASE = 'https://api.geckoterminal.com/api/v2';
 const TIMEOUT_MS = 9000;
 
-// Our canonical chain id → GeckoTerminal network slug. EVM only (no Solana).
+// Our canonical chain id → GeckoTerminal network slug. Now includes Solana —
+// GeckoTerminal DOES index Solana pools (pump.fun, Raydium, Meteora, …), which
+// is where the bulk of launchpad activity lives. Excluding it was the main
+// reason the feed looked empty.
 const GT_NETWORK: Record<string, string> = {
+  solana: 'solana',
   ethereum: 'eth',
   base: 'base',
   arbitrum: 'arbitrum',
@@ -25,7 +29,9 @@ const GT_NETWORK: Record<string, string> = {
   avalanche: 'avax',
 };
 
-export const SNIPER_EVM_CHAINS = Object.keys(GT_NETWORK);
+export const SNIPER_EVM_CHAINS = Object.keys(GT_NETWORK).filter((c) => c !== 'solana');
+/** Every chain the feed ingests (Solana first — highest launchpad volume). */
+export const SNIPER_FEED_CHAINS = Object.keys(GT_NETWORK);
 
 interface GtToken {
   id: string; // "network_0xaddress"
@@ -130,7 +136,8 @@ async function newPoolsForChain(chain: string, minLiquidityUsd: number): Promise
 
 /**
  * Fresh EVM pools across the supported chains (or a single chain). Sorted
- * newest-first. EVM only — Solana is intentionally excluded for now.
+ * newest-first. EVM only — kept for the legacy live path; the primary feed now
+ * reads from the ingested sniper_feed_tokens table.
  */
 export async function getNewEvmPairs(minLiquidityUsd = 3000, chain?: string): Promise<DexPair[]> {
   const chains = chain ? [chain] : SNIPER_EVM_CHAINS;
@@ -138,4 +145,26 @@ export async function getNewEvmPairs(minLiquidityUsd = 3000, chain?: string): Pr
   return results
     .flat()
     .sort((a, b) => (b.pairCreatedAt ?? 0) - (a.pairCreatedAt ?? 0));
+}
+
+/**
+ * Raw new/trending pools for a single chain + page — uncached, no liquidity
+ * filter. Used by the ingestion cron (#61) which normalizes + upserts into
+ * sniper_feed_tokens. `feed` selects the endpoint: 'new_pools' (freshest) or
+ * 'trending_pools' (active). Returns [] on any error so one bad chain/page
+ * never aborts a whole ingest run.
+ */
+export async function getPoolsForIngest(
+  chain: string,
+  page = 1,
+  feed: 'new_pools' | 'trending_pools' = 'new_pools',
+): Promise<DexPair[]> {
+  const network = GT_NETWORK[chain];
+  if (!network) return [];
+  try {
+    const body = await gtFetch(`/networks/${network}/${feed}?include=base_token,quote_token,dex&page=${page}`);
+    return mapPoolsToPairs(chain, body);
+  } catch {
+    return [];
+  }
 }

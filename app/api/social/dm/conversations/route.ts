@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   const sb = getSupabaseAdmin();
   const { data, error } = await sb
     .from('dm_conversations')
-    .select('id, user_a_id, user_b_id, conversation_key_a, conversation_key_b, last_message_at, user_a_archived, user_b_archived, created_at, request_state, requested_by')
+    .select('id, user_a_id, user_b_id, conversation_key_a, conversation_key_b, is_encrypted, last_message_at, last_message_preview, last_message_sender, user_a_archived, user_b_archived, created_at, request_state, requested_by')
     .or(`user_a_id.eq.${user.id},user_b_id.eq.${user.id}`)
     .neq('request_state', 'declined')
     .order('last_message_at', { ascending: false, nullsFirst: false });
@@ -68,7 +68,10 @@ export async function GET(req: NextRequest) {
       id: row.id,
       peer_id: peerId,
       sealed_conversation_key: sealedKey,
+      is_encrypted: row.is_encrypted,
       last_message_at: row.last_message_at,
+      last_message_preview: row.last_message_preview,
+      last_message_sender: row.last_message_sender,
       archived,
       created_at: row.created_at,
       request_state: row.request_state,
@@ -107,6 +110,10 @@ export async function POST(req: NextRequest) {
   // the NOT NULL key columns are satisfied and the thread still opens.
   const keySelf = parsed.data.sealed_key_self ?? PLAIN_SENTINEL;
   const keyPeer = parsed.data.sealed_key_peer ?? PLAIN_SENTINEL;
+  // A conversation is genuinely E2E only when BOTH sealed keys are real (the
+  // client could seal its own key but fail to fetch the peer's). Anything less
+  // is plaintext — and the row records the truth so the UI can be honest.
+  const encrypted = !!parsed.data.sealed_key_self && !!parsed.data.sealed_key_peer;
   const sb = getSupabaseAdmin();
 
   // Decide whether this conversation goes straight to the peer's inbox or
@@ -137,6 +144,7 @@ export async function POST(req: NextRequest) {
         user_b_id: pair.user_b_id,
         conversation_key_a: isUserA ? keySelf : keyPeer,
         conversation_key_b: isUserA ? keyPeer : keySelf,
+        is_encrypted: encrypted,
         request_state: requestState,
         requested_by: requestState === 'pending' ? user.id : null,
       },
@@ -148,7 +156,7 @@ export async function POST(req: NextRequest) {
   // already existed, the just-inserted ones for a brand-new conversation.
   const { data, error } = await sb
     .from('dm_conversations')
-    .select('id, user_a_id, user_b_id, conversation_key_a, conversation_key_b, created_at, last_message_at, request_state, requested_by')
+    .select('id, user_a_id, user_b_id, conversation_key_a, conversation_key_b, is_encrypted, created_at, last_message_at, request_state, requested_by')
     .eq('user_a_id', pair.user_a_id)
     .eq('user_b_id', pair.user_b_id)
     .single();
@@ -159,6 +167,7 @@ export async function POST(req: NextRequest) {
     id: data.id,
     peer_id: parsed.data.peer_id,
     sealed_conversation_key: isUserA ? data.conversation_key_a : data.conversation_key_b,
+    is_encrypted: data.is_encrypted,
     created_at: data.created_at,
     last_message_at: data.last_message_at,
     request_state: data.request_state,

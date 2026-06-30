@@ -88,7 +88,7 @@ export function PortfolioTable({ positions, loading = false }: PortfolioTablePro
 
   if (!loading && positions.length === 0) {
     return (
-      <div className="bg-[#111827] border border-[#1E2433] rounded-xl py-16 flex flex-col items-center gap-3">
+      <div className="nl-glass rounded-xl py-16 flex flex-col items-center gap-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         <div className="w-12 h-12 rounded-full bg-[#1E2433] flex items-center justify-center">
           <TrendingUp size={20} className="text-gray-600" />
         </div>
@@ -99,7 +99,7 @@ export function PortfolioTable({ positions, loading = false }: PortfolioTablePro
   }
 
   return (
-    <div className="w-full overflow-x-auto rounded-xl border border-[#1E2433] bg-[#111827]">
+    <div className="nl-glass w-full overflow-x-auto rounded-xl" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
       <table className="w-full text-sm min-w-[900px]">
         <thead>
           <tr className="border-b border-[#1E2433] text-gray-500 text-xs">

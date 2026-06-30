@@ -147,7 +147,7 @@ export default function SupportPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#060A14] text-white p-4 sm:p-6">
+    <div className="min-h-screen text-white p-4 sm:p-6">
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -162,7 +162,7 @@ export default function SupportPage() {
           </div>
           <button
             onClick={() => { setShowForm(true); setSelected(null); }}
-            className="inline-flex items-center gap-1.5 text-xs font-bold bg-[#0066FF] hover:bg-[#0818CC] text-white px-3 py-2 rounded-lg transition-colors"
+            className="nl-btn-neon inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg transition-colors"
           >
             <Plus className="w-3.5 h-3.5" /> New ticket
           </button>
@@ -176,7 +176,10 @@ export default function SupportPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* List */}
-          <div className="lg:col-span-1 nl-glass rounded-2xl overflow-hidden">
+          <div
+            className="lg:col-span-1 nl-glass rounded-2xl overflow-hidden"
+            style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
+          >
             <div className="px-4 py-2.5 text-[11px] uppercase tracking-wide text-gray-500 border-b border-white/[0.05]">
               Your tickets
             </div>
@@ -214,7 +217,10 @@ export default function SupportPage() {
           </div>
 
           {/* Detail / Form */}
-          <div className="lg:col-span-2 nl-glass rounded-2xl p-5 min-h-[60vh]">
+          <div
+            className="lg:col-span-2 nl-glass rounded-2xl p-5 min-h-[60vh]"
+            style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
+          >
             {showForm ? (
               <form
                 onSubmit={(e) => { e.preventDefault(); void createTicket(e.currentTarget); }}
@@ -274,7 +280,7 @@ export default function SupportPage() {
                   <button
                     type="submit"
                     disabled={creating}
-                    className="inline-flex items-center gap-1.5 text-sm font-bold bg-[#0066FF] hover:bg-[#0818CC] text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                    className="nl-btn-neon inline-flex items-center gap-1.5 text-sm font-bold px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
                   >
                     {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     Submit ticket
@@ -317,7 +323,7 @@ export default function SupportPage() {
                 </div>
 
                 {/* Original description */}
-                <div className="mb-4 bg-white/[0.03] border border-white/[0.05] rounded-xl p-4">
+                <div className="mb-4 nl-card rounded-xl p-4">
                   <div className="text-[11px] text-gray-500 uppercase tracking-wide mb-2">Your original message</div>
                   <div className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">{detail.description}</div>
                 </div>
@@ -359,7 +365,7 @@ export default function SupportPage() {
                       <button
                         onClick={postReply}
                         disabled={posting || !replyInput.trim()}
-                        className="inline-flex items-center gap-1.5 text-sm font-bold bg-[#0066FF] hover:bg-[#0818CC] text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-40"
+                        className="nl-btn-neon inline-flex items-center gap-1.5 text-sm font-bold px-4 py-2 rounded-lg transition-colors disabled:opacity-40"
                       >
                         {posting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                         Send
@@ -375,7 +381,7 @@ export default function SupportPage() {
                 <p className="text-xs text-gray-500 max-w-xs mb-4">We respond to every ticket. Priority on Pro+ and urgent-flagged.</p>
                 <button
                   onClick={() => setShowForm(true)}
-                  className="inline-flex items-center gap-1.5 text-sm font-bold bg-[#0066FF] hover:bg-[#0818CC] text-white px-4 py-2 rounded-lg transition-colors"
+                  className="nl-btn-neon inline-flex items-center gap-1.5 text-sm font-bold px-4 py-2 rounded-lg transition-colors"
                 >
                   <Plus className="w-4 h-4" /> New ticket
                 </button>

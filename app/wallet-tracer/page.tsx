@@ -46,7 +46,7 @@ export default function WalletTracerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] p-6">
+    <div className="min-h-screen p-6">
       <div className="max-w-5xl mx-auto">
         <PageHeader
           title="Wallet Tracer"
@@ -63,13 +63,13 @@ export default function WalletTracerPage() {
               onChange={(e) => setWallet(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && traceWallet()}
               placeholder="Enter wallet address (0x... or Solana address)..."
-              className="w-full bg-[#141824] border border-[#1E2433] rounded-lg ps-12 pe-4 py-4 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
+              className="w-full nl-glass rounded-lg ps-12 pe-4 py-4 text-white placeholder-gray-600 focus:outline-none"
             />
           </div>
           <select
             value={chain}
             onChange={(e) => setChain(e.target.value)}
-            className="bg-[#141824] border border-[#1E2433] rounded-lg px-4 text-white focus:outline-none focus:border-[#0066FF]"
+            className="nl-glass rounded-lg px-4 text-white focus:outline-none"
           >
             {['ethereum', 'solana', 'base', 'bsc', 'polygon', 'arbitrum'].map((c) => (
               <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
@@ -78,7 +78,7 @@ export default function WalletTracerPage() {
           <button
             onClick={traceWallet}
             disabled={loading || !wallet.trim()}
-            className="bg-[#0066FF] hover:bg-[#0052CC] disabled:opacity-50 text-white font-bold px-8 py-4 rounded-lg transition-colors"
+            className="nl-button disabled:opacity-50 font-bold px-8 py-4 rounded-lg"
           >
             {loading ? 'Tracing...' : 'Trace'}
           </button>
@@ -100,8 +100,8 @@ export default function WalletTracerPage() {
                   onClick={() => setActiveTab(tab)}
                   className={`px-6 py-2 rounded-lg font-medium capitalize transition-colors ${
                     activeTab === tab
-                      ? 'bg-[#0066FF] text-white'
-                      : 'bg-[#141824] text-gray-400 hover:text-white border border-[#1E2433]'
+                      ? 'nl-btn-neon'
+                      : 'nl-button--ghost'
                   }`}
                 >
                   {tab === 'intel' ? 'Intelligence' : tab === 'history' ? `History (${history.length})` : `Approvals (${approvals.length})`}
@@ -110,7 +110,7 @@ export default function WalletTracerPage() {
             </div>
 
             {activeTab === 'intel' && (
-              <div className="bg-[#141824] rounded-lg p-6 border border-[#1E2433]">
+              <div className="nl-glass rounded-lg p-6" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <h3 className="text-white font-bold text-xl">
@@ -141,13 +141,13 @@ export default function WalletTracerPage() {
 
                 <div className="grid grid-cols-3 gap-4">
                   {intel.transactionCount !== undefined && (
-                    <div className="bg-[#0A0E1A] rounded-lg p-4">
+                    <div className="nl-card rounded-lg p-4">
                       <div className="text-gray-400 text-sm">Transactions</div>
                       <div className="text-white text-xl font-bold mt-1">{intel.transactionCount.toLocaleString()}</div>
                     </div>
                   )}
                   {intel.totalVolume && (
-                    <div className="bg-[#0A0E1A] rounded-lg p-4">
+                    <div className="nl-card rounded-lg p-4">
                       <div className="text-gray-400 text-sm">Total Volume</div>
                       <div className="text-white text-xl font-bold mt-1">{intel.totalVolume}</div>
                     </div>
@@ -163,7 +163,7 @@ export default function WalletTracerPage() {
             )}
 
             {activeTab === 'history' && (
-              <div className="bg-[#141824] rounded-lg border border-[#1E2433] overflow-hidden">
+              <div className="nl-glass rounded-lg overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <div className="p-4 border-b border-[#1E2433]">
                   <h3 className="text-white font-bold">Transaction History</h3>
                 </div>
@@ -191,7 +191,7 @@ export default function WalletTracerPage() {
             )}
 
             {activeTab === 'approvals' && (
-              <div className="bg-[#141824] rounded-lg border border-[#1E2433] overflow-hidden">
+              <div className="nl-glass rounded-lg overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <div className="p-4 border-b border-[#1E2433]">
                   <h3 className="text-white font-bold flex items-center gap-2">
                     <Shield size={18} className="text-yellow-500" />

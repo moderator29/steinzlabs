@@ -119,6 +119,17 @@ button, a, input, select, textarea {
   transition-timing-function: ease;
 }
 
+/* iOS Safari auto-zooms the viewport whenever a focused form control has a
+   computed font-size < 16px (the DM composer, every search box, trading modals,
+   etc. all use text-sm/text-xs). Keep pinch-zoom ENABLED for accessibility and
+   instead enforce a 16px floor on touch-width viewports only — desktop keeps its
+   denser sizing. This is the X/Instagram approach and fixes every input at once. */
+@media (max-width: 640px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
 /* a11y / WCAG 2.3.3 — respect prefers-reduced-motion. The aurora
    background, glow-pulse keyframes, and marquee tickers cause real
    discomfort for users with vestibular conditions. Globally clamp

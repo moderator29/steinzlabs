@@ -1,6 +1,21 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
+import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
+/**
+ * PATCH /api/notifications/[id]/read — mark a single notification read.
+ *
+ * Security (IDOR fix): the update is bound to the authenticated session user
+ * via `.eq('user_id', user.id)`. Previously the service-role update keyed only
+ * on the row id, so any authenticated caller could flip the read flag on ANY
+ * user's notification by guessing/enumerating ids.
+ *
+ * Supabase-backed ids arrive prefixed with `sb-` (see /api/notifications GET).
+ * Local-only ids (market feed / client store) have no DB row — those are
+ * acknowledged client-side via the steinz_read_notifs list, so we no-op here.
+ */
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -11,32 +26,39 @@ export async function PATCH(
     return NextResponse.json({ error: 'Notification ID required' }, { status: 400 });
   }
 
-  // If it's a Supabase-backed notification, mark it in Supabase
-  if (id.startsWith('sb-')) {
-    const supabaseId = id.replace('sb-', '');
-    try {
-      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
-      if (serviceKey) {
-        const { createClient } = await import('@supabase/supabase-js');
-        const adminClient = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          serviceKey,
-          { auth: { autoRefreshToken: false, persistSession: false } }
-        );
-        const { error } = await adminClient
-          .from('notifications')
-          .update({ read: true })
-          .eq('id', supabaseId);
-
-        if (error) {
-
-        }
-      }
-    } catch (err) {
-
-    }
+  // Only Supabase-backed rows are durable; local-only ids are handled client-side.
+  if (!id.startsWith('sb-')) {
+    return NextResponse.json({ success: true, id, persisted: false });
   }
 
-  // localStorage read state is managed client-side via steinz_read_notifs
-  return NextResponse.json({ success: true, id });
+  const user = await getAuthenticatedUser(req);
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const supabaseId = id.replace('sb-', '');
+  try {
+    const admin = getSupabaseAdmin();
+    const { error } = await admin
+      .from('notifications')
+      .update({ read: true })
+      .eq('id', supabaseId)
+      .eq('user_id', user.id);
+
+    if (error) {
+      Sentry.captureException(error, {
+        tags: { route: 'notifications/[id]/read', stage: 'update' },
+        extra: { notification_id: supabaseId },
+      });
+      return NextResponse.json({ error: 'Failed to mark notification read' }, { status: 500 });
+    }
+  } catch (err) {
+    Sentry.captureException(err, {
+      tags: { route: 'notifications/[id]/read', stage: 'update' },
+      extra: { notification_id: supabaseId },
+    });
+    return NextResponse.json({ error: 'Failed to mark notification read' }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true, id, persisted: true });
 }

@@ -24,6 +24,7 @@ export const maxDuration = 300;
 const GROUPS: Record<string, string[]> = {
   // Every ~2 minutes — the demand-gated monitors (all exit instantly at 0 rows).
   frequent: [
+    'sniper-feed-ingest', 'mm-engine',
     'sniper-monitor', 'sniper-auto-execute', 'sniper-autosell', 'sniper-enrich-security',
     'copy-trade-monitor', 'alert-monitor', 'limit-order-monitor', 'stop-loss-monitor',
     'publish-scheduled-research', 'feed-alert-monitor', 'whale-alert-dispatcher',

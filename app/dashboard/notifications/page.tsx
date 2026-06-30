@@ -6,6 +6,8 @@ import {
   Bell, AlertTriangle, Flame, ShieldAlert, Send, Info, ArrowLeftRight, CheckCheck,
 } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { notificationsHowItWorks } from '@/lib/howItWorks/content/notifications';
 import { getLocalNotifications, markAllNotificationsRead } from '@/lib/notifications';
 
 /**
@@ -114,21 +116,24 @@ export default function NotificationsPage() {
         showBack
         backTo="/dashboard"
         actions={
-          unread ? (
-            <button
-              onClick={markAll}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/[0.04] border border-white/10 text-slate-300 hover:text-white hover:border-white/20 transition-colors"
-            >
-              <CheckCheck className="w-3.5 h-3.5" /> Mark all read
-            </button>
-          ) : null
+          <>
+            {unread ? (
+              <button
+                onClick={markAll}
+                className="nl-button--ghost inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition-colors"
+              >
+                <CheckCheck className="w-3.5 h-3.5" /> Mark all read
+              </button>
+            ) : null}
+            <HowItWorksButton content={notificationsHowItWorks} className="ms-auto shrink-0" />
+          </>
         }
       />
 
       {loading ? (
         <div className="text-sm text-slate-500 py-10 text-center">Loading…</div>
       ) : items.length === 0 ? (
-        <div className="glass rounded-2xl border border-white/10 py-14 text-center">
+        <div className="nl-glass rounded-2xl py-14 text-center">
           <Bell className="w-7 h-7 mx-auto text-slate-600 mb-3" />
           <div className="text-sm text-slate-400">No notifications yet.</div>
           <div className="text-[11px] text-slate-600 mt-1">Whale moves, price targets, and security alerts will show up here.</div>
@@ -139,9 +144,9 @@ export default function NotificationsPage() {
             <button
               key={n.id}
               onClick={() => n.href && router.push(n.href)}
-              className={`w-full text-start flex items-start gap-3 px-4 py-3 rounded-xl border transition-colors ${
+              className={`w-full text-start flex items-start gap-3 px-4 py-3 rounded-xl nl-glass border transition-colors ${
                 n.read
-                  ? 'bg-white/[0.02] border-white/[0.06]'
+                  ? 'border-white/[0.06]'
                   : 'bg-[#0066FF]/[0.06] border-[#0066FF]/25'
               } ${n.href ? 'hover:border-white/20' : ''}`}
             >
