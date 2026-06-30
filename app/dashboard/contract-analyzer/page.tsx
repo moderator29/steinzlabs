@@ -1,15 +1,28 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Code, Search, AlertTriangle, CheckCircle, XCircle,
-  Shield, Loader2, Info, ChevronDown, ChevronUp, Brain, ThumbsUp, ThumbsDown,
-  TrendingUp, TrendingDown, ShieldAlert, ExternalLink
+  Loader2, Info, ChevronDown, ChevronUp, Brain, ThumbsUp, ThumbsDown,
+  TrendingUp, TrendingDown, ExternalLink, Clock, Rocket, Twitter, Send, Globe
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { isEvmAddress, isSolanaAddress } from '@/lib/utils/addressNormalize';
+
+interface Socials { twitter?: string; telegram?: string; website?: string }
+interface Launchpad { id: string; label: string }
 
 interface AnalysisResult {
+  found?: boolean;
+  reason?: string;
+  tooEarly?: boolean;
+  age?: string | null;
+  ageMs?: number | null;
+  launchpad?: Launchpad | null;
+  socials?: Socials | null;
+  creatorAddress?: string | null;
+  earlyFlags?: string[];
   address: string;
   chain: string;
   overallScore: number;
@@ -70,8 +83,15 @@ const CHAINS = [
   { id: 'solana', label: 'Solana' },
 ];
 
-export default function ContractAnalyzerPage() {
-  const router = useRouter();
+function isValidForChain(addr: string, chain: string): boolean {
+  const a = addr.trim();
+  if (!a) return false;
+  if (chain === 'solana') return isSolanaAddress(a);
+  return isEvmAddress(a);
+}
+
+function ContractAnalyzerInner() {
+  const searchParams = useSearchParams();
   const [input, setInput] = useState('');
   const [chain, setChain] = useState('ethereum');
   const [analyzing, setAnalyzing] = useState(false);
@@ -79,9 +99,10 @@ export default function ContractAnalyzerPage() {
   const [error, setError] = useState<string | null>(null);
   const [showChecks, setShowChecks] = useState(false);
   const [aiFeedback, setAiFeedback] = useState<'up' | 'down' | null>(null);
+  const autoRanRef = useRef(false);
 
-  const handleAnalyze = async () => {
-    if (!input.trim()) return;
+  const runAnalysis = useCallback(async (addr: string, ch: string) => {
+    if (!addr.trim()) return;
     setAnalyzing(true);
     setError(null);
     setResult(null);
@@ -90,7 +111,7 @@ export default function ContractAnalyzerPage() {
       const res = await fetch('/api/security/contract-analyzer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: input.trim(), chain }),
+        body: JSON.stringify({ address: addr.trim(), chain: ch }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Analysis failed'); return; }
@@ -100,7 +121,26 @@ export default function ContractAnalyzerPage() {
     } finally {
       setAnalyzing(false);
     }
-  };
+  }, []);
+
+  const handleAnalyze = () => runAnalysis(input, chain);
+
+  // Auto-populate + auto-run from ?address=&chain= (e.g. the sniper "DNA" button).
+  useEffect(() => {
+    if (autoRanRef.current) return;
+    const addrParam = (searchParams.get('address') || '').trim();
+    const chainParam = (searchParams.get('chain') || '').trim().toLowerCase();
+    if (!addrParam) return;
+    autoRanRef.current = true;
+    const resolvedChain = CHAINS.some((c) => c.id === chainParam)
+      ? chainParam
+      : isSolanaAddress(addrParam) ? 'solana' : 'ethereum';
+    setInput(addrParam);
+    setChain(resolvedChain);
+    if (isValidForChain(addrParam, resolvedChain)) {
+      void runAnalysis(addrParam, resolvedChain);
+    }
+  }, [searchParams, runAnalysis]);
 
   const getStatusIcon = (status: string) => {
     if (status === 'pass') return <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />;
@@ -175,7 +215,99 @@ export default function ContractAnalyzerPage() {
           </div>
         )}
 
-        {result && !analyzing && (
+        {/* INVALID / UNKNOWN contract — clear no-data state, no fake report */}
+        {result && !analyzing && result.found === false && (
+          <div className="nl-glass rounded-2xl p-6 text-center" style={{ boxShadow: '0 0 0 1px rgba(148,163,184,.25)' }}>
+            <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-white/[0.04] flex items-center justify-center">
+              <XCircle className="w-7 h-7 text-gray-500" />
+            </div>
+            <p className="text-sm font-semibold text-gray-300">No data — not a valid/known contract on <span className="capitalize">{result.chain}</span>.</p>
+            <p className="text-[11px] text-gray-600 mt-2 max-w-[280px] mx-auto">
+              We could not find on-chain, security, or market data for this address from any source. Double-check the address and the selected chain.
+            </p>
+            <p className="text-[10px] text-gray-700 font-mono mt-3 break-all">{result.address}</p>
+            <button onClick={() => { setResult(null); setInput(''); }}
+              className="mt-4 nl-btn-neon py-2 px-4 rounded-xl text-xs text-gray-400 hover:text-white transition-all">
+              Try another address
+            </button>
+          </div>
+        )}
+
+        {/* TOO EARLY — token just launched, limited data so far */}
+        {result && !analyzing && result.found !== false && result.tooEarly && (
+          <>
+            <div className="nl-glass rounded-2xl p-4 bg-gradient-to-br from-[#F59E0B]/5 to-transparent" style={{ boxShadow: '0 0 0 1px rgba(245,158,11,.4), 0 0 16px rgba(245,158,11,.18)' }}>
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#F59E0B]/15 flex items-center justify-center flex-shrink-0">
+                  <Rocket className="w-5 h-5 text-[#F59E0B]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-[#F59E0B]">Too early — this coin just launched</p>
+                  <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
+                    Limited data so far. Honeypot simulation, holder distribution, and reliable market metrics need a tradable pool and a little time to populate.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* The light context we actually have */}
+            <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+              <div className="grid grid-cols-2 gap-2">
+                {result.age && (
+                  <div className="bg-white/[0.03] rounded-xl p-2.5">
+                    <p className="text-[9px] text-gray-500 flex items-center gap-1"><Clock className="w-3 h-3" /> Age</p>
+                    <p className="text-xs font-bold">{result.age}</p>
+                  </div>
+                )}
+                {result.launchpad && (
+                  <div className="bg-white/[0.03] rounded-xl p-2.5">
+                    <p className="text-[9px] text-gray-500 flex items-center gap-1"><Rocket className="w-3 h-3" /> Launchpad</p>
+                    <p className="text-xs font-bold">{result.launchpad.label}</p>
+                  </div>
+                )}
+                {result.dexData && result.dexData.liquidity > 0 && (
+                  <div className="bg-white/[0.03] rounded-xl p-2.5">
+                    <p className="text-[9px] text-gray-500">Liquidity</p>
+                    <p className="text-xs font-bold font-mono">${result.dexData.liquidity.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                  </div>
+                )}
+                {result.creatorAddress && (
+                  <div className="bg-white/[0.03] rounded-xl p-2.5 col-span-2">
+                    <p className="text-[9px] text-gray-500">Creator</p>
+                    <p className="text-[11px] font-mono text-gray-300 break-all">{result.creatorAddress}</p>
+                  </div>
+                )}
+              </div>
+
+              {result.socials && (result.socials.twitter || result.socials.telegram || result.socials.website) && (
+                <div className="flex items-center gap-2 mt-3">
+                  {result.socials.twitter && <a href={result.socials.twitter} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg bg-white/5 text-gray-400 hover:text-white"><Twitter className="w-3.5 h-3.5" /></a>}
+                  {result.socials.telegram && <a href={result.socials.telegram} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg bg-white/5 text-gray-400 hover:text-white"><Send className="w-3.5 h-3.5" /></a>}
+                  {result.socials.website && <a href={result.socials.website} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg bg-white/5 text-gray-400 hover:text-white"><Globe className="w-3.5 h-3.5" /></a>}
+                </div>
+              )}
+
+              {result.earlyFlags && result.earlyFlags.length > 0 && (
+                <div className="mt-3 border-t border-white/10 pt-3 space-y-2">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider">Early flags</p>
+                  {result.earlyFlags.map((flag, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
+                      <span className="text-[12px] text-gray-300">{flag}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <button onClick={() => { setResult(null); setInput(''); }}
+              className="w-full nl-btn-neon py-2.5 rounded-xl text-xs text-gray-400 hover:text-white transition-all">
+              Analyze another contract
+            </button>
+          </>
+        )}
+
+        {result && !analyzing && result.found !== false && !result.tooEarly && (
           <>
             {/* Token Header with DexScreener data */}
             {result.dexData && (
@@ -229,6 +361,24 @@ export default function ContractAnalyzerPage() {
                     </p>
                   </div>
                 </div>
+                {/* Launchpad + age + socials */}
+                {(result.launchpad || result.age || (result.socials && (result.socials.twitter || result.socials.telegram || result.socials.website))) && (
+                  <div className="flex items-center flex-wrap gap-2 mt-3">
+                    {result.launchpad && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#0066FF]/10 text-blue-300 border border-[#0066FF]/20 flex items-center gap-1">
+                        <Rocket className="w-3 h-3" /> {result.launchpad.label}
+                      </span>
+                    )}
+                    {result.age && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-gray-400 border border-white/10 flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {result.age}
+                      </span>
+                    )}
+                    {result.socials?.twitter && <a href={result.socials.twitter} target="_blank" rel="noopener noreferrer" className="p-1 rounded-lg bg-white/5 text-gray-400 hover:text-white"><Twitter className="w-3.5 h-3.5" /></a>}
+                    {result.socials?.telegram && <a href={result.socials.telegram} target="_blank" rel="noopener noreferrer" className="p-1 rounded-lg bg-white/5 text-gray-400 hover:text-white"><Send className="w-3.5 h-3.5" /></a>}
+                    {result.socials?.website && <a href={result.socials.website} target="_blank" rel="noopener noreferrer" className="p-1 rounded-lg bg-white/5 text-gray-400 hover:text-white"><Globe className="w-3.5 h-3.5" /></a>}
+                  </div>
+                )}
               </div>
             )}
 
@@ -481,5 +631,17 @@ export default function ContractAnalyzerPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ContractAnalyzerPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen text-white flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-[#0066FF]" />
+      </div>
+    }>
+      <ContractAnalyzerInner />
+    </Suspense>
   );
 }
