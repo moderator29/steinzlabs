@@ -103,10 +103,13 @@ export async function GET(request: NextRequest) {
   const q = (searchParams.get('q') || '').trim();
   const sort = (searchParams.get('sort') || 'new').toLowerCase();
   const audit = (searchParams.get('audit') || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  // OG mode = earliest token we've ingested per (chain, symbol). Honest
+  // "first seen on Naka" — served from the sniper_feed_og view.
+  const ogMode = searchParams.get('og') === '1';
 
   try {
     const sb = getSupabaseAdmin();
-    let query = sb.from('sniper_feed_tokens').select('*', { count: 'exact' });
+    let query = sb.from(ogMode ? 'sniper_feed_og' : 'sniper_feed_tokens').select('*', { count: 'exact' });
 
     if (chainFilter !== 'all') query = query.eq('chain', chainFilter);
     if (sources.length) query = query.in('launchpad', sources);

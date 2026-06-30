@@ -122,6 +122,9 @@ export default function SniperPage() {
   const [feedSort, setFeedSort] = useState<'new' | 'volume' | 'liquidity' | 'mcap'>('new');
   const [excludeHoneypots, setExcludeHoneypots] = useState(false);
   const [socialOnly, setSocialOnly] = useState(false);
+  // OG mode — earliest token we've seen per (chain, symbol). Honest "first seen
+  // on Naka", not "first ever" (we have no global launch index).
+  const [ogMode, setOgMode] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<string[]>([]);
   const [feedQuery, setFeedQuery] = useState('');
   const [killSwitchOn, setKillSwitchOn] = useState(false);
@@ -216,11 +219,12 @@ export default function SniperPage() {
     if (excludeHoneypots) auditFlags.push('nohoneypot');
     if (socialOnly) auditFlags.push('social');
     if (auditFlags.length) params.set('audit', auditFlags.join(','));
+    if (ogMode) params.set('og', '1');
     // Forward the search term (symbol/name/address) so it resolves server-side.
     const qTrim = feedQuery.trim();
     if (qTrim) params.set('q', qTrim);
     return params;
-  }, [feedChain, feedSort, minLiq, sourceFilter, excludeHoneypots, socialOnly, feedQuery]);
+  }, [feedChain, feedSort, minLiq, sourceFilter, excludeHoneypots, socialOnly, ogMode, feedQuery]);
 
   const loadFeed = useCallback(async () => {
     setFeedLoading(true);
@@ -473,6 +477,7 @@ export default function SniperPage() {
               sort={feedSort} setSort={setFeedSort}
               excludeHoneypots={excludeHoneypots} setExcludeHoneypots={setExcludeHoneypots}
               socialOnly={socialOnly} setSocialOnly={setSocialOnly}
+              ogMode={ogMode} setOgMode={setOgMode}
               sourceFilter={sourceFilter} setSourceFilter={setSourceFilter}
               query={feedQuery} setQuery={setFeedQuery}
               soundEnabled={feedSound.enabled} soundVolume={feedSound.volume}
@@ -580,7 +585,7 @@ const SORT_OPTIONS: { id: 'new' | 'volume' | 'liquidity' | 'mcap'; label: string
 function DiscoverTab({
   tokens, total, loading, loadingMore, onRefresh, onLoadMore, onSnipe, onOpen,
   minLiq, setMinLiq, feedChain, setFeedChain, sort, setSort,
-  excludeHoneypots, setExcludeHoneypots, socialOnly, setSocialOnly,
+  excludeHoneypots, setExcludeHoneypots, socialOnly, setSocialOnly, ogMode, setOgMode,
   sourceFilter, setSourceFilter, query, setQuery,
   soundEnabled, soundVolume, onToggleSound, onSetSoundVolume,
 }: {
@@ -592,6 +597,7 @@ function DiscoverTab({
   sort: 'new' | 'volume' | 'liquidity' | 'mcap'; setSort: (s: 'new' | 'volume' | 'liquidity' | 'mcap') => void;
   excludeHoneypots: boolean; setExcludeHoneypots: (b: boolean) => void;
   socialOnly: boolean; setSocialOnly: (b: boolean) => void;
+  ogMode: boolean; setOgMode: (b: boolean) => void;
   sourceFilter: string[]; setSourceFilter: (s: string[]) => void;
   query: string; setQuery: (s: string) => void;
   soundEnabled: boolean; soundVolume: number;
@@ -677,6 +683,15 @@ function DiscoverTab({
             }`}
           >
             1+ social
+          </button>
+          <button
+            onClick={() => setOgMode(!ogMode)}
+            title="OG — first token we've seen for this ticker (first seen on Naka, not first ever)"
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition ${
+              ogMode ? 'bg-amber-500/15 border-amber-500/45 text-amber-200' : 'bg-white/[0.04] border-white/10 text-white/60 hover:text-white'
+            }`}
+          >
+            OG
           </button>
           <span className="w-px h-4 bg-white/10 mx-1" />
           <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold me-1">Min Liq</span>
