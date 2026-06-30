@@ -5,6 +5,7 @@ import { use, useEffect, useState } from 'react';
 import { BookOpen, Clock, Tag, Eye, ArrowRight } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
+import { TiltCard } from '@/components/brand/TiltCard';
 
 interface Post {
   id: string;
@@ -79,8 +80,8 @@ export default function ResearchDetailPage({ params }: { params: Promise<{ id: s
           )}
 
           {state === 'ready' && post && (
-            <article>
-              <div className="flex items-center gap-2 mb-4 text-[11px] text-gray-500">
+            <article className="nl-hero-glow">
+              <div className="flex items-center gap-2 mb-4 text-[11px] text-gray-500 nl-fade-up nl-fade-up-1">
                 <Tag className="w-3 h-3" />
                 <span className="uppercase tracking-wide text-[#4D6BFF] font-semibold">{post.category}</span>
                 <span className="opacity-30">·</span>
@@ -90,20 +91,24 @@ export default function ResearchDetailPage({ params }: { params: Promise<{ id: s
                 {post.view_count > 0 ? (<><span className="opacity-30">·</span><Eye className="w-3 h-3" /><span>{post.view_count.toLocaleString()}</span></>) : null}
               </div>
 
-              <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight mb-4">{post.title}</h1>
-              <p className="text-gray-400 text-sm mb-6">By {post.author}</p>
+              <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight mb-4 nl-fade-up nl-fade-up-1">{post.title}</h1>
+              <p className="text-gray-400 text-sm mb-6 nl-fade-up nl-fade-up-2">By {post.author}</p>
 
               {post.image_url && (
-                <div className="aspect-[16/9] rounded-2xl overflow-hidden mb-8 border border-white/[0.08] nl-glass">
-                  <img src={post.image_url} alt="" className="w-full h-full object-cover" />
+                <div style={{ perspective: '1200px' }} className="mb-8 nl-fade-up nl-fade-up-2">
+                  <TiltCard max={6} className="aspect-[16/9] rounded-2xl overflow-hidden border border-white/[0.08] nl-glass">
+                    <img src={post.image_url} alt="" className="w-full h-full object-cover" />
+                  </TiltCard>
                 </div>
               )}
 
-              {looksLikeHtml(post.content) ? (
-                <div className="nl-research-content" dangerouslySetInnerHTML={{ __html: post.content }} />
-              ) : (
-                <div className="text-[15px] text-gray-300 leading-relaxed whitespace-pre-wrap">{post.content}</div>
-              )}
+              <div className="nl-fade-up nl-fade-up-3">
+                {looksLikeHtml(post.content) ? (
+                  <div className="nl-research-content" dangerouslySetInnerHTML={{ __html: post.content }} />
+                ) : (
+                  <div className="text-[15px] text-gray-300 leading-relaxed whitespace-pre-wrap">{post.content}</div>
+                )}
+              </div>
 
               {post.tags && post.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-10 pt-6 border-t border-white/[0.06]">
@@ -114,7 +119,7 @@ export default function ResearchDetailPage({ params }: { params: Promise<{ id: s
               )}
 
               {/* CTA */}
-              <div className="mt-12 rounded-3xl border border-[#0066FF]/25 bg-gradient-to-br from-[#0066FF]/10 to-[#8B5CF6]/10 p-8 text-center">
+              <div className="mt-12 rounded-3xl border border-[#0066FF]/25 bg-gradient-to-br from-[#0066FF]/10 to-[#8B5CF6]/10 p-8 text-center nl-sheen nl-fade-up nl-fade-up-4">
                 <h3 className="text-xl sm:text-2xl font-black tracking-tight mb-3">Track this live on Naka Labs</h3>
                 <p className="text-gray-400 text-sm max-w-lg mx-auto mb-6">
                   Whale feeds, wallet intelligence, and AI scanners. Free to start, grounded in real on-chain data.

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { BookOpen, Clock, Tag, ArrowRight } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
+import { TiltCard } from '@/components/brand/TiltCard';
 
 interface Post {
   id: string;
@@ -101,16 +102,16 @@ export default function PublicResearchPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {posts.map(p => (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ perspective: '1200px' }}>
+            {posts.map((p, i) => (
+              <TiltCard key={p.id} className={`rounded-2xl nl-fade-up nl-fade-up-${Math.min(i + 1, 4)}`}>
               <Link
-                key={p.id}
                 href={`/research/${p.id}`}
-                className="group relative nl-glass rounded-2xl overflow-hidden hover:bg-white/[0.04] hover:border-white/[0.12] transition-all"
+                className="group relative block nl-glass nl-sheen rounded-2xl overflow-hidden hover:bg-white/[0.04] hover:border-white/[0.12] transition-all"
               >
                 {p.image_url && (
                   <div className="aspect-[16/9] overflow-hidden bg-white/[0.03]">
-                    <img src={p.image_url} alt="" className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500" />
+                    <img src={p.image_url} alt="" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700" />
                   </div>
                 )}
                 <div className="p-5">
@@ -128,6 +129,7 @@ export default function PublicResearchPage() {
                   </div>
                 </div>
               </Link>
+              </TiltCard>
             ))}
           </div>
         )}
