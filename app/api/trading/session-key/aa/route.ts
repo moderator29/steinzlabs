@@ -43,7 +43,13 @@ const AA_CHAINS = ['ethereum', 'base', 'arbitrum', 'optimism', 'polygon', 'bsc',
 /** EIP-712 owner authorization of an AA session grant. Mirrors the legacy
  *  session-key route but binds the kernel address too, since AA execution acts
  *  through that specific kernel account. */
-const TYPED_DATA_DOMAIN = { name: 'NakaLabs AA Session Key', version: '1' };
+// Audit #47 H1: the domain carries chainId (cross-chain replay protection) and
+// the struct carries a single-use server nonce (cross-deployment capture-replay
+// + revoked-grant-resurrection protection). Client + server MUST build these
+// identically or the signature won't verify.
+function aaTypedDataDomain(chain: string) {
+  return { name: 'NakaLabs AA Session Key', version: '1', chainId: aaChainFor(chain)?.id ?? 0 };
+}
 const TYPED_DATA_TYPES = {
   Authorization: [
     { name: 'sessionAddress', type: 'address' },
@@ -52,6 +58,7 @@ const TYPED_DATA_TYPES = {
     { name: 'maxPerTradeUsd', type: 'uint256' },
     { name: 'dailyCapUsd', type: 'uint256' },
     { name: 'expiresAt', type: 'uint256' },
+    { name: 'nonce', type: 'string' },
   ],
 };
 
@@ -151,12 +158,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'vault error' }, { status: 503 });
   }
 
+  // H1: mint a single-use nonce the owner must sign and approve consumes (15m TTL).
+  const nonce = crypto.randomUUID();
+  const { error: nonceErr } = await admin.from('aa_auth_nonces').insert({
+    nonce, user_id: user.id, chain,
+    expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
+  });
+  if (nonceErr) return NextResponse.json({ error: 'could not issue auth nonce' }, { status: 500 });
+
   return NextResponse.json({
     ok: true,
     session_address: session.address,
     encrypted_session_key: encrypted,
     valid_until: validUntil,
     max_trades_per_day: maxTradesPerDay,
+    nonce,
     // Echo back the caps so the client signs exactly what the server will store.
     max_per_trade_usd: maxPerTrade,
     daily_cap_usd: dailyCap,
@@ -188,9 +204,11 @@ async function handleApprove(
   }
 
   // 1. Verify the EIP-712 signature recovers to main_address (owner control).
+  //    Domain includes chainId (H1) so a signature for one chain can't be replayed
+  //    on another.
   try {
     const recovered = ethers.verifyTypedData(
-      TYPED_DATA_DOMAIN,
+      aaTypedDataDomain(chain),
       TYPED_DATA_TYPES,
       body.auth_payload,
       body.auth_signature,
@@ -214,15 +232,35 @@ async function handleApprove(
   const signedMaxPerTrade = Number(signed.maxPerTradeUsd ?? NaN);
   const signedDailyCap = Number(signed.dailyCapUsd ?? NaN);
   const signedExpiresAt = Number(signed.expiresAt ?? NaN);
+  const signedNonce = String(signed.nonce ?? '');
   if (
     signedSession.toLowerCase() !== body.session_address.toLowerCase() ||
     signedKernel.toLowerCase() !== body.kernel_address.toLowerCase() ||
     signedChain.toLowerCase() !== chain ||
     !Number.isFinite(signedMaxPerTrade) || signedMaxPerTrade <= 0 ||
     !Number.isFinite(signedDailyCap) || signedDailyCap <= 0 ||
-    !Number.isFinite(signedExpiresAt) || signedExpiresAt <= Math.floor(Date.now() / 1000)
+    !Number.isFinite(signedExpiresAt) || signedExpiresAt <= Math.floor(Date.now() / 1000) ||
+    !signedNonce
   ) {
     return NextResponse.json({ error: 'auth_payload does not match the authorized scope' }, { status: 400 });
+  }
+
+  // H1: atomically consume the single-use nonce — must be this user's, this
+  // chain's, unused, and unexpired. A conditional UPDATE re-checks under row lock
+  // so a captured signature can't be replayed (the nonce is already used) and a
+  // revoked grant can't be resurrected (each approval needs a fresh nonce).
+  const { data: claimedNonce } = await admin
+    .from('aa_auth_nonces')
+    .update({ used_at: new Date().toISOString() })
+    .eq('nonce', signedNonce)
+    .eq('user_id', userId)
+    .eq('chain', chain)
+    .is('used_at', null)
+    .gt('expires_at', new Date().toISOString())
+    .select('nonce')
+    .maybeSingle();
+  if (!claimedNonce) {
+    return NextResponse.json({ error: 'auth nonce invalid, expired, or already used' }, { status: 400 });
   }
 
   // 3. Confirm the round-tripped ciphertext is a key the SERVER minted AND that

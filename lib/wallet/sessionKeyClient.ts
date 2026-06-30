@@ -16,7 +16,9 @@
 
 import { decryptPrivateKey } from './encryption';
 
-const AA_TYPED_DATA_DOMAIN = { name: 'NakaLabs AA Session Key', version: '1' };
+// Audit #47 H1: domain carries chainId, struct carries a single-use server
+// nonce. MUST match the server (app/api/trading/session-key/aa) byte-for-byte
+// or the signature won't verify.
 const AA_TYPED_DATA_TYPES = {
   Authorization: [
     { name: 'sessionAddress', type: 'address' },
@@ -25,6 +27,7 @@ const AA_TYPED_DATA_TYPES = {
     { name: 'maxPerTradeUsd', type: 'uint256' },
     { name: 'dailyCapUsd', type: 'uint256' },
     { name: 'expiresAt', type: 'uint256' },
+    { name: 'nonce', type: 'string' },
   ],
 };
 
@@ -55,11 +58,13 @@ export async function enableBackgroundSniping(params: {
   });
   const init = (await initRes.json().catch(() => ({}))) as {
     session_address?: string; encrypted_session_key?: string; valid_until?: number;
-    max_trades_per_day?: number; max_per_trade_usd?: number; daily_cap_usd?: number; error?: string;
+    max_trades_per_day?: number; max_per_trade_usd?: number; daily_cap_usd?: number;
+    nonce?: string; error?: string;
   };
   if (
     !initRes.ok || !init.session_address || !init.encrypted_session_key ||
-    !init.valid_until || init.max_per_trade_usd == null || init.daily_cap_usd == null
+    !init.valid_until || init.max_per_trade_usd == null || init.daily_cap_usd == null ||
+    !init.nonce
   ) {
     throw new Error(init.error || 'Could not start background-sniping setup.');
   }
@@ -83,6 +88,7 @@ export async function enableBackgroundSniping(params: {
   //    authorized this exact session + kernel + caps + expiry), so the server
   //    can store the grant with on-record authorization (audit #47 C1).
   const { Wallet } = await import('ethers');
+  const { aaChainFor } = await import('./sessionKeyAA');
   const authPayload = {
     sessionAddress: init.session_address,
     kernelAddress,
@@ -90,10 +96,12 @@ export async function enableBackgroundSniping(params: {
     maxPerTradeUsd: Math.floor(init.max_per_trade_usd),
     dailyCapUsd: Math.floor(init.daily_cap_usd),
     expiresAt: init.valid_until,
+    nonce: init.nonce,
   };
+  const domain = { name: 'NakaLabs AA Session Key', version: '1', chainId: aaChainFor(params.chain)?.id ?? 0 };
   const ownerWallet = new Wallet(ownerPk);
   const authSignature = await ownerWallet.signTypedData(
-    AA_TYPED_DATA_DOMAIN,
+    domain,
     AA_TYPED_DATA_TYPES,
     authPayload,
   );
