@@ -6,6 +6,7 @@ import {
   type GlobalMarketData,
 } from '@/lib/services/coingecko';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { vtxAnalyze } from '@/lib/services/anthropic';
 
 /**
  * Daily Market Brief engine. Assembles the Research Labs daily post entirely
@@ -232,6 +233,70 @@ function buildCover(dateLabel: string, vibe: MarketVibe, marketCap: number): str
 
 // ─── Public builder ─────────────────────────────────────────────────────────
 
+// ─── AI Market Read (grounded narrative) ────────────────────────────────────
+
+interface NarrativeInput {
+  dateLabel: string;
+  vibe: MarketVibe;
+  global: GlobalMarketData | null;
+  gainers: BriefToken[];
+  losers: BriefToken[];
+  moves: BriefWhaleMove[];
+  trending: BriefToken[];
+}
+
+/**
+ * Ask Claude to interpret the brief's REAL numbers into a short market read.
+ * The model is given only the assembled real data and is forbidden from
+ * inventing any token, number, or event. Returns an HTML block, or '' when the
+ * model is unavailable / returns nothing (never a fabricated narrative).
+ */
+async function buildAiNarrative(input: NarrativeInput): Promise<string> {
+  const { vibe, global, gainers, losers, moves, trending } = input;
+  // Only build a narrative when there's real material to interpret.
+  if (gainers.length === 0 && losers.length === 0 && moves.length === 0) return '';
+
+  const lines: string[] = [`Market vibe: ${vibe.label} (${vibe.blurb})`];
+  if (global) lines.push(`Total market cap: ${fmtUsdCompact(global.totalMarketCapUSD)} (${fmtPctArrow(global.marketCapChange24hPercent).arrow} ${fmtPctArrow(global.marketCapChange24hPercent).text} 24h). BTC dominance ${global.btcDominancePercent.toFixed(1)}%. 24h volume ${fmtUsdCompact(global.totalVolumeUSD)}.`);
+  if (gainers.length) lines.push(`Top gainers (24h): ${gainers.map(g => `${g.symbol.toUpperCase()} up ${fmtPctArrow(g.changePct).text}`).join(', ')}.`);
+  if (losers.length) lines.push(`Top losers (24h): ${losers.map(l => `${l.symbol.toUpperCase()} down ${fmtPctArrow(l.changePct).text}`).join(', ')}.`);
+  if (moves.length) lines.push(`Biggest whale moves (last 24h): ${moves.map(m => `${m.label} ${m.action === 'buy' ? 'bought' : m.action === 'sell' ? 'sold' : 'moved'} ${fmtUsdCompact(m.valueUsd)} of ${m.tokenSymbol.toUpperCase()} on ${m.chain}`).join('; ')}.`);
+  if (trending.length) lines.push(`Trending searches: ${trending.map(t => t.symbol.toUpperCase()).join(', ')}.`);
+
+  const prompt = `You are the Naka Labs research desk writing a short crypto market read for today.
+
+Here is the ONLY data you may use (all real, pulled live at publish time):
+${lines.join('\n')}
+
+Write 2 to 3 tight paragraphs (about 90 to 140 words total) interpreting THIS data: what the market is doing, what stands out among the movers, and what the whale flows suggest. Reference the actual tickers and figures above by name.
+
+STRICT RULES:
+- Use ONLY the tokens, numbers, and moves listed above. Do NOT invent any ticker, price, percentage, event, partnership, or statistic that is not in the data.
+- No price predictions, no targets, no financial advice.
+- Do not use the words "dash" or any "—"/"–"/"-" character as a separator; write plainly.
+- Plain prose only. No markdown, no headings, no bullet points, no preamble like "Here is".
+Return only the prose.`;
+
+  try {
+    const text = (await vtxAnalyze(prompt, 600))?.trim();
+    if (!text || text.length < 40) return '';
+    // Render as paragraphs; escape so the model's text can never inject markup.
+    const paras = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean)
+      .map(p => `<p style="color:#cbd5e1;font-size:14px;line-height:1.8;margin:0 0 12px">${esc(p)}</p>`).join('');
+    if (!paras) return '';
+    return `
+    <div style="background:rgba(111,126,255,0.06);border:1px solid rgba(111,126,255,0.2);border-radius:14px;padding:18px;margin:0 0 8px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-size:16px">⚡</span>
+        <span style="color:#c7d2fe;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px">Naka AI Market Read</span>
+      </div>
+      ${paras}
+    </div>`;
+  } catch {
+    return '';
+  }
+}
+
 /** Build today's brief from live data. Returns null only if every data source
  *  failed (so we never publish an empty shell). */
 export async function buildDailyBrief(now: Date): Promise<DailyBrief | null> {
@@ -306,10 +371,17 @@ export async function buildDailyBrief(now: Date): Promise<DailyBrief | null> {
       ${trending.map(t => `<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(111,126,255,0.12);border:1px solid rgba(111,126,255,0.25);border-radius:999px;padding:6px 12px;color:#c7d2fe;font-size:13px;font-weight:600"><img src="${esc(t.image)}" width="16" height="16" style="border-radius:50%"/> ${esc(t.symbol.toUpperCase())}</span>`).join('')}
     </div>` : '';
 
+  // AI Market Read — Claude interprets ONLY the real numbers assembled above
+  // into a grounded narrative. Fully omitted (no fabricated text) if the model
+  // is unavailable or returns nothing. Numbers stay authoritative in the
+  // structured sections below; the narrative may only reference what it's given.
+  const aiNarrative = await buildAiNarrative({ dateLabel, vibe, global: global ?? null, gainers, losers, moves, trending });
+
   const contentHtml = `
     <p style="color:#cbd5e1;font-size:15px;line-height:1.8;margin:0 0 20px">
       Here is your on-chain and market read for <strong style="color:#f1f5f9">${esc(dateLabel)}</strong>, straight from the Naka Labs desk. Everything below is pulled live from market data and our own whale feed.
     </p>
+    ${aiNarrative}
     ${vibeBlock}
     ${moversTable('Top Gainers', '#10B981', gainers)}
     ${moversTable('Top Losers', '#EF4444', losers)}
