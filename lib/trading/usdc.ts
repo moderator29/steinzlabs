@@ -25,3 +25,29 @@ const USDC_BY_CHAIN: Record<string, string> = {
 export function usdcForChain(chain: string): string | null {
   return USDC_BY_CHAIN[chain.toLowerCase()] ?? null;
 }
+
+// USDC decimals per chain. Almost everywhere USDC is 6dp, BUT Binance-Peg USDC
+// on BSC is 18dp — hardcoding 1e6 there silently converts $50 into dust and
+// corrupts proceeds/cost-basis. Resolve decimals per chain on every USD↔base-unit
+// conversion. Default 6 for any chain not explicitly 18.
+const USDC_DECIMALS_BY_CHAIN: Record<string, number> = {
+  bsc: 18,
+  bnb: 18,
+};
+
+export function usdcDecimalsForChain(chain: string): number {
+  return USDC_DECIMALS_BY_CHAIN[chain.toLowerCase()] ?? 6;
+}
+
+/** USD amount → USDC base units (BigInt-safe; handles 6dp and 18dp chains). */
+export function usdToUsdcBaseUnits(amountUsd: number, chain: string): string {
+  const decimals = usdcDecimalsForChain(chain);
+  // Scale via the 6-sig-fig micro-USD intermediate so 18dp never overflows Number.
+  return (BigInt(Math.round(amountUsd * 1e6)) * (BigInt(10) ** BigInt(decimals)) / BigInt(1e6)).toString();
+}
+
+/** USDC base units → USD number (handles 6dp and 18dp chains). */
+export function usdcBaseUnitsToUsd(baseUnits: string | number | bigint, chain: string): number {
+  const decimals = usdcDecimalsForChain(chain);
+  return Number(baseUnits) / 10 ** decimals;
+}

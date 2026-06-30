@@ -2,7 +2,7 @@ import 'server-only';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { getDexPrice } from '@/lib/services/dexscreener';
 import { getEvmTokenDecimals } from '@/lib/sniper/priceFeed';
-import { usdcForChain } from '@/lib/trading/usdc';
+import { usdcForChain, usdcBaseUnitsToUsd } from '@/lib/trading/usdc';
 import { aaChainFor } from '@/lib/wallet/sessionKeyAA';
 import { tryExecuteSnipeViaSessionKey, tryExecuteSellViaSessionKey } from '@/lib/trading/sessionKeyExecutor';
 
@@ -126,7 +126,7 @@ export async function runStrategyTick(s: Strategy): Promise<TickResult> {
     if (res?.txHash) {
       // H4: use the ACTUAL on-chain fill amounts (0x quote), not price estimates.
       const tokensSold = res.sellAmountBaseUnits ? Number(res.sellAmountBaseUnits) / 10 ** decimals : tokensToSell;
-      const proceedsUsd = res.buyAmountBaseUnits ? Number(res.buyAmountBaseUnits) / 1e6 : tokensToSell * price;
+      const proceedsUsd = res.buyAmountBaseUnits ? usdcBaseUnitsToUsd(res.buyAmountBaseUnits, s.chain) : tokensToSell * price;
       // C1: realized PnL = proceeds - cost basis of the tokens sold (NET, not gross).
       const inv = s.inventory_tokens || 0;
       const avgCost = inv > 0 ? (s.inventory_cost_usd ?? 0) / inv : 0;

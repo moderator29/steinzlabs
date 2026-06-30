@@ -21,7 +21,7 @@
 import { NextRequest } from 'next/server';
 import { verifyCron, cronResponse, logCronExecution } from '../_shared';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { usdcForChain } from '@/lib/trading/usdc';
+import { usdcForChain, usdToUsdcBaseUnits } from '@/lib/trading/usdc';
 import { tryExecuteSnipeViaSessionKey } from '@/lib/trading/sessionKeyExecutor';
 
 export const runtime = 'nodejs';
@@ -237,7 +237,7 @@ export async function GET(request: NextRequest) {
     // 2) Queue the buy on pending_trades with the VERIFIED live schema
     //    (from_token_address/to_token_address/amount_in base units/route_data/
     //    source_order_table). USDC is 6-decimal, so base units = usd * 1e6.
-    const amountInBaseUnits = String(Math.round(criteria.amount_per_snipe_usd * 1e6));
+    const amountInBaseUnits = usdToUsdcBaseUnits(criteria.amount_per_snipe_usd, m.matched_chain);
     // Map the criteria wallet vocabulary (metamask/phantom/builtin) to the
     // relayer/pending_trades vocabulary (external_evm/external_solana/builtin).
     // The pending_trades CHECK only allows the latter set.

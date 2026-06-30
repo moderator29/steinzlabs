@@ -3,6 +3,11 @@
 import { useEffect, useState } from 'react';
 import { Shield, AlertTriangle, Lock, Globe, Send, Twitter } from 'lucide-react';
 import { launchpadIconUrl, launchpadLabel } from '@/lib/sniper/launchpads';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
+
+// Solana addresses are case-sensitive — never lowercase them. normalizeAddress
+// lowercases EVM and preserves Solana, so the audit cache key is collision-safe.
+const auditKey = (chain: string, address: string) => `${chain}:${normalizeAddress(address)}`;
 
 /**
  * Shared primitives for the Sniper terminal: feed token shape, formatting
@@ -252,7 +257,7 @@ function auditRelease() {
 }
 
 async function fetchAudit(chain: string, address: string): Promise<TokenAudit | null> {
-  const key = `${chain}:${address.toLowerCase()}`;
+  const key = auditKey(chain, address);
   const cached = auditCache.get(key);
   if (cached) return cached;
   const existing = auditInflight.get(key);
@@ -278,11 +283,11 @@ async function fetchAudit(chain: string, address: string): Promise<TokenAudit | 
 }
 
 export function useTokenAudit(chain: string, address: string): { audit: TokenAudit | null; loading: boolean } {
-  const [audit, setAudit] = useState<TokenAudit | null>(() => auditCache.get(`${chain}:${address.toLowerCase()}`) ?? null);
+  const [audit, setAudit] = useState<TokenAudit | null>(() => auditCache.get(auditKey(chain, address)) ?? null);
   const [loading, setLoading] = useState(!audit);
   useEffect(() => {
     let alive = true;
-    const cached = auditCache.get(`${chain}:${address.toLowerCase()}`);
+    const cached = auditCache.get(auditKey(chain, address));
     if (cached) { setAudit(cached); setLoading(false); return; }
     setLoading(true);
     fetchAudit(chain, address).then((a) => {

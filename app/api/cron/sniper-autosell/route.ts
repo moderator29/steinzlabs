@@ -18,7 +18,7 @@ import { NextRequest } from "next/server";
 import { verifyCron, cronResponse, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getCurrentTokenPriceUsd, getEvmTokenDecimals } from "@/lib/sniper/priceFeed";
-import { usdcForChain } from "@/lib/trading/usdc";
+import { usdcForChain, usdcBaseUnitsToUsd } from "@/lib/trading/usdc";
 import { evaluatePosition } from "@/lib/sniper/autosell";
 import { tryExecuteSellViaSessionKey } from "@/lib/trading/sessionKeyExecutor";
 import type { SniperChain } from "@/lib/sniper/chains";
@@ -245,18 +245,30 @@ export async function GET(request: NextRequest) {
         slippageBps: c.max_slippage_bps ?? 200,
       });
       if (aa?.txHash) {
-        // Closed on-chain. Mark realized so the next tick skips it, and record
-        // an approximate realized PnL from the price delta at trigger time.
+        // The M3 balance cap can sell LESS than requested (stale/inflated
+        // tokens_received, or a partially-drained kernel). Use the ACTUAL sold
+        // amount, not tokens_received, for PnL — and only fully close the position
+        // when essentially all of it sold; otherwise decrement the remainder and
+        // leave it open so the next tick can finish unwinding it.
+        const soldBase = aa.sellAmountBaseUnits ? BigInt(aa.sellAmountBaseUnits) : BigInt(tokenAmountBaseUnits);
+        const reqBase = BigInt(tokenAmountBaseUnits);
+        const tokensSold = Number(soldBase) / 10 ** decimals;
+        const proceedsUsd = aa.buyAmountBaseUnits ? usdcBaseUnitsToUsd(aa.buyAmountBaseUnits, pos.chain) : null;
         const realizedPnlUsd =
-          pos.entry_price_usd != null
-            ? (currentPriceUsd - pos.entry_price_usd) * (pos.tokens_received ?? 0)
-            : null;
+          proceedsUsd != null && pos.entry_price_usd != null
+            ? proceedsUsd - pos.entry_price_usd * tokensSold
+            : pos.entry_price_usd != null
+              ? (currentPriceUsd - pos.entry_price_usd) * tokensSold
+              : null;
+        // Fully sold if not capped down (allow tiny rounding slack).
+        const fullySold = soldBase * BigInt(1000) >= reqBase * BigInt(999);
+        const remainingTokens = Math.max(0, (pos.tokens_received ?? 0) - tokensSold);
         await supabase
           .from("sniper_executions")
           .update({
             sell_tx_hash: aa.txHash,
             sell_dispatched_at: new Date().toISOString(),
-            realized_at: new Date().toISOString(),
+            ...(fullySold ? { realized_at: new Date().toISOString() } : { tokens_received: remainingTokens }),
             ...(realizedPnlUsd != null ? { pnl_usd: realizedPnlUsd } : {}),
           })
           .eq("id", pos.id)
@@ -265,7 +277,7 @@ export async function GET(request: NextRequest) {
         summary.push({
           id: pos.id,
           action: "sell",
-          reason: `${decision.reason ?? "trigger"} (AA session key)`,
+          reason: `${decision.reason ?? "trigger"} (AA session key${fullySold ? "" : ", partial"})`,
           pnlPct: decision.pnlPct,
         });
         continue;

@@ -1,7 +1,7 @@
 import 'server-only';
 import { type Address, type Hex, encodeFunctionData, erc20Abi, isAddress } from 'viem';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { usdcForChain } from '@/lib/trading/usdc';
+import { usdcForChain, usdToUsdcBaseUnits } from '@/lib/trading/usdc';
 import { getSwapQuote } from '@/lib/services/zerox';
 import { executeSessionKeyTx, getZeroDevRpc, aaChainFor, getErc20Balance } from '@/lib/wallet/sessionKeyAA';
 import { decryptServerSecret, vaultConfigured } from '@/lib/wallet/serverKeyVault';
@@ -183,13 +183,16 @@ export async function tryExecuteSnipeViaSessionKey(params: {
   // the sniper AND the market maker (unified RPC), so the bot can't slip the cap.
   if (session.daily_cap_usd != null) {
     const since = new Date(Date.now() - 86_400_000).toISOString();
-    const { data: spent } = await getSupabaseAdmin().rpc('aa_daily_spend_usd', {
+    const { data: spent, error: capErr } = await getSupabaseAdmin().rpc('aa_daily_spend_usd', {
       p_user: params.userId, p_chain: chain, p_since: since,
     });
+    // Fail CLOSED on a cap-read error — never spend blind against a money cap.
+    if (capErr) return null;
     if (Number(spent ?? 0) + params.amountUsd > Number(session.daily_cap_usd)) return null;
   }
 
-  // Buy: USDC -> token. Sell amount is denominated in USDC (6dp).
+  // Buy: USDC -> token. USDC base units are chain-aware (6dp everywhere except
+  // BSC's 18dp Binance-Peg USDC) — hardcoding 1e6 would turn $50 into dust on BSC.
   const res = await executeSessionSwap({
     session,
     sessionPrivateKey,
@@ -197,7 +200,7 @@ export async function tryExecuteSnipeViaSessionKey(params: {
     chainId,
     sellToken: usdc,
     buyToken: params.tokenAddress,
-    sellAmountBaseUnits: String(Math.round(params.amountUsd * 1e6)),
+    sellAmountBaseUnits: usdToUsdcBaseUnits(params.amountUsd, chain),
     slippageBps: params.slippageBps,
   });
   if (!res) return null;

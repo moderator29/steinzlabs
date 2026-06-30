@@ -206,13 +206,18 @@ export default function NotificationBell() {
             const readIds: string[] = (() => {
               try { return JSON.parse(localStorage.getItem('steinz_read_notifs') || '[]'); } catch { return []; }
             })();
+            // Supabase rows are addressed everywhere by an `sb-`-prefixed id
+            // (the GET route, the read route, lib/notifications all require it).
+            // Use that form here too, or live notifications would never mark read
+            // and would duplicate the next polled row.
+            const sbId = `sb-${row.id}`;
             const next: DisplayNotification = {
-              id: row.id,
+              id: sbId,
               type: row.type as DisplayNotification['type'],
               title: row.title,
               message: row.body,
               time: 'Just now',
-              read: row.read || readIds.includes(row.id),
+              read: row.read || readIds.includes(sbId),
               href: row.url ?? undefined,
             };
             setNotifications((prev) => (prev.some((n) => n.id === next.id) ? prev : [next, ...prev]));
@@ -223,7 +228,7 @@ export default function NotificationBell() {
           { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
           (payload) => {
             const row = payload.new as NotificationRowPayload;
-            setNotifications((prev) => prev.map((n) => (n.id === row.id ? { ...n, read: n.read || row.read } : n)));
+            setNotifications((prev) => prev.map((n) => (n.id === `sb-${row.id}` ? { ...n, read: n.read || row.read } : n)));
           },
         )
         .subscribe();
