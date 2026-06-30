@@ -1,15 +1,29 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Code, Search, AlertTriangle, CheckCircle, XCircle,
-  Shield, Loader2, Info, ChevronDown, ChevronUp, Brain, ThumbsUp, ThumbsDown,
-  TrendingUp, TrendingDown, ShieldAlert, ExternalLink
+  Loader2, Info, ChevronDown, ChevronUp, Brain, ThumbsUp, ThumbsDown,
+  TrendingUp, TrendingDown, ExternalLink, Clock, Rocket, Twitter, Send, Globe
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { isEvmAddress, isSolanaAddress } from '@/lib/utils/addressNormalize';
+import { RelatedTokensPanels } from '@/components/security/RelatedTokensPanels';
+
+interface Socials { twitter?: string; telegram?: string; website?: string }
+interface Launchpad { id: string; label: string }
 
 interface AnalysisResult {
+  found?: boolean;
+  reason?: string;
+  tooEarly?: boolean;
+  age?: string | null;
+  ageMs?: number | null;
+  launchpad?: Launchpad | null;
+  socials?: Socials | null;
+  creatorAddress?: string | null;
+  earlyFlags?: string[];
   address: string;
   chain: string;
   overallScore: number;
@@ -70,8 +84,15 @@ const CHAINS = [
   { id: 'solana', label: 'Solana' },
 ];
 
-export default function ContractAnalyzerPage() {
-  const router = useRouter();
+function isValidForChain(addr: string, chain: string): boolean {
+  const a = addr.trim();
+  if (!a) return false;
+  if (chain === 'solana') return isSolanaAddress(a);
+  return isEvmAddress(a);
+}
+
+function ContractAnalyzerInner() {
+  const searchParams = useSearchParams();
   const [input, setInput] = useState('');
   const [chain, setChain] = useState('ethereum');
   const [analyzing, setAnalyzing] = useState(false);
@@ -79,9 +100,10 @@ export default function ContractAnalyzerPage() {
   const [error, setError] = useState<string | null>(null);
   const [showChecks, setShowChecks] = useState(false);
   const [aiFeedback, setAiFeedback] = useState<'up' | 'down' | null>(null);
+  const autoRanRef = useRef(false);
 
-  const handleAnalyze = async () => {
-    if (!input.trim()) return;
+  const runAnalysis = useCallback(async (addr: string, ch: string) => {
+    if (!addr.trim()) return;
     setAnalyzing(true);
     setError(null);
     setResult(null);
@@ -90,7 +112,7 @@ export default function ContractAnalyzerPage() {
       const res = await fetch('/api/security/contract-analyzer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: input.trim(), chain }),
+        body: JSON.stringify({ address: addr.trim(), chain: ch }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Analysis failed'); return; }
@@ -100,7 +122,26 @@ export default function ContractAnalyzerPage() {
     } finally {
       setAnalyzing(false);
     }
-  };
+  }, []);
+
+  const handleAnalyze = () => runAnalysis(input, chain);
+
+  // Auto-populate + auto-run from ?address=&chain= (e.g. the sniper "DNA" button).
+  useEffect(() => {
+    if (autoRanRef.current) return;
+    const addrParam = (searchParams.get('address') || '').trim();
+    const chainParam = (searchParams.get('chain') || '').trim().toLowerCase();
+    if (!addrParam) return;
+    autoRanRef.current = true;
+    const resolvedChain = CHAINS.some((c) => c.id === chainParam)
+      ? chainParam
+      : isSolanaAddress(addrParam) ? 'solana' : 'ethereum';
+    setInput(addrParam);
+    setChain(resolvedChain);
+    if (isValidForChain(addrParam, resolvedChain)) {
+      void runAnalysis(addrParam, resolvedChain);
+    }
+  }, [searchParams, runAnalysis]);
 
   const getStatusIcon = (status: string) => {
     if (status === 'pass') return <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />;
@@ -109,11 +150,11 @@ export default function ContractAnalyzerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#060A12] text-white pb-20">
-      <div className="sticky top-0 z-40 bg-[#060A12]/90 backdrop-blur-2xl border-b border-[#1a1f2e]">
+    <div className="min-h-screen text-white pb-20">
+      <div className="sticky top-0 z-40 nl-glass backdrop-blur-2xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
-          <div className="w-8 h-8 bg-gradient-to-br from-[#0066FF] to-[#7C3AED] rounded-xl flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-[#1E90FF] to-[#0066FF] rounded-xl flex items-center justify-center">
             <Code className="w-4 h-4" />
           </div>
           <div>
@@ -124,7 +165,7 @@ export default function ContractAnalyzerPage() {
       </div>
 
       <div className="p-4 space-y-4">
-        <div className="bg-[#0066FF]/5 border border-[#0066FF]/20 rounded-2xl p-3 flex items-start gap-3">
+        <div className="nl-glass bg-gradient-to-br from-[#0066FF]/5 to-transparent rounded-2xl p-3 flex items-start gap-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           <Info className="w-4 h-4 text-[#0066FF] mt-0.5 flex-shrink-0" />
           <p className="text-[11px] text-gray-400 leading-relaxed">
             Analyze any smart contract or token address for honeypot risk, dangerous permissions, high taxes, and malicious patterns.
@@ -134,7 +175,7 @@ export default function ContractAnalyzerPage() {
         <div className="flex gap-2 flex-wrap">
           {CHAINS.map((c) => (
             <button key={c.id} onClick={() => setChain(c.id)}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${chain === c.id ? 'bg-[#0066FF]/10 border-[#0066FF]/30 text-blue-300' : 'bg-[#0f1320] border-[#1a1f2e] text-gray-500 hover:text-gray-300'}`}>
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${chain === c.id ? 'bg-[#0066FF]/10 border-[#0066FF]/30 text-blue-300' : 'nl-button--ghost text-gray-500 hover:text-gray-300'}`}>
               {c.label}
             </button>
           ))}
@@ -147,10 +188,10 @@ export default function ContractAnalyzerPage() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
             placeholder="Contract or token address (0x... or Solana)"
-            className="flex-1 bg-[#0f1320] border border-[#1a1f2e] rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40"
+            className="flex-1 nl-glass rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40"
           />
           <button onClick={handleAnalyze} disabled={analyzing || !input.trim()}
-            className="bg-gradient-to-r from-[#0066FF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5">
+            className="nl-btn-neon px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5">
             {analyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
             Analyze
           </button>
@@ -169,17 +210,109 @@ export default function ContractAnalyzerPage() {
         )}
 
         {error && !analyzing && (
-          <div className="bg-[#0f1320] rounded-2xl p-4 border border-red-500/20 text-center">
+          <div className="nl-glass nl-glass--crimson rounded-2xl p-4 text-center">
             <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-2" />
             <p className="text-sm text-red-400 font-semibold">{error}</p>
           </div>
         )}
 
-        {result && !analyzing && (
+        {/* INVALID / UNKNOWN contract — clear no-data state, no fake report */}
+        {result && !analyzing && result.found === false && (
+          <div className="nl-glass rounded-2xl p-6 text-center" style={{ boxShadow: '0 0 0 1px rgba(148,163,184,.25)' }}>
+            <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-white/[0.04] flex items-center justify-center">
+              <XCircle className="w-7 h-7 text-gray-500" />
+            </div>
+            <p className="text-sm font-semibold text-gray-300">No data — not a valid/known contract on <span className="capitalize">{result.chain}</span>.</p>
+            <p className="text-[11px] text-gray-600 mt-2 max-w-[280px] mx-auto">
+              We could not find on-chain, security, or market data for this address from any source. Double-check the address and the selected chain.
+            </p>
+            <p className="text-[10px] text-gray-700 font-mono mt-3 break-all">{result.address}</p>
+            <button onClick={() => { setResult(null); setInput(''); }}
+              className="mt-4 nl-btn-neon py-2 px-4 rounded-xl text-xs text-gray-400 hover:text-white transition-all">
+              Try another address
+            </button>
+          </div>
+        )}
+
+        {/* TOO EARLY — token just launched, limited data so far */}
+        {result && !analyzing && result.found !== false && result.tooEarly && (
+          <>
+            <div className="nl-glass rounded-2xl p-4 bg-gradient-to-br from-[#F59E0B]/5 to-transparent" style={{ boxShadow: '0 0 0 1px rgba(245,158,11,.4), 0 0 16px rgba(245,158,11,.18)' }}>
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#F59E0B]/15 flex items-center justify-center flex-shrink-0">
+                  <Rocket className="w-5 h-5 text-[#F59E0B]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-[#F59E0B]">Too early — this coin just launched</p>
+                  <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
+                    Limited data so far. Honeypot simulation, holder distribution, and reliable market metrics need a tradable pool and a little time to populate.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* The light context we actually have */}
+            <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+              <div className="grid grid-cols-2 gap-2">
+                {result.age && (
+                  <div className="bg-white/[0.03] rounded-xl p-2.5">
+                    <p className="text-[9px] text-gray-500 flex items-center gap-1"><Clock className="w-3 h-3" /> Age</p>
+                    <p className="text-xs font-bold">{result.age}</p>
+                  </div>
+                )}
+                {result.launchpad && (
+                  <div className="bg-white/[0.03] rounded-xl p-2.5">
+                    <p className="text-[9px] text-gray-500 flex items-center gap-1"><Rocket className="w-3 h-3" /> Launchpad</p>
+                    <p className="text-xs font-bold">{result.launchpad.label}</p>
+                  </div>
+                )}
+                {result.dexData && result.dexData.liquidity > 0 && (
+                  <div className="bg-white/[0.03] rounded-xl p-2.5">
+                    <p className="text-[9px] text-gray-500">Liquidity</p>
+                    <p className="text-xs font-bold font-mono">${result.dexData.liquidity.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                  </div>
+                )}
+                {result.creatorAddress && (
+                  <div className="bg-white/[0.03] rounded-xl p-2.5 col-span-2">
+                    <p className="text-[9px] text-gray-500">Creator</p>
+                    <p className="text-[11px] font-mono text-gray-300 break-all">{result.creatorAddress}</p>
+                  </div>
+                )}
+              </div>
+
+              {result.socials && (result.socials.twitter || result.socials.telegram || result.socials.website) && (
+                <div className="flex items-center gap-2 mt-3">
+                  {result.socials.twitter && <a href={result.socials.twitter} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg bg-white/5 text-gray-400 hover:text-white"><Twitter className="w-3.5 h-3.5" /></a>}
+                  {result.socials.telegram && <a href={result.socials.telegram} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg bg-white/5 text-gray-400 hover:text-white"><Send className="w-3.5 h-3.5" /></a>}
+                  {result.socials.website && <a href={result.socials.website} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg bg-white/5 text-gray-400 hover:text-white"><Globe className="w-3.5 h-3.5" /></a>}
+                </div>
+              )}
+
+              {result.earlyFlags && result.earlyFlags.length > 0 && (
+                <div className="mt-3 border-t border-white/10 pt-3 space-y-2">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider">Early flags</p>
+                  {result.earlyFlags.map((flag, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
+                      <span className="text-[12px] text-gray-300">{flag}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <button onClick={() => { setResult(null); setInput(''); }}
+              className="w-full nl-btn-neon py-2.5 rounded-xl text-xs text-gray-400 hover:text-white transition-all">
+              Analyze another contract
+            </button>
+          </>
+        )}
+
+        {result && !analyzing && result.found !== false && !result.tooEarly && (
           <>
             {/* Token Header with DexScreener data */}
             {result.dexData && (
-              <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+              <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <div className="flex items-center gap-3 mb-3">
                   {result.dexData.imageUrl ? (
                     <img src={result.dexData.imageUrl} alt={result.dexData.symbol} className="w-10 h-10 rounded-full object-cover flex-shrink-0 border border-white/10" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
@@ -210,30 +343,48 @@ export default function ContractAnalyzerPage() {
                   )}
                 </div>
                 <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-[#060A12] rounded-xl p-2">
+                  <div className="bg-white/[0.03] rounded-xl p-2">
                     <p className="text-[9px] text-gray-500">MCap</p>
                     <p className="text-xs font-bold font-mono">
                       ${result.dexData.marketCap > 1e6 ? (result.dexData.marketCap / 1e6).toFixed(2) + 'M' : result.dexData.marketCap > 1000 ? (result.dexData.marketCap / 1000).toFixed(1) + 'K' : result.dexData.marketCap.toFixed(0)}
                     </p>
                   </div>
-                  <div className="bg-[#060A12] rounded-xl p-2">
+                  <div className="bg-white/[0.03] rounded-xl p-2">
                     <p className="text-[9px] text-gray-500">Volume 24h</p>
                     <p className="text-xs font-bold font-mono">
                       ${result.dexData.volume24h > 1e6 ? (result.dexData.volume24h / 1e6).toFixed(2) + 'M' : result.dexData.volume24h > 1000 ? (result.dexData.volume24h / 1000).toFixed(1) + 'K' : result.dexData.volume24h.toFixed(0)}
                     </p>
                   </div>
-                  <div className="bg-[#060A12] rounded-xl p-2">
+                  <div className="bg-white/[0.03] rounded-xl p-2">
                     <p className="text-[9px] text-gray-500">Liquidity</p>
                     <p className="text-xs font-bold font-mono">
                       ${result.dexData.liquidity > 1e6 ? (result.dexData.liquidity / 1e6).toFixed(2) + 'M' : result.dexData.liquidity > 1000 ? (result.dexData.liquidity / 1000).toFixed(1) + 'K' : result.dexData.liquidity.toFixed(0)}
                     </p>
                   </div>
                 </div>
+                {/* Launchpad + age + socials */}
+                {(result.launchpad || result.age || (result.socials && (result.socials.twitter || result.socials.telegram || result.socials.website))) && (
+                  <div className="flex items-center flex-wrap gap-2 mt-3">
+                    {result.launchpad && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#0066FF]/10 text-blue-300 border border-[#0066FF]/20 flex items-center gap-1">
+                        <Rocket className="w-3 h-3" /> {result.launchpad.label}
+                      </span>
+                    )}
+                    {result.age && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-gray-400 border border-white/10 flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {result.age}
+                      </span>
+                    )}
+                    {result.socials?.twitter && <a href={result.socials.twitter} target="_blank" rel="noopener noreferrer" className="p-1 rounded-lg bg-white/5 text-gray-400 hover:text-white"><Twitter className="w-3.5 h-3.5" /></a>}
+                    {result.socials?.telegram && <a href={result.socials.telegram} target="_blank" rel="noopener noreferrer" className="p-1 rounded-lg bg-white/5 text-gray-400 hover:text-white"><Send className="w-3.5 h-3.5" /></a>}
+                    {result.socials?.website && <a href={result.socials.website} target="_blank" rel="noopener noreferrer" className="p-1 rounded-lg bg-white/5 text-gray-400 hover:text-white"><Globe className="w-3.5 h-3.5" /></a>}
+                  </div>
+                )}
               </div>
             )}
 
             {/* Score Card */}
-            <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+            <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <div className="flex items-center gap-4">
                 <div className="relative w-20 h-20 flex-shrink-0">
                   <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
@@ -275,7 +426,7 @@ export default function ContractAnalyzerPage() {
 
             {/* Risk Flags */}
             {result.riskFlags.length > 0 && (
-              <div className="bg-[#0f1320] rounded-2xl p-4 border border-red-500/20">
+              <div className="nl-glass nl-glass--crimson rounded-2xl p-4">
                 <h3 className="font-bold text-sm mb-3 flex items-center gap-2 text-red-400">
                   <AlertTriangle className="w-4 h-4" />
                   Risk Flags ({result.riskFlags.length})
@@ -293,24 +444,24 @@ export default function ContractAnalyzerPage() {
 
             {/* Token Security Details */}
             {result.tokenSecurity && (
-              <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+              <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <h3 className="font-bold text-sm mb-3">Token Security Details</h3>
                 <div className="grid grid-cols-2 gap-2 mb-3">
-                  <div className="bg-[#060A12] rounded-xl p-2.5">
+                  <div className="bg-white/[0.03] rounded-xl p-2.5">
                     <p className="text-[9px] text-gray-500">Honeypot</p>
                     <p className={`text-xs font-bold ${result.tokenSecurity.isHoneypot ? 'text-red-400' : 'text-emerald-400'}`}>
                       {result.tokenSecurity.isHoneypot ? 'Detected' : 'None'}
                     </p>
                   </div>
-                  <div className="bg-[#060A12] rounded-xl p-2.5">
+                  <div className="bg-white/[0.03] rounded-xl p-2.5">
                     <p className="text-[9px] text-gray-500">Buy Tax</p>
                     <p className="text-xs font-bold">{result.tokenSecurity.buyTax}</p>
                   </div>
-                  <div className="bg-[#060A12] rounded-xl p-2.5">
+                  <div className="bg-white/[0.03] rounded-xl p-2.5">
                     <p className="text-[9px] text-gray-500">Sell Tax</p>
                     <p className="text-xs font-bold">{result.tokenSecurity.sellTax}</p>
                   </div>
-                  <div className="bg-[#060A12] rounded-xl p-2.5">
+                  <div className="bg-white/[0.03] rounded-xl p-2.5">
                     <p className="text-[9px] text-gray-500">Holders</p>
                     <p className="text-xs font-bold">{result.tokenSecurity.holderCount.toLocaleString()}</p>
                   </div>
@@ -322,7 +473,7 @@ export default function ContractAnalyzerPage() {
                   {showChecks ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
                 {showChecks && (
-                  <div className="space-y-2 border-t border-[#1a1f2e] pt-3">
+                  <div className="space-y-2 border-t border-white/10 pt-3">
                     {result.tokenSecurity.checks.map((check, i) => (
                       <div key={i} className="flex items-center gap-2">
                         {getStatusIcon(check.status)}
@@ -336,7 +487,7 @@ export default function ContractAnalyzerPage() {
 
             {/* Address Intel */}
             {result.addressIntel && result.addressIntel.labels.length > 0 && (
-              <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+              <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <h3 className="font-bold text-sm mb-3">Intelligence Flags</h3>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-lg"
@@ -357,7 +508,7 @@ export default function ContractAnalyzerPage() {
             )}
 
             {result.riskFlags.length === 0 && (
-              <div className="bg-[#0f1320] rounded-2xl p-4 border border-emerald-500/20">
+              <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(16,185,129,.4), 0 0 16px rgba(16,185,129,.18)' }}>
                 <div className="flex items-center gap-3">
                   <CheckCircle className="w-5 h-5 text-emerald-400" />
                   <div>
@@ -369,7 +520,7 @@ export default function ContractAnalyzerPage() {
             )}
 
             {/* Security Assessment Summary */}
-            <div className="bg-[#0A0E1A] rounded-2xl p-4 border border-[#0066FF]/20 bg-gradient-to-br from-[#0066FF]/5 to-transparent">
+            <div className="nl-glass rounded-2xl p-4 bg-gradient-to-br from-[#0066FF]/5 to-transparent" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-7 h-7 bg-[#0066FF]/20 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Brain className="w-4 h-4 text-[#0066FF]" />
@@ -461,8 +612,16 @@ export default function ContractAnalyzerPage() {
               </div>
             </div>
 
+            {/* MEVX-parity: similar tokens (shared ticker) + related wallets
+                (creator/owner/top holders). Read-only, real provider data. */}
+            <RelatedTokensPanels
+              address={result.address}
+              chain={result.chain}
+              symbol={result.dexData?.symbol || undefined}
+            />
+
             <button onClick={() => { setResult(null); setInput(''); }}
-              className="w-full bg-[#0f1320] border border-[#1a1f2e] hover:border-[#0066FF]/30 py-2.5 rounded-xl text-xs text-gray-400 hover:text-white transition-all">
+              className="w-full nl-btn-neon py-2.5 rounded-xl text-xs text-gray-400 hover:text-white transition-all">
               Analyze another contract
             </button>
           </>
@@ -481,5 +640,17 @@ export default function ContractAnalyzerPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ContractAnalyzerPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen text-white flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-[#0066FF]" />
+      </div>
+    }>
+      <ContractAnalyzerInner />
+    </Suspense>
   );
 }

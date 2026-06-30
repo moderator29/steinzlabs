@@ -16,11 +16,8 @@ export function AlphaReportCard({ report }: { report: AlphaReportView }) {
   const confPct = Math.round(report.confidence * 100);
   return (
     <div
-      className="rounded-2xl border border-blue-500/20 p-5 overflow-hidden relative"
-      style={{
-        background:
-          "radial-gradient(1000px 300px at 0% 0%, rgba(26,58,204,0.14), transparent 50%), linear-gradient(180deg, rgba(12,17,32,0.9), rgba(8,11,22,0.9))",
-      }}
+      className="nl-glass rounded-2xl p-5 overflow-hidden relative"
+      style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">

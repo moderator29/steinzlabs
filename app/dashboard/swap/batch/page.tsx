@@ -59,7 +59,7 @@ export default function BatchSwapPage() {
   const field = 'w-full bg-[#060A12] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors';
 
   return (
-    <div className="min-h-screen bg-[#060A12] text-white">
+    <div className="min-h-screen bg-transparent text-white">
       <div className="relative z-10 flex flex-col items-center px-4 pt-6 sm:pt-12 pb-20">
         <div className="w-full max-w-[480px]">
           <div className="flex items-center justify-between mb-6">
@@ -69,7 +69,7 @@ export default function BatchSwapPage() {
           </div>
 
           {!address && (
-            <div className="mb-4 rounded-2xl p-4 bg-[#0D1117] border border-[#1E2433] flex items-center gap-3">
+            <div className="mb-4 rounded-2xl p-4 nl-glass flex items-center gap-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <Wallet className="w-5 h-5 text-gray-500 shrink-0" />
               <div className="flex-1">
                 <p className="text-xs font-semibold text-gray-300">No wallet connected</p>
@@ -81,7 +81,7 @@ export default function BatchSwapPage() {
           {!executing ? (
             <>
               {/* Leg builder */}
-              <div className="bg-[#0D1117] border border-[#1E2433] rounded-2xl p-4 mb-4">
+              <div className="nl-glass rounded-2xl p-4 mb-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <div className="flex items-center gap-2 mb-3 text-gray-300">
                   <Plus size={15} className="text-[#0066FF]" />
                   <span className="text-sm font-semibold">Add a swap</span>
@@ -123,7 +123,7 @@ export default function BatchSwapPage() {
                   {draftError && <p className="text-[11px] text-red-400">{draftError}</p>}
                   <button
                     onClick={addLeg}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-[#1E2433] text-sm font-semibold transition-colors"
+                    className="nl-button--ghost w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold"
                   >
                     <Plus size={15} /> Add to batch
                   </button>
@@ -132,13 +132,13 @@ export default function BatchSwapPage() {
 
               {/* Queued legs */}
               {legs.length > 0 && (
-                <div className="bg-[#0D1117] border border-[#1E2433] rounded-2xl p-4 mb-4">
+                <div className="nl-glass rounded-2xl p-4 mb-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                   <div className="text-[11px] uppercase tracking-wider text-gray-500 mb-2.5">
                     {legs.length} swap{legs.length > 1 ? 's' : ''} queued
                   </div>
                   <div className="space-y-2">
                     {legs.map((leg, i) => (
-                      <div key={i} className="flex items-center gap-2.5 bg-white/[0.02] border border-[#1E2433] rounded-lg px-3 py-2">
+                      <div key={i} className="nl-card flex items-center gap-2.5 rounded-lg px-3 py-2">
                         <SwapTokenGlyph symbol={leg.fromToken} size={26} />
                         <span className="text-[13px] font-mono tabular-nums text-white truncate flex-1">
                           {leg.amount} {leg.fromToken} <span className="text-gray-500">→</span> {leg.toToken}
@@ -157,7 +157,7 @@ export default function BatchSwapPage() {
                   <button
                     onClick={() => setExecuting(true)}
                     disabled={!address}
-                    className="naka-button-primary w-full justify-center mt-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="nl-button w-full justify-center mt-3 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ paddingTop: 12, paddingBottom: 12 }}
                   >
                     <ArrowDownUp size={15} /> Review &amp; execute {legs.length} swap{legs.length > 1 ? 's' : ''}

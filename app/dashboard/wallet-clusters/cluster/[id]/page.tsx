@@ -105,14 +105,14 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#05081E] flex items-center justify-center text-slate-500">
+      <div className="min-h-screen flex items-center justify-center text-slate-500">
         <Loader2 className="w-5 h-5 animate-spin me-2" /> Loading cluster…
       </div>
     );
   }
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-[#05081E] flex items-center justify-center text-slate-400">
+      <div className="min-h-screen flex items-center justify-center text-slate-400">
         <div className="text-center">
           <p className="mb-2">{error || 'Cluster not found.'}</p>
           <Link href="/dashboard/wallet-clusters" className="text-xs text-[#8FA3FF] hover:underline">← Back to directory</Link>
@@ -133,9 +133,9 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
   const firstSeen = edges.map((e) => e.first_seen_at).sort()[0];
 
   return (
-    <div className="min-h-screen bg-[#05081E] text-white pb-24">
+    <div className="min-h-screen text-white pb-24">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-[#05081E]/90 backdrop-blur-xl border-b border-white/5">
+      <div className="sticky top-0 z-30 nl-glass backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-2">
           <BackButton />
           <code className="text-[11px] font-mono text-slate-500 truncate flex-1">{cluster.cluster_id}</code>
@@ -145,7 +145,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
 
       {/* Hero */}
       <div className="max-w-7xl mx-auto px-4 mt-6">
-        <div className="bg-gradient-to-br from-white/[0.04] to-transparent border border-white/10 rounded-2xl p-6">
+        <div className="nl-glass rounded-2xl p-6" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           <div className="flex items-start gap-4">
             <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${meta.tone} flex items-center justify-center shrink-0`}>
               <Icon className="w-8 h-8 text-white" />
@@ -193,7 +193,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
             onNodeClick={(addr) => window.open(`https://etherscan.io/address/${addr}`, '_blank')}
           />
         ) : (
-          <div className="p-10 text-center bg-white/[0.02] border border-white/10 rounded-xl text-slate-500 text-sm">
+          <div className="p-10 text-center nl-glass rounded-xl text-slate-500 text-sm" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             Graph unavailable — no edges persisted yet for this cluster.
           </div>
         )}
@@ -208,7 +208,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             {Object.entries(edgeTypeCount).map(([type, count]) => (
-              <div key={type} className="bg-white/[0.02] border border-white/10 rounded-xl p-3">
+              <div key={type} className="nl-glass rounded-xl p-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <div className="text-[10px] uppercase tracking-wider text-slate-500">{type.replace('_', ' ')}</div>
                 <div className="text-lg font-black font-mono mt-0.5">{count}</div>
               </div>
@@ -229,19 +229,19 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
           <span className="text-[10px] text-slate-500">submit a label → 5 net upvotes → approved + reputation points</span>
         </div>
 
-        <div className="bg-white/[0.02] border border-white/10 rounded-xl p-4">
+        <div className="nl-glass rounded-xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           <div className="flex items-center gap-2 mb-4">
             <input
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
               placeholder="Suggest a label (2–4 words)…"
               maxLength={60}
-              className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#0066FF]/50"
+              className="flex-1 nl-card rounded-lg px-3 py-2 text-sm outline-none"
             />
             <button
               onClick={submitLabel}
               disabled={submitting || !newLabel.trim()}
-              className="px-3 py-2 rounded-lg bg-[#0066FF] hover:bg-[#0918CC] text-xs font-bold disabled:opacity-60 flex items-center gap-1.5"
+              className="px-3 py-2 rounded-lg nl-button text-xs font-bold disabled:opacity-60 flex items-center gap-1.5"
             >
               {submitting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
               Submit
@@ -255,7 +255,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
               {labels.map((l) => {
                 const net = (l.upvotes || 0) - (l.downvotes || 0);
                 return (
-                  <div key={l.id} className="flex items-center gap-3 p-3 bg-black/20 border border-white/5 rounded-lg">
+                  <div key={l.id} className="flex items-center gap-3 p-3 nl-card rounded-lg">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-semibold text-sm">{l.label}</span>
@@ -287,7 +287,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
 
 function Metric({ label, value, color = 'text-white' }: { label: string; value: string; color?: string }) {
   return (
-    <div className="bg-black/20 rounded-lg p-3">
+    <div className="nl-card rounded-lg p-3">
       <div className="text-[10px] uppercase tracking-wider text-slate-500">{label}</div>
       <div className={`text-base font-bold font-mono mt-0.5 ${color}`}>{value}</div>
     </div>
@@ -308,7 +308,7 @@ function MembersList({ members }: { members: Member[] }) {
           Members <span className="text-slate-500 text-xs">({members.length})</span>
         </h2>
       </div>
-      <div className="bg-white/[0.02] border border-white/10 rounded-xl overflow-hidden">
+      <div className="nl-glass rounded-xl overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         <div className="max-h-[400px] overflow-y-auto">
           {slice.map((m) => (
             <div key={m.address} className="flex items-center gap-3 px-4 py-2.5 border-b border-white/5 last:border-b-0 hover:bg-white/[0.03]">

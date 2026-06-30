@@ -97,14 +97,14 @@ export default function ApprovalManagerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#060A12] text-white pb-20">
+    <div className="min-h-screen text-white pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-[#060A12]/90 backdrop-blur-2xl border-b border-[#1a1f2e]">
+      <div className="sticky top-0 z-40 nl-glass backdrop-blur-2xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <button onClick={() => router.back()} className="hover:bg-white/5 p-2 rounded-xl transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="w-8 h-8 bg-gradient-to-br from-[#7C3AED] to-[#0066FF] rounded-xl flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-[#1E90FF] to-[#0066FF] rounded-xl flex items-center justify-center">
             <Key className="w-4 h-4" />
           </div>
           <div>
@@ -132,7 +132,7 @@ export default function ApprovalManagerPage() {
               className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${
                 chain === c.id
                   ? 'bg-[#7C3AED]/10 border-[#7C3AED]/30 text-[#7C3AED]'
-                  : 'bg-[#0f1320] border-[#1a1f2e] text-gray-500 hover:text-gray-300'
+                  : 'nl-button--ghost text-gray-500 hover:text-gray-300'
               }`}
             >
               {c.label}
@@ -148,12 +148,12 @@ export default function ApprovalManagerPage() {
             onChange={(e) => setAddress(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleScan()}
             placeholder="Wallet address (0x...)"
-            className="flex-1 bg-[#0f1320] border border-[#1a1f2e] rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#7C3AED]/40"
+            className="flex-1 nl-glass rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#7C3AED]/40"
           />
           <button
             onClick={handleScan}
             disabled={loading || !address.trim()}
-            className="bg-gradient-to-r from-[#7C3AED] to-[#0066FF] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
+            className="nl-btn-neon px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
           >
             {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
             Scan
@@ -171,7 +171,7 @@ export default function ApprovalManagerPage() {
 
         {/* Error */}
         {error && !loading && (
-          <div className="bg-[#0f1320] rounded-2xl p-4 border border-red-500/20 text-center">
+          <div className="nl-glass nl-glass--crimson rounded-2xl p-4 text-center">
             <AlertTriangle className="w-6 h-6 text-red-400 mx-auto mb-2" />
             <p className="text-sm text-red-400">{error}</p>
           </div>
@@ -182,15 +182,15 @@ export default function ApprovalManagerPage() {
           <>
             {/* Summary row */}
             <div className="grid grid-cols-3 gap-2">
-              <div className="bg-[#0f1320] rounded-2xl p-3 border border-[#1a1f2e] text-center">
+              <div className="nl-card rounded-2xl p-3 text-center">
                 <p className="text-xl font-bold">{response.approvals.length}</p>
                 <p className="text-[10px] text-gray-500 mt-0.5">Total</p>
               </div>
-              <div className="bg-[#0f1320] rounded-2xl p-3 border border-amber-500/20 text-center">
+              <div className="nl-glass rounded-2xl p-3 text-center" style={{ boxShadow: '0 0 0 1px rgba(245,158,11,.4), 0 0 16px rgba(245,158,11,.18)' }}>
                 <p className="text-xl font-bold text-amber-400">{response.unlimitedCount}</p>
                 <p className="text-[10px] text-gray-500 mt-0.5">Unlimited</p>
               </div>
-              <div className="bg-[#0f1320] rounded-2xl p-3 border border-red-500/20 text-center">
+              <div className="nl-glass rounded-2xl p-3 text-center" style={{ boxShadow: '0 0 0 1px rgba(239,68,68,.4), 0 0 16px rgba(239,68,68,.18)' }}>
                 <p className="text-xl font-bold text-red-400">{response.dangerCount}</p>
                 <p className="text-[10px] text-gray-500 mt-0.5">Dangerous</p>
               </div>
@@ -201,7 +201,7 @@ export default function ApprovalManagerPage() {
               href={getRevokeUrl(address.trim(), selectedChain.chainId)}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-between bg-gradient-to-r from-[#7C3AED]/10 to-[#0066FF]/10 border border-[#7C3AED]/20 rounded-2xl p-4 hover:border-[#7C3AED]/40 transition-all"
+              className="nl-glass nl-glass--interactive flex items-center justify-between rounded-2xl p-4 transition-all" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
             >
               <div>
                 <p className="text-sm font-bold">Revoke Approvals</p>
@@ -212,8 +212,8 @@ export default function ApprovalManagerPage() {
 
             {/* Approval list */}
             {response.approvals.length > 0 ? (
-              <div className="bg-[#0f1320] rounded-2xl border border-[#1a1f2e] overflow-hidden">
-                <div className="p-4 border-b border-[#1a1f2e] flex items-center justify-between">
+              <div className="nl-glass rounded-2xl overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+                <div className="p-4 border-b border-white/10 flex items-center justify-between">
                   <div>
                     <h3 className="font-bold text-sm">Active Approvals</h3>
                     <p className="text-[10px] text-gray-500 mt-0.5">Contracts with access to your tokens</p>
@@ -237,10 +237,10 @@ export default function ApprovalManagerPage() {
                     </div>
                   )}
                 </div>
-                <div className="divide-y divide-[#1a1f2e]">
+                <div className="divide-y divide-white/10">
                   {response.approvals.map((approval, i) => (
                     <div key={i} className="flex items-center gap-3 px-4 py-3">
-                      <div className="w-8 h-8 rounded-lg bg-[#1a1f2e] flex items-center justify-center flex-shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
                         <span className="text-[10px] font-bold text-gray-400">
                           {(approval.tokenSymbol || '??').slice(0, 2)}
                         </span>
@@ -263,7 +263,7 @@ export default function ApprovalManagerPage() {
                 </div>
               </div>
             ) : (
-              <div className="bg-[#0f1320] rounded-2xl p-6 border border-emerald-500/20 text-center">
+              <div className="nl-glass rounded-2xl p-6 text-center" style={{ boxShadow: '0 0 0 1px rgba(16,185,129,.4), 0 0 16px rgba(16,185,129,.18)' }}>
                 <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto mb-3" />
                 <p className="text-sm font-semibold text-emerald-400">No active approvals detected</p>
                 <p className="text-[11px] text-gray-500 mt-1">This wallet has a clean approval history on {selectedChain.label}</p>
@@ -271,7 +271,7 @@ export default function ApprovalManagerPage() {
             )}
 
             {/* Safety tips */}
-            <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+            <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
                 <Shield className="w-4 h-4 text-[#7C3AED]" />
                 Approval Safety Rules

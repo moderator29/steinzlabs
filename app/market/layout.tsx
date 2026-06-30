@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import BackButton from '@/components/ui/BackButton';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 
 export const metadata: Metadata = {
   title: 'Market — Naka Labs',
@@ -13,13 +14,15 @@ export const metadata: Metadata = {
 // reachable from /dashboard.
 export default function MarketLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-[#0A0E1A]">
-      <div className="max-w-[1400px] mx-auto px-4 py-4">
-        <div className="mb-5">
-          <BackButton href="/dashboard" label="Dashboard" />
+    <AuroraBackground fullHeight>
+      <div className="min-h-screen">
+        <div className="max-w-[1400px] mx-auto px-4 py-4">
+          <div className="mb-5">
+            <BackButton href="/dashboard" label="Dashboard" />
+          </div>
+          {children}
         </div>
-        {children}
       </div>
-    </div>
+    </AuroraBackground>
   );
 }

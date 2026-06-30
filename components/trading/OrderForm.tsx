@@ -4,7 +4,15 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
-type Tab = "market" | "limit" | "dca" | "stop";
+type Tab = "market" | "limit" | "trailing" | "dca" | "stop";
+
+const TAB_LABELS: Record<Tab, string> = {
+  market: "Market",
+  limit: "Limit",
+  trailing: "Trailing SL",
+  dca: "DCA",
+  stop: "Stop/TP",
+};
 
 interface OrderFormProps {
   chain: string;
@@ -18,8 +26,8 @@ export function OrderForm({ chain, tokenAddress, tokenSymbol }: OrderFormProps) 
   return (
     <div className="flex flex-col h-full bg-slate-900/20">
       {/* Tab bar */}
-      <div className="grid grid-cols-4 border-b border-slate-800">
-        {(["market", "limit", "dca", "stop"] as Tab[]).map((t) => (
+      <div className="grid grid-cols-5 border-b border-slate-800">
+        {(["market", "limit", "trailing", "dca", "stop"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -29,7 +37,7 @@ export function OrderForm({ chain, tokenAddress, tokenSymbol }: OrderFormProps) 
                 : "text-slate-500 hover:text-white"
             }`}
           >
-            {t === "stop" ? "Stop/TP" : t}
+            {TAB_LABELS[t]}
           </button>
         ))}
       </div>
@@ -37,6 +45,7 @@ export function OrderForm({ chain, tokenAddress, tokenSymbol }: OrderFormProps) 
       <div className="flex-1 overflow-y-auto p-3">
         {tab === "market" && <MarketTab chain={chain} tokenAddress={tokenAddress} tokenSymbol={tokenSymbol} />}
         {tab === "limit" && <LimitTab chain={chain} tokenAddress={tokenAddress} tokenSymbol={tokenSymbol} />}
+        {tab === "trailing" && <TrailingStopTab chain={chain} tokenAddress={tokenAddress} tokenSymbol={tokenSymbol} />}
         {tab === "dca" && <DcaTab chain={chain} tokenAddress={tokenAddress} tokenSymbol={tokenSymbol} />}
         {tab === "stop" && <StopTab chain={chain} tokenAddress={tokenAddress} tokenSymbol={tokenSymbol} />}
       </div>
@@ -170,6 +179,84 @@ function LimitTab({ chain, tokenAddress, tokenSymbol }: { chain: string; tokenAd
       >
         {submitting && <Loader2 size={13} className="animate-spin" />}
         Place limit order
+      </button>
+    </div>
+  );
+}
+
+function TrailingStopTab({ chain, tokenAddress, tokenSymbol }: { chain: string; tokenAddress: string; tokenSymbol: string }) {
+  const [amount, setAmount] = useState("");
+  const [trailingDelta, setTrailingDelta] = useState("15");
+  const [expires, setExpires] = useState<string>("never");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit() {
+    if (!amount) {
+      toast.error("Enter position amount");
+      return;
+    }
+    const delta = Number(trailingDelta);
+    if (!(delta > 0)) {
+      toast.error("Enter a trailing delta greater than 0%");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/trading/stop-loss", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chain,
+          token_address: tokenAddress,
+          token_symbol: tokenSymbol,
+          position_amount: Number(amount),
+          // Pure trailing stop: no fixed SL/TP — the monitor tracks the
+          // high-water mark and sells when price falls trailingDelta% off peak.
+          stop_loss_pct: null,
+          take_profit_pct: null,
+          trailing_stop_percent: delta,
+          exit_to_token_address: "USDC",
+          expires_at: expires === "never" ? null : new Date(Date.now() + Number(expires) * 1000).toISOString(),
+          wallet_source: "external_evm",
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed");
+      toast.success("Trailing stop order placed");
+      setAmount("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div>
+      <p className="text-xs text-slate-500 mb-3">
+        Sells {tokenSymbol} when the price falls the trailing delta below its highest point since you placed the order. Non-custodial — you confirm the swap.
+      </p>
+      <Field label={`Position amount (${tokenSymbol})`}>
+        <input className={INPUT_CLS} placeholder="0.0" value={amount} onChange={(e) => setAmount(e.target.value)} />
+      </Field>
+      <Field label="Trailing delta (%)" hint="drawdown off peak">
+        <input className={INPUT_CLS} placeholder="15" value={trailingDelta} onChange={(e) => setTrailingDelta(e.target.value)} />
+      </Field>
+      <Field label="Expires in">
+        <select value={expires} onChange={(e) => setExpires(e.target.value)} className={INPUT_CLS}>
+          <option value="86400">1 day</option>
+          <option value="604800">1 week</option>
+          <option value="2592000">1 month</option>
+          <option value="never">Never</option>
+        </select>
+      </Field>
+      <button
+        onClick={submit}
+        disabled={submitting}
+        className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white text-sm font-semibold transition flex items-center justify-center gap-2"
+      >
+        {submitting && <Loader2 size={13} className="animate-spin" />}
+        Place order
       </button>
     </div>
   );

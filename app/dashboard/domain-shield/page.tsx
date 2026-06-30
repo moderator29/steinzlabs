@@ -89,12 +89,12 @@ export default function DomainShieldPage() {
   const config = result ? VERDICT_CONFIG[result.verdict] : null;
 
   return (
-    <div className="min-h-screen bg-[#060A12] text-white pb-20">
+    <div className="min-h-screen text-white pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-[#060A12]/90 backdrop-blur-2xl border-b border-[#1a1f2e]">
+      <div className="sticky top-0 z-40 nl-glass backdrop-blur-2xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
-          <div className="w-8 h-8 bg-gradient-to-br from-[#0066FF] to-[#7C3AED] rounded-xl flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-[#1E90FF] to-[#0066FF] rounded-xl flex items-center justify-center">
             <Globe className="w-4 h-4" />
           </div>
           <div>
@@ -106,7 +106,7 @@ export default function DomainShieldPage() {
 
       <div className="p-4 space-y-4">
         {/* Info Banner */}
-        <div className="bg-[#0066FF]/5 border border-[#0066FF]/20 rounded-2xl p-3 flex items-start gap-3">
+        <div className="nl-glass bg-gradient-to-br from-[#0066FF]/5 to-transparent rounded-2xl p-3 flex items-start gap-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           <Info className="w-4 h-4 text-[#0066FF] mt-0.5 flex-shrink-0" />
           <p className="text-[11px] text-gray-400 leading-relaxed">
             Enter any URL or domain to instantly check if it is safe, suspicious, or a known phishing site.
@@ -124,13 +124,13 @@ export default function DomainShieldPage() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleScan()}
               placeholder="Enter URL or domain (e.g. uniswap.org)"
-              className="w-full bg-[#0f1320] border border-[#1a1f2e] rounded-xl ps-9 pe-4 py-2.5 text-xs placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40"
+              className="w-full nl-glass rounded-xl ps-9 pe-4 py-2.5 text-xs placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40"
             />
           </div>
           <button
             onClick={handleScan}
             disabled={scanning || !input.trim()}
-            className="bg-gradient-to-r from-[#0066FF] to-[#7C3AED] px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
+            className="nl-btn-neon px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
           >
             {scanning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
             Check
@@ -168,7 +168,7 @@ export default function DomainShieldPage() {
 
         {/* Error */}
         {error && !scanning && (
-          <div className="bg-[#0f1320] rounded-2xl p-4 border border-red-500/20 text-center">
+          <div className="nl-glass nl-glass--crimson rounded-2xl p-4 text-center">
             <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-2" />
             <p className="text-sm text-red-400 font-semibold">{error}</p>
           </div>
@@ -198,7 +198,7 @@ export default function DomainShieldPage() {
 
             {/* Risk Signals */}
             {result.signals.length > 0 && (
-              <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+              <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-400" />
                   Risk Signals
@@ -216,7 +216,7 @@ export default function DomainShieldPage() {
 
             {/* Clean Result */}
             {result.signals.length === 0 && result.verdict === 'SAFE' && (
-              <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+              <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 <div className="flex items-center gap-3">
                   <CheckCircle className="w-5 h-5 text-emerald-400" />
                   <div>
@@ -228,7 +228,7 @@ export default function DomainShieldPage() {
             )}
 
             {/* AI Analysis Card */}
-            <div className="bg-[#0A0E1A] rounded-2xl p-4 border border-[#0066FF]/20 bg-gradient-to-br from-[#0066FF]/5 to-transparent">
+            <div className="nl-glass rounded-2xl p-4 bg-gradient-to-br from-[#0066FF]/5 to-transparent" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-7 h-7 bg-[#0066FF]/20 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Brain className="w-4 h-4 text-[#0066FF]" />
@@ -349,7 +349,7 @@ export default function DomainShieldPage() {
             </div>
 
             {/* Safety Tips */}
-            <div className="bg-[#0f1320] rounded-2xl p-4 border border-[#1a1f2e]">
+            <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
                 <Shield className="w-4 h-4 text-[#0066FF]" />
                 Safety Reminders
@@ -378,7 +378,7 @@ export default function DomainShieldPage() {
             {/* Scan Again */}
             <button
               onClick={() => { setResult(null); setInput(''); }}
-              className="w-full bg-[#0f1320] border border-[#1a1f2e] hover:border-[#0066FF]/30 py-2.5 rounded-xl text-xs text-gray-400 hover:text-white transition-all"
+              className="w-full nl-btn-neon py-2.5 rounded-xl text-xs text-gray-400 hover:text-white transition-all"
             >
               Scan another domain
             </button>

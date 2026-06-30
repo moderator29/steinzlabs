@@ -113,7 +113,8 @@ function ArticleCard({
     return (
       <button
         onClick={onClick}
-        className="w-full text-start rounded-2xl border border-white/[0.06] overflow-hidden hover:border-[#0066FF]/30 hover:shadow-[0_0_24px_rgba(0,102,255,0.08)] transition-all duration-200 group"
+        className="nl-glass w-full text-start rounded-2xl overflow-hidden hover:border-[#0066FF]/30 hover:shadow-[0_0_24px_rgba(0,102,255,0.08)] transition-all duration-200 group"
+        style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
       >
         {post.image_url ? (
           <div className="h-44 w-full overflow-hidden">
@@ -170,7 +171,8 @@ function ArticleCard({
   return (
     <button
       onClick={onClick}
-      className="w-full text-start rounded-xl border border-white/[0.06] overflow-hidden hover:border-[#0066FF]/20 hover:shadow-[0_0_16px_rgba(0,102,255,0.06)] transition-all duration-200 group flex"
+      className="nl-glass w-full text-start rounded-xl overflow-hidden hover:border-[#0066FF]/20 hover:shadow-[0_0_16px_rgba(0,102,255,0.06)] transition-all duration-200 group flex"
+      style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
     >
       {post.image_url ? (
         <div className="w-20 flex-shrink-0 overflow-hidden" style={{ minHeight: '88px' }}>
@@ -360,7 +362,7 @@ export default function ResearchPage() {
   // ── Article detail view ────────────────────────────────────────────────
   if (selected) {
     return (
-      <div className="min-h-screen bg-[#060A12] text-white">
+      <div className="min-h-screen text-white">
         <div className="max-w-2xl mx-auto px-4 py-6 pb-24">
           <ArticleView post={selected} onBack={() => setSelected(null)} />
         </div>
@@ -372,7 +374,7 @@ export default function ResearchPage() {
   const rest = !search ? filtered.slice(1) : filtered;
 
   return (
-    <div className="min-h-screen bg-[#060A12] text-white">
+    <div className="min-h-screen text-white">
       <div className="max-w-2xl mx-auto px-4 py-6 pb-24">
 
         {/* ── Header ── */}
@@ -412,7 +414,7 @@ export default function ResearchPage() {
 
         {/* ── Filter/Sort Panel ── */}
         {showFilters && (
-          <div className="mb-5 rounded-xl border border-white/[0.06] p-4 space-y-4">
+          <div className="nl-glass mb-5 rounded-xl p-4 space-y-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-gray-300 uppercase tracking-wider">Filters</span>
               <button onClick={() => setShowFilters(false)}>
@@ -430,7 +432,7 @@ export default function ResearchPage() {
                     onClick={() => { setSort(value); setPage(1); }}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${
                       sort === value
-                        ? 'bg-[#0066FF] text-white'
+                        ? 'nl-btn-neon'
                         : 'bg-white/[0.04] text-gray-500 hover:bg-white/[0.08] hover:text-gray-300 border border-white/[0.06]'
                     }`}
                   >
@@ -451,7 +453,7 @@ export default function ResearchPage() {
                     onClick={() => { setCategory(label); setPage(1); }}
                     className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all ${
                       category === label
-                        ? 'bg-[#0066FF] text-white'
+                        ? 'nl-btn-neon'
                         : 'bg-white/[0.04] text-gray-500 hover:bg-white/[0.08] hover:text-gray-300 border border-white/[0.06]'
                     }`}
                   >
@@ -491,7 +493,7 @@ export default function ResearchPage() {
               onClick={() => { setCategory(label); setPage(1); }}
               className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${
                 category === label
-                  ? 'bg-[#0066FF] text-white shadow-[0_0_12px_rgba(0,102,255,0.4)]'
+                  ? 'nl-btn-neon'
                   : 'bg-white/[0.04] text-gray-500 hover:bg-white/[0.08] hover:text-gray-300 border border-white/[0.06]'
               }`}
             >
@@ -533,7 +535,7 @@ export default function ResearchPage() {
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-4 py-2 text-xs font-semibold nl-glass rounded-lg disabled:opacity-30 hover:bg-white/[0.08] transition-colors"
+                  className="px-4 py-2 text-xs font-semibold nl-button--ghost rounded-lg disabled:opacity-30"
                 >
                   Previous
                 </button>
@@ -541,7 +543,7 @@ export default function ResearchPage() {
                 <button
                   onClick={() => setPage((p) => p + 1)}
                   disabled={page * 20 >= total}
-                  className="px-4 py-2 text-xs font-semibold nl-glass rounded-lg disabled:opacity-30 hover:bg-white/[0.08] transition-colors"
+                  className="px-4 py-2 text-xs font-semibold nl-button--ghost rounded-lg disabled:opacity-30"
                 >
                   Next
                 </button>

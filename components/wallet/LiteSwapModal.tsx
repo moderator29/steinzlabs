@@ -156,7 +156,7 @@ export function LiteSwapModal({ open, onClose, tokenAddress, tokenSymbol, chain,
       aria-modal="true"
       aria-labelledby="lite-swap-title"
     >
-      <div ref={trapRef} className="bg-[#0D1117] border border-slate-800 rounded-2xl p-5 w-full max-w-sm">
+      <div ref={trapRef} className="nl-glass rounded-2xl p-5 w-full max-w-sm" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Repeat className="w-4 h-4 text-[#0066FF]" aria-hidden />
@@ -201,7 +201,7 @@ export function LiteSwapModal({ open, onClose, tokenAddress, tokenSymbol, chain,
                 key={bps}
                 onClick={() => setSlippageBps(bps)}
                 aria-pressed={slippageBps === bps}
-                className={`px-2 py-0.5 rounded text-[10px] font-semibold ${slippageBps === bps ? 'bg-[#0066FF] text-white' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'}`}
+                className={`rounded text-[10px] font-semibold ${slippageBps === bps ? 'nl-button' : 'nl-button--ghost'}`}
               >
                 {bps / 100}%
               </button>
@@ -224,7 +224,7 @@ export function LiteSwapModal({ open, onClose, tokenAddress, tokenSymbol, chain,
           type="button"
           onClick={handleConfirm}
           disabled={!quote || loading || !!error}
-          className="w-full py-2.5 rounded-lg bg-[#0066FF] hover:bg-[#0818CC] disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold text-white flex items-center justify-center gap-1.5"
+          className="nl-button w-full py-2.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold flex items-center justify-center gap-1.5"
         >
           {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden /> : <Repeat className="w-3.5 h-3.5" aria-hidden />}
           Open in swap to sign

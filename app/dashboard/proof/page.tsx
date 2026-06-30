@@ -281,7 +281,7 @@ function BubbleVisualization({ event }: { event: ProofEvent }) {
 
   if (!tokenAddress || errored || (!loading && !holders)) {
     return (
-      <div className="glass rounded-xl p-4 border border-white/10">
+      <div className="nl-glass rounded-xl p-4 border border-white/10" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         <div className="flex items-center gap-2 mb-2">
           <svg className="w-5 h-5 text-[#0066FF]" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="5"/><circle cx="5" cy="18" r="3.5"/><circle cx="19" cy="18" r="3.5"/></svg>
           <h3 className="font-bold text-sm">Token Distribution</h3>
@@ -295,7 +295,7 @@ function BubbleVisualization({ event }: { event: ProofEvent }) {
 
   if (loading || !holders) {
     return (
-      <div className="glass rounded-xl p-4 border border-white/10">
+      <div className="nl-glass rounded-xl p-4 border border-white/10" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         <div className="flex items-center gap-2 mb-2">
           <svg className="w-5 h-5 text-[#0066FF]" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="5"/><circle cx="5" cy="18" r="3.5"/><circle cx="19" cy="18" r="3.5"/></svg>
           <h3 className="font-bold text-sm">Token Distribution</h3>
@@ -306,7 +306,7 @@ function BubbleVisualization({ event }: { event: ProofEvent }) {
   }
 
   return (
-    <div className="glass rounded-xl p-4 border border-white/10">
+    <div className="nl-glass rounded-xl p-4 border border-white/10" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
       <div className="flex items-center gap-2 mb-4">
         <svg className="w-5 h-5 text-[#0066FF]" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="5"/><circle cx="5" cy="18" r="3.5"/><circle cx="19" cy="18" r="3.5"/></svg>
         <h3 className="font-bold text-sm">Token Distribution</h3>
@@ -338,7 +338,7 @@ function BubbleVisualization({ event }: { event: ProofEvent }) {
 
       <div className="grid grid-cols-3 gap-2 mt-3">
         {holders.slice(0, 3).map((h, i) => (
-          <div key={i} className="bg-[#111827] rounded-lg p-2 text-center">
+          <div key={i} className="nl-card rounded-lg p-2 text-center">
             <div className="text-[10px] text-gray-400">{h.label}</div>
             <div className="text-xs font-bold" style={{ color: h.color }}>{h.pct.toFixed(1)}%</div>
           </div>
@@ -392,7 +392,7 @@ export default function ViewProofPage() {
       <div className="min-h-screen text-white flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-400 mb-4">Event not found</p>
-          <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-[#0066FF] rounded-lg text-sm font-semibold">
+          <button onClick={() => router.push('/dashboard')} className="nl-btn-neon px-4 py-2 rounded-lg text-sm font-semibold">
             Back to Dashboard
           </button>
         </div>
@@ -442,7 +442,7 @@ export default function ViewProofPage() {
 
   return (
     <div className="min-h-screen text-white">
-      <div className="fixed top-0 w-full z-40 bg-[#0A0E27]/95 backdrop-blur-xl border-b border-white/[0.06]">
+      <div className="fixed top-0 w-full z-40 nl-glass backdrop-blur-xl border-b border-white/[0.06]">
         <div className="flex items-center gap-3 px-4 h-14">
           {/* Bug §6.3 — testers wanted an explicit "Back to Feed" path so
               they don't land on dashboard overview after explaining a
@@ -463,7 +463,7 @@ export default function ViewProofPage() {
       </div>
 
       <div className="pt-[68px] pb-8 px-4 max-w-3xl mx-auto space-y-4">
-        <div className="glass rounded-xl p-4 border border-white/10">
+        <div className="nl-glass rounded-xl p-4 border border-white/10" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           <h2 className="text-lg font-bold mb-2">{event.title}</h2>
           <p className="text-sm text-gray-300 leading-relaxed mb-3">{event.summary}</p>
           <div className="flex items-center gap-3 text-xs text-gray-500">
@@ -476,7 +476,7 @@ export default function ViewProofPage() {
         </div>
 
         {event.tokenSymbol && (
-          <div className="glass rounded-xl p-4 border border-white/10">
+          <div className="nl-glass rounded-xl p-4 border border-white/10" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
               <Activity className="w-4 h-4 text-[#0066FF]" />
               On-chain Assessment
@@ -532,14 +532,14 @@ export default function ViewProofPage() {
         )}
 
         {(event.tokenVolume24h || event.tokenLiquidity || event.tokenMarketCap) && (
-          <div className="glass rounded-xl p-4 border border-white/10">
+          <div className="nl-glass rounded-xl p-4 border border-white/10" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <h3 className="font-bold text-sm mb-3 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-[#10B981]" />
               Market Data
             </h3>
             <div className="grid grid-cols-2 gap-2">
               {event.tokenPrice && (
-                <div className="bg-[#111827] rounded-lg p-3">
+                <div className="nl-card rounded-lg p-3">
                   <div className="text-[10px] text-gray-500 mb-1">Price</div>
                   <div className="text-sm font-bold font-mono text-white">{event.tokenPrice}</div>
                   {event.tokenPriceChange24h !== undefined && (
@@ -550,19 +550,19 @@ export default function ViewProofPage() {
                 </div>
               )}
               {event.tokenMarketCap && event.tokenMarketCap > 0 && (
-                <div className="bg-[#111827] rounded-lg p-3">
+                <div className="nl-card rounded-lg p-3">
                   <div className="text-[10px] text-gray-500 mb-1">Market Cap</div>
                   <div className="text-sm font-bold font-mono text-white">${event.tokenMarketCap >= 1000000000 ? `${(event.tokenMarketCap / 1000000000).toFixed(2)}B` : event.tokenMarketCap >= 1000000 ? `${(event.tokenMarketCap / 1000000).toFixed(1)}M` : event.tokenMarketCap.toLocaleString()}</div>
                 </div>
               )}
               {event.tokenVolume24h && event.tokenVolume24h > 0 && (
-                <div className="bg-[#111827] rounded-lg p-3">
+                <div className="nl-card rounded-lg p-3">
                   <div className="text-[10px] text-gray-500 mb-1">24h Volume</div>
                   <div className="text-sm font-bold font-mono text-white">${event.tokenVolume24h >= 1000000 ? `${(event.tokenVolume24h / 1000000).toFixed(1)}M` : event.tokenVolume24h >= 1000 ? `${(event.tokenVolume24h / 1000).toFixed(0)}K` : event.tokenVolume24h.toLocaleString()}</div>
                 </div>
               )}
               {event.tokenLiquidity && event.tokenLiquidity > 0 && (
-                <div className="bg-[#111827] rounded-lg p-3">
+                <div className="nl-card rounded-lg p-3">
                   <div className="text-[10px] text-gray-500 mb-1">Liquidity</div>
                   <div className="text-sm font-bold font-mono text-white">${event.tokenLiquidity >= 1000000 ? `${(event.tokenLiquidity / 1000000).toFixed(1)}M` : event.tokenLiquidity >= 1000 ? `${(event.tokenLiquidity / 1000).toFixed(0)}K` : event.tokenLiquidity.toLocaleString()}</div>
                   <div className={`text-[10px] font-semibold mt-0.5 ${event.tokenLiquidity > 500000 ? 'text-[#10B981]' : 'text-[#F59E0B]'}`}>
@@ -575,7 +575,7 @@ export default function ViewProofPage() {
         )}
 
         {hasChart && (
-          <div className="glass rounded-xl border border-white/10 overflow-hidden">
+          <div className="nl-glass rounded-xl border border-white/10 overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="p-3 border-b border-white/5">
               <h3 className="font-bold text-sm">Price Chart</h3>
             </div>
@@ -599,7 +599,7 @@ export default function ViewProofPage() {
 
         <BubbleVisualization event={event} />
 
-        <div className="glass rounded-xl p-4 border border-white/10">
+        <div className="nl-glass rounded-xl p-4 border border-white/10" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           <div className="flex items-center gap-2 mb-3">
             <span style={{ color: trustColor }} className="text-lg"><Shield className="w-5 h-5" /></span>
             <h3 className="font-bold text-sm">Trust Score</h3>
@@ -620,22 +620,22 @@ export default function ViewProofPage() {
           </div>
         </div>
 
-        <div className="glass rounded-xl p-4 border border-white/10">
+        <div className="nl-glass rounded-xl p-4 border border-white/10" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           <h3 className="font-bold text-sm mb-3">Blockchain Verification</h3>
           <div className="grid grid-cols-2 gap-2 mb-3">
-            <div className="bg-[#111827] rounded-lg p-3">
+            <div className="nl-card rounded-lg p-3">
               <div className="text-[10px] text-gray-500 mb-1">Token</div>
               <div className="text-xs font-mono truncate">{event.tokenSymbol ? `$${event.tokenSymbol}` : `${event.txHash.slice(0, 8)}...${event.txHash.slice(-4)}`}</div>
             </div>
-            <div className="bg-[#111827] rounded-lg p-3">
+            <div className="nl-card rounded-lg p-3">
               <div className="text-[10px] text-gray-500 mb-1">Chain</div>
               <div className="text-xs font-mono">{chainId}</div>
             </div>
-            <div className="bg-[#111827] rounded-lg p-3">
+            <div className="nl-card rounded-lg p-3">
               <div className="text-[10px] text-gray-500 mb-1">Time</div>
               <div className="text-xs font-mono">{timeAgo()}</div>
             </div>
-            <div className="bg-[#111827] rounded-lg p-3">
+            <div className="nl-card rounded-lg p-3">
               <div className="text-[10px] text-gray-500 mb-1">Value</div>
               <div className="text-xs font-mono">${event.valueUsd.toLocaleString()}</div>
             </div>
@@ -658,7 +658,7 @@ export default function ViewProofPage() {
             <div className="flex gap-2">
               <button
                 onClick={() => setShowSwapCard((v) => !v)}
-                className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#0066FF] to-[#7C3AED] rounded-xl text-sm font-semibold hover:scale-[1.02] transition-all"
+                className="nl-btn-neon flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold hover:scale-[1.02] transition-all"
               >
                 {showSwapCard ? <X className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
                 {showSwapCard ? 'Hide swap' : `Buy ${event.tokenSymbol ? `$${event.tokenSymbol}` : 'Token'}`}
@@ -689,7 +689,7 @@ export default function ViewProofPage() {
               const swap = buildProofSwapData(event);
               if (!swap) {
                 return (
-                  <div className="glass rounded-xl p-3 border border-amber-400/30 text-[11px] text-amber-300">
+                  <div className="nl-glass rounded-xl p-3 border border-amber-400/30 text-[11px] text-amber-300">
                     Swap unavailable — this signal doesn&apos;t carry a
                     resolvable token. Open the full swap if you want to pick
                     a token manually.
@@ -697,7 +697,7 @@ export default function ViewProofPage() {
                 );
               }
               return (
-                <div className="glass rounded-xl p-3 border border-white/10">
+                <div className="nl-glass rounded-xl p-3 border border-white/10" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                   {/*
                     Inline swap — uses the same SwapCard component VTX AI
                     renders inside agent messages. fromToken defaults to
@@ -726,7 +726,8 @@ export default function ViewProofPage() {
             from "Yes, Go! / Skip This" to "Bullish / Bearish" so the
             semantic is unmistakable. */}
         <div
-          className="glass rounded-xl p-4 border border-white/10"
+          className="nl-glass rounded-xl p-4 border border-white/10"
+          style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
           title="Endorse Signal: vote bullish or bearish to share your read with the community. This is a sentiment poll, not a trade."
         >
           <div className="flex items-center justify-between mb-1">

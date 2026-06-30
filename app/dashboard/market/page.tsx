@@ -184,7 +184,7 @@ export default function DashboardMarketPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, ticker, or paste a contract address…"
-            className="w-full nl-glass/50 rounded-xl ps-9 pe-10 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-[#0066FF]/40 focus:shadow-[0_0_0_3px_rgba(0,102,255,0.08)] transition-all"
+            className="w-full nl-glass rounded-xl ps-9 pe-10 py-2.5 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-[#0066FF]/40 focus:shadow-[0_0_0_3px_rgba(0,102,255,0.08)] transition-all"
           />
           {resolving && (
             <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 animate-spin" size={14} />
@@ -192,10 +192,10 @@ export default function DashboardMarketPage() {
         </div>
         <button
           onClick={() => setShowFilters(true)}
-          className={`flex items-center gap-2 px-4 py-2.5 bg-slate-950/80 backdrop-blur-xl border rounded-xl text-sm transition-colors ${
+          className={`nl-button--ghost gap-2 px-4 py-2.5 rounded-xl text-sm ${
             mFilters.sortBy !== "market_cap" || mFilters.minMarketCap > 0 || mFilters.maxMarketCap > 0 || mFilters.minVolume > 0
-              ? "border-[#0066FF] text-white"
-              : "border-slate-800/50 text-slate-400 hover:text-white hover:border-slate-700"
+              ? "!border-[#0066FF] !text-white"
+              : ""
           }`}
         >
           <SlidersHorizontal size={14} />
@@ -206,7 +206,7 @@ export default function DashboardMarketPage() {
       <CategoryPills active={category} onChange={setCategory as (id: CategoryId) => void} />
 
       {resolved.length > 0 && (
-        <div className="bg-slate-950/80 backdrop-blur-xl border border-[#0066FF]/30 rounded-xl overflow-hidden">
+        <div className="nl-glass rounded-xl overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           <div className="px-4 py-2.5 border-b border-slate-800/60 flex items-center justify-between">
             <div>
               <p className="text-[11px] uppercase tracking-wider text-[#4D6BFF] font-semibold">
@@ -251,7 +251,7 @@ export default function DashboardMarketPage() {
         <ErrorState message={error} onRetry={refetch} />
       ) : (
         <>
-          <div className="hidden md:block nl-glass/50 rounded-xl overflow-hidden">
+          <div className="hidden md:block nl-glass rounded-xl overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <table className="w-full">
               <thead>
                 <tr className="text-slate-500 text-xs uppercase tracking-wide border-b border-slate-800/60">
@@ -283,7 +283,7 @@ export default function DashboardMarketPage() {
             </table>
           </div>
 
-          <div className="md:hidden nl-glass/50 rounded-xl overflow-hidden">
+          <div className="md:hidden nl-glass rounded-xl overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             {filtered.map((token, i) => (
               <TokenRow
                 key={token.id}

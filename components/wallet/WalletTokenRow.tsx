@@ -18,6 +18,8 @@ interface Props {
   contractAddress?: string | null;
   logoUrl?: string;
   chainLabel?: string;
+  /** Chain logo overlaid as a corner badge (e.g. Arbitrum badge on an ETH row). */
+  chainLogoUrl?: string;
   coinGeckoId?: string;
   hideBalance?: boolean;
   onClick?: () => void;
@@ -31,7 +33,9 @@ interface SparkData {
 const sparkCache = new Map<string, SparkData>();
 
 function formatPrice(p: number): string {
-  if (!p || !isFinite(p)) return '—';
+  // No price yet → render nothing (the stray '—' read as gibberish next to
+  // '0 BNB' / '0 MATIC').
+  if (!p || !isFinite(p)) return '';
   if (p >= 1000) return `$${p.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   if (p >= 1)    return `$${p.toFixed(2)}`;
   if (p >= 0.01) return `$${p.toFixed(4)}`;
@@ -52,7 +56,7 @@ function formatValue(v: number): string {
 }
 
 export function WalletTokenRow({
-  symbol, name, balance, valueUsd, contractAddress, logoUrl, chainLabel, coinGeckoId, hideBalance, onClick,
+  symbol, name, balance, valueUsd, contractAddress, logoUrl, chainLabel, chainLogoUrl, coinGeckoId, hideBalance, onClick,
 }: Props) {
   const [changePct, setChangePct] = useState<number | null>(null);
   // Real market price from the sparkline's latest point — so the row shows a
@@ -111,6 +115,16 @@ export function WalletTokenRow({
           <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-white">
             {symbol.slice(0, 2)}
           </div>
+        )}
+        {/* Chain badge — shows the network (e.g. Arbitrum on an ETH row) so
+            L2 natives that share the ETH symbol are visually distinct. */}
+        {chainLogoUrl && chainLabel && chainLabel !== 'Ethereum' && (
+          <img
+            src={chainLogoUrl}
+            alt={chainLabel}
+            className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full ring-2 ring-[#0A0E1A] bg-[#0A0E1A]"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
         )}
       </div>
 

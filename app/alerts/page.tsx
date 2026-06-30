@@ -103,7 +103,7 @@ export default function AlertsPage() {
           </div>
           <button
             onClick={() => setShowForm(true)}
-            className="bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium px-5 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            className="nl-btn-neon font-medium px-5 py-2 rounded-lg flex items-center gap-2"
           >
             <Plus size={18} />
             New Alert
@@ -111,7 +111,7 @@ export default function AlertsPage() {
         </div>
 
         {showForm && (
-          <div className="bg-[#141824] rounded-lg p-6 border border-[#0066FF] mb-6">
+          <div className="nl-glass rounded-lg p-6 mb-6" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <h3 className="text-white font-bold text-lg mb-4">Create Alert</h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
@@ -122,7 +122,7 @@ export default function AlertsPage() {
                   className={`p-3 rounded-lg border text-start transition-colors ${
                     alertType === type.value
                       ? 'border-[#0066FF] bg-[#0066FF]/10'
-                      : 'border-[#1E2433] hover:border-gray-500'
+                      : 'nl-card hover:border-gray-500'
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
@@ -140,14 +140,14 @@ export default function AlertsPage() {
                 value={condition.token}
                 onChange={(e) => setCondition({ ...condition, token: e.target.value })}
                 placeholder="Token address or symbol..."
-                className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
+                className="w-full nl-card rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
               />
               {(alertType === 'PRICE' || alertType === 'VOLUME') && (
                 <div className="flex gap-3">
                   <select
                     value={condition.direction}
                     onChange={(e) => setCondition({ ...condition, direction: e.target.value as 'above' | 'below' })}
-                    className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#0066FF]"
+                    className="nl-card rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#0066FF]"
                   >
                     <option value="above">Above</option>
                     <option value="below">Below</option>
@@ -157,7 +157,7 @@ export default function AlertsPage() {
                     value={condition.threshold}
                     onChange={(e) => setCondition({ ...condition, threshold: e.target.value })}
                     placeholder={alertType === 'PRICE' ? 'Price (USD)' : 'Volume threshold'}
-                    className="flex-1 bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
+                    className="flex-1 nl-card rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]"
                   />
                 </div>
               )}
@@ -167,13 +167,13 @@ export default function AlertsPage() {
               <button
                 onClick={() => void createAlert()}
                 disabled={submitting || !condition.token}
-                className="bg-[#0066FF] hover:bg-[#0052CC] disabled:opacity-50 text-white font-medium px-6 py-2 rounded-lg"
+                className="nl-btn-neon disabled:opacity-50 font-medium px-6 py-2 rounded-lg"
               >
                 {submitting ? 'Creating…' : 'Create Alert'}
               </button>
               <button
                 onClick={() => setShowForm(false)}
-                className="bg-[#1E2433] text-gray-400 hover:text-white px-6 py-2 rounded-lg"
+                className="nl-button--ghost px-6 py-2 rounded-lg"
               >
                 Cancel
               </button>
@@ -194,7 +194,7 @@ export default function AlertsPage() {
             {alerts.map((alert) => {
               const type = ALERT_TYPES.find((t) => t.value === alert.alert_type);
               return (
-                <div key={alert.id} className="bg-[#141824] rounded-lg p-4 border border-[#1E2433] flex items-center justify-between">
+                <div key={alert.id} className="nl-glass rounded-lg p-4 flex items-center justify-between" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                   <div className="flex items-center gap-3">
                     <div className={`w-2 h-2 rounded-full ${alert.active ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
                     <div>

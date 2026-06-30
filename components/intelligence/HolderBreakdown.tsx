@@ -69,7 +69,7 @@ export function HolderBreakdown({ composition }: HolderBreakdownProps) {
   ];
 
   return (
-    <div className="bg-[#141824] rounded-lg p-4">
+    <div className="nl-glass rounded-lg p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
       <h3 className="text-sm font-medium text-gray-300 mb-4">
         Holder Composition
       </h3>

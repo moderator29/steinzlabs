@@ -70,7 +70,7 @@ export default function ViewProofPage() {
           <p className="text-gray-400 mb-4">Unable to fetch token data</p>
           <button
             onClick={() => router.back()}
-            className="bg-[#0066FF] hover:bg-[#0052CC] text-white px-4 py-2 rounded-lg"
+            className="nl-button px-4 py-2 rounded-lg"
           >
             Go Back
           </button>
@@ -84,7 +84,7 @@ export default function ViewProofPage() {
     <AuroraBackground fullHeight>
     <div className="min-h-screen">
       {/* Header */}
-      <div className="bg-[#141824] border-b border-[#1E2433] sticky top-0 z-10">
+      <div className="nl-glass border-b border-[#1E2433] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="mb-3"><BackButton label="Back to Feed" /></div>
 
@@ -113,21 +113,21 @@ export default function ViewProofPage() {
       <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
         {/* Market Data Grid */}
         <div className="grid grid-cols-4 gap-4">
-          <div className="bg-[#141824] rounded-lg p-4">
+          <div className="nl-glass rounded-lg p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="text-sm text-gray-400 mb-1">Price</div>
             <div className="text-xl font-bold text-white font-mono">$0.0012</div>
             <div className="text-sm text-green-500">+12% 24h</div>
           </div>
-          <div className="bg-[#141824] rounded-lg p-4">
+          <div className="nl-glass rounded-lg p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="text-sm text-gray-400 mb-1">Market Cap</div>
             <div className="text-xl font-bold text-white font-mono">$1.2M</div>
           </div>
-          <div className="bg-[#141824] rounded-lg p-4">
+          <div className="nl-glass rounded-lg p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="text-sm text-gray-400 mb-1">Volume 24h</div>
             <div className="text-xl font-bold text-white font-mono">$450K</div>
             <div className="text-sm text-green-500">+45% 24h</div>
           </div>
-          <div className="bg-[#141824] rounded-lg p-4">
+          <div className="nl-glass rounded-lg p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="text-sm text-gray-400 mb-1">Liquidity</div>
             <div className="text-xl font-bold text-white font-mono">$250K</div>
             <div className="text-sm text-green-500">Locked 180d</div>
@@ -143,7 +143,7 @@ export default function ViewProofPage() {
           <HolderBreakdown composition={intelligence.composition} />
 
           {/* Security Analysis */}
-          <div className="bg-[#141824] rounded-lg p-4">
+          <div className="nl-glass rounded-lg p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <h3 className="text-sm font-medium text-gray-300 mb-4">
               Shadow Guardian Analysis
             </h3>
@@ -191,7 +191,7 @@ export default function ViewProofPage() {
             />
           </div>
 
-          <div className="mt-4 bg-[#141824] rounded-lg p-4">
+          <div className="mt-4 nl-glass rounded-lg p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="grid grid-cols-4 gap-4 text-sm">
               <div>
                 <div className="text-gray-400">Total Nodes</div>
@@ -223,7 +223,7 @@ export default function ViewProofPage() {
 
         {/* Historical Pattern Matching */}
         {intelligence.patternMatching.historicalOutcomes.totalMatches > 0 && (
-          <div className="bg-[#141824] rounded-lg p-6">
+          <div className="nl-glass rounded-lg p-6" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <h3 className="text-lg font-bold text-white mb-4">
               Historical Pattern Matching
             </h3>
@@ -233,25 +233,25 @@ export default function ViewProofPage() {
             </p>
 
             <div className="grid grid-cols-4 gap-4 mb-6">
-              <div className="bg-[#0A0E1A] rounded p-3">
+              <div className="nl-card rounded p-3">
                 <div className="text-sm text-gray-400">Average Gain</div>
                 <div className="text-2xl font-bold text-green-500">
                   +{intelligence.patternMatching.historicalOutcomes.avgGain}%
                 </div>
               </div>
-              <div className="bg-[#0A0E1A] rounded p-3">
+              <div className="nl-card rounded p-3">
                 <div className="text-sm text-gray-400">Avg Hold Time</div>
                 <div className="text-2xl font-bold text-white">
                   {intelligence.patternMatching.historicalOutcomes.avgHoldTime}d
                 </div>
               </div>
-              <div className="bg-[#0A0E1A] rounded p-3">
+              <div className="nl-card rounded p-3">
                 <div className="text-sm text-gray-400">Success Rate</div>
                 <div className="text-2xl font-bold text-green-500">
                   {intelligence.patternMatching.historicalOutcomes.successRate}%
                 </div>
               </div>
-              <div className="bg-[#0A0E1A] rounded p-3">
+              <div className="nl-card rounded p-3">
                 <div className="text-sm text-gray-400">Total Matches</div>
                 <div className="text-2xl font-bold text-white">
                   {intelligence.patternMatching.historicalOutcomes.totalMatches}
@@ -260,7 +260,7 @@ export default function ViewProofPage() {
             </div>
 
             {/* AI Prediction */}
-            <div className="bg-gradient-to-r from-[#0066FF]/20 to-purple-500/20 border border-[#0066FF] rounded-lg p-4">
+            <div className="nl-glass rounded-lg p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <h4 className="text-sm font-medium text-white mb-2">AI Prediction</h4>
               <div className="grid grid-cols-3 gap-4 mb-3">
                 <div>
@@ -291,10 +291,10 @@ export default function ViewProofPage() {
 
         {/* Trading Actions */}
         <div className="flex gap-4">
-          <button className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium py-4 px-6 rounded-lg transition-colors text-lg">
+          <button className="flex-1 nl-button font-medium py-4 px-6 rounded-lg text-lg">
             Open Trading Terminal
           </button>
-          <button className="flex-1 bg-[#141824] hover:bg-[#1E2433] border border-[#1E2433] text-white font-medium py-4 px-6 rounded-lg transition-colors text-lg">
+          <button className="flex-1 nl-button--ghost font-medium py-4 px-6 rounded-lg text-lg">
             Copy Smart Money Trade
           </button>
         </div>

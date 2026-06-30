@@ -91,7 +91,7 @@ export default function TokenIntelligencePanel({
       </div>
 
       {!hasSignal && (
-        <div className="p-4 text-center text-xs text-slate-500 bg-white/[0.02] border border-white/10 rounded-lg">
+        <div className="nl-card p-4 text-center text-xs text-slate-500 rounded-lg">
           No tracked whales have traded this token yet. As Naka's whale index grows, signal here will sharpen.
         </div>
       )}
@@ -184,7 +184,7 @@ export default function TokenIntelligencePanel({
       {/* VTX handoff */}
       <Link
         href={`/dashboard/vtx-ai?q=${encodeURIComponent(`Deep dive ${symbol} (${address}) on ${chain}. What's the whale sentiment?`)}`}
-        className="flex items-center justify-center gap-2 py-2.5 rounded-lg bg-gradient-to-r from-[#0066FF] to-[#7C3AED] font-bold text-xs hover:opacity-95"
+        className="nl-button justify-center gap-2 py-2.5 rounded-lg text-xs"
       >
         <Sparkles className="w-3.5 h-3.5" /> Ask VTX to deep-dive {symbol}
       </Link>
@@ -194,7 +194,7 @@ export default function TokenIntelligencePanel({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-white/[0.02] border border-white/10 rounded-lg p-2">
+    <div className="nl-card rounded-lg p-2">
       <div className="text-[9px] uppercase tracking-wider text-slate-500">{label}</div>
       <div className="text-sm font-bold font-mono">{value}</div>
     </div>
@@ -211,7 +211,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-white/[0.02] border border-white/10 rounded-lg overflow-hidden">
+    <div className="nl-card rounded-lg overflow-hidden">
       <button onClick={onToggle} className="w-full flex items-center gap-2 px-3 py-2 hover:bg-white/[0.02]">
         <span className="text-slate-400">{icon}</span>
         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300 flex-1 text-start">{title}</span>

@@ -124,7 +124,7 @@ function AlertCard({
   const color = getAlertColor(alert.type);
 
   return (
-    <div className={`glass rounded-xl p-4 border transition-all ${alert.active ? 'border-white/10' : 'border-white/5 opacity-60'}`}>
+    <div className={`nl-glass rounded-xl p-4 border transition-all ${alert.active ? 'border-white/10' : 'border-white/5 opacity-60'}`}>
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}20` }}>
@@ -278,7 +278,7 @@ function WhaleTrackerForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
       <button
         onClick={save}
         disabled={!valid}
-        className="w-full bg-gradient-to-r from-[#0066FF] to-[#7C3AED] py-3 rounded-xl font-bold text-sm disabled:opacity-40"
+        className="nl-btn-neon w-full py-3 rounded-xl font-bold text-sm disabled:opacity-40"
       >
         Save Alert
       </button>
@@ -378,7 +378,7 @@ function PriceAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
               className="w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 ps-9 text-sm focus:outline-none focus:border-[#0066FF]/40 placeholder-gray-600"
             />
             {results.length > 0 && (
-              <div className="absolute top-full mt-1 left-0 right-0 bg-[#0D1117] border border-white/10 rounded-xl overflow-hidden z-20 shadow-xl">
+              <div className="nl-glass absolute top-full mt-1 left-0 right-0 border border-white/10 rounded-xl overflow-hidden z-20 shadow-xl">
                 {results.map(coin => (
                   <button
                     key={coin.id}
@@ -447,7 +447,7 @@ function PriceAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
       <button
         onClick={save}
         disabled={!valid}
-        className="w-full bg-gradient-to-r from-[#10B981] to-[#0066FF] py-3 rounded-xl font-bold text-sm disabled:opacity-40"
+        className="nl-btn-neon w-full py-3 rounded-xl font-bold text-sm disabled:opacity-40"
       >
         Save Alert
       </button>
@@ -549,7 +549,7 @@ function LaunchAlertForm({ onSave }: { onSave: (alert: SmartAlert) => void }) {
       <button
         onClick={save}
         disabled={!valid}
-        className="w-full bg-gradient-to-r from-[#F59E0B] to-[#EF4444] py-3 rounded-xl font-bold text-sm disabled:opacity-40"
+        className="nl-btn-neon w-full py-3 rounded-xl font-bold text-sm disabled:opacity-40"
       >
         Save Alert
       </button>
@@ -617,7 +617,7 @@ function WalletActivityForm({ onSave }: { onSave: (alert: SmartAlert) => void })
       <button
         onClick={save}
         disabled={!valid}
-        className="w-full bg-gradient-to-r from-[#8B5CF6] to-[#0066FF] py-3 rounded-xl font-bold text-sm disabled:opacity-40"
+        className="nl-btn-neon w-full py-3 rounded-xl font-bold text-sm disabled:opacity-40"
       >
         Save Alert
       </button>
@@ -645,7 +645,7 @@ function CreateModal({ onClose, onSave }: { onClose: () => void; onSave: (alert:
   return (
     <div className="fixed inset-0 z-[100] flex items-end">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full bg-[#0D1117] rounded-t-2xl border-t border-white/[0.06] z-10 max-h-[90vh] overflow-y-auto pb-8">
+      <div className="relative w-full nl-glass rounded-t-2xl border-t border-white/[0.06] z-10 max-h-[90vh] overflow-y-auto pb-8">
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 bg-white/20 rounded-full" />
         </div>
@@ -708,7 +708,7 @@ function HistoryTab() {
 
   if (history.length === 0) {
     return (
-      <div className="glass rounded-xl p-8 border border-white/10 text-center mt-4">
+      <div className="nl-glass rounded-xl p-8 border border-white/10 text-center mt-4">
         <History className="w-10 h-10 text-gray-600 mx-auto mb-3" />
         <p className="text-sm font-semibold mb-1">No history yet</p>
         <p className="text-xs text-gray-500">
@@ -726,7 +726,7 @@ function HistoryTab() {
         const Icon = getAlertIcon(entry.alertType);
         const color = getAlertColor(entry.alertType);
         return (
-          <div key={entry.id} className="glass rounded-xl p-3.5 border border-white/[0.08]">
+          <div key={entry.id} className="nl-glass rounded-xl p-3.5 border border-white/[0.08]">
             <div className="flex items-start gap-2.5">
               <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: `${color}20` }}>
                 <Icon className="w-3.5 h-3.5" style={{ color }} />
@@ -814,14 +814,14 @@ export default function AlertsPage() {
   return (
     <div className="min-h-screen text-white pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 glass backdrop-blur-xl border-b border-white/10">
+      <div className="sticky top-0 z-40 nl-glass backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
           <Bell className="w-5 h-5 text-[#0066FF]" />
           <h1 className="text-sm font-heading font-bold">Smart Alerts</h1>
           <button
             onClick={() => setShowCreate(true)}
-            className="ms-auto bg-gradient-to-r from-[#0066FF] to-[#7C3AED] px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold"
+            className="nl-btn-neon ms-auto px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold"
           >
             <Plus className="w-3.5 h-3.5" />
             Create
@@ -850,15 +850,15 @@ export default function AlertsPage() {
       <div className="p-4 space-y-4">
         {/* Stats */}
         <div className="grid grid-cols-3 gap-2">
-          <div className="glass rounded-xl p-3 border border-white/10 text-center">
+          <div className="nl-glass rounded-xl p-3 border border-white/10 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="text-lg font-bold text-[#0066FF]">{activeCount}</div>
             <div className="text-[10px] text-gray-500">Active</div>
           </div>
-          <div className="glass rounded-xl p-3 border border-white/10 text-center">
+          <div className="nl-glass rounded-xl p-3 border border-white/10 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="text-lg font-bold text-gray-400">{pausedCount}</div>
             <div className="text-[10px] text-gray-500">Paused</div>
           </div>
-          <div className="glass rounded-xl p-3 border border-white/10 text-center">
+          <div className="nl-glass rounded-xl p-3 border border-white/10 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="text-lg font-bold text-[#F59E0B]">{totalFired}</div>
             <div className="text-[10px] text-gray-500">Triggered</div>
           </div>
@@ -883,13 +883,13 @@ export default function AlertsPage() {
         {activeTab === 'alerts' && (
           <>
             {alerts.length === 0 ? (
-              <div className="glass rounded-xl p-8 border border-white/10 text-center">
+              <div className="nl-glass rounded-xl p-8 border border-white/10 text-center">
                 <Bell className="w-10 h-10 text-gray-600 mx-auto mb-3" />
                 <p className="text-sm font-semibold mb-1">No alerts yet</p>
                 <p className="text-xs text-gray-500 mb-4">Create smart alerts to monitor whale wallets, price targets, new launches, and wallet activity</p>
                 <button
                   onClick={() => setShowCreate(true)}
-                  className="bg-gradient-to-r from-[#0066FF] to-[#7C3AED] px-5 py-2.5 rounded-xl text-xs font-bold"
+                  className="nl-btn-neon px-5 py-2.5 rounded-xl text-xs font-bold"
                 >
                   Create First Alert
                 </button>

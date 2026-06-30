@@ -42,6 +42,7 @@ export const DOC_SECTIONS: DocSection[] = [
     { id: 'swap-engine', label: 'Multi-Chain Swap' },
     { id: 'copy-trading', label: 'Copy Trading' },
     { id: 'sniper-bot', label: 'Sniper Bot' },
+    { id: 'market-maker', label: 'Market Maker Bot' },
   ]},
   { id: 'smart-money', number: '08', label: 'Smart Money & Whales', subsections: [
     { id: 'smart-money-tracking', label: 'Smart Money Tracking' },

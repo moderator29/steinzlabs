@@ -12,7 +12,7 @@ import {
 } from '@/components/icons/brand';
 import {
   ArrowLeft, RotateCcw, Key, Globe, Layers, ArrowUpRight, ArrowDownLeft,
-  Repeat, DollarSign, QrCode, ShoppingCart, Zap, Loader2, BarChart3,
+  Repeat, DollarSign, QrCode, ShoppingCart, Zap, Loader2, BarChart3, Info,
 } from 'lucide-react';
 import Link from 'next/link';
 import BackButton from '@/components/ui/BackButton';
@@ -29,6 +29,7 @@ import { BiometricUnlockRow } from '@/components/wallet/BiometricUnlockRow';
 import { encryptPrivateKey, decryptPrivateKey, verifyWalletPassword } from '@/lib/wallet/encryption';
 import { normalizeAddress, isEvmChain, isSolanaAddress, addressesEqual } from '@/lib/utils/addressNormalize';
 import { getOnrampUrl } from '@/lib/wallet/onramp';
+import { DappConnect } from '@/components/wallet/DappConnect';
 
 interface TokenBalance {
   symbol: string;
@@ -64,7 +65,11 @@ interface StoredWallet {
   // How the wallet entered our vault: 'generated' (we made the seed), 'seed'
   // (user imported 12/24-word phrase), or 'private_key' (user imported raw pk).
   // Drives which reveal options the UI surfaces.
-  importMethod?: 'generated' | 'seed' | 'private_key';
+  importMethod?: 'generated' | 'seed' | 'private_key' | 'ledger';
+  // #42 — hardware wallet. For 'ledger' wallets there is NO encryptedKey
+  // (the key lives on the device); signing routes to the Ledger via WebHID at
+  // the stored BIP-44 path. EVM only.
+  derivationPath?: string;
   // Audit B3 / P0 #1 — Solana base58 public key derived from the same
   // BIP-39 seed at Phantom's default path m/44'/501'/0'/0'. Populated
   // at wallet-create or wallet-import time when a mnemonic is present.
@@ -132,6 +137,24 @@ const SUPPORTED_CHAINS: ChainInfo[] = [
   { id: 'fantom', name: 'Fantom', symbol: 'FTM', color: '#1969FF', explorerUrl: 'https://ftmscan.com', explorerName: 'FtmScan', apiChain: 'fantom', logoUrl: COIN_LOGOS.FTM, coinGeckoId: 'fantom' },
   { id: 'cronos', name: 'Cronos', symbol: 'CRO', color: '#002D74', explorerUrl: 'https://cronoscan.com', explorerName: 'CronoScan', apiChain: 'cronos', logoUrl: COIN_LOGOS.CRO, coinGeckoId: 'crypto-com-chain' },
   { id: 'sui', name: 'Sui', symbol: 'SUI', color: '#4DA2FF', explorerUrl: 'https://suiscan.xyz', explorerName: 'SuiScan', apiChain: 'sui', logoUrl: COIN_LOGOS.SUI, coinGeckoId: 'sui' },
+  // #53 — additional popular EVM networks. Opt-in via Add Network. Native
+  // balance reads through the generic RPC path (CHAIN_RPC below); token
+  // indexing depends on backend support per chain.
+  { id: 'linea', name: 'Linea', symbol: 'ETH', color: '#61DFFF', explorerUrl: 'https://lineascan.build', explorerName: 'LineaScan', apiChain: 'linea', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/linea.png', coinGeckoId: 'ethereum' },
+  { id: 'scroll', name: 'Scroll', symbol: 'ETH', color: '#FFEEDA', explorerUrl: 'https://scrollscan.com', explorerName: 'ScrollScan', apiChain: 'scroll', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/scroll.png', coinGeckoId: 'ethereum' },
+  { id: 'zksync', name: 'zkSync Era', symbol: 'ETH', color: '#8C8DFC', explorerUrl: 'https://explorer.zksync.io', explorerName: 'zkSync Explorer', apiChain: 'zksync', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/zksync.png', coinGeckoId: 'ethereum' },
+  { id: 'mantle', name: 'Mantle', symbol: 'MNT', color: '#000000', explorerUrl: 'https://explorer.mantle.xyz', explorerName: 'Mantle Explorer', apiChain: 'mantle', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/mantle.png', coinGeckoId: 'mantle' },
+  { id: 'blast', name: 'Blast', symbol: 'ETH', color: '#FCFC03', explorerUrl: 'https://blastscan.io', explorerName: 'BlastScan', apiChain: 'blast', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/blast.png', coinGeckoId: 'ethereum' },
+  { id: 'mode', name: 'Mode', symbol: 'ETH', color: '#DFFE00', explorerUrl: 'https://explorer.mode.network', explorerName: 'Mode Explorer', apiChain: 'mode', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/mode.png', coinGeckoId: 'ethereum' },
+  { id: 'gnosis', name: 'Gnosis', symbol: 'XDAI', color: '#3E6957', explorerUrl: 'https://gnosisscan.io', explorerName: 'GnosisScan', apiChain: 'gnosis', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/gnosischain.png', coinGeckoId: 'xdai' },
+  { id: 'celo', name: 'Celo', symbol: 'CELO', color: '#FCFF52', explorerUrl: 'https://celoscan.io', explorerName: 'CeloScan', apiChain: 'celo', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/celo.png', coinGeckoId: 'celo' },
+  { id: 'metis', name: 'Metis', symbol: 'METIS', color: '#00DACC', explorerUrl: 'https://explorer.metis.io', explorerName: 'Metis Explorer', apiChain: 'metis', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/metis.png', coinGeckoId: 'metis-token' },
+  { id: 'moonbeam', name: 'Moonbeam', symbol: 'GLMR', color: '#53CBC8', explorerUrl: 'https://moonscan.io', explorerName: 'MoonScan', apiChain: 'moonbeam', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/moonbeam.png', coinGeckoId: 'moonbeam' },
+  { id: 'opbnb', name: 'opBNB', symbol: 'BNB', color: '#F0B90B', explorerUrl: 'https://opbnbscan.com', explorerName: 'opBNBScan', apiChain: 'opbnb', logoUrl: COIN_LOGOS.BNB, coinGeckoId: 'binancecoin' },
+  { id: 'manta', name: 'Manta Pacific', symbol: 'ETH', color: '#0091FF', explorerUrl: 'https://pacific-explorer.manta.network', explorerName: 'Manta Explorer', apiChain: 'manta', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/manta.png', coinGeckoId: 'ethereum' },
+  { id: 'zora', name: 'Zora', symbol: 'ETH', color: '#000000', explorerUrl: 'https://explorer.zora.energy', explorerName: 'Zora Explorer', apiChain: 'zora', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/zora.png', coinGeckoId: 'ethereum' },
+  { id: 'aurora', name: 'Aurora', symbol: 'ETH', color: '#70D44B', explorerUrl: 'https://explorer.aurora.dev', explorerName: 'Aurora Explorer', apiChain: 'aurora', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/aurora.png', coinGeckoId: 'ethereum' },
+  { id: 'kava', name: 'Kava', symbol: 'KAVA', color: '#FF564F', explorerUrl: 'https://kavascan.com', explorerName: 'KavaScan', apiChain: 'kava', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/kava.png', coinGeckoId: 'kava' },
 ];
 
 // FIX 5A.1 / Phase 4: was 'ethereum,base,polygon,avalanche,solana' only, which is why
@@ -266,6 +289,9 @@ function ChainLogo({ chain, size = 24 }: { chain: ChainInfo; size?: number }) {
 }
 
 const SOLANA_CHAIN = SUPPORTED_CHAINS.find(c => c.id === 'solana') || SUPPORTED_CHAINS[0];
+// Naka is an EVM-first wallet — default the active chain to Ethereum so Send /
+// Receive / the big-4 actions open on ETH, not Solana.
+const ETHEREUM_CHAIN = SUPPORTED_CHAINS.find(c => c.id === 'ethereum') || SUPPORTED_CHAINS[0];
 
 export default function WalletPage() {
   useFeatureUsageLog('wallet');
@@ -298,7 +324,7 @@ export default function WalletPage() {
   // Pleasure Coin always render with real price/logo even when the
   // wallet has zero balance.
   const [customTokenRows, setCustomTokenRows] = useState<Array<TokenBalance & { chain: string }>>([]);
-  const [activeChain, setActiveChain] = useState<ChainInfo>(SOLANA_CHAIN);
+  const [activeChain, setActiveChain] = useState<ChainInfo>(ETHEREUM_CHAIN);
   const [multiChainBalances, setMultiChainBalances] = useState<Record<string, WalletData | null>>({});
   const [multiChainLoading, setMultiChainLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'crypto' | 'watchlist' | 'nfts' | 'activity'>('crypto');
@@ -315,6 +341,9 @@ export default function WalletPage() {
   const [addAcctPwd, setAddAcctPwd] = useState('');
   const [addAcctBusy, setAddAcctBusy] = useState(false);
   const [addAcctError, setAddAcctError] = useState<string | null>(null);
+  // #42 — hardware wallet connect status.
+  const [ledgerBusy, setLedgerBusy] = useState(false);
+  const [ledgerError, setLedgerError] = useState<string | null>(null);
   const [assetSearch, setAssetSearch] = useState('');
   const [assetSort, setAssetSort] = useState<'value' | 'change' | 'alpha' | 'recent'>('value');
   const [chainFilter, setChainFilter] = useState('all');
@@ -403,6 +432,18 @@ export default function WalletPage() {
     let changed = false;
     for (const t of DEFAULT_TOKENS) {
       if (!parsed.includes(t)) { merged = [...merged, t]; changed = true; }
+    }
+    // One-time cleanup: an earlier build seeded "Pleasure Coin" (NSFW) as a
+    // default token. Strip it from the local list AND the server so it stops
+    // re-appearing via cross-device sync. Case-insensitive (EVM addrs).
+    const NSFW_RE = /0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19/i;
+    const nsfwKeys = merged.filter((t) => NSFW_RE.test(t));
+    if (nsfwKeys.length) {
+      merged = merged.filter((t) => !NSFW_RE.test(t));
+      changed = true;
+      for (const key of nsfwKeys) {
+        void fetch(`/api/wallet/custom-tokens?key=${encodeURIComponent(key)}`, { method: 'DELETE', credentials: 'include' }).catch(() => {});
+      }
     }
     if (changed) localStorage.setItem('steinz_custom_tokens', JSON.stringify(merged));
     setCustomTokens(merged);
@@ -850,6 +891,41 @@ export default function WalletPage() {
     }
   };
 
+  // #42 — connect a Ledger as an EVM wallet (key stays on the device).
+  const connectLedgerWallet = async () => {
+    if (wallets.length >= MAX_WALLETS) {
+      setLedgerError(`Max ${MAX_WALLETS} wallets. Remove one to add more.`);
+      return;
+    }
+    setLedgerBusy(true);
+    setLedgerError(null);
+    try {
+      const { connectLedger } = await import('@/lib/wallet/ledger');
+      const { address, path } = await connectLedger();
+      if (wallets.some((w) => addressesEqual(w.address, address, 'ethereum'))) {
+        setLedgerError('That Ledger account is already added.');
+        return;
+      }
+      const lw: StoredWallet = {
+        address,
+        encryptedKey: '',
+        importMethod: 'ledger',
+        derivationPath: path,
+        name: `Ledger ${address.slice(0, 6)}…${address.slice(-4)}`,
+        createdAt: new Date().toISOString(),
+      };
+      const updated = [...wallets, lw];
+      saveWallets(updated);
+      setActiveWallet(lw);
+      notifyWalletImported(lw.name);
+      setView('main');
+    } catch (e) {
+      setLedgerError(e instanceof Error ? e.message : 'Could not connect Ledger. Unlock it and open the Ethereum app.');
+    } finally {
+      setLedgerBusy(false);
+    }
+  };
+
   const handleWalletImported = (wallet: StoredWallet) => {
     if (wallets.length >= MAX_WALLETS) return;
     const updated = [...wallets, wallet];
@@ -977,20 +1053,6 @@ export default function WalletPage() {
     />
   );
 
-  const CHAIN_FILTER_PILLS = [
-    { id: 'all', label: 'All' },
-    { id: 'ethereum', label: 'Ethereum' },
-    { id: 'solana', label: 'Solana' },
-    { id: 'base', label: 'Base' },
-    { id: 'arbitrum', label: 'Arbitrum' },
-    { id: 'polygon', label: 'Polygon' },
-    { id: 'bnb', label: 'BSC' },
-    // Enabled testnets get their own pills so the user can switch to them.
-    ...(testnetMode
-      ? TESTNET_CHAINS.filter((c) => enabledChains.includes(c.id)).map((c) => ({ id: c.id, label: c.name }))
-      : []),
-  ];
-
   // Stable token identity for hidden/customize (chain-aware, matches the IIFE).
   const tokenKeyOf = (chain: string, contractAddress: string | null | undefined, symbol: string) =>
     `${chain}:${contractAddress ? normalizeAddress(contractAddress, chain) : symbol.toLowerCase()}`;
@@ -1098,7 +1160,18 @@ export default function WalletPage() {
       a.prio - b.prio || a.t.symbol.localeCompare(b.t.symbol));
     else if (assetSort === 'change') withPriority.sort((a, b) =>
       a.prio - b.prio || parseFloat(b.t.valueUsd || '0') - parseFloat(a.t.valueUsd || '0'));
-    return withPriority.map((x) => x.t);
+    // Final de-dupe: a token can arrive from both the on-chain fetch and the
+    // custom-token list with slightly different keys (contract vs symbol, case),
+    // which surfaced as a duplicate NAKA row. Collapse by chain-aware identity,
+    // keeping the first (highest-priority/highest-value) occurrence.
+    const dedupeSeen = new Set<string>();
+    const deduped = withPriority.map((x) => x.t).filter((t) => {
+      const k = tokenKey(t.chain, t.contractAddress, t.symbol);
+      if (dedupeSeen.has(k)) return false;
+      dedupeSeen.add(k);
+      return true;
+    });
+    return deduped;
   })();
 
   const pnlAmount = currentBalance * (priceChange / 100);
@@ -1354,25 +1427,10 @@ export default function WalletPage() {
               ))}
             </div>
 
-            {/* ── CHAIN FILTER PILLS ───────────────────────── */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide mb-4">
-              {CHAIN_FILTER_PILLS.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => { setChainFilter(p.id); if (p.id !== 'all') { const c = chainById(p.id); if (c) setActiveChain(c); } }}
-                  style={chainFilter === p.id
-                    ? { background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 14px rgba(0,102,255,.5), inset 0 1px 0 rgba(255,255,255,.2)' }
-                    : { boxShadow: '0 0 0 1px rgba(0,102,255,.15)' }}
-                  className={`px-3 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all ${
-                    chainFilter === p.id
-                      ? 'text-white nl-glass'
-                      : 'bg-white/[0.03] text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
+            {/* Chain-filter chip row removed per product direction — each coin
+                row already shows its chain, so the chips were redundant. The
+                `chainFilter` state stays 'all'; search + the holdings list
+                cover discovery. */}
 
             {/* ── SEARCH + SORT BAR ────────────────────────── */}
             <div className="flex items-center gap-2 mb-4">
@@ -1451,7 +1509,7 @@ export default function WalletPage() {
                 aria-labelledby="wallet-tab-nfts"
                 className="mb-6 rounded-xl nl-glass/40 overflow-hidden"
               >
-                <NftTab address={activeWallet.address} chain={activeChain.id} />
+                <NftTab evmAddress={activeWallet.address} solanaAddress={activeWallet.solanaAddress} />
               </div>
             )}
 
@@ -1472,6 +1530,11 @@ export default function WalletPage() {
               id="wallet-panel-crypto"
               aria-labelledby="wallet-tab-crypto"
               hidden={activeTab !== 'crypto'}
+              // The Tailwind `flex` class overrides the native [hidden] display:none
+              // (equal specificity, utilities win), which leaked the holdings list
+              // under the Watchlist/NFTs/Activity tabs. Force display via inline
+              // style so each tab is a true full page.
+              style={{ display: activeTab === 'crypto' ? 'flex' : 'none' }}
               className="flex flex-col mb-6 divide-y divide-slate-900/60"
             >
               {loading ? (
@@ -1507,6 +1570,7 @@ export default function WalletPage() {
                       contractAddress={token.contractAddress}
                       logoUrl={logoUrl}
                       chainLabel={chainById(token.chain)?.name ?? ''}
+                      chainLogoUrl={chainById(token.chain)?.logoUrl}
                       // Testnet tokens get NO price lookup (empty id) so we never
                       // render a mainnet USD price against a worthless test coin.
                       coinGeckoId={isTestnetChain(token.chain)
@@ -1527,15 +1591,12 @@ export default function WalletPage() {
                 <FundWalletEmpty onFund={() => setView('receive')} onManage={() => setView('customize')} />
               )}
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <button onClick={() => setView('add-network')} className="nl-glass py-3 rounded-xl text-[11px] text-slate-200 hover:-translate-y-px flex items-center justify-center gap-1.5 transition-all" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}>
                   <Plus className="w-3.5 h-3.5 text-blue-300" /> Network
                 </button>
                 <button onClick={() => setView('add-token')} className="nl-glass py-3 rounded-xl text-[11px] text-slate-200 hover:-translate-y-px flex items-center justify-center gap-1.5 transition-all" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}>
                   <Plus className="w-3.5 h-3.5 text-blue-300" /> Add Token
-                </button>
-                <button onClick={() => setView('customize')} className="nl-glass py-3 rounded-xl text-[11px] text-slate-200 hover:-translate-y-px flex items-center justify-center gap-1.5 transition-all" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25)' }}>
-                  <Settings className="w-3.5 h-3.5 text-blue-300" /> Customize
                 </button>
               </div>
             </div>
@@ -1612,6 +1673,8 @@ export default function WalletPage() {
             {/* ── ADVANCED ─────────────────────────────────── */}
             <div className="mb-6">
               <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Advanced</h2>
+              {/* #43 — connect this wallet to external dApps (WalletConnect). */}
+              <DappConnect />
               <button
                 onClick={() => setView('analytics')}
                 className="w-full mb-2 py-3 nl-glass rounded-xl text-xs font-semibold hover:-translate-y-px flex items-center justify-center gap-1.5 transition-all"
@@ -1637,6 +1700,19 @@ export default function WalletPage() {
               </div>
               {wallets.length >= MAX_WALLETS && (
                 <p className="text-xs text-amber-400 mt-2 text-center">Max {MAX_WALLETS} wallets. Remove one to add more.</p>
+              )}
+              {/* #42 — hardware wallet (Ledger, EVM). Key never leaves the device. */}
+              <button
+                onClick={() => void connectLedgerWallet()}
+                disabled={ledgerBusy || wallets.length >= MAX_WALLETS}
+                className="w-full mt-2 py-3 nl-glass rounded-xl text-xs font-semibold hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                {ledgerBusy
+                  ? (<><Loader2 className="w-3.5 h-3.5 animate-spin" /> Connecting Ledger…</>)
+                  : (<><Shield className="w-3.5 h-3.5 text-blue-400" /> Connect Ledger (hardware)</>)}
+              </button>
+              {ledgerError && (
+                <p className="text-xs text-amber-400 mt-2 text-center">{ledgerError}</p>
               )}
             </div>
           </>
@@ -1855,7 +1931,7 @@ function CreateWalletView({ onBack, onCreated, walletCount = 0 }: { onBack: () =
       <div className="px-4 pt-6 max-w-lg mx-auto">
         <div className="flex items-center justify-between mb-6">
           <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-sm hover:text-white transition-colors">
-            <ArrowLeft className="w-4 h-4" /> Back
+            <ArrowLeft className="w-3.5 h-3.5" /> Back
           </button>
         </div>
 
@@ -2065,7 +2141,7 @@ function ImportWalletView({ onBack, onImported }: { onBack: () => void; onImport
     <div className="min-h-screen text-white pb-24">
       <div className="px-4 pt-6 max-w-lg mx-auto">
         <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-xs mb-6 hover:text-white">
-          <ArrowLeft className="w-4 h-4" /> Back
+          <ArrowLeft className="w-3.5 h-3.5" /> Back
         </button>
 
         <div className="flex items-center gap-3 mb-6">
@@ -2124,6 +2200,22 @@ const CHAIN_RPC: Record<string, string> = {
   optimism: 'https://mainnet.optimism.io',
   bnb: 'https://bsc-dataseed.binance.org',
   fantom: 'https://rpc.ftm.tools',
+  // #53 — additional EVM networks (public RPCs).
+  linea: 'https://rpc.linea.build',
+  scroll: 'https://rpc.scroll.io',
+  zksync: 'https://mainnet.era.zksync.io',
+  mantle: 'https://rpc.mantle.xyz',
+  blast: 'https://rpc.blast.io',
+  mode: 'https://mainnet.mode.network',
+  gnosis: 'https://rpc.gnosischain.com',
+  celo: 'https://forno.celo.org',
+  metis: 'https://andromeda.metis.io/?owner=1088',
+  moonbeam: 'https://rpc.api.moonbeam.network',
+  opbnb: 'https://opbnb-mainnet-rpc.bnbchain.org',
+  manta: 'https://pacific-rpc.manta.network/http',
+  zora: 'https://rpc.zora.energy',
+  aurora: 'https://mainnet.aurora.dev',
+  kava: 'https://evm.kava.io',
   // Test networks (real public RPCs).
   sepolia: 'https://ethereum-sepolia-rpc.publicnode.com',
   'base-sepolia': 'https://sepolia.base.org',
@@ -2340,10 +2432,16 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
   };
 
   const handleSend = async () => {
-    if (!password) { setPwError('Enter your wallet password.'); return; }
+    // #42 — Ledger wallets sign on the device; no password needed.
+    const isLedger = wallet.importMethod === 'ledger';
+    if (!isLedger && !password) { setPwError('Enter your wallet password.'); return; }
     setPwError(''); setStep('processing');
     try {
       if (chain.id === 'solana') {
+        if (isLedger) {
+          setError('Ledger is EVM-only in Naka — switch to an EVM network to send from this wallet.');
+          setStep('confirm'); return;
+        }
         // Native SOL transfer. Needs the seed phrase to derive the signing
         // keypair — raw-private-key imports have no Solana key.
         if (!wallet.encryptedMnemonic) {
@@ -2382,6 +2480,18 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
       const rpc = CHAIN_RPC[chain.id];
       if (!rpc) { setError(`${chain.name} send not supported yet.`); setStep('confirm'); return; }
       const ethers = await import('ethers');
+      // #42 — Ledger: build + sign the native transfer on the device.
+      if (isLedger) {
+        const { sendLedgerEvmTx } = await import('@/lib/wallet/ledger');
+        const hash = await sendLedgerEvmTx({
+          path: wallet.derivationPath ?? "44'/60'/0'/0/0",
+          rpcUrl: rpc,
+          tx: { to: recipient, value: ethers.parseEther(amount) },
+        });
+        setTxHash(hash);
+        setStep('sent');
+        return;
+      }
       const decryptedKey = await decryptPrivateKey(wallet.encryptedKey, password);
       const provider = new ethers.JsonRpcProvider(rpc);
       const signer = new ethers.Wallet(decryptedKey, provider);
@@ -2427,14 +2537,18 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
       <div className="px-4 pt-6 max-w-lg mx-auto">
         <button
           onClick={() => (step === 'form' || step === 'sent' ? onBack() : setStep(step === 'password' ? 'confirm' : 'form'))}
-          className="flex items-center gap-2 text-gray-400 text-xs mb-6 hover:text-white"
+          className="flex items-center gap-1.5 text-gray-400 text-[11px] mb-5 hover:text-white"
         >
-          <ArrowLeft className="w-4 h-4" /> {step === 'form' || step === 'sent' ? 'Back' : 'Back'}
+          <ArrowLeft className="w-3.5 h-3.5" /> Back
         </button>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF 60%,#1233AE)', boxShadow: '0 0 14px rgba(0,102,255,.5)' }}>
-            <ArrowUpRight className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden" style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF 60%,#1233AE)', boxShadow: '0 0 14px rgba(0,102,255,.5)' }}>
+            {/* Real per-chain token logo (Solana logo for SOL, ETH for Ethereum,
+                Arbitrum badge, etc.) instead of a generic arrow. */}
+            {chain.logoUrl
+              ? <img src={chain.logoUrl} alt={chain.symbol} className="w-6 h-6 rounded-full" />
+              : <ArrowUpRight className="w-5 h-5 text-white" />}
           </div>
           <div>
             <h1 className="text-xl font-heading font-bold">
@@ -2536,7 +2650,9 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
               </div>
             )}
             {error && <p className="text-xs text-[#EF4444] bg-[#EF4444]/5 p-3 rounded-xl border border-[#EF4444]/10">{error}</p>}
-            <button onClick={() => setStep('password')} style={primaryStyle} className="w-full py-3.5 rounded-2xl font-bold text-sm">Continue</button>
+            <button onClick={() => wallet.importMethod === 'ledger' ? void handleSend() : setStep('password')} style={primaryStyle} className="w-full py-3.5 rounded-2xl font-bold text-sm">
+              {wallet.importMethod === 'ledger' ? 'Confirm on Ledger' : 'Continue'}
+            </button>
           </div>
         )}
 
@@ -2706,7 +2822,7 @@ function ApprovalsView({ onBack, wallet, chain }: { onBack: () => void; wallet: 
       <div className="max-w-md mx-auto px-4 pt-6">
         <div className="flex items-center gap-3 mb-6">
           <button onClick={onBack} aria-label="Back" className="p-2 -ms-2 hover:bg-white/5 rounded-xl transition-colors">
-            <ArrowLeft className="w-5 h-5 text-slate-400" />
+            <ArrowLeft className="w-4 h-4 text-slate-400" />
           </button>
           <div>
             <h1 className="text-lg font-bold">Token Approvals</h1>
@@ -2872,7 +2988,7 @@ function PortfolioAnalyticsView({ onBack, wallet }: { onBack: () => void; wallet
       <div className="max-w-md mx-auto px-4 pt-6">
         <div className="flex items-center gap-3 mb-6">
           <button onClick={onBack} aria-label="Back" className="p-2 -ms-2 hover:bg-white/5 rounded-xl transition-colors">
-            <ArrowLeft className="w-5 h-5 text-slate-400" />
+            <ArrowLeft className="w-4 h-4 text-slate-400" />
           </button>
           <div>
             <h1 className="text-lg font-bold">Portfolio Analytics</h1>
@@ -3046,7 +3162,7 @@ function ReceiveView({
     <div className="min-h-screen text-white pb-24">
       <div className="px-4 pt-6 max-w-lg mx-auto">
         <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-xs mb-6 hover:text-white">
-          <ArrowLeft className="w-4 h-4" /> Back
+          <ArrowLeft className="w-3.5 h-3.5" /> Back
         </button>
 
         <div className="flex items-center gap-3 mb-5">
@@ -3059,32 +3175,12 @@ function ReceiveView({
           </div>
         </div>
 
-        {/* Bug §1 — inline chain picker. Lets the user fix a wrong-chain
-            deep link (e.g. when the market detail page passed a chain
-            that wasn't enabled, or when the user wants to switch chain
-            without backing out of the flow). Mirrors the wallet-home
-            pill row so the visual idiom is the same. */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-5 scrollbar-hide">
-          {availableChains.map((c) => {
-            const active = c.id === chain.id;
-            return (
-              <button
-                key={c.id}
-                onClick={() => onChangeChain(c)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap border transition-colors ${
-                  active
-                    ? 'text-white border-transparent'
-                    : 'text-slate-400 bg-slate-900/40 border-slate-800 hover:bg-slate-900 hover:text-slate-200'
-                }`}
-                style={active ? { backgroundColor: `${c.color}20`, borderColor: `${c.color}55`, color: c.color } : undefined}
-                aria-pressed={active}
-              >
-                <ChainLogo chain={c} size={14} />
-                {c.name}
-              </button>
-            );
-          })}
-        </div>
+        {/* Receive shows only the active coin's network (chain-picker chips
+            removed per product direction) — you receive the coin you opened
+            Receive for; switch coins from the wallet home / coin page. The
+            void below keeps the (still-passed) props from tripping lint. */}
+        {void availableChains}
+        {void onChangeChain}
 
         {/* Bug §1 — when the active chain isn't compatible with the
             stored wallet address (e.g. Solana / Bitcoin requested while
@@ -3127,14 +3223,12 @@ function ReceiveView({
           </div>
         ) : (
         <>
-        {/* TRUST WALLET-STYLE warning bar — placed ABOVE the QR / address so the
-            user reads it before they ever copy or share. The exact phrasing
-            ("lost forever") matches what funds-handling apps use to make sure
-            users do not send wrong-chain assets. Mandatory on every chain. */}
-        <div className="mb-5 flex items-start gap-3 rounded-xl border border-[#F59E0B]/30 bg-[#F59E0B]/10 p-4">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0 text-[#F59E0B] mt-0.5" />
-          <p className="text-xs leading-relaxed text-amber-100">
-            <span className="font-semibold">Only send {chain.name} ({chain.symbol}) assets to this address.</span> Other assets sent on a different network will be{' '}
+        {/* Compact per-chain red info bar — read before copy/share. Exact
+            wording per product direction; mandatory on every chain. */}
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-[#EF4444]/30 bg-[#EF4444]/10 px-3 py-2">
+          <Info className="w-3.5 h-3.5 flex-shrink-0 text-[#EF4444]" />
+          <p className="text-[11px] leading-snug text-red-100">
+            <span className="font-semibold">Only send {chain.name} ({chain.symbol}) assets to this address.</span> Other assets will be{' '}
             <span className="font-bold underline">lost forever</span>.
           </p>
         </div>
@@ -3159,7 +3253,7 @@ function ReceiveView({
             )}
           </div>
 
-          <p className="text-gray-400 text-xs mb-3">Send {chain.symbol} or tokens to this address:</p>
+          <p className="text-gray-400 text-xs mb-3">Your {chain.name} address</p>
 
           <div className="nl-glass rounded-xl p-4 mb-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.3)' }}>
             <p className="text-xs font-mono break-all text-[#8FA3FF]">{address}</p>
@@ -3368,7 +3462,7 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
     <div className="min-h-screen text-white pb-24">
       <div className="px-4 pt-6 max-w-lg mx-auto">
         <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-xs mb-6 hover:text-white">
-          <ArrowLeft className="w-4 h-4" /> Back
+          <ArrowLeft className="w-3.5 h-3.5" /> Back
         </button>
 
         <div className="flex items-center gap-3 mb-6">
@@ -3484,10 +3578,18 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
   );
 }
 
+// #58 — soft-square toggle matching the platform's profile-settings style
+// (rounded-rect track + square knob), not an iOS pill.
 function ToggleSwitch({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
-    <button onClick={onToggle} className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${on ? 'bg-blue-600' : 'bg-slate-700'}`}>
-      <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={onToggle}
+      className={`relative w-10 h-6 rounded-md transition-colors duration-200 flex-shrink-0 ${on ? 'bg-[#0066FF]' : 'bg-slate-700'}`}
+    >
+      <span className={`absolute top-0.5 w-5 h-5 rounded-[5px] bg-white shadow-sm transition-all duration-200 ${on ? 'left-[18px]' : 'left-0.5'}`} />
     </button>
   );
 }
@@ -3566,7 +3668,7 @@ function CustomizeTokensView({ onBack, tokens, isHidden, onToggle, onAddToken }:
       <div className="px-4 pt-6 max-w-lg mx-auto">
         <div className="flex items-center justify-between mb-6">
           <button onClick={onBack} className="flex items-center gap-2 text-gray-400 text-xs hover:text-white">
-            <ArrowLeft className="w-4 h-4" /> Back
+            <ArrowLeft className="w-3.5 h-3.5" /> Back
           </button>
           <button onClick={onAddToken} className="nl-glass inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4)' }}>
             <Plus className="w-3.5 h-3.5 text-blue-300" /> Add Token
@@ -3668,6 +3770,7 @@ function WalletSettingsView({
 
   // Seed / key reveal
   const [revealPassword, setRevealPassword] = useState('');
+  const [showRevealPwd, setShowRevealPwd] = useState(false);
   const [revealError, setRevealError] = useState('');
   const [revealLoading, setRevealLoading] = useState(false);
   const [revealedPhrase, setRevealedPhrase] = useState('');
@@ -3795,7 +3898,7 @@ function WalletSettingsView({
       <div className="px-4 pt-6 max-w-lg mx-auto">
         {/* Top bar */}
         <button onClick={onBack} className="flex items-center gap-2 text-slate-400 text-sm mb-6 hover:text-white transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back to Wallet
+          <ArrowLeft className="w-3.5 h-3.5" /> Back to Wallet
         </button>
 
         {/* Header */}
@@ -3876,7 +3979,12 @@ function WalletSettingsView({
                         <p className="text-sm font-semibold text-white mb-1">Reveal Seed Phrase</p>
                         <p className="text-xs text-slate-400 mb-3">Enter your password to reveal your 12-word recovery phrase.</p>
                         <div className="flex gap-2 mb-3">
-                          <input type="password" value={revealPassword} onChange={e => { setRevealPassword(e.target.value); setRevealError(''); setRevealedPhrase(''); setRevealedKey(''); }} placeholder="Wallet password" className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500/60 text-white" />
+                          <div className="relative flex-1">
+                            <input type={showRevealPwd ? 'text' : 'password'} value={revealPassword} onChange={e => { setRevealPassword(e.target.value); setRevealError(''); setRevealedPhrase(''); setRevealedKey(''); }} placeholder="Wallet password" className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 pe-10 text-sm focus:outline-none focus:border-blue-500/60 text-white" />
+                            <button type="button" onClick={() => setShowRevealPwd(v => !v)} aria-label={showRevealPwd ? 'Hide password' : 'Show password'} className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-slate-300">
+                              {showRevealPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
                           <button onClick={() => handleReveal('phrase')} disabled={revealLoading || !revealPassword} className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-bold disabled:opacity-50 transition-colors">
                             {revealLoading ? <RotateCcw className="w-4 h-4 animate-spin" /> : 'Reveal'}
                           </button>
@@ -4419,6 +4527,7 @@ function AddNetworkView({
   testnetMode: boolean;
   onTestnetModeChange: (on: boolean) => void;
 }) {
+  const [q, setQ] = useState('');
   const toggle = (id: string) => {
     const next = enabled.includes(id)
       ? enabled.filter((x) => x !== id)
@@ -4428,6 +4537,10 @@ function AddNetworkView({
     if (next.length === 0) return;
     onChange(next);
   };
+  const query = q.trim().toLowerCase();
+  const visibleChains = query
+    ? chains.filter((c) => c.name.toLowerCase().includes(query) || c.symbol.toLowerCase().includes(query) || c.id.toLowerCase().includes(query))
+    : chains;
 
   return (
     <div className="min-h-screen text-white">
@@ -4452,8 +4565,16 @@ function AddNetworkView({
           </div>
           <ToggleSwitch on={testnetMode} onToggle={() => onTestnetModeChange(!testnetMode)} />
         </div>
+        {/* #53 — search across the network catalog. */}
+        <div className="mb-3 flex items-center gap-2 nl-glass rounded-xl px-3 py-2.5" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.15)' }}>
+          <Search className="w-4 h-4 text-slate-500 shrink-0" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search networks…" className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-slate-500" />
+        </div>
         <div className="rounded-xl border border-slate-800/60 bg-slate-950/40 overflow-hidden divide-y divide-slate-800/60">
-          {chains.map((c) => {
+          {visibleChains.length === 0 && (
+            <div className="px-3 py-6 text-center text-xs text-slate-500">No networks match &ldquo;{q}&rdquo;.</div>
+          )}
+          {visibleChains.map((c) => {
             const isOn = enabled.includes(c.id);
             const isDefault = DEFAULT_ENABLED_CHAINS.includes(c.id);
             return (

@@ -49,7 +49,7 @@ function SkeletonRow() {
 
 export function PricesTable({ tokens, loading = false, onTokenClick }: PricesTableProps) {
   return (
-    <div className="w-full overflow-x-auto rounded-xl nl-glass" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.18)' }}>
+    <div className="w-full overflow-x-auto rounded-xl nl-glass" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
       <table className="w-full text-sm min-w-[900px]">
         <thead>
           <tr className="border-b border-[#1E2433] text-gray-500 text-xs">

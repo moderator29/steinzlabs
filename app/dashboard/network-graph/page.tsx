@@ -510,7 +510,7 @@ export default function NetworkGraphPage() {
     <div className="min-h-screen text-white flex flex-col">
 
       {/* ── Header ── */}
-      <div className="sticky top-0 z-40 bg-[#0A0E27]/95 backdrop-blur-md border-b border-white/[0.06] px-4 py-3 flex items-center gap-3 flex-shrink-0">
+      <div className="sticky top-0 z-40 nl-glass backdrop-blur-md border-b border-white/[0.06] px-4 py-3 flex items-center gap-3 flex-shrink-0">
         <BackButton className="flex-shrink-0" />
         <Network className="w-4 h-4 text-[#0066FF] flex-shrink-0" />
         <h1 className="font-bold text-sm flex-1 truncate">Network Graph</h1>
@@ -526,7 +526,7 @@ export default function NetworkGraphPage() {
       </div>
 
       {/* ── Search bar ── */}
-      <div className="flex-shrink-0 px-3 py-2.5 border-b border-white/[0.06] bg-[#0D1117]">
+      <div className="flex-shrink-0 px-3 py-2.5 border-b border-white/[0.06] nl-glass">
         <div className="flex gap-2 max-w-2xl mx-auto">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
@@ -536,13 +536,13 @@ export default function NetworkGraphPage() {
               onChange={e => setWalletInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAnalyze()}
               placeholder="Enter wallet address or token CA..."
-              className="w-full border border-white/[0.08] rounded-lg ps-8 pe-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-[#0066FF]/50 focus:bg-[#0A0E1A] transition-all"
+              className="w-full nl-card rounded-lg ps-8 pe-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none transition-all"
             />
           </div>
           <button
             onClick={handleAnalyze}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg bg-[#0066FF] hover:bg-[#0066FF]/80 text-white text-xs font-semibold transition-all disabled:opacity-50 flex-shrink-0 whitespace-nowrap"
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg nl-btn-neon text-xs font-semibold disabled:opacity-50 flex-shrink-0 whitespace-nowrap"
           >
             {loading ? (
               <Loader2 className="w-3 h-3 animate-spin" />
@@ -559,7 +559,7 @@ export default function NetworkGraphPage() {
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden min-h-0">
 
         {/* ── Left Panel ── */}
-        <aside className="lg:w-56 flex-shrink-0 bg-[#0D1117] border-b lg:border-b-0 lg:border-r border-white/[0.06] flex flex-col overflow-hidden">
+        <aside className="lg:w-56 flex-shrink-0 nl-glass border-b lg:border-b-0 lg:border-r border-white/[0.06] flex flex-col overflow-hidden">
           {/* Mobile toggle */}
           <button
             className="lg:hidden flex items-center justify-between px-4 py-2.5 border-b border-white/[0.05] text-xs text-gray-400 hover:text-white transition-colors"
@@ -685,7 +685,7 @@ export default function NetworkGraphPage() {
               className="absolute z-20 pointer-events-none"
               style={{ left: tooltipX, top: tooltipY }}
             >
-              <div className="bg-[#0D1117] border border-white/[0.1] rounded-xl p-3 shadow-2xl min-w-[160px]">
+              <div className="nl-glass rounded-xl p-3 shadow-2xl min-w-[160px]">
                 <p className="text-[9px] text-gray-500 font-mono mb-1 truncate max-w-[160px]">
                   {shortAddr(tooltip.node.address)}
                 </p>
@@ -708,7 +708,7 @@ export default function NetworkGraphPage() {
 
           {/* Selected node side panel */}
           {selectedNode && !loading && (
-            <div className="absolute top-3 right-3 z-20 w-52 bg-[#0D1117] border border-white/[0.1] rounded-xl p-3 shadow-2xl">
+            <div className="absolute top-3 right-3 z-20 w-52 nl-glass rounded-xl p-3 shadow-2xl" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
                   <div
@@ -755,7 +755,7 @@ export default function NetworkGraphPage() {
           {/* Zoom hint */}
           {!loading && nodes.length > 0 && (
             <div className="absolute bottom-3 left-3 z-10">
-              <span className="text-[9px] text-gray-700 bg-[#0D1117]/80 px-2 py-1 rounded-lg border border-white/[0.04]">
+              <span className="text-[9px] text-gray-700 nl-glass px-2 py-1 rounded-lg">
                 Scroll to zoom · Drag to pan · Click node to select
               </span>
             </div>
@@ -765,7 +765,7 @@ export default function NetworkGraphPage() {
           {!loading && (
             <button
               onClick={() => fetchData(walletInput.trim() || undefined)}
-              className="absolute bottom-3 right-3 z-10 flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] text-gray-500 hover:text-gray-300 bg-[#0D1117]/80 border border-white/[0.06] rounded-lg hover:border-white/[0.12] transition-all"
+              className="absolute bottom-3 right-3 z-10 flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] text-gray-500 hover:text-gray-300 nl-glass rounded-lg transition-all"
             >
               <RefreshCw className="w-3 h-3" />
               <span className="hidden sm:inline">Refresh</span>

@@ -22,6 +22,7 @@ import { NextRequest } from 'next/server';
 import { verifyCron, cronResponse, logCronExecution } from '../_shared';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { usdcForChain } from '@/lib/trading/usdc';
+import { tryExecuteSnipeViaSessionKey } from '@/lib/trading/sessionKeyExecutor';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -68,6 +69,19 @@ export async function GET(request: NextRequest) {
     return cronResponse('sniper-auto-execute', startedAt, { pending: count, killed: true, reason: killErr ? 'kill-state unreadable (fail-closed)' : (!killState ? 'kill-state missing (fail-closed)' : 'admin disabled') });
   }
 
+  // Audit #47 C1: serialize money-cron ticks. Two overlapping invocations would
+  // each read the same daily-cap total before either incremented it (TOCTOU) and
+  // could both broadcast. Take an atomic DB lock; if another tick holds it, exit.
+  // TTL matches maxDuration so a crashed tick self-releases.
+  const { data: lockOk } = await supabase.rpc('try_acquire_cron_lock', {
+    p_name: 'sniper-auto-execute',
+    p_ttl_seconds: 280,
+  });
+  if (!lockOk) {
+    return cronResponse('sniper-auto-execute', startedAt, { pending: count, skipped: 'another tick is running' });
+  }
+
+  try {
   const { data: matches, error } = await supabase
     .from('sniper_match_events')
     .select('id, criteria_id, user_id, matched_token_address, matched_chain, details')
@@ -100,9 +114,31 @@ export async function GET(request: NextRequest) {
     .in('id', criteriaIds);
   const criteriaMap = new Map((criteriaRows ?? []).map((c) => [c.id, c]));
 
-  const processed: Array<{ matchId: string; status: 'queued' | 'skipped' | 'error'; reason?: string; pendingTradeId?: string }> = [];
+  const processed: Array<{ matchId: string; status: 'queued' | 'skipped' | 'error' | 'executed'; reason?: string; pendingTradeId?: string; txHash?: string }> = [];
 
+  const claimStaleIso = new Date(Date.now() - 120_000).toISOString();
   for (const m of matches) {
+    // Audit #47 C2: atomically claim the match before doing any work. The
+    // conditional UPDATE only matches an unexecuted, unstaged, unclaimed (or
+    // stale-claimed) row, and Postgres re-checks the WHERE after row-locking —
+    // so even without the cron lock, two ticks can't both broadcast this buy.
+    if (!dryRun) {
+      const { data: claimed } = await supabase
+        .from('sniper_match_events')
+        .update({ claimed_at: new Date().toISOString() })
+        .eq('id', m.id)
+        .eq('decision', 'sniped_pending')
+        .is('executed_tx_hash', null)
+        .is('pending_trade_id', null)
+        .or(`claimed_at.is.null,claimed_at.lt.${claimStaleIso}`)
+        .select('id')
+        .maybeSingle();
+      if (!claimed) {
+        processed.push({ matchId: m.id, status: 'skipped', reason: 'already claimed by another tick' });
+        continue;
+      }
+    }
+
     const criteria = criteriaMap.get(m.criteria_id) as
       | {
           id: string;
@@ -162,6 +198,40 @@ export async function GET(request: NextRequest) {
     if (execErr || !execRow) {
       processed.push({ matchId: m.id, status: 'error', reason: execErr?.message ?? 'execution insert failed' });
       continue;
+    }
+
+    // 1b) #41 — TRUE background execution via an AA session key (Naka built-in
+    //     wallet only). If the user has an active, owner-approved ZeroDev
+    //     session for this chain and AA is configured, broadcast the buy now
+    //     from their kernel account — no open tab, no click. Best-effort: any
+    //     failure (no session, over caps, AA off, quote/bundler error) falls
+    //     through to the one-tap pending_trades path below. entry_price_usd /
+    //     tokens_received are backfilled by the receipt-reconciliation cron.
+    if (criteria.wallet_source === 'builtin' && !dryRun) {
+      let aa: { txHash: string; kernelAddress: string } | null = null;
+      try {
+        aa = await tryExecuteSnipeViaSessionKey({
+          userId: criteria.user_id,
+          chain: m.matched_chain,
+          tokenAddress: m.matched_token_address,
+          amountUsd: criteria.amount_per_snipe_usd,
+          slippageBps: criteria.max_slippage_bps ?? 200,
+        });
+      } catch {
+        aa = null; // fall back to staging
+      }
+      if (aa?.txHash) {
+        await supabase
+          .from('sniper_executions')
+          .update({ status: 'confirmed', tx_hash: aa.txHash, wallet_address: aa.kernelAddress, executed_at: new Date().toISOString() })
+          .eq('id', execRow.id);
+        await supabase
+          .from('sniper_match_events')
+          .update({ decision: 'sniped_executed' })
+          .eq('id', m.id);
+        processed.push({ matchId: m.id, status: 'executed', txHash: aa.txHash });
+        continue;
+      }
     }
 
     // 2) Queue the buy on pending_trades with the VERIFIED live schema
@@ -237,4 +307,9 @@ export async function GET(request: NextRequest) {
     dryRun,
     sample: processed.slice(0, 5),
   });
+  } finally {
+    // Release the lock so the next 1-min tick can run immediately (the TTL is
+    // only a crash backstop). Best-effort — if this fails the TTL still frees it.
+    await supabase.rpc('release_cron_lock', { p_name: 'sniper-auto-execute' });
+  }
 }

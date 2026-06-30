@@ -108,7 +108,7 @@ export default function ApprovalsPage() {
         <select
           value={chain}
           onChange={(e) => setChain(e.target.value)}
-          className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm"
+          className="nl-glass rounded-lg px-3 py-2 text-sm"
         >
           {CHAINS.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
@@ -116,25 +116,25 @@ export default function ApprovalsPage() {
           value={address}
           onChange={(e) => setAddress(e.target.value)}
           placeholder="0x..."
-          className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#0066FF]"
+          className="flex-1 nl-glass rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#0066FF]"
         />
         <button
           onClick={fetchAudit}
           disabled={loading}
-          className="px-4 py-2 rounded-lg bg-[#0066FF] hover:bg-[#0066FF]/90 disabled:opacity-50 text-sm font-bold flex items-center gap-2"
+          className="nl-btn-neon px-4 py-2 rounded-lg disabled:opacity-50 text-sm font-bold flex items-center gap-2"
         >
           {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Scanning</> : 'Scan'}
         </button>
       </div>
 
       {data?.error && (
-        <div className="rounded-xl border border-[#EF4444]/30 bg-[#EF4444]/10 px-4 py-3 text-sm text-[#EF4444]">
+        <div className="nl-glass nl-glass--crimson rounded-xl px-4 py-3 text-sm text-[#EF4444]">
           {data.error}
         </div>
       )}
 
       {data && data.approvals && (
-        <div className="rounded-xl border border-white/[0.06] bg-black/30 px-4 py-3 mb-4 flex items-center gap-6 text-sm">
+        <div className="nl-glass rounded-xl px-4 py-3 mb-4 flex items-center gap-6 text-sm" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           <span>Active: <span className="font-bold">{data.approvals.length}</span></span>
           <span>Unlimited: <span className="font-bold text-amber-300">{data.unlimitedCount ?? 0}</span></span>
           <span>Danger: <span className="font-bold text-red-300">{data.dangerCount ?? 0}</span></span>
@@ -143,7 +143,7 @@ export default function ApprovalsPage() {
 
       <div className="space-y-2">
         {data?.approvals?.map((row) => (
-          <div key={`${row.tokenAddress}-${row.spender}`} className="rounded-xl border border-white/[0.06] bg-black/30 px-4 py-3 flex items-center justify-between gap-3">
+          <div key={`${row.tokenAddress}-${row.spender}`} className="nl-glass rounded-xl px-4 py-3 flex items-center justify-between gap-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold">{row.tokenSymbol || row.tokenName || 'Unknown'}</span>

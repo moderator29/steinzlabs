@@ -32,7 +32,7 @@ function SkeletonRow() {
 export function PricesList({ tokens, loading = false, onTokenClick }: PricesListProps) {
   if (loading) {
     return (
-      <div className="rounded-xl border border-[#1E2433] bg-[#0D1117] overflow-hidden">
+      <div className="nl-glass rounded-xl overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         {Array.from({ length: 10 }).map((_, i) => (
           <SkeletonRow key={i} />
         ))}
@@ -42,14 +42,14 @@ export function PricesList({ tokens, loading = false, onTokenClick }: PricesList
 
   if (tokens.length === 0) {
     return (
-      <div className="rounded-xl border border-[#1E2433] bg-[#0D1117] py-16 text-center text-gray-500 text-sm">
+      <div className="nl-glass rounded-xl py-16 text-center text-gray-500 text-sm" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         No tokens found
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-[#1E2433] bg-[#0D1117] overflow-hidden">
+    <div className="nl-glass rounded-xl overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
       {tokens.map((token, idx) => {
         const change = token.price_change_percentage_24h ?? 0;
         const isPos = change >= 0;

@@ -130,7 +130,7 @@ export function BuySellModal({ symbol, name, logo, priceUSD, chain, tokenAddress
                 <p className="text-gray-400 text-sm mt-1">{result.blockReason ?? result.error}</p>
               </>
             )}
-            <button onClick={onClose} className="mt-4 w-full py-2.5 bg-[#141824] border border-[#1E2433] rounded-lg text-white text-sm">Close</button>
+            <button onClick={onClose} className="nl-button--ghost mt-4 w-full py-2.5 rounded-lg text-sm">Close</button>
           </div>
         ) : (
           <>
@@ -181,14 +181,14 @@ export function BuySellModal({ symbol, name, logo, priceUSD, chain, tokenAddress
                   <button
                     type="button"
                     onClick={() => { window.location.href = `/dashboard/wallet-page?action=receive&chain=${chain}`; }}
-                    className="flex-1 text-xs font-semibold px-3 py-1.5 rounded-md bg-[#0066FF] hover:bg-[#0066FF]/90 text-white"
+                    className="nl-button flex-1 text-xs px-3 py-1.5 rounded-md"
                   >
                     Add Funds
                   </button>
                   <button
                     type="button"
                     onClick={() => setBalanceError('')}
-                    className="text-xs px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300"
+                    className="nl-button--ghost text-xs px-3 py-1.5 rounded-md"
                   >
                     Cancel
                   </button>
@@ -197,7 +197,7 @@ export function BuySellModal({ symbol, name, logo, priceUSD, chain, tokenAddress
             )}
 
             {amountNum > 0 && (
-              <div className="bg-[#141824] rounded-lg p-3 text-sm mb-4 space-y-1.5">
+              <div className="nl-card rounded-lg p-3 text-sm mb-4 space-y-1.5">
                 <div className="flex justify-between">
                   <span className="text-gray-400">You&apos;ll receive</span>
                   <span className="text-white font-mono">{tokenAmount.toFixed(4)} {symbol}</span>

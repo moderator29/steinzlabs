@@ -328,7 +328,7 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
 
   if (loading && !data) {
     return (
-      <div className="rounded-xl border border-slate-800/70 bg-slate-950/40 p-4">
+      <div className="nl-glass rounded-xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         <div className="flex items-center gap-2 text-xs text-slate-400">
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
           Running on-chain security scan…
@@ -339,7 +339,7 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
 
   if (error || !data) {
     return (
-      <div className="rounded-xl border border-slate-800/70 bg-slate-950/40 p-4">
+      <div className="nl-glass rounded-xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         <div className="flex items-center justify-between text-xs">
           <div className="flex items-center gap-2 text-slate-400">
             <Shield className="w-3.5 h-3.5" />
@@ -348,7 +348,7 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
           <button
             type="button"
             onClick={scan}
-            className="inline-flex items-center gap-1 px-2 py-1 rounded bg-slate-900/60 hover:bg-slate-800 text-slate-300"
+            className="nl-button--ghost inline-flex items-center gap-1 px-2 py-1 rounded"
           >
             <RefreshCw className="w-3 h-3" /> Retry
           </button>
@@ -523,7 +523,7 @@ export default function SecurityPanel({ chain, address, liquidityUsd }: Props) {
         const holders = (Array.isArray(raw.holders) ? raw.holders as RawHolder[] : []).slice(0, 10);
         if (holders.length === 0) return null;
         return (
-          <div className="mb-3 rounded-2xl border border-slate-800/50 bg-slate-950/40 p-3">
+          <div className="nl-glass mb-3 rounded-2xl p-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="flex items-center justify-between mb-2">
               <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Top 10 Holders</span>
               <span className="text-[10px] text-slate-500 font-mono">

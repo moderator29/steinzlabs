@@ -130,7 +130,7 @@ export default function TopGainersPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="inline-flex items-center gap-1 p-1 rounded-lg bg-[#111827] border border-white/[0.06]">
+        <div className="nl-glass inline-flex items-center gap-1 p-1 rounded-lg">
           {(['gainers', 'losers'] as Direction[]).map((d) => (
             <button
               key={d}
@@ -139,9 +139,9 @@ export default function TopGainersPage() {
               className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition-colors ${
                 direction === d
                   ? d === 'gainers'
-                    ? 'bg-emerald-500/15 text-emerald-300'
-                    : 'bg-red-500/15 text-red-300'
-                  : 'text-slate-400 hover:text-white'
+                    ? 'nl-button bg-emerald-500/15 text-emerald-300'
+                    : 'nl-button bg-red-500/15 text-red-300'
+                  : 'nl-button--ghost text-slate-400 hover:text-white'
               }`}
             >
               {d === 'gainers' ? 'Gainers' : 'Losers'}
@@ -150,7 +150,7 @@ export default function TopGainersPage() {
         </div>
       </div>
 
-      <div className="space-y-0 rounded-xl overflow-hidden border border-white/[0.06] bg-[#111827]">
+      <div className="nl-glass space-y-0 rounded-xl overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         {loading && rows.length === 0 ? (
           Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="h-16 bg-white/[0.02] animate-pulse border-b border-white/[0.04] last:border-b-0" />

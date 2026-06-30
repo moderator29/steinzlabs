@@ -203,7 +203,7 @@ export default function SwapBatchCard({
         execution prices may shift slightly.
       </p>
 
-      <div className="bg-[#0D1117] border border-[#1E2433] rounded-2xl overflow-hidden">
+      <div className="nl-glass rounded-2xl overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         {/* Header */}
         <div className="flex items-center gap-2 px-4 pt-4 pb-3 text-gray-300">
           <ArrowDownUp size={15} className="text-[#0066FF]" />
@@ -276,7 +276,7 @@ export default function SwapBatchCard({
         {activeLeg && active && (
           <div className="px-4 pt-2 pb-4">
             {/* You pay */}
-            <div className="flex items-center gap-3 bg-white/[0.02] rounded-xl p-3 border border-[#1E2433]">
+            <div className="nl-card flex items-center gap-3 rounded-xl p-3">
               <SwapTokenGlyph symbol={activeLeg.fromToken} size={36} />
               <div className="min-w-0">
                 <div className="text-[10px] uppercase tracking-wider text-gray-500">You pay</div>
@@ -287,13 +287,13 @@ export default function SwapBatchCard({
             </div>
 
             <div className="flex items-center justify-center py-1.5">
-              <div className="w-8 h-8 rounded-full bg-[#141824] border border-[#1E2433] flex items-center justify-center">
+              <div className="nl-card w-8 h-8 rounded-full flex items-center justify-center">
                 <ArrowDownUp size={14} className="text-gray-400" />
               </div>
             </div>
 
             {/* You receive */}
-            <div className="flex items-center gap-3 bg-white/[0.02] rounded-xl p-3 border border-[#1E2433]">
+            <div className="nl-card flex items-center gap-3 rounded-xl p-3">
               <SwapTokenGlyph symbol={activeLeg.toToken} size={36} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
@@ -365,7 +365,7 @@ export default function SwapBatchCard({
               <button
                 onClick={() => signLeg(activeIndex)}
                 disabled={!walletAddress || active.status === 'quoting' || active.status === 'signing'}
-                className="naka-button-primary w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                className="nl-button w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ paddingTop: 12, paddingBottom: 12 }}
               >
                 {active.status === 'signing' ? (
@@ -380,7 +380,7 @@ export default function SwapBatchCard({
                 <button
                   onClick={onCancel}
                   disabled={active.status === 'signing'}
-                  className="px-4 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-[#1E2433] text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="nl-button--ghost px-4 rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>

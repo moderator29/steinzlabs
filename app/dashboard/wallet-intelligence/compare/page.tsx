@@ -213,8 +213,8 @@ export default function WalletCompareePage() {
   }, [a.data, b.data]);
 
   return (
-    <div className="min-h-screen bg-[#060A12] text-white pb-20">
-      <div className="sticky top-0 z-40 bg-[#060A12]/90 backdrop-blur-2xl border-b border-[#1a1f2e]">
+    <div className="min-h-screen text-white pb-20">
+      <div className="sticky top-0 z-40 nl-glass backdrop-blur-2xl border-b border-[#1a1f2e]">
         <div className="flex items-center gap-3 px-4 h-14 max-w-6xl mx-auto">
           <BackButton href="/dashboard/wallet-intelligence" label="Back" />
           <div className="w-8 h-8 bg-gradient-to-br from-[#0066FF] to-[#00C8FF] rounded-xl flex items-center justify-center">
@@ -243,7 +243,7 @@ export default function WalletCompareePage() {
         {/* Side panels */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[{ side: a, label: 'A' }, { side: b, label: 'B' }].map(({ side, label }) => (
-            <div key={label} className="whale-glass-card p-4">
+            <div key={label} className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <div className="flex items-center justify-between mb-3">
                 <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Wallet {label}</div>
                 {side.data?.address && (
@@ -275,15 +275,15 @@ export default function WalletCompareePage() {
                     <div className="text-[11px] text-slate-500">Total balance</div>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="rounded-lg border border-white/[0.06] py-2">
+                    <div className="nl-card rounded-lg py-2">
                       <div className="text-sm font-semibold">{side.data.tokenCount}</div>
                       <div className="text-[10px] uppercase tracking-wide text-slate-500">Tokens</div>
                     </div>
-                    <div className="rounded-lg border border-white/[0.06] py-2">
+                    <div className="nl-card rounded-lg py-2">
                       <div className="text-sm font-semibold">{side.data.txCount.toLocaleString()}</div>
                       <div className="text-[10px] uppercase tracking-wide text-slate-500">Txs</div>
                     </div>
-                    <div className="rounded-lg border border-white/[0.06] py-2">
+                    <div className="nl-card rounded-lg py-2">
                       <div className="text-sm font-semibold">{side.data.chain}</div>
                       <div className="text-[10px] uppercase tracking-wide text-slate-500">Chain</div>
                     </div>
@@ -301,7 +301,7 @@ export default function WalletCompareePage() {
 
         {/* Diff table */}
         {a.data && b.data && (
-          <div className="whale-glass-card p-4 sm:p-5">
+          <div className="nl-glass rounded-2xl p-4 sm:p-5" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
             <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500 mb-3">Side-by-side</div>
             <div className="overflow-x-auto">
             <table className="w-full min-w-[420px] text-start">

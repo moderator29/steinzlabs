@@ -46,7 +46,8 @@ function InsightCard({ card, onSelect }: { card: TrendCard; onSelect: (c: TrendC
   const sparkColor = card.hot ? (up ? '#10B981' : '#EF4444') : '#3B82F6';
 
   return (
-    <div className={`bg-[#0f1320] border rounded-2xl p-4 transition-all hover:border-white/[0.16] cursor-pointer active:scale-[0.99] ${card.hot ? 'border-[' + color + ']/30' : 'border-white/[0.06]'}`}
+    <div className={`nl-glass rounded-2xl p-4 transition-all hover:border-white/[0.16] cursor-pointer active:scale-[0.99] ${card.hot ? 'border-[' + color + ']/30' : ''}`}
+      style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
       onClick={() => onSelect(card)}>
       <div className="flex items-start justify-between mb-3">
         <div>
@@ -109,7 +110,7 @@ function TrendDrawer({ card, onClose }: { card: TrendCard; onClose: () => void }
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0D1117] border-t border-white/[0.08] rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto">
+      <div className="fixed bottom-0 left-0 right-0 z-50 nl-glass border-t border-white/[0.08] rounded-t-3xl shadow-2xl max-h-[85vh] overflow-y-auto">
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 bg-white/[0.15] rounded-full" />
@@ -228,7 +229,7 @@ export default function TrendsPage() {
   return (
     <div className="min-h-screen text-white pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-[#0A0E27]/95 backdrop-blur-xl border-b border-white/[0.06]">
+      <div className="sticky top-0 z-40 bg-black/40 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="flex items-center gap-3 px-4 h-14">
           <BackButton />
           <div className="w-8 h-8 bg-gradient-to-br from-[#0066FF] to-[#10B981] rounded-xl flex items-center justify-center">
@@ -256,7 +257,7 @@ export default function TrendsPage() {
           {chainTabs.map(c => (
             <button key={c} onClick={() => handleChain(c)}
               className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors ${
-                chain === c ? 'bg-gradient-to-r from-[#0066FF] to-[#10B981] text-white' : 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.08]'
+                chain === c ? 'nl-btn-neon text-white' : 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.08]'
               }`}>
               {chainLabels[c] ?? c}
             </button>
@@ -278,11 +279,11 @@ export default function TrendsPage() {
         {/* Stats summary */}
         {data && (
           <div className="grid grid-cols-2 gap-2">
-            <div className="bg-[#0f1320] border border-white/[0.06] rounded-xl p-3">
+            <div className="nl-glass rounded-xl p-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <div className="text-[10px] text-gray-500 mb-1">Hot Metrics</div>
               <div className="text-xl font-bold text-[#F59E0B]">{data.cards.filter(c => c.hot).length}</div>
             </div>
-            <div className="bg-[#0f1320] border border-white/[0.06] rounded-xl p-3">
+            <div className="nl-glass rounded-xl p-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <div className="text-[10px] text-gray-500 mb-1">Chains Tracked</div>
               <div className="text-xl font-bold text-[#0066FF]">{data.chains.length - 1}</div>
             </div>

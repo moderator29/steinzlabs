@@ -219,12 +219,31 @@ export function useSwapBroadcast() {
       if (!quote.transaction) {
         throw new Error('No transaction data to sign. Re-fetch the quote and try again.');
       }
-      const storedWallets = safeLocalParse<Array<{ address?: string; encryptedKey?: string }>>('steinz_wallets', []);
+      const storedWallets = safeLocalParse<Array<{ address?: string; encryptedKey?: string; importMethod?: string; derivationPath?: string }>>('steinz_wallets', []);
       const activeAddr = safeLocalGet('steinz_active_wallet_address') || address;
       const storedWallet = storedWallets.find(
         (w) => w.address && activeAddr && normalizeAddress(w.address) === normalizeAddress(activeAddr),
       );
-      if (!storedWallet?.encryptedKey) {
+      if (!storedWallet) {
+        throw new Error('No wallet found. Please re-import your wallet to sign transactions.');
+      }
+
+      // #44 — Ledger hardware wallet: sign the swap tx on the device. No
+      // encryptedKey exists (the key lives on the Ledger); route to WebHID.
+      if (storedWallet.importMethod === 'ledger') {
+        const { sendLedgerEvmTx } = await import('@/lib/wallet/ledger');
+        return sendLedgerEvmTx({
+          path: storedWallet.derivationPath ?? "44'/60'/0'/0/0",
+          rpcUrl: CHAIN_RPCS[chain] ?? CHAIN_RPCS.ethereum,
+          tx: {
+            to: quote.transaction.to,
+            data: quote.transaction.data,
+            value: quote.transaction.value ? BigInt(quote.transaction.value) : undefined,
+          },
+        });
+      }
+
+      if (!storedWallet.encryptedKey) {
         throw new Error('No wallet keys found. Please re-import your wallet to sign transactions.');
       }
 

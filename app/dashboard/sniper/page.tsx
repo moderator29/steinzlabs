@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Sentry from '@sentry/nextjs';
 import {
   AlertTriangle, Play, Pause, ExternalLink, Plus, TrendingUp, Trash2,
 } from '@/components/icons/brand';
 import {
-  Crosshair, Loader2, Lock, Power, Zap, Target, Search, RefreshCw, Radar, Flame, Clock, Bell, Copy, Check, ShieldAlert,
+  Crosshair, Loader2, Lock, Power, Zap, Target, Search, RefreshCw, Radar, Clock, Bell, ShieldAlert,
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { ChainLogo } from '@/components/common/ChainLogo';
@@ -20,10 +20,16 @@ import { NewSniperModal } from './NewSniperModal';
 import { SniperWalletModal } from './SniperWalletModal';
 import { SniperTokenDrawer } from './SniperTokenDrawer';
 import { WalletStatus } from './WalletStatus';
+import { BackgroundSnipingCard } from '@/components/sniper/BackgroundSnipingCard';
 import { LimitOrdersTab, AlertsTab, useAlertSound } from './OrdersAlerts';
 import {
-  type DetectedToken, fmtUSD, fmtCompact, timeAgo, shortAddr, useTokenAudit, GuardianBadges, TokenAvatar, sourceMeta,
+  type DetectedToken, fmtUSD, timeAgo,
 } from './sniperShared';
+import { LAUNCHPADS } from '@/lib/sniper/launchpads';
+import { SourceFilterRow } from '@/components/sniper/SourceFilterRow';
+import { TokenCard } from '@/components/sniper/TokenCard';
+import { FeedSoundToggle } from '@/components/sniper/FeedSoundToggle';
+import { useFeedSound } from '@/lib/sniper/useFeedSound';
 
 interface SniperCriteriaRow {
   id: string;
@@ -73,6 +79,9 @@ type Tab = 'discover' | 'positions' | 'limit' | 'alerts' | 'snipers' | 'history'
 // appear as selectable chains (they were dead filter options).
 const EVM_CHAINS = SNIPER_CHAINS.filter((c) => c !== 'solana' && c !== 'ton');
 
+// Discover feed page size; "Load more" pages by this offset.
+const FEED_PAGE = 60;
+
 // Early-entry liquidity presets — catch coins at 5k/10k/15k.
 const LIQ_PRESETS: { label: string; value: number }[] = [
   { label: 'Any', value: 0 },
@@ -102,12 +111,22 @@ export default function SniperPage() {
   const [snipers, setSnipers] = useState<SniperCriteriaRow[]>([]);
   const [executions, setExecutions] = useState<ExecutionRow[]>([]);
   const [feedTokens, setFeedTokens] = useState<DetectedToken[]>([]);
+  const [feedTotal, setFeedTotal] = useState(0);
   const [feedLoading, setFeedLoading] = useState(false);
+  const [feedLoadingMore, setFeedLoadingMore] = useState(false);
   const [minLiq, setMinLiq] = useState(0);
-  const [feedSources, setFeedSources] = useState<string[]>([]);
+  // Discover-feed chain selector — independent of the global chainFilter so the
+  // feed can target the full launchpad chain set (solana, base, arbitrum, …)
+  // without breaking the EVM-only Positions/History/Snipers tabs.
+  const [feedChain, setFeedChain] = useState<string>('all');
+  const [feedSort, setFeedSort] = useState<'new' | 'volume' | 'liquidity' | 'mcap'>('new');
+  const [excludeHoneypots, setExcludeHoneypots] = useState(false);
+  const [socialOnly, setSocialOnly] = useState(false);
+  // OG mode — earliest token we've seen per (chain, symbol). Honest "first seen
+  // on Naka", not "first ever" (we have no global launch index).
+  const [ogMode, setOgMode] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<string[]>([]);
   const [feedQuery, setFeedQuery] = useState('');
-  const [ogOnly, setOgOnly] = useState(false);
   const [killSwitchOn, setKillSwitchOn] = useState(false);
   const [killToggling, setKillToggling] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
@@ -117,6 +136,49 @@ export default function SniperPage() {
   const [loading, setLoading] = useState(true);
   const [liveConnected, setLiveConnected] = useState(false);
   const [freshIds, setFreshIds] = useState<Set<string>>(() => new Set());
+
+  // ── Meme Zone sound alerts (Discover feed) ─────────────────────────────────
+  const feedSound = useFeedSound();
+  // Snapshot of the previous refresh: which token ids existed and their bonding
+  // curve %, so we can detect freshly-appeared tokens and ~90% graduate crosses.
+  const prevFeedRef = useRef<{ ids: Set<string>; bonding: Map<string, number> } | null>(null);
+  // Set when the last feed mutation was a "Load more" append, so pagination is
+  // never mistaken for freshly-detected tokens.
+  const pagingRef = useRef(false);
+
+  useEffect(() => {
+    if (tab !== 'discover') return;
+    // Wait for the first non-empty page before seeding a baseline, otherwise the
+    // initial empty→populated transition would read every token as "new".
+    if (feedTokens.length === 0) return;
+    const wasPaging = pagingRef.current;
+    pagingRef.current = false;
+    const prev = prevFeedRef.current;
+    const ids = new Set(feedTokens.map((t) => t.id));
+    const bonding = new Map<string, number>();
+    for (const t of feedTokens) {
+      if (typeof t.bondingCurvePct === 'number') bonding.set(t.id, t.bondingCurvePct);
+    }
+    // First populated load just seeds the baseline — don't chime on initial fill.
+    if (prev && !wasPaging) {
+      const hasNew = feedTokens.some((t) => !prev.ids.has(t.id));
+      // Graduate cross: a token that was below the threshold last cycle and is
+      // now at/above it (and was already present, so it's a genuine crossing).
+      const graduated = feedTokens.some((t) => {
+        if (typeof t.bondingCurvePct !== 'number' || !prev.ids.has(t.id)) return false;
+        const before = prev.bonding.get(t.id);
+        return before != null && before < feedSound.graduatePct && t.bondingCurvePct >= feedSound.graduatePct;
+      });
+      if (feedSound.enabled && (hasNew || graduated)) {
+        // Debounced to one chime per refresh cycle even on a burst of new pairs.
+        feedSound.playChime(graduated);
+      }
+    }
+    prevFeedRef.current = { ids, bonding };
+    // playChime / graduatePct are stable enough; depend on the feed snapshot and
+    // the enabled flag so toggling on doesn't retroactively replay old tokens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feedTokens, tab, feedSound.enabled]);
 
   // ── Data loaders ─────────────────────────────────────────────────────────
   const loadSnipers = useCallback(async () => {
@@ -146,30 +208,60 @@ export default function SniperPage() {
     } catch { /* keep default */ }
   }, []);
 
+  // Build the GET /api/sniper query from the current discover-feed filters.
+  const buildFeedParams = useCallback((offset: number) => {
+    const params = new URLSearchParams({ limit: String(FEED_PAGE), offset: String(offset), sort: feedSort });
+    if (feedChain !== 'all') params.set('chain', feedChain);
+    // Always send minLiquidity — '0' means "no floor".
+    params.set('minLiquidity', String(minLiq));
+    if (sourceFilter.length) params.set('source', sourceFilter.join(','));
+    const auditFlags: string[] = [];
+    if (excludeHoneypots) auditFlags.push('nohoneypot');
+    if (socialOnly) auditFlags.push('social');
+    if (auditFlags.length) params.set('audit', auditFlags.join(','));
+    if (ogMode) params.set('og', '1');
+    // Forward the search term (symbol/name/address) so it resolves server-side.
+    const qTrim = feedQuery.trim();
+    if (qTrim) params.set('q', qTrim);
+    return params;
+  }, [feedChain, feedSort, minLiq, sourceFilter, excludeHoneypots, socialOnly, ogMode, feedQuery]);
+
   const loadFeed = useCallback(async () => {
     setFeedLoading(true);
     try {
-      const params = new URLSearchParams({ limit: '30' });
-      if (chainFilter !== 'all') params.set('chain', chainFilter);
-      // Always send minLiquidity — '0' means "no floor". Omitting it let the
-      // server apply a hidden $3000 default, so the "Any" preset silently
-      // filtered out sub-$3k pairs.
-      params.set('minLiquidity', String(minLiq));
-      if (sourceFilter.length) params.set('source', sourceFilter.join(','));
-      // Forward an address-shaped query so pasting a contract resolves it
-      // server-side instead of filtering only the newest-30 client rows.
-      const qTrim = feedQuery.trim();
-      if (/^0x[a-fA-F0-9]{40}$/.test(qTrim)) params.set('q', qTrim);
-      const res = await fetch(`/api/sniper?${params.toString()}`, { cache: 'no-store' });
+      const res = await fetch(`/api/sniper?${buildFeedParams(0).toString()}`, { cache: 'no-store' });
       const j = await res.json();
       setFeedTokens(j?.tokens ?? []);
-      if (Array.isArray(j?.sources)) setFeedSources(j.sources);
+      setFeedTotal(typeof j?.total === 'number' ? j.total : (j?.tokens?.length ?? 0));
     } catch (err) {
       Sentry.captureException(err, { tags: { surface: 'sniper/feed' } });
     } finally {
       setFeedLoading(false);
     }
-  }, [chainFilter, minLiq, sourceFilter, feedQuery]);
+  }, [buildFeedParams]);
+
+  const loadMoreFeed = useCallback(async () => {
+    setFeedLoadingMore(true);
+    try {
+      const res = await fetch(`/api/sniper?${buildFeedParams(feedTokens.length).toString()}`, { cache: 'no-store' });
+      const j = await res.json();
+      const more: DetectedToken[] = j?.tokens ?? [];
+      // Mark this mutation as pagination so the sound effect doesn't treat the
+      // appended older page as freshly-detected tokens and chime.
+      pagingRef.current = true;
+      setFeedTokens((prev) => {
+        // De-dupe by id so a live refresh overlapping the next page never
+        // renders the same token twice.
+        const seen = new Set(prev.map((p) => p.id));
+        return [...prev, ...more.filter((m) => !seen.has(m.id))];
+      });
+      if (typeof j?.total === 'number') setFeedTotal(j.total);
+    } catch (err) {
+      Sentry.captureException(err, { tags: { surface: 'sniper/feed-more' } });
+    } finally {
+      setFeedLoadingMore(false);
+    }
+  }, [buildFeedParams, feedTokens.length]);
 
   // ── Initial + reactive loads ─────────────────────────────────────────────
   useEffect(() => {
@@ -183,6 +275,16 @@ export default function SniperPage() {
     // a request per keystroke; address paste still resolves within 350ms.
     const t = window.setTimeout(() => loadFeed(), 350);
     return () => window.clearTimeout(t);
+  }, [tab, loadFeed]);
+
+  // Live feed — silently re-pull the first page every ~20s so newly-launched
+  // pairs surface without a manual refresh (only while the tab is visible).
+  useEffect(() => {
+    if (tab !== 'discover') return;
+    const id = window.setInterval(() => {
+      if (document.visibilityState === 'visible') loadFeed();
+    }, 20_000);
+    return () => window.clearInterval(id);
   }, [tab, loadFeed]);
 
   // Realtime execution fills (Photon/BullX parity — instant, with flash).
@@ -317,6 +419,12 @@ export default function SniperPage() {
             </div>
           )}
 
+          {/* #41 — built-in-wallet background (AA) sniping setup. Renders only
+              when a Naka wallet exists locally; dormant if AA isn't configured. */}
+          <div className="mt-4">
+            <BackgroundSnipingCard />
+          </div>
+
           {/* Stat strip */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mt-4">
             <StatCard label="Active Snipers" value={snipers.filter((s) => s.enabled && !s.paused).length} icon={Target} />
@@ -361,10 +469,19 @@ export default function SniperPage() {
         <div className="mt-4">
           {tab === 'discover' && (
             <DiscoverTab
-              tokens={feedTokens} loading={feedLoading} onRefresh={loadFeed} chainFilter={chainFilter}
-              onSnipe={() => setShowNewModal(true)} onOpen={setDrawerToken} minLiq={minLiq} setMinLiq={setMinLiq}
-              sources={feedSources} sourceFilter={sourceFilter} setSourceFilter={setSourceFilter}
-              query={feedQuery} setQuery={setFeedQuery} ogOnly={ogOnly} setOgOnly={setOgOnly}
+              tokens={feedTokens} total={feedTotal} loading={feedLoading} loadingMore={feedLoadingMore}
+              onRefresh={loadFeed} onLoadMore={loadMoreFeed}
+              onSnipe={() => setShowNewModal(true)} onOpen={setDrawerToken}
+              minLiq={minLiq} setMinLiq={setMinLiq}
+              feedChain={feedChain} setFeedChain={setFeedChain}
+              sort={feedSort} setSort={setFeedSort}
+              excludeHoneypots={excludeHoneypots} setExcludeHoneypots={setExcludeHoneypots}
+              socialOnly={socialOnly} setSocialOnly={setSocialOnly}
+              ogMode={ogMode} setOgMode={setOgMode}
+              sourceFilter={sourceFilter} setSourceFilter={setSourceFilter}
+              query={feedQuery} setQuery={setFeedQuery}
+              soundEnabled={feedSound.enabled} soundVolume={feedSound.volume}
+              onToggleSound={feedSound.toggle} onSetSoundVolume={feedSound.setVolume}
             />
           )}
           {tab === 'positions' && <PositionsTab executions={executions} />}
@@ -444,158 +561,188 @@ function NavPill({ id, current, onClick, count, icon: Icon, children }: { id: Ta
 
 // ─── Discover (feed) ────────────────────────────────────────────────────────
 
+// Chain pills for the discover feed — slugs sent straight to the API `chain`
+// param (independent of the EVM-only CHAIN_CONFIGS used by the other tabs).
+const FEED_CHAINS: { id: string; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'solana', label: 'Solana' },
+  { id: 'ethereum', label: 'Ethereum' },
+  { id: 'base', label: 'Base' },
+  { id: 'bsc', label: 'BSC' },
+  { id: 'arbitrum', label: 'Arbitrum' },
+  { id: 'optimism', label: 'Optimism' },
+  { id: 'polygon', label: 'Polygon' },
+  { id: 'avalanche', label: 'Avalanche' },
+];
+
+const SORT_OPTIONS: { id: 'new' | 'volume' | 'liquidity' | 'mcap'; label: string }[] = [
+  { id: 'new', label: 'New' },
+  { id: 'volume', label: 'Volume' },
+  { id: 'liquidity', label: 'Liquidity' },
+  { id: 'mcap', label: 'Market cap' },
+];
+
 function DiscoverTab({
-  tokens, loading, onRefresh, chainFilter, onSnipe, onOpen,
-  minLiq, setMinLiq, sources, sourceFilter, setSourceFilter, query, setQuery, ogOnly, setOgOnly,
+  tokens, total, loading, loadingMore, onRefresh, onLoadMore, onSnipe, onOpen,
+  minLiq, setMinLiq, feedChain, setFeedChain, sort, setSort,
+  excludeHoneypots, setExcludeHoneypots, socialOnly, setSocialOnly, ogMode, setOgMode,
+  sourceFilter, setSourceFilter, query, setQuery,
+  soundEnabled, soundVolume, onToggleSound, onSetSoundVolume,
 }: {
-  tokens: DetectedToken[]; loading: boolean; onRefresh: () => void; chainFilter: SniperChain | 'all';
+  tokens: DetectedToken[]; total: number; loading: boolean; loadingMore: boolean;
+  onRefresh: () => void; onLoadMore: () => void;
   onSnipe: (t: DetectedToken) => void; onOpen: (t: DetectedToken) => void;
   minLiq: number; setMinLiq: (n: number) => void;
-  sources: string[]; sourceFilter: string[]; setSourceFilter: (s: string[]) => void;
-  query: string; setQuery: (s: string) => void; ogOnly: boolean; setOgOnly: (b: boolean) => void;
+  feedChain: string; setFeedChain: (c: string) => void;
+  sort: 'new' | 'volume' | 'liquidity' | 'mcap'; setSort: (s: 'new' | 'volume' | 'liquidity' | 'mcap') => void;
+  excludeHoneypots: boolean; setExcludeHoneypots: (b: boolean) => void;
+  socialOnly: boolean; setSocialOnly: (b: boolean) => void;
+  ogMode: boolean; setOgMode: (b: boolean) => void;
+  sourceFilter: string[]; setSourceFilter: (s: string[]) => void;
+  query: string; setQuery: (s: string) => void;
+  soundEnabled: boolean; soundVolume: number;
+  onToggleSound: () => void; onSetSoundVolume: (v: number) => void;
 }) {
-  const [feedView, setFeedView] = useState<'live' | 'blocked'>('live');
-  const toggleSource = (s: string) => setSourceFilter(sourceFilter.includes(s) ? sourceFilter.filter((x) => x !== s) : [...sourceFilter, s]);
-  const q = query.trim().toLowerCase();
-  let filtered = q
-    ? tokens.filter((t) => t.symbol.toLowerCase().includes(q) || t.name.toLowerCase().includes(q) || t.address.toLowerCase() === q)
-    : tokens;
-  // OG-Token mode: established names only (heuristic — meaningful liquidity + MC).
-  if (ogOnly) filtered = filtered.filter((t) => t.liquidity >= 50_000 && (t.marketCap ?? 0) >= 250_000);
-  // Shadow Guardian: blocked tokens get their own tab — keep the live feed clean.
-  const liveTokens = filtered.filter((t) => t.status !== 'blocked');
-  const blockedTokens = filtered.filter((t) => t.status === 'blocked');
-  const shown = feedView === 'blocked' ? blockedTokens : liveTokens;
+  // When the chain changes, drop launchpad selections that don't belong to it
+  // so a stale Solana pad never silently empties an EVM feed.
+  const onChainChange = (c: string) => {
+    setFeedChain(c);
+    if (sourceFilter.length) {
+      const valid = LAUNCHPADS.filter((l) => c === 'all' || l.chains.includes(c)).map((l) => l.id);
+      setSourceFilter(sourceFilter.filter((s) => valid.includes(s)));
+    }
+  };
+
+  const hasMore = tokens.length < total;
 
   return (
     <div>
-      <div className="nl-glass rounded-xl p-3 mb-3 space-y-3">
+      <div className="nl-glass rounded-2xl p-3.5 mb-3 space-y-3">
+        {/* Search + refresh */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           <div className="flex items-center gap-2 flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 min-w-0">
             <Search className="w-4 h-4 text-white/40 shrink-0" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search name, symbol or paste token address…" className="flex-1 bg-transparent outline-none text-sm text-white placeholder-white/40 min-w-0" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search name, symbol or paste contract address…"
+              className="flex-1 bg-transparent outline-none text-sm text-white placeholder-white/40 min-w-0"
+            />
           </div>
-          <button
-            onClick={() => setOgOnly(!ogOnly)}
-            title="OG-Token mode — show only established tokens"
-            className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border transition ${
-              ogOnly ? 'bg-amber-500/15 border-amber-500/45 text-amber-200' : 'bg-white/[0.04] border-white/10 text-white/60 hover:text-white'
-            }`}
-          >
-            <Flame className="w-3.5 h-3.5" /> OG
-          </button>
-          <button onClick={onRefresh} className="shrink-0 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/[0.06] border border-white/10 text-xs font-semibold text-white/80 hover:text-white hover:border-white/20">
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <SelectMenu
+              value={sort}
+              options={SORT_OPTIONS.map((s): SelectOption => ({ id: s.id, label: `Sort: ${s.label}` }))}
+              onChange={(id) => setSort(id as 'new' | 'volume' | 'liquidity' | 'mcap')}
+            />
+            <FeedSoundToggle
+              enabled={soundEnabled}
+              volume={soundVolume}
+              onToggle={onToggleSound}
+              onVolume={onSetSoundVolume}
+            />
+            <button onClick={onRefresh} className="nl-button nl-button--ghost shrink-0 px-3 py-2 rounded-lg text-xs font-semibold">
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold me-1">Min Liq</span>
-          {LIQ_PRESETS.map((p) => (
-            <button key={p.label} onClick={() => setMinLiq(p.value)} className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${minLiq === p.value ? 'bg-[#0066FF]/20 border border-[#0066FF]/50 text-blue-200' : 'bg-white/[0.04] border border-white/10 text-white/60 hover:text-white'}`}>{p.label}</button>
+
+        {/* Chain pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide -mx-1 px-1 py-0.5">
+          {FEED_CHAINS.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => onChainChange(c.id)}
+              className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap border transition ${
+                feedChain === c.id ? 'bg-[#0066FF]/20 border-[#0066FF]/50 text-blue-200' : 'bg-white/[0.04] border-white/10 text-white/60 hover:text-white'
+              }`}
+            >
+              {c.id !== 'all' && <ChainLogo chain={c.id} size={13} />}
+              {c.label}
+            </button>
           ))}
         </div>
-        {sources.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold me-1">Source</span>
-            {sources.map((s) => {
-              const meta = sourceMeta(s);
-              const active = sourceFilter.includes(s);
-              return (
-                <button
-                  key={s}
-                  onClick={() => toggleSource(s)}
-                  className={`nl-glass inline-flex items-center gap-1.5 ps-1 pe-2.5 py-1 rounded-lg text-[11px] font-semibold capitalize transition ${active ? 'text-blue-100' : 'text-white/70 hover:text-white'}`}
-                  style={active ? { boxShadow: '0 0 0 1px rgba(0,102,255,.55), 0 0 12px rgba(0,102,255,.25)' } : undefined}
-                >
-                  <span className="w-4 h-4 rounded-md flex items-center justify-center text-[8px] font-bold text-white shrink-0" style={{ background: meta.color }}>{meta.short}</span>
-                  {meta.label}
-                </button>
-              );
-            })}
-          </div>
-        )}
+
+        {/* Source / launchpad chips */}
+        <SourceFilterRow chain={feedChain} selected={sourceFilter} onChange={setSourceFilter} />
+
+        {/* Audit toggles + min-liq presets */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <button
+            onClick={() => setExcludeHoneypots(!excludeHoneypots)}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition ${
+              excludeHoneypots ? 'bg-emerald-500/15 border-emerald-500/45 text-emerald-200' : 'bg-white/[0.04] border-white/10 text-white/60 hover:text-white'
+            }`}
+          >
+            <ShieldAlert className="w-3.5 h-3.5" /> Exclude honeypots
+          </button>
+          <button
+            onClick={() => setSocialOnly(!socialOnly)}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition ${
+              socialOnly ? 'bg-[#0066FF]/20 border-[#0066FF]/50 text-blue-200' : 'bg-white/[0.04] border-white/10 text-white/60 hover:text-white'
+            }`}
+          >
+            1+ social
+          </button>
+          <button
+            onClick={() => setOgMode(!ogMode)}
+            title="OG — first token we've seen for this ticker (first seen on Naka, not first ever)"
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition ${
+              ogMode ? 'bg-amber-500/15 border-amber-500/45 text-amber-200' : 'bg-white/[0.04] border-white/10 text-white/60 hover:text-white'
+            }`}
+          >
+            OG
+          </button>
+          <span className="w-px h-4 bg-white/10 mx-1" />
+          <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold me-1">Min Liq</span>
+          {LIQ_PRESETS.map((p) => (
+            <button
+              key={p.label}
+              onClick={() => setMinLiq(p.value)}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
+                minLiq === p.value ? 'bg-[#0066FF]/20 border border-[#0066FF]/50 text-blue-200' : 'bg-white/[0.04] border border-white/10 text-white/60 hover:text-white'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Live vs Blocked (Shadow Guardian) */}
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/10">
-          <button onClick={() => setFeedView('live')} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${feedView === 'live' ? 'bg-[#0066FF]/20 text-blue-200 border border-[#0066FF]/40' : 'text-white/55 hover:text-white border border-transparent'}`}>
-            <Radar className="w-3.5 h-3.5" /> Live <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/10">{liveTokens.length}</span>
-          </button>
-          <button onClick={() => setFeedView('blocked')} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${feedView === 'blocked' ? 'bg-red-500/20 text-red-200 border border-red-500/40' : 'text-white/55 hover:text-white border border-transparent'}`}>
-            <ShieldAlert className="w-3.5 h-3.5" /> Blocked <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/10">{blockedTokens.length}</span>
-          </button>
-        </div>
-        <span className="text-[11px] text-white/45">{loading ? 'Scanning…' : `${chainFilter !== 'all' ? CHAIN_CONFIGS[chainFilter].name : 'EVM'}`}</span>
+      {/* Result count */}
+      <div className="flex items-center justify-between gap-2 mb-2 px-0.5">
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-white/60">
+          <Radar className="w-3.5 h-3.5 text-blue-300" />
+          {loading ? 'Scanning…' : `${total.toLocaleString()} token${total === 1 ? '' : 's'}`}
+        </span>
+        <span className="text-[11px] text-white/40">Live · refreshes every 20s</span>
       </div>
 
       {loading ? (
-        <div className="nl-glass rounded-xl p-12 text-center"><Loader2 className="w-6 h-6 mx-auto animate-spin text-blue-400" /></div>
-      ) : shown.length === 0 ? (
-        <div className="rounded-xl border-2 border-dashed border-white/10 p-12 text-center text-white/50 text-sm">
-          {feedView === 'blocked' ? 'No tokens blocked by Shadow Guardian right now.' : 'No fresh pairs match these filters right now.'}
+        <div className="nl-glass rounded-2xl p-12 text-center"><Loader2 className="w-6 h-6 mx-auto animate-spin text-blue-400" /></div>
+      ) : tokens.length === 0 ? (
+        <div className="rounded-2xl border-2 border-dashed border-white/10 p-12 text-center text-white/50 text-sm">
+          No fresh pairs match these filters right now.
         </div>
       ) : (
-        <div className="grid gap-2">
-          {shown.map((t) => <TokenRow key={t.id} t={t} onSnipe={onSnipe} onOpen={onOpen} />)}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function TokenRow({ t, onSnipe, onOpen }: { t: DetectedToken; onSnipe: (t: DetectedToken) => void; onOpen: (t: DetectedToken) => void }) {
-  const { audit, loading: auditLoading } = useTokenAudit(t.chain, t.address);
-  const [copied, setCopied] = useState(false);
-  const snipeBlocked = audit?.blocked ?? false;
-  const statusColor = t.status === 'safe' ? 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30'
-    : t.status === 'risky' ? 'text-amber-300 bg-amber-500/15 border-amber-500/30'
-    : 'text-red-300 bg-red-500/15 border-red-500/30';
-  const src = t.source ? sourceMeta(t.source) : null;
-  const copyAddr = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigator.clipboard?.writeText(t.address).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 1400); }).catch(() => {});
-  };
-  return (
-    <div onClick={() => onOpen(t)} role="button" tabIndex={0} className="nl-glass rounded-xl p-3 flex items-center gap-3 hover:-translate-y-px transition cursor-pointer">
-      <TokenAvatar logo={t.logo} symbol={t.symbol} address={t.address} size={40} />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="font-bold truncate">{t.symbol}</span>
-          <span className="text-xs text-white/50 truncate hidden sm:inline">{t.name}</span>
-          <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-white/40 shrink-0"><ChainLogo chain={t.chain} size={11} />{t.chain}</span>
-          <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border shrink-0 ${statusColor}`}>{t.status}</span>
-        </div>
-        <div className="flex items-center gap-2 text-[11px] text-white/55 mt-0.5 flex-wrap">
-          <span>Liq {fmtCompact(t.liquidity)}</span>
-          {t.marketCap ? <span className="text-white/30">·</span> : null}
-          {t.marketCap ? <span>MC {fmtCompact(t.marketCap)}</span> : null}
-          {t.volume24h ? <span className="text-white/30">·</span> : null}
-          {t.volume24h ? <span>Vol {fmtCompact(t.volume24h)}</span> : null}
-          <span className="text-white/30">·</span>
-          <span>{t.pairAge ?? 'new'}</span>
-        </div>
-        {/* Contract address (copyable) + source chip with logo */}
-        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-          <button onClick={copyAddr} title="Copy contract address" className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/[0.05] border border-white/10 text-[10px] text-white/55 hover:text-white">
-            {copied ? <Check className="w-2.5 h-2.5 text-emerald-300" /> : <Copy className="w-2.5 h-2.5" />}{shortAddr(t.address)}
-          </button>
-          {src && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/[0.04] border border-white/10 text-[10px] text-white/55 capitalize">
-              <span className="w-3 h-3 rounded-[3px] flex items-center justify-center text-[7px] font-bold text-white" style={{ background: src.color }}>{src.short}</span>{src.label}
-            </span>
+        <>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {tokens.map((t) => <TokenCard key={t.id} t={t} onSnipe={onSnipe} onOpen={onOpen} />)}
+          </div>
+          {hasMore && (
+            <div className="mt-4 flex justify-center">
+              <button
+                onClick={onLoadMore}
+                disabled={loadingMore}
+                className="nl-button nl-button--ghost px-5 py-2.5 rounded-xl text-sm font-semibold"
+              >
+                {loadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {loadingMore ? 'Loading…' : `Load more (${(total - tokens.length).toLocaleString()} left)`}
+              </button>
+            </div>
           )}
-        </div>
-        <div className="mt-1.5"><GuardianBadges audit={audit} loading={auditLoading} /></div>
-      </div>
-      <button
-        onClick={(e) => { e.stopPropagation(); onSnipe(t); }}
-        disabled={snipeBlocked}
-        title={snipeBlocked ? 'Blocked by Shadow Guardian — failed security checks' : 'Snipe this token'}
-        className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition border ${snipeBlocked ? 'bg-red-500/10 border-red-500/30 text-red-300/70 cursor-not-allowed' : 'bg-[#0066FF]/15 border-[#0066FF]/40 text-blue-200 hover:bg-[#0066FF]/25'}`}
-      >
-        {snipeBlocked ? 'Blocked' : 'Snipe'}
-      </button>
+        </>
+      )}
     </div>
   );
 }

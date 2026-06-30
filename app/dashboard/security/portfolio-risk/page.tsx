@@ -111,7 +111,7 @@ export default function PortfolioRiskPage() {
               className={`rounded-lg px-2.5 py-1 text-[10px] font-semibold border ${
                 chainId === c.id
                   ? 'bg-[#0066FF]/15 border-[#0066FF]/40 text-white'
-                  : 'bg-[#0f1320] border-[#1a1f2e] text-gray-400 hover:text-white'
+                  : 'nl-button--ghost text-gray-400 hover:text-white'
               }`}
             >
               {c.label}
@@ -128,7 +128,7 @@ export default function PortfolioRiskPage() {
       )}
 
       {error && !loading && (
-        <div className="rounded-2xl border border-red-500/20 bg-[#0f1320] p-4 text-center text-xs text-red-400">
+        <div className="nl-glass nl-glass--crimson rounded-2xl p-4 text-center text-xs text-red-400">
           {error}
         </div>
       )}
@@ -141,7 +141,7 @@ export default function PortfolioRiskPage() {
             <SummaryStat label="Warning" value={summary.warning} tone="warning" />
             <SummaryStat label="Danger" value={summary.danger} tone="danger" />
           </div>
-          <div className={`rounded-2xl p-4 border ${
+          <div className={`nl-glass rounded-2xl p-4 border ${
             summary.portfolioRisk === 'critical' ? 'border-red-500/40 bg-red-500/[0.05]'
             : summary.portfolioRisk === 'high' ? 'border-orange-500/40 bg-orange-500/[0.05]'
             : summary.portfolioRisk === 'moderate' ? 'border-yellow-500/40 bg-yellow-500/[0.05]'
@@ -158,17 +158,17 @@ export default function PortfolioRiskPage() {
 
           <div className="space-y-2">
             {rows.length === 0 ? (
-              <div className="rounded-xl border border-[#1a1f2e] bg-[#0f1320] p-6 text-center text-xs text-gray-500">
+              <div className="nl-glass rounded-xl p-6 text-center text-xs text-gray-500" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
                 No scannable tokens returned.
               </div>
             ) : rows
               .sort((a, b) => a.score - b.score)
               .map((r) => (
-                <div key={r.contractAddress} className={`rounded-xl border p-3 ${
-                  r.riskLevel === 'danger' ? 'border-red-500/40 bg-[#0f1320]'
-                  : r.riskLevel === 'warning' ? 'border-yellow-500/40 bg-[#0f1320]'
-                  : r.riskLevel === 'safe' ? 'border-green-500/30 bg-[#0f1320]'
-                  : 'border-[#1a1f2e] bg-[#0f1320]'
+                <div key={r.contractAddress} className={`nl-glass rounded-xl border p-3 ${
+                  r.riskLevel === 'danger' ? 'border-red-500/40'
+                  : r.riskLevel === 'warning' ? 'border-yellow-500/40'
+                  : r.riskLevel === 'safe' ? 'border-green-500/30'
+                  : 'border-white/5'
                 }`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -204,7 +204,7 @@ function SummaryStat({ label, value, tone }: { label: string; value: number; ton
     : tone === 'danger' ? 'text-red-400'
     : 'text-white';
   return (
-    <div className="rounded-xl border border-[#1a1f2e] bg-[#0f1320] p-3 text-center">
+    <div className="nl-card rounded-xl p-3 text-center">
       <div className="text-[10px] uppercase tracking-wider text-gray-500">{label}</div>
       <div className={`text-lg font-bold ${color}`}>{value}</div>
     </div>
