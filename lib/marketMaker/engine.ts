@@ -70,6 +70,13 @@ async function referencePrice(s: Strategy): Promise<number | null> {
 
 export interface TickResult { id: string; action: 'buy' | 'sell' | 'hold' | 'skip'; reason?: string; txHash?: string; }
 
+// A rung must not re-fill on every tick. Without a re-arm window the same buy
+// rung re-fires on each ~2-min cron pass during a one-directional move and
+// drains the entire budget into a falling knife (the opposite of grid
+// accumulation). Re-arm a given (level, side) rung at most once per window.
+// (Full price-re-entry re-arming is a follow-up; this bounds the runaway.)
+const RUNG_COOLDOWN_MS = 30 * 60 * 1000;
+
 /** Run one tick for a single active strategy. Conservative: at most one fill. */
 export async function runStrategyTick(s: Strategy): Promise<TickResult> {
   // AA execution is EVM-only; Solana strategies persist but don't auto-trade.
@@ -111,9 +118,21 @@ export async function runStrategyTick(s: Strategy): Promise<TickResult> {
     return (data as { status?: string } | null)?.status === 'active';
   };
 
+  // True if this exact rung already filled within the re-arm window.
+  const rungOnCooldown = async (level: number, side: 'buy' | 'sell'): Promise<boolean> => {
+    const { data } = await sb
+      .from('mm_orders')
+      .select('id')
+      .eq('strategy_id', s.id).eq('side', side).eq('level', level).eq('status', 'filled')
+      .gte('filled_at', new Date(Date.now() - RUNG_COOLDOWN_MS).toISOString())
+      .limit(1);
+    return !!(data && data.length);
+  };
+
   // SELL side: price at/above the lowest sell rung and we hold inventory.
   const sellRung = ladder.filter((l) => l.side === 'sell' && price >= l.targetPrice).sort((a, b) => a.targetPrice - b.targetPrice)[0];
   if (sellRung && (s.inventory_tokens ?? 0) > 0) {
+    if (await rungOnCooldown(sellRung.level, 'sell')) return { id: s.id, action: 'hold', reason: 'sell rung on cooldown' };
     // Money-path sizing: a wrong decimals mis-scales the sell by 1e10–1e12x, so
     // SKIP this tick if the on-chain read fails rather than assuming 18.
     const decimals = await getEvmTokenDecimalsStrict(s.chain, s.token_address).catch(() => null);
@@ -155,7 +174,10 @@ export async function runStrategyTick(s: Strategy): Promise<TickResult> {
   if (buyRung) {
     // C2: gate against MONOTONIC lifetime deployed USD, not the revolving spent_usd.
     if ((s.gross_deployed_usd ?? 0) + s.order_size_usd > s.budget_usd) return { id: s.id, action: 'hold', reason: 'budget (lifetime) exhausted' };
-    if (s.max_inventory_usd != null && inventoryUsd >= s.max_inventory_usd) return { id: s.id, action: 'hold', reason: 'max inventory reached' };
+    // Hard inventory cap: gate on POST-buy inventory so a single order can't
+    // overshoot max_inventory_usd by up to order_size_usd.
+    if (s.max_inventory_usd != null && inventoryUsd + s.order_size_usd > s.max_inventory_usd) return { id: s.id, action: 'hold', reason: 'max inventory reached' };
+    if (await rungOnCooldown(buyRung.level, 'buy')) return { id: s.id, action: 'hold', reason: 'buy rung on cooldown' };
     if (!(await stillActive())) return { id: s.id, action: 'skip', reason: 'paused/stopped before execution' };
     const res = await tryExecuteSnipeViaSessionKey({
       userId: s.user_id, chain: s.chain, tokenAddress: s.token_address,

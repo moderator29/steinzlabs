@@ -19,10 +19,12 @@
  * logging all happen the same way as manual trades.
  */
 import { NextRequest } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { verifyCron, cronResponse, logCronExecution } from '../_shared';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { usdcForChain, usdToUsdcBaseUnits } from '@/lib/trading/usdc';
-import { tryExecuteSnipeViaSessionKey } from '@/lib/trading/sessionKeyExecutor';
+import { usdcForChain, usdToUsdcBaseUnits, usdcBaseUnitsToUsd } from '@/lib/trading/usdc';
+import { tryExecuteSnipeViaSessionKey, type SnipeExecResult } from '@/lib/trading/sessionKeyExecutor';
+import { getEvmTokenDecimalsStrict } from '@/lib/sniper/priceFeed';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -187,7 +189,10 @@ export async function GET(request: NextRequest) {
         user_id: criteria.user_id,
         criteria_id: criteria.id,
         token_address: m.matched_token_address,
-        chain: m.matched_chain,
+        // Store the chain lowercased: the AA daily-cap SQL compares
+        // sniper_executions.chain against the lowercased p_chain, so a
+        // mixed-case slug from the monitor would make a real buy escape the cap.
+        chain: (m.matched_chain || '').toLowerCase(),
         wallet_address: walletAddress,
         buy_amount_usd: criteria.amount_per_snipe_usd,
         slippage_bps: criteria.max_slippage_bps ?? 200,
@@ -208,7 +213,7 @@ export async function GET(request: NextRequest) {
     //     through to the one-tap pending_trades path below. entry_price_usd /
     //     tokens_received are backfilled by the receipt-reconciliation cron.
     if (criteria.wallet_source === 'builtin' && !dryRun) {
-      let aa: { txHash: string; kernelAddress: string } | null = null;
+      let aa: SnipeExecResult | null = null;
       try {
         aa = await tryExecuteSnipeViaSessionKey({
           userId: criteria.user_id,
@@ -221,10 +226,50 @@ export async function GET(request: NextRequest) {
         aa = null; // fall back to staging
       }
       if (aa?.txHash) {
-        await supabase
-          .from('sniper_executions')
-          .update({ status: 'confirmed', tx_hash: aa.txHash, wallet_address: aa.kernelAddress, executed_at: new Date().toISOString() })
-          .eq('id', execRow.id);
+        // The buy is on-chain. Recording status='confirmed' + tx_hash is what
+        // makes aa_daily_spend_usd count this against the daily cap; if the write
+        // is lost the spend becomes invisible once the 300s reservation lapses
+        // (cap under-count, no reconciler recovers it). Retry, then capture
+        // durably so it can be reconciled from the tx hash.
+        // Seed entry_price_usd + tokens_received from the ACTUAL on-chain fill
+        // (0x quote amounts, not client-reported) so the autosell engine — which
+        // requires entry_price_usd IS NOT NULL and tokens_received > 0 — can
+        // protect this AA position with TP/SL/trailing. Without this an
+        // AA-executed snipe would sit open forever with no exit. Skip on a
+        // decimals miss (autosell skips a position with unknown tokens anyway).
+        const tokDec = await getEvmTokenDecimalsStrict(m.matched_chain, m.matched_token_address).catch(() => null);
+        let tokensReceived: number | null = null;
+        let entryPrice: number | null = null;
+        if (tokDec != null && aa.buyAmountBaseUnits) {
+          tokensReceived = Number(aa.buyAmountBaseUnits) / 10 ** tokDec;
+          const costUsd = aa.sellAmountBaseUnits
+            ? usdcBaseUnitsToUsd(aa.sellAmountBaseUnits, m.matched_chain)
+            : criteria.amount_per_snipe_usd;
+          if (tokensReceived > 0) entryPrice = costUsd / tokensReceived;
+        }
+        let confErr: { message: string } | null = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const { error: e } = await supabase
+            .from('sniper_executions')
+            .update({
+              status: 'confirmed',
+              tx_hash: aa.txHash,
+              wallet_address: aa.kernelAddress,
+              executed_at: new Date().toISOString(),
+              ...(tokensReceived != null ? { tokens_received: tokensReceived } : {}),
+              ...(entryPrice != null ? { entry_price_usd: entryPrice, peak_price_usd: entryPrice } : {}),
+            })
+            .eq('id', execRow.id);
+          confErr = e;
+          if (!e) break;
+          await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+        }
+        if (confErr) {
+          Sentry.captureException(
+            new Error(`AA snipe spent on-chain but status write failed (tx ${aa.txHash}, exec ${execRow.id}): ${confErr.message}`),
+            { tags: { source: 'sniper-auto-execute', execId: execRow.id, txHash: aa.txHash } },
+          );
+        }
         await supabase
           .from('sniper_match_events')
           .update({ decision: 'sniped_executed' })
