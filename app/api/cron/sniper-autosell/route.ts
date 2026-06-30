@@ -17,7 +17,7 @@
 import { NextRequest } from "next/server";
 import { verifyCron, cronResponse, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { getCurrentTokenPriceUsd, getEvmTokenDecimalsStrict } from "@/lib/sniper/priceFeed";
+import { getCurrentTokenPriceUsd, getEvmTokenDecimalsStrict, getSolanaTokenDecimals } from "@/lib/sniper/priceFeed";
 import { usdcForChain, usdcBaseUnitsToUsd } from "@/lib/trading/usdc";
 import { evaluatePosition } from "@/lib/sniper/autosell";
 import { tryExecuteSellViaSessionKey } from "@/lib/trading/sessionKeyExecutor";
@@ -164,19 +164,18 @@ export async function GET(request: NextRequest) {
     // Resolve real on-chain decimals once — needed for both correct pricing
     // and base-unit sell sizing (the sell amount_in must be wei, not whole
     // tokens, or the swap sells ~nothing yet marks the position realized).
-    // For EVM chains, a failed decimals read must SKIP this tick, not assume 18:
-    // assuming 18 for a 6/8-decimal token mis-scales the sell by 1e10–1e12x —
-    // it sells dust yet marks the position realized, or fires a false TP. Solana
-    // doesn't price off EVM decimals, so it's exempt (decimals stays a no-op).
-    const isEvm = pos.chain !== "solana";
-    let decimals = 18;
-    if (isEvm) {
-      const strict = await getEvmTokenDecimalsStrict(pos.chain as string, pos.token_address);
-      if (strict == null) {
-        summary.push({ id: pos.id, action: "skip", reason: "decimals unavailable (RPC) — retry next tick" });
-        continue;
-      }
-      decimals = strict;
+    // A failed decimals read must SKIP this tick, never assume 18: the sell
+    // amount is scaled by 10**decimals and flows as base units straight into the
+    // aggregator (0x for EVM, Jupiter for Solana). Assuming 18 for a 6/8/9-dp
+    // token over-scales by 1e9–1e12x — the swap reverts on insufficient balance
+    // and the protective sell silently never fires. EVM reads on-chain decimals;
+    // Solana reads the SPL mint decimals from the Jupiter token list.
+    const decimals = pos.chain === "solana"
+      ? await getSolanaTokenDecimals(pos.token_address)
+      : await getEvmTokenDecimalsStrict(pos.chain as string, pos.token_address);
+    if (decimals == null) {
+      summary.push({ id: pos.id, action: "skip", reason: "token decimals unavailable — retry next tick" });
+      continue;
     }
     const currentPriceUsd = await getCurrentTokenPriceUsd(
       pos.chain as SniperChain,

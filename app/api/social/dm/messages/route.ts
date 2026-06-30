@@ -177,7 +177,10 @@ export async function POST(req: NextRequest) {
     notifySocialEvent({
       recipient_id: peerId,
       event: isPendingRequest ? 'dm_request' : 'dm_received',
-      metadata: { sender_id: user.id, conversation_id: parsed.data.conversation_id },
+      // message_id is the per-message discriminator the dm_received dedup key
+      // needs: without it every message in a conversation collapses onto the
+      // first within the 5-min window and back-to-back DMs are suppressed.
+      metadata: { sender_id: user.id, conversation_id: parsed.data.conversation_id, message_id: data.id },
     }).catch(() => {});
   }
 

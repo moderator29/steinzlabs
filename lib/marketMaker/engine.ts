@@ -1,4 +1,5 @@
 import 'server-only';
+import * as Sentry from '@sentry/nextjs';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { getDexPriceForChain } from '@/lib/services/dexscreener';
 import { getEvmTokenDecimalsStrict } from '@/lib/sniper/priceFeed';
@@ -169,7 +170,14 @@ export async function runStrategyTick(s: Strategy): Promise<TickResult> {
       const tokensBought = (decimals != null && res.buyAmountBaseUnits)
         ? Number(res.buyAmountBaseUnits) / 10 ** decimals
         : s.order_size_usd / price;
-      await sb.from('mm_fills').insert({ strategy_id: s.id, user_id: s.user_id, side: 'buy', price, amount_usd: s.order_size_usd, amount_tokens: tokensBought, tx_hash: res.txHash });
+      // The buy is already on-chain. If this fill row fails to insert, the spend
+      // is real but uncounted by aa_daily_spend_usd once the reservation TTL
+      // lapses (an UNSAFE under-count of the daily cap). Surface it loudly so it
+      // can be reconciled rather than silently dropping money from the cap math.
+      const { error: fillErr } = await sb.from('mm_fills').insert({ strategy_id: s.id, user_id: s.user_id, side: 'buy', price, amount_usd: s.order_size_usd, amount_tokens: tokensBought, tx_hash: res.txHash });
+      if (fillErr) {
+        Sentry.captureException(new Error(`mm_fills buy insert failed after on-chain swap ${res.txHash}: ${fillErr.message}`), { tags: { source: 'marketMaker/engine', strategyId: s.id, txHash: res.txHash } });
+      }
       await sb.from('mm_orders').insert({ strategy_id: s.id, user_id: s.user_id, level: buyRung.level, side: 'buy', target_price: buyRung.targetPrice, size_usd: s.order_size_usd, status: 'filled', tx_hash: res.txHash, filled_at: new Date().toISOString() });
       await sb.from('mm_strategies').update({
         inventory_tokens: (s.inventory_tokens ?? 0) + tokensBought,

@@ -84,6 +84,33 @@ export async function getEvmTokenDecimals(chain: string, tokenAddress: string): 
   return (await getEvmTokenDecimalsStrict(chain, tokenAddress)) ?? 18;
 }
 
+// Solana decimals are cached under a CASE-SENSITIVE key — Solana mint addresses
+// are case-sensitive (CLAUDE.md: never lowercase a Solana address), unlike the
+// EVM cache which lowercases.
+const solDecimalsCache = new Map<string, number>();
+
+/**
+ * SPL mint decimals via the Jupiter token list. Returns null on failure (RPC/
+ * list miss) so MONEY-PATH callers SKIP the position instead of assuming a wrong
+ * default — SPL tokens are typically 6 or 9 decimals, so assuming 18 over-scales
+ * a sell amount by 1e9–1e12x (the swap then reverts on insufficient balance and
+ * the protective sell silently never fires). Never default this for sizing.
+ */
+export async function getSolanaTokenDecimals(mint: string): Promise<number | null> {
+  const cached = solDecimalsCache.get(mint);
+  if (cached != null) return cached;
+  try {
+    const res = await fetch(`https://tokens.jup.ag/token/${mint}`, { signal: AbortSignal.timeout(7000) });
+    if (!res.ok) return null;
+    const t = await res.json();
+    if (t && typeof t.decimals === 'number' && t.decimals >= 0 && t.decimals <= 18) {
+      solDecimalsCache.set(mint, t.decimals);
+      return t.decimals;
+    }
+  } catch { /* fall through to null */ }
+  return null;
+}
+
 async function priceUsdSolana(mint: string): Promise<number | null> {
   try {
     const p = await jupiterGetTokenPrice(mint);
