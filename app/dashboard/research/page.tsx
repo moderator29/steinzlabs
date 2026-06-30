@@ -11,6 +11,8 @@ import {
   Search, Calendar, ChevronRight, Clock, RefreshCw, TrendingUp, X,
 } from '@/components/icons/brand';
 import { BookOpen, Tag, Loader2, SlidersHorizontal, Zap } from 'lucide-react';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
+import { TiltCard } from '@/components/brand/TiltCard';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface ResearchPost {
@@ -111,79 +113,85 @@ function ArticleCard({
 
   if (featured) {
     return (
-      <button
-        onClick={onClick}
-        className="w-full text-start rounded-2xl border border-white/[0.06] overflow-hidden hover:border-[#0066FF]/30 hover:shadow-[0_0_24px_rgba(0,102,255,0.08)] transition-all duration-200 group"
-      >
-        {post.image_url ? (
-          <div className="h-44 w-full overflow-hidden">
-            <img
-              src={post.image_url}
-              alt={post.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            />
-          </div>
-        ) : (
-          <div className="h-44 w-full bg-gradient-to-br from-[#0066FF]/10 to-[#7C3AED]/10 flex items-center justify-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(0,102,255,0.06)_0%,_transparent_70%)]" />
-            <BookOpen className="w-10 h-10 text-[#0066FF]/30" />
-          </div>
-        )}
-        <div className="p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-[9px] font-bold text-[#0066FF] uppercase tracking-widest flex items-center gap-1">
-              <Zap className="w-2.5 h-2.5" /> Featured
-            </span>
-            <span className="text-white/20">·</span>
-            <CategoryBadge category={post.category} />
-            {post.source && (
-              <>
-                <span className="text-white/20">·</span>
-                <SourceTag source={post.source} />
-              </>
+      <div style={{ perspective: '1200px' }}>
+        <TiltCard max={5} className="rounded-2xl nl-glass nl-glass--interactive nl-sheen overflow-hidden">
+          <button onClick={onClick} className="w-full text-start group block">
+            {post.image_url ? (
+              <div className="h-44 w-full overflow-hidden">
+                <img
+                  src={post.image_url}
+                  alt={post.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                />
+              </div>
+            ) : (
+              <div className="h-44 w-full bg-gradient-to-br from-[#0066FF]/10 to-[#7C3AED]/10 flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(0,102,255,0.06)_0%,_transparent_70%)]" />
+                <BookOpen className="w-10 h-10 text-[#0066FF]/30" />
+              </div>
             )}
-          </div>
-          <h2 className="text-base font-heading font-bold text-white mb-2 leading-snug group-hover:text-[#6B7FFF] transition-colors line-clamp-2">
-            {post.title}
-          </h2>
-          <p className="text-[12px] text-gray-400 leading-relaxed mb-4 line-clamp-2">{post.summary}</p>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 text-[10px] text-gray-600">
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                {formatDate(post.published_at || post.created_at)}
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {readTime} min read
-              </span>
+            <div className="p-5">
+              <div className="flex items-center gap-2 mb-3">
+                {/* live breaking-news pulse on the freshest story */}
+                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-red-400 uppercase tracking-widest">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75 animate-ping" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" />
+                  </span>
+                  Breaking
+                </span>
+                <span className="text-white/20">·</span>
+                <CategoryBadge category={post.category} />
+                {post.source && (
+                  <>
+                    <span className="text-white/20">·</span>
+                    <SourceTag source={post.source} />
+                  </>
+                )}
+              </div>
+              <h2 className="text-lg font-heading font-bold text-white mb-2 leading-snug group-hover:text-[#6B7FFF] transition-colors line-clamp-2">
+                {post.title}
+              </h2>
+              <p className="text-[12px] text-gray-400 leading-relaxed mb-4 line-clamp-2">{post.summary}</p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 text-[10px] text-gray-600">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    {formatDate(post.published_at || post.created_at)}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {readTime} min read
+                  </span>
+                </div>
+                <span className="text-[11px] font-semibold text-[#6B7FFF] flex items-center gap-1 group-hover:gap-2 transition-all">
+                  View more <ChevronRight className="w-3.5 h-3.5" />
+                </span>
+              </div>
             </div>
-            <span className="text-[11px] font-semibold text-[#0066FF] flex items-center gap-1 group-hover:gap-2 transition-all">
-              Read <ChevronRight className="w-3.5 h-3.5" />
-            </span>
-          </div>
-        </div>
-      </button>
+          </button>
+        </TiltCard>
+      </div>
     );
   }
 
   return (
     <button
       onClick={onClick}
-      className="w-full text-start rounded-xl border border-white/[0.06] overflow-hidden hover:border-[#0066FF]/20 hover:shadow-[0_0_16px_rgba(0,102,255,0.06)] transition-all duration-200 group flex"
+      className="w-full text-start rounded-xl nl-glass nl-glass--interactive overflow-hidden group flex"
     >
       {post.image_url ? (
-        <div className="w-20 flex-shrink-0 overflow-hidden" style={{ minHeight: '88px' }}>
+        <div className="w-20 flex-shrink-0 overflow-hidden" style={{ minHeight: '92px' }}>
           <img
             src={post.image_url}
             alt={post.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
           />
         </div>
       ) : (
         <div
-          className="w-20 flex-shrink-0 bg-gradient-to-br from-[#0066FF]/08 to-[#7C3AED]/06 flex items-center justify-center"
-          style={{ minHeight: '88px' }}
+          className="w-20 flex-shrink-0 bg-gradient-to-br from-[#0066FF]/[0.08] to-[#7C3AED]/[0.06] flex items-center justify-center"
+          style={{ minHeight: '92px' }}
         >
           <BookOpen className="w-4 h-4 text-[#0066FF]/25" />
         </div>
@@ -197,14 +205,19 @@ function ArticleCard({
           {post.title}
         </h3>
         <p className="text-[11px] text-gray-500 line-clamp-1 mb-2">{post.summary}</p>
-        <div className="flex items-center gap-3 text-[9px] text-gray-600">
-          <span className="flex items-center gap-0.5">
-            <Calendar className="w-2.5 h-2.5" />
-            {formatDate(post.published_at || post.created_at)}
-          </span>
-          <span className="flex items-center gap-0.5">
-            <Clock className="w-2.5 h-2.5" />
-            {readTime} min read
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 text-[9px] text-gray-600">
+            <span className="flex items-center gap-0.5">
+              <Calendar className="w-2.5 h-2.5" />
+              {formatDate(post.published_at || post.created_at)}
+            </span>
+            <span className="flex items-center gap-0.5">
+              <Clock className="w-2.5 h-2.5" />
+              {readTime} min read
+            </span>
+          </div>
+          <span className="text-[10px] font-semibold text-[#6B7FFF] flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            View more <ChevronRight className="w-3 h-3" />
           </span>
         </div>
       </div>
@@ -215,19 +228,21 @@ function ArticleCard({
 function ArticleView({ post, onBack }: { post: ResearchPost; onBack: () => void }) {
   const readTime = estimateReadTime(post.content);
   return (
-    <div>
+    <div className="nl-hero-glow">
       <button
         onClick={onBack}
-        className="flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-4 transition-colors"
+        className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white mb-5 transition-colors nl-fade-up nl-fade-up-1"
       >
-        Back to Research
+        <ChevronRight className="w-4 h-4 rotate-180" /> Back to Research
       </button>
       {post.image_url && (
-        <div className="h-48 w-full rounded-xl overflow-hidden mb-5 border border-white/[0.06]">
-          <img src={post.image_url} alt={post.title} className="w-full h-full object-cover" />
+        <div style={{ perspective: '1200px' }} className="mb-6 nl-fade-up nl-fade-up-1">
+          <TiltCard max={6} className="h-48 w-full rounded-2xl overflow-hidden nl-glass">
+            <img src={post.image_url} alt={post.title} className="w-full h-full object-cover" />
+          </TiltCard>
         </div>
       )}
-      <div className="flex items-center gap-2 mb-3 flex-wrap">
+      <div className="flex items-center gap-2 mb-3 flex-wrap nl-fade-up nl-fade-up-2">
         <CategoryBadge category={post.category} />
         {post.source && <SourceTag source={post.source} />}
         <span className="text-[10px] text-gray-600 flex items-center gap-1">
@@ -239,17 +254,19 @@ function ArticleView({ post, onBack }: { post: ResearchPost; onBack: () => void 
           {readTime} min read
         </span>
       </div>
-      <h1 className="text-xl font-heading font-bold text-white mb-3 leading-tight">{post.title}</h1>
-      <p className="text-[13px] text-gray-400 leading-relaxed mb-5 pb-5 border-b border-white/[0.06]">
+      <h1 className="text-2xl font-heading font-black text-white mb-3 leading-tight tracking-tight nl-fade-up nl-fade-up-2">{post.title}</h1>
+      <p className="text-[13px] text-gray-400 leading-relaxed mb-5 pb-5 border-b border-white/[0.06] nl-fade-up nl-fade-up-3">
         {post.summary}
       </p>
       {/* Briefs ship as HTML; admin posts may be plain text. Render each
           correctly so HTML markup is never shown as raw text. */}
-      {/<\/?[a-z][\s\S]*>/i.test(post.content) ? (
-        <div className="nl-research-content text-[13px]" dangerouslySetInnerHTML={{ __html: post.content }} />
-      ) : (
-        <div className="text-[13px] text-gray-300 leading-relaxed whitespace-pre-wrap">{post.content}</div>
-      )}
+      <div className="nl-fade-up nl-fade-up-3">
+        {/<\/?[a-z][\s\S]*>/i.test(post.content) ? (
+          <div className="nl-research-content text-[13px]" dangerouslySetInnerHTML={{ __html: post.content }} />
+        ) : (
+          <div className="text-[13px] text-gray-300 leading-relaxed whitespace-pre-wrap">{post.content}</div>
+        )}
+      </div>
       {post.url && (
         <div className="mt-5">
           <a
@@ -366,11 +383,13 @@ export default function ResearchPage() {
   // ── Article detail view ────────────────────────────────────────────────
   if (selected) {
     return (
-      <div className="min-h-screen bg-[#060A12] text-white">
-        <div className="max-w-2xl mx-auto px-4 py-6 pb-24">
-          <ArticleView post={selected} onBack={() => setSelected(null)} />
+      <AuroraBackground fullHeight>
+        <div className="text-white">
+          <div className="max-w-2xl mx-auto px-4 py-6 pb-24">
+            <ArticleView post={selected} onBack={() => setSelected(null)} />
+          </div>
         </div>
-      </div>
+      </AuroraBackground>
     );
   }
 
@@ -378,15 +397,25 @@ export default function ResearchPage() {
   const rest = !search ? filtered.slice(1) : filtered;
 
   return (
-    <div className="min-h-screen bg-[#060A12] text-white">
+    <AuroraBackground fullHeight>
+    <div className="text-white">
       <div className="max-w-2xl mx-auto px-4 py-6 pb-24">
 
         {/* ── Header ── */}
         <div className="flex items-center gap-3 mb-5">
           <BackButton />
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-heading font-bold text-white">Research Labs</h1>
-            <p className="text-[11px] text-gray-500">Live intel from DexScreener, CoinGecko & more</p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-heading font-bold text-white">Research Labs</h1>
+              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-400 uppercase tracking-widest">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75 animate-ping" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                </span>
+                Live
+              </span>
+            </div>
+            <p className="text-[11px] text-gray-500">On-chain newsroom · real-time market intel</p>
           </div>
           <div className="flex items-center gap-2">
             {lastUpdated && (
@@ -418,7 +447,7 @@ export default function ResearchPage() {
 
         {/* ── Filter/Sort Panel ── */}
         {showFilters && (
-          <div className="mb-5 rounded-xl border border-white/[0.06] p-4 space-y-4">
+          <div className="mb-5 rounded-xl nl-glass p-4 space-y-4 nl-fade-up">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-gray-300 uppercase tracking-wider">Filters</span>
               <button onClick={() => setShowFilters(false)}>
@@ -476,8 +505,8 @@ export default function ResearchPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search research..."
-            className="w-full border border-white/[0.07] rounded-xl ps-9 pe-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40 transition-colors"
+            placeholder="Search the newsroom..."
+            className="w-full nl-glass rounded-xl ps-9 pe-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40 transition-colors"
           />
           {search && (
             <button
@@ -525,12 +554,14 @@ export default function ResearchPage() {
         ) : (
           <div className="space-y-3">
             {featured && (
-              <div className="mb-4">
+              <div className="mb-4 nl-fade-up nl-fade-up-1">
                 <ArticleCard post={featured} onClick={() => setSelected(featured)} featured />
               </div>
             )}
-            {rest.map((post) => (
-              <ArticleCard key={post.id} post={post} onClick={() => setSelected(post)} />
+            {rest.map((post, i) => (
+              <div key={post.id} className={`nl-fade-up nl-fade-up-${Math.min((i % 4) + 1, 4)}`}>
+                <ArticleCard post={post} onClick={() => setSelected(post)} />
+              </div>
             ))}
 
             {/* Pagination */}
@@ -567,5 +598,6 @@ export default function ResearchPage() {
         )}
       </div>
     </div>
+    </AuroraBackground>
   );
 }
