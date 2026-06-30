@@ -84,7 +84,7 @@ function safeDateLabel(iso: unknown): string {
 
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
-  if (!isFinite(diff) || diff < 0) return "—";
+  if (!isFinite(diff) || diff < 0) return "n/a";
   const s = Math.floor(diff / 1000);
   if (s < 60) return `${s}s ago`;
   const m = Math.floor(s / 60);
@@ -93,11 +93,11 @@ function relativeTime(iso: string): string {
   if (h < 24) return `${h}h ago`;
   const d = Math.floor(h / 24);
   if (d < 30) return `${d}d ago`;
-  return safeDateLabel(iso) || "—";
+  return safeDateLabel(iso) || "n/a";
 }
 
 function fmtUsd(n: number | null): string {
-  if (n === null) return "—";
+  if (n === null) return "n/a";
   if (Math.abs(n) >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
   if (Math.abs(n) >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
   if (Math.abs(n) >= 1e3) return `$${(n / 1e3).toFixed(1)}K`;
@@ -113,10 +113,10 @@ function fmtUsd(n: number | null): string {
  * CAN sum value_usd of sells minus buys in the window. That's a real
  * indicative number — labelled as 'est.' so users don't mistake it for
  * audited PnL — and it ships immediately instead of leaving the row
- * showing '—' until the cron runs.
+ * showing 'n/a' until the cron runs.
  *
  * Returns null when activity is empty or no rows in window — caller
- * falls back to '—' as before.
+ * falls back to 'n/a' as before.
  */
 function estimateNetFlowUsd(
   activity: ReadonlyArray<{ action: string; value_usd: number | null; timestamp: string | null }>,
@@ -445,25 +445,27 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
                   users see it's not audited PnL. */}
               {(() => {
                 const est7d = w.pnl_7d_usd === null ? estimateNetFlowUsd(data.activity ?? [], 7) : null;
-                const value = w.pnl_7d_usd !== null ? fmtUsd(w.pnl_7d_usd) : est7d !== null ? `${fmtUsd(est7d)} (est.)` : '—';
+                const value = w.pnl_7d_usd !== null ? fmtUsd(w.pnl_7d_usd) : est7d !== null ? `${fmtUsd(est7d)} (est.)` : 'n/a';
                 const tone = (w.pnl_7d_usd ?? est7d ?? 0) >= 0 ? 'up' : 'down';
                 return <StatCard label="7d PnL" value={value} tone={tone as 'up' | 'down'} />;
               })()}
               {(() => {
                 const est30d = w.pnl_30d_usd === null ? estimateNetFlowUsd(data.activity ?? [], 30) : null;
-                const value = w.pnl_30d_usd !== null ? fmtUsd(w.pnl_30d_usd) : est30d !== null ? `${fmtUsd(est30d)} (est.)` : '—';
+                const value = w.pnl_30d_usd !== null ? fmtUsd(w.pnl_30d_usd) : est30d !== null ? `${fmtUsd(est30d)} (est.)` : 'n/a';
                 const tone = (w.pnl_30d_usd ?? est30d ?? 0) >= 0 ? 'up' : 'down';
                 return <StatCard label="30d PnL" value={value} tone={tone as 'up' | 'down'} />;
               })()}
-              <StatCard label="Win rate" value={w.win_rate !== null ? `${(w.win_rate * 100).toFixed(0)}%` : "—"} />
-              <StatCard label="Trades (30d)" value={w.trade_count_30d?.toString() ?? "—"} />
+              {/* win_rate is stored 0..100 (see whale-backfill-pnl), so render
+                  it directly — multiplying by 100 showed e.g. "6500%". */}
+              <StatCard label="Win rate" value={w.win_rate !== null ? `${Math.round(w.win_rate)}%` : "n/a"} />
+              <StatCard label="Trades (30d)" value={w.trade_count_30d?.toString() ?? "n/a"} />
               {/* Deep-dive crash fix — followerCount can be undefined on
                   unbackfilled rows; .toLocaleString() on undefined throws. */}
               <StatCard label="Followers" value={(data.followerCount ?? 0).toLocaleString()} />
               <StatCard label="Entity" value={w.entity_type ?? "unknown"} />
               <StatCard label="Score" value={w.whale_score.toString()} />
-              <StatCard label="First seen" value={safeDateLabel(w.first_seen_at) || "—"} />
-              <StatCard label="Last active" value={w.last_active_at ? relativeTime(w.last_active_at) : "—"} />
+              <StatCard label="First seen" value={safeDateLabel(w.first_seen_at) || "n/a"} />
+              <StatCard label="Last active" value={w.last_active_at ? relativeTime(w.last_active_at) : "n/a"} />
             </div>
             <AiSummarySection address={w.address} chain={w.chain} />
           </>
@@ -510,14 +512,14 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
                   {data.activity.map((a) => (
                     <tr key={a.id} className="border-b border-slate-800/50 hover:bg-white/[0.02]">
                       <td className="px-3 py-2 uppercase text-[10px] text-slate-400">{a.action}</td>
-                      <td className="px-3 py-2 font-mono text-white">{a.token_symbol ?? "—"}</td>
-                      <td className="px-3 py-2 font-mono text-slate-300">{a.amount ?? "—"}</td>
+                      <td className="px-3 py-2 font-mono text-white">{a.token_symbol ?? "n/a"}</td>
+                      <td className="px-3 py-2 font-mono text-slate-300">{a.amount ?? "n/a"}</td>
                       <td className="px-3 py-2 font-mono text-slate-300">{fmtUsd(a.value_usd)}</td>
-                      <td className="px-3 py-2 text-slate-400 truncate max-w-[140px]">{a.counterparty_label ?? a.counterparty ?? "—"}</td>
+                      <td className="px-3 py-2 text-slate-400 truncate max-w-[140px]">{a.counterparty_label ?? a.counterparty ?? "n/a"}</td>
                       {/* Deep-dive crash fix — a.timestamp can be null on
                           live Alchemy/Helius rows; new Date(null) is Invalid
                           Date and .toLocaleString() throws on that. */}
-                      <td className="px-3 py-2 text-slate-500">{(() => { const t = a.timestamp ? new Date(a.timestamp).getTime() : NaN; return Number.isFinite(t) ? new Date(t).toLocaleString() : '—'; })()}</td>
+                      <td className="px-3 py-2 text-slate-500">{(() => { const t = a.timestamp ? new Date(a.timestamp).getTime() : NaN; return Number.isFinite(t) ? new Date(t).toLocaleString() : 'n/a'; })()}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -797,7 +799,7 @@ function HoldingsPanel({ address, chain }: { address: string; chain: string }) {
                     {h.balance < 1 ? h.balance.toFixed(6) : h.balance.toLocaleString(undefined, { maximumFractionDigits: 4 })}
                   </td>
                   <td className="px-3 py-2 text-end font-mono text-slate-400 tabular-nums">
-                    {h.priceUsd > 0 ? `$${h.priceUsd < 0.01 ? h.priceUsd.toExponential(2) : h.priceUsd.toFixed(4)}` : '—'}
+                    {h.priceUsd > 0 ? `$${h.priceUsd < 0.01 ? h.priceUsd.toExponential(2) : h.priceUsd.toFixed(4)}` : 'n/a'}
                   </td>
                   <td className="px-3 py-2 text-end font-mono text-white tabular-nums">{fmtUsd(h.valueUsd)}</td>
                   <td className="px-3 py-2 text-end">
@@ -901,7 +903,7 @@ function CounterpartiesPanel({ activity }: { activity: ActivityRow[] }) {
           {aggregates.map((a) => (
             <tr key={a.address} className="border-b border-slate-800/50 hover:bg-white/[0.02]">
               <td className="px-3 py-2">
-                <div className="text-slate-300">{a.label ?? '—'}</div>
+                <div className="text-slate-300">{a.label ?? 'n/a'}</div>
                 <div className="text-[10px] font-mono text-slate-500 truncate max-w-[200px]">{a.address}</div>
               </td>
               <td className="px-3 py-2 text-end font-mono text-white">{a.txCount}</td>

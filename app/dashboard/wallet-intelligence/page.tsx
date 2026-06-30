@@ -15,7 +15,7 @@ interface RecentTx {
   status: 'success' | 'failed';
   type?: string;
   asset?: string;
-  value?: number;
+  value?: number | string;
   from?: string;
   to?: string;
   memo?: string;
@@ -211,11 +211,17 @@ function RecentTransactions({ transactions, chain, walletAddress }: { transactio
                       {tx.type || 'tx'}
                     </span>
                     {tx.asset && <span className="text-[10px] text-gray-400">{tx.asset}</span>}
-                    {tx.value != null && tx.value > 0 && (
-                      <span className="text-[10px] font-mono text-gray-300">
-                        {tx.value < 0.001 ? tx.value.toFixed(6) : tx.value.toFixed(4)}
-                      </span>
-                    )}
+                    {(() => {
+                      // value arrives as a string from the API (EVM/Solana both
+                      // serialize it as text), so coerce before any numeric use.
+                      const v = Number(tx.value);
+                      if (!Number.isFinite(v) || v <= 0) return null;
+                      return (
+                        <span className="text-[10px] font-mono text-gray-300">
+                          {v < 0.001 ? v.toFixed(6) : v.toFixed(4)}
+                        </span>
+                      );
+                    })()}
                     {tx.memo && <span className="text-[9px] text-gray-600 italic truncate">{tx.memo.slice(0, 20)}</span>}
                   </div>
                   <div className="text-[9px] font-mono text-gray-600">{tx.hash.slice(0, 12)}...{tx.hash.slice(-6)}</div>
@@ -914,7 +920,7 @@ export default function WalletIntelligencePage() {
                           <div className={`text-sm font-bold font-mono mt-0.5 ${p.winRate >= 50 ? 'text-emerald-400' : 'text-gray-300'}`}>{p.winRate}%</div>
                         </div>
                         <div className="bg-black/20 rounded-lg p-2">
-                          <div className="text-[9px] uppercase tracking-wider text-gray-500">Closed trades</div>
+                          <div className="text-[9px] uppercase tracking-wider text-gray-500">Closed lots</div>
                           <div className="text-sm font-bold font-mono mt-0.5 text-white">{p.closedLots}</div>
                         </div>
                         <div className="bg-black/20 rounded-lg p-2">
@@ -926,25 +932,28 @@ export default function WalletIntelligencePage() {
                         const best = p.byToken[0];
                         const worst = p.byToken[p.byToken.length - 1];
                         const showWorst = p.byToken.length > 1 && worst.totalRealizedUsd < 0;
+                        // best is the top token by realized PnL; it can itself be
+                        // a net loss when every token lost, so colour honestly.
+                        const bestPos = best.totalRealizedUsd >= 0;
                         const sym = (t: { tokenSymbol: string | null; token: string }) => t.tokenSymbol || `${t.token.slice(0, 6)}…${t.token.slice(-4)}`;
                         return (
                           <>
-                            {/* Best & worst trade highlights */}
+                            {/* Best & worst token by realized PnL */}
                             <div className="grid grid-cols-2 gap-2 mt-3">
-                              <div className="bg-emerald-500/[0.08] border border-emerald-500/20 rounded-lg p-2.5">
-                                <div className="text-[9px] uppercase tracking-wider text-emerald-300/70">Best trade</div>
+                              <div className={`rounded-lg p-2.5 border ${bestPos ? 'bg-emerald-500/[0.08] border-emerald-500/20' : 'bg-red-500/[0.08] border-red-500/20'}`}>
+                                <div className={`text-[9px] uppercase tracking-wider ${bestPos ? 'text-emerald-300/70' : 'text-red-300/70'}`}>Best token</div>
                                 <div className="text-xs font-semibold text-white truncate mt-0.5">{sym(best)}</div>
-                                <div className="text-sm font-mono font-bold text-emerald-400 mt-0.5">{fmtPnl(best.totalRealizedUsd)}</div>
+                                <div className={`text-sm font-mono font-bold mt-0.5 ${bestPos ? 'text-emerald-400' : 'text-red-400'}`}>{fmtPnl(best.totalRealizedUsd)}</div>
                               </div>
                               {showWorst ? (
                                 <div className="bg-red-500/[0.08] border border-red-500/20 rounded-lg p-2.5">
-                                  <div className="text-[9px] uppercase tracking-wider text-red-300/70">Worst trade</div>
+                                  <div className="text-[9px] uppercase tracking-wider text-red-300/70">Worst token</div>
                                   <div className="text-xs font-semibold text-white truncate mt-0.5">{sym(worst)}</div>
                                   <div className="text-sm font-mono font-bold text-red-400 mt-0.5">{fmtPnl(worst.totalRealizedUsd)}</div>
                                 </div>
                               ) : (
                                 <div className="bg-black/20 border border-[#1a1f2e] rounded-lg p-2.5 flex flex-col justify-center">
-                                  <div className="text-[9px] uppercase tracking-wider text-gray-500">Losing trades</div>
+                                  <div className="text-[9px] uppercase tracking-wider text-gray-500">Losing tokens</div>
                                   <div className="text-xs font-semibold text-emerald-300 mt-0.5">None in window</div>
                                 </div>
                               )}
