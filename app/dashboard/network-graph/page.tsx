@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import BackButton from '@/components/ui/BackButton';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { networkGraphHowItWorks } from '@/lib/howItWorks/content/network-graph';
 import {
   Network,
   Search,
@@ -542,6 +544,7 @@ export default function NetworkGraphPage() {
         <BackButton className="flex-shrink-0" />
         <Network className="w-4 h-4 text-[#0066FF] flex-shrink-0" />
         <h1 className="font-bold text-sm flex-1 truncate">Network Graph</h1>
+        <HowItWorksButton content={networkGraphHowItWorks} className="ms-auto shrink-0" />
 
         <div className="flex items-center gap-2 flex-shrink-0">
           <span className="flex items-center gap-1.5 text-[10px] text-gray-400">

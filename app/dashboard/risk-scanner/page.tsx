@@ -2,6 +2,8 @@
 
 import { Target, AlertTriangle, CheckCircle, Shield, Zap, Loader2, Search, Brain, ShieldAlert, TrendingUp } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { riskScannerHowItWorks } from '@/lib/howItWorks/content/risk-scanner';
 import { useState } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
@@ -241,6 +243,7 @@ export default function RiskScannerPage() {
           <BackButton />
           <Target className="w-5 h-5 text-[#0066FF]" />
           <h1 className="text-sm font-heading font-bold">Risk Scanner</h1>
+          <HowItWorksButton content={riskScannerHowItWorks} className="ms-auto shrink-0" />
         </div>
       </div>
 
