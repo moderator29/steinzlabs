@@ -4,7 +4,7 @@ export const marketHowItWorks: HowItWorksContent = {
   title: 'Market',
   tagline: 'Live prices across the top crypto assets, with one click into a full trading terminal.',
   howItWorks: [
-    'The table streams live market data sourced from CoinGecko, including price, 1H, 24H and 7D change, volume, market cap, and a 7-day sparkline.',
+    'The table loads live market data sourced from CoinGecko, including price, 1H, 24H and 7D change, volume, market cap, and a 7-day sparkline.',
     'Category pills filter the list by theme such as majors, DeFi, layer 1, layer 2, gaming, AI, and memes, with Pump.fun and BNB meme markets pulled from DexScreener so newer pairs still show up.',
     'Search matches by name or ticker against the loaded list, and pasting a contract address resolves the exact token across chains so you can jump straight to it.',
     'Filters let you narrow by market cap range and minimum 24H volume, then sort by market cap, volume, or 24H price change.',

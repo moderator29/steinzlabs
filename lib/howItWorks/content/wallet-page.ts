@@ -28,9 +28,9 @@ export const walletHowItWorks: HowItWorksContent = {
       text: 'Add Custom Token now works end to end across chains with per-network validation, including case-sensitive Solana addresses and a security scan on the selected chain.',
     },
     {
-      date: 'June 2026',
+      date: '2026',
       tag: 'NEW',
-      text: 'Multi-chain net worth sums your priced balances across all supported chains into one figure with a per-chain proportion bar.',
+      text: 'Add multiple accounts from one seed phrase, or connect a Ledger as a hardware-backed account whose private key never leaves the device.',
     },
   ],
 };

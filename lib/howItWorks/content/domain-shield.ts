@@ -6,7 +6,7 @@ export const domainShieldHowItWorks: HowItWorksContent = {
   howItWorks: [
     'You enter a URL or domain, and Domain Shield checks it against live phishing and malicious site intelligence so the verdict reflects the current threat landscape.',
     'Each scan returns a clear verdict of Safe, Suspicious, or Phishing, along with a confidence score and the specific risk signals that drove the result.',
-    'An AI analysis layer turns those signals into a plain-language assessment, a threat breakdown, and concrete recommended actions tailored to the verdict.',
+    'The result expands into a plain-language assessment, a threat breakdown across phishing and malicious content, and concrete recommended actions tailored to the verdict.',
     'Results are cached briefly so repeat checks on the same domain return quickly without rescanning every time.',
   ],
   howToUse: [
@@ -25,7 +25,7 @@ export const domainShieldHowItWorks: HowItWorksContent = {
     {
       date: '2026',
       tag: 'NEW',
-      text: 'Domain Shield scans any URL or domain and returns a Safe, Suspicious, or Phishing verdict with confidence, risk signals, and AI guidance.',
+      text: 'Domain Shield scans any URL or domain and returns a Safe, Suspicious, or Phishing verdict with a confidence score, risk signals, and recommended actions.',
     },
   ],
 };

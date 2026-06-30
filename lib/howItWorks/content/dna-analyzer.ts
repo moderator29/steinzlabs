@@ -14,7 +14,7 @@ export const dnaAnalyzerHowItWorks: HowItWorksContent = {
     'Connect your wallet to analyze your own DNA, or paste any wallet address into the input field.',
     'Tap Analyze DNA and let the scan fetch balances, parse history, and run the intelligence pass.',
     'Review the identity profile, trading archetype, AI insights, and sector breakdown in the results.',
-    'Use Quick Actions to copy the address, track the wallet in Alerts, or analyze a partner wallet next.',
+    'Use Quick Actions to copy the address, track the wallet in Alerts, or analyze another wallet next.',
   ],
   why: [
     'It turns a raw address into an instant, readable profile, so you can judge a wallet before you follow or copy it.',

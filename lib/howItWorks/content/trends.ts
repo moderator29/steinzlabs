@@ -5,9 +5,9 @@ export const trendsHowItWorks: HowItWorksContent = {
   tagline: 'See where capital is flowing across chains with live, dollar-denominated metrics.',
   howItWorks: [
     'On-Chain Trends reads live network data such as total value locked, DEX volume, active addresses, and stablecoin supply, then turns each one into a clean intelligence card.',
-    'Every card shows the current value, its 24 hour and 7 day change, and a short sparkline so you can read direction at a glance.',
+    'TVL cards show the current value, its 24 hour and 7 day change, and a short sparkline so you can read direction at a glance, while volume and address cards show the latest figure.',
     'Cards with unusually large moves are marked hot and float to the top, and sharp swings raise trend alerts ranked by severity.',
-    'Tapping a card opens a detail view with a larger 7 day trend and a plain language read on what the move suggests.',
+    'Tapping a card opens a detail view with a larger trend chart and, when available, a plain language read on what the move suggests.',
   ],
   howToUse: [
     'Open On-Chain Trends to load the latest metrics across the chains we track.',
@@ -25,7 +25,7 @@ export const trendsHowItWorks: HowItWorksContent = {
     {
       date: '2026',
       tag: 'NEW',
-      text: 'Track total value locked, DEX volume, active addresses, and stablecoin supply across chains with hot metric flags and severity-ranked trend alerts.',
+      text: 'Track total value locked, DEX volume, active addresses, and stablecoin supply across top chains, with hot metric flags and severity-ranked trend alerts.',
     },
   ],
 };

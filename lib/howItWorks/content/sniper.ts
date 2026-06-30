@@ -2,10 +2,10 @@ import type { HowItWorksContent } from '@/lib/howItWorks/types';
 
 export const sniperHowItWorks: HowItWorksContent = {
   title: 'Sniper Bot',
-  tagline: 'Non-custodial EVM sniping that scans fresh launches and executes your rules in seconds.',
+  tagline: 'Non-custodial sniping that scans fresh launches and executes your rules from your own wallet.',
   howItWorks: [
-    'The Discover feed streams newly launched pairs across EVM chains and launchpads, refreshing live so you see fresh tokens as they appear.',
-    'Every token is run through an on-chain security audit (honeypot, taxes, liquidity, holders) so risky or blocked pairs are flagged before you act.',
+    'The Discover feed streams newly launched pairs across Solana and the major EVM chains and launchpads, refreshing live so you see fresh tokens as they appear.',
+    'Every token is run through an on-chain security check (honeypot, liquidity, social presence) so risky pairs are flagged and can be filtered out before you act.',
     'You define snipers as reusable rules: which chains, how much per buy, daily caps, slippage, MEV protection, and optional take-profit and stop-loss.',
     'When a launch matches a rule, the bot executes from your own connected wallet, then tracks the fill as a live position with real-time PnL.',
   ],
@@ -25,7 +25,7 @@ export const sniperHowItWorks: HowItWorksContent = {
     {
       date: '2026',
       tag: 'NEW',
-      text: 'Sniper Bot is available on the MAX tier with non-custodial EVM execution, live launch discovery, on-chain security audits, MEV protection, and take-profit and stop-loss automation.',
+      text: 'Sniper Bot is available on the MAX tier with non-custodial EVM execution, live multi-chain launch discovery, on-chain security screening, MEV protection, and take-profit and stop-loss automation.',
     },
   ],
 };

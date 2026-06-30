@@ -10,8 +10,8 @@ export const networkGraphHowItWorks: HowItWorksContent = {
     'A side panel summarizes the network with cluster, density, and average-degree stats, ranks the most connected wallets, and charts transfer activity over the last 24 hours.',
   ],
   howToUse: [
-    'Open Network Graph to load the default view, then type a wallet address or token contract into the search bar.',
-    'Press Analyze to rebuild the map around your target, pulling live on-chain transfer data.',
+    'Type a wallet address or token contract into the search bar to choose what to map.',
+    'Press Analyze to build the graph around your target, pulling live on-chain transfer data.',
     'Scroll to zoom, drag the canvas to pan, and drag any node to reposition it.',
     'Hover a node to highlight its direct connections and see its volume and transaction count, or click it to pin a detail panel.',
     'Use the legend and the Top Wallets list to find the hubs that route the most flow.',

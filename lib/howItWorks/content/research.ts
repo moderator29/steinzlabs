@@ -4,7 +4,7 @@ export const researchHowItWorks: HowItWorksContent = {
   title: 'Research Lab',
   tagline: 'A live feed of crypto research briefs and market reads, refreshed for you automatically.',
   howItWorks: [
-    'Research Lab gathers published briefs and market intel into one clean reading feed, drawing on live sources like CoinGecko, DexScreener, and CryptoPanic.',
+    'Research Lab gathers published briefs and market intel into one clean reading feed, with each post tagged by the source it came from, such as CoinGecko, DexScreener, or CryptoPanic.',
     'A daily market brief assembles a real read of the market each day, covering top gainers and losers, overall market mood, trending searches, and the biggest priced whale moves from the last 24 hours.',
     'Every post is tagged by category and source, so you can tell at a glance whether you are reading about DeFi, Layer2, security, on-chain flows, or broad market analysis.',
     'The feed refreshes on its own every few minutes, and each card shows how recently the data was updated alongside an estimated read time.',

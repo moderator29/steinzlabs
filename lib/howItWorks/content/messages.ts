@@ -2,9 +2,9 @@ import type { HowItWorksContent } from '@/lib/howItWorks/types';
 
 export const messagesHowItWorks: HowItWorksContent = {
   title: 'Messages',
-  tagline: 'A private, end-to-end encrypted inbox for direct messages with anyone on the platform.',
+  tagline: 'A private, encrypted inbox for direct messages with anyone on the platform.',
   howItWorks: [
-    'Each conversation is end-to-end encrypted: a per-conversation key is sealed for both people, so the server only ever stores ciphertext and message text is unsealed inside the thread on your device.',
+    'Conversations are end-to-end encrypted whenever both people have published an encryption key: a per-conversation key is sealed for each side, so the server stores only ciphertext and message text is unsealed inside the thread on your device.',
     'Your inbox splits into two tabs. Primary holds accepted conversations, while Requests holds first messages from people who do not yet follow you back, waiting for you to accept or decline.',
     'The search bar finds any platform user by username or display name, letting you open a thread with someone new in one tap.',
     'Unread counts are tracked per conversation and roll up into a badge, and new messages arrive in real time without reloading the page.',
@@ -17,7 +17,7 @@ export const messagesHowItWorks: HowItWorksContent = {
     'Open the settings menu to mark everything read, filter to unread only, or toggle notification sound and read receipts.',
   ],
   why: [
-    'Your conversations stay private by design, since the platform stores only encrypted message bodies and cannot read them.',
+    'Your conversations stay private by design, since the platform stores only encrypted message bodies once both sides have a key in place.',
     'The Requests tab keeps unwanted first messages out of your main inbox, so you decide who reaches you.',
     'Real-time delivery and clear unread badges mean you never miss a reply or have to refresh to see it.',
   ],

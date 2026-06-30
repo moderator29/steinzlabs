@@ -5,7 +5,7 @@ export const discoverHowItWorks: HowItWorksContent = {
   tagline: 'Find and follow the traders worth watching across the Naka Labs community.',
   howItWorks: [
     'A live search box finds users by username, display name, or verified badge, with results appearing as you type.',
-    'A personalized "You might like to follow" strip suggests people based on who your follows trust, higher tiers, strong success rates, and recent activity.',
+    'A personalized "You might like to follow" strip suggests people based on the most followed accounts, who the people you follow also follow, higher tiers, strong success rates, and recent activity.',
     'Eight leaderboards rank the community by success rate, followers, new users, max tier, top traders, copy traders, whale watchers, and most active.',
     'Each leaderboard reads live data and auto-refreshes every few minutes, so movement shows up without a manual reload.',
   ],

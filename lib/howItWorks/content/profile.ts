@@ -22,6 +22,6 @@ export const profileHowItWorks: HowItWorksContent = {
     'A clear view of your current plan and what each upgrade unlocks, with one tap to change it.',
   ],
   whatsNew: [
-    { date: 'June 2026', tag: 'NEW', text: 'Your public profile header now displays your tier badge alongside your name.' },
+    { date: 'June 2026', tag: 'IMPROVED', text: 'Your tier badge now shows next to your name on both your in-app profile and your public profile header.' },
   ],
 };

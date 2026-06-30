@@ -4,8 +4,8 @@ export const archiveHowItWorks: HowItWorksContent = {
   title: 'Archive',
   tagline: 'A searchable history of Context Feed events once they age past the live window.',
   howItWorks: [
-    'The Archive holds on-chain and market events that have aged out of the live Context Feed, surfacing the persisted older window so signals stay reviewable instead of scrolling away.',
-    'Events render as the same cards you see in the live feed, covering new listings, token launches, trending moves, whale accumulation and selling, large transfers, and trades.',
+    'The Archive holds the older window of feed events, roughly 24 to 72 hours old, that have aged out of the live Context Feed, so signals stay reviewable instead of scrolling away.',
+    'Events render as the same cards you see in the live feed, covering new listings, token launches, trending moves, smart money buys, whale selling, large transfers, and trades.',
     'Results are sorted newest first and load in pages, so you can scan recent history quickly and pull in more as you go.',
     'Everything is filtered on the chain you select, spanning Ethereum, Solana, Base, BSC, Polygon, and Arbitrum.',
   ],
@@ -24,7 +24,7 @@ export const archiveHowItWorks: HowItWorksContent = {
     {
       date: 'June 2026',
       tag: 'IMPROVED',
-      text: 'Context Feed hardening improved the shared event pipeline that the Archive reads from, including chain-correct smart-money labeling for Solana.',
+      text: 'The Archive now returns the full 24 to 72 hour history for the chain you pick, so older events stay complete and consistent every time you open it.',
     },
     {
       date: '2026',

@@ -6,7 +6,7 @@ export const alertsHowItWorks: HowItWorksContent = {
   howItWorks: [
     'Smart Alerts supports four kinds of watch: whale wallet moves above a dollar threshold, price targets above or below a level, fresh token launches that clear your liquidity and holder filters, and any activity on a wallet you choose.',
     'The platform monitors your active alerts continuously in the background, checking prices frequently and wallets and new launches on a steady cycle, so you do not have to keep the page open and refresh it.',
-    'Whale and price conditions are valued in US dollars using live market data, so your thresholds reflect real value rather than raw token amounts. Launch alerts can also filter by keywords in the token name or symbol.',
+    'Price conditions are checked against live market data, and whale conditions use a dollar threshold so you watch by value rather than raw token amounts. Launch alerts can also filter by keywords in the token name or symbol.',
     'When a condition is met, you get an in-app notification and the alert is logged to a History tab so you can review what fired and when.',
   ],
   howToUse: [

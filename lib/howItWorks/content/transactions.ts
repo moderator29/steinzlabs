@@ -12,8 +12,8 @@ export const transactionsHowItWorks: HowItWorksContent = {
   howToUse: [
     'Open Transactions from the dashboard to load your most recent swaps and snipes.',
     'Use the All, Swaps, or Snipes filter at the top to focus on one kind of activity.',
-    'Read each row for the token movement, chain, status, value, and time since it happened.',
-    'Tap the external link on any confirmed entry to open the full transaction on its block explorer.',
+    'Read each row for the token movement, chain, status, amount, and time since it happened.',
+    'Tap the external link on any entry with an on-chain hash to open the full transaction on its block explorer.',
     'Hit Refresh to pull the latest activity after a new trade settles.',
   ],
   why: [
