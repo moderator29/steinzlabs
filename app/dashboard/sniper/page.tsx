@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Sentry from '@sentry/nextjs';
 import {
@@ -28,6 +28,8 @@ import {
 import { LAUNCHPADS } from '@/lib/sniper/launchpads';
 import { SourceFilterRow } from '@/components/sniper/SourceFilterRow';
 import { TokenCard } from '@/components/sniper/TokenCard';
+import { FeedSoundToggle } from '@/components/sniper/FeedSoundToggle';
+import { useFeedSound } from '@/lib/sniper/useFeedSound';
 
 interface SniperCriteriaRow {
   id: string;
@@ -132,6 +134,49 @@ export default function SniperPage() {
   const [liveConnected, setLiveConnected] = useState(false);
   const [freshIds, setFreshIds] = useState<Set<string>>(() => new Set());
 
+  // ── Meme Zone sound alerts (Discover feed) ─────────────────────────────────
+  const feedSound = useFeedSound();
+  // Snapshot of the previous refresh: which token ids existed and their bonding
+  // curve %, so we can detect freshly-appeared tokens and ~90% graduate crosses.
+  const prevFeedRef = useRef<{ ids: Set<string>; bonding: Map<string, number> } | null>(null);
+  // Set when the last feed mutation was a "Load more" append, so pagination is
+  // never mistaken for freshly-detected tokens.
+  const pagingRef = useRef(false);
+
+  useEffect(() => {
+    if (tab !== 'discover') return;
+    // Wait for the first non-empty page before seeding a baseline, otherwise the
+    // initial empty→populated transition would read every token as "new".
+    if (feedTokens.length === 0) return;
+    const wasPaging = pagingRef.current;
+    pagingRef.current = false;
+    const prev = prevFeedRef.current;
+    const ids = new Set(feedTokens.map((t) => t.id));
+    const bonding = new Map<string, number>();
+    for (const t of feedTokens) {
+      if (typeof t.bondingCurvePct === 'number') bonding.set(t.id, t.bondingCurvePct);
+    }
+    // First populated load just seeds the baseline — don't chime on initial fill.
+    if (prev && !wasPaging) {
+      const hasNew = feedTokens.some((t) => !prev.ids.has(t.id));
+      // Graduate cross: a token that was below the threshold last cycle and is
+      // now at/above it (and was already present, so it's a genuine crossing).
+      const graduated = feedTokens.some((t) => {
+        if (typeof t.bondingCurvePct !== 'number' || !prev.ids.has(t.id)) return false;
+        const before = prev.bonding.get(t.id);
+        return before != null && before < feedSound.graduatePct && t.bondingCurvePct >= feedSound.graduatePct;
+      });
+      if (feedSound.enabled && (hasNew || graduated)) {
+        // Debounced to one chime per refresh cycle even on a burst of new pairs.
+        feedSound.playChime(graduated);
+      }
+    }
+    prevFeedRef.current = { ids, bonding };
+    // playChime / graduatePct are stable enough; depend on the feed snapshot and
+    // the enabled flag so toggling on doesn't retroactively replay old tokens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feedTokens, tab, feedSound.enabled]);
+
   // ── Data loaders ─────────────────────────────────────────────────────────
   const loadSnipers = useCallback(async () => {
     if (!user?.id) return;
@@ -197,6 +242,9 @@ export default function SniperPage() {
       const res = await fetch(`/api/sniper?${buildFeedParams(feedTokens.length).toString()}`, { cache: 'no-store' });
       const j = await res.json();
       const more: DetectedToken[] = j?.tokens ?? [];
+      // Mark this mutation as pagination so the sound effect doesn't treat the
+      // appended older page as freshly-detected tokens and chime.
+      pagingRef.current = true;
       setFeedTokens((prev) => {
         // De-dupe by id so a live refresh overlapping the next page never
         // renders the same token twice.
@@ -427,6 +475,8 @@ export default function SniperPage() {
               socialOnly={socialOnly} setSocialOnly={setSocialOnly}
               sourceFilter={sourceFilter} setSourceFilter={setSourceFilter}
               query={feedQuery} setQuery={setFeedQuery}
+              soundEnabled={feedSound.enabled} soundVolume={feedSound.volume}
+              onToggleSound={feedSound.toggle} onSetSoundVolume={feedSound.setVolume}
             />
           )}
           {tab === 'positions' && <PositionsTab executions={executions} />}
@@ -532,6 +582,7 @@ function DiscoverTab({
   minLiq, setMinLiq, feedChain, setFeedChain, sort, setSort,
   excludeHoneypots, setExcludeHoneypots, socialOnly, setSocialOnly,
   sourceFilter, setSourceFilter, query, setQuery,
+  soundEnabled, soundVolume, onToggleSound, onSetSoundVolume,
 }: {
   tokens: DetectedToken[]; total: number; loading: boolean; loadingMore: boolean;
   onRefresh: () => void; onLoadMore: () => void;
@@ -543,6 +594,8 @@ function DiscoverTab({
   socialOnly: boolean; setSocialOnly: (b: boolean) => void;
   sourceFilter: string[]; setSourceFilter: (s: string[]) => void;
   query: string; setQuery: (s: string) => void;
+  soundEnabled: boolean; soundVolume: number;
+  onToggleSound: () => void; onSetSoundVolume: (v: number) => void;
 }) {
   // When the chain changes, drop launchpad selections that don't belong to it
   // so a stale Solana pad never silently empties an EVM feed.
@@ -575,6 +628,12 @@ function DiscoverTab({
               value={sort}
               options={SORT_OPTIONS.map((s): SelectOption => ({ id: s.id, label: `Sort: ${s.label}` }))}
               onChange={(id) => setSort(id as 'new' | 'volume' | 'liquidity' | 'mcap')}
+            />
+            <FeedSoundToggle
+              enabled={soundEnabled}
+              volume={soundVolume}
+              onToggle={onToggleSound}
+              onVolume={onSetSoundVolume}
             />
             <button onClick={onRefresh} className="nl-button nl-button--ghost shrink-0 px-3 py-2 rounded-lg text-xs font-semibold">
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
