@@ -8,6 +8,20 @@ the top.
 
 ## [Unreleased]
 
+### Daily Research Brief engine (June 2026)
+
+- **Automated daily market brief** — new `research-daily-brief` cron (daily dispatch group, 03:00 UTC) assembles a real market read from CoinGecko (top gainers/losers among the top 100 by cap, global market vibe, trending searches) and the platform's own `whale_activity` feed (biggest priced moves, last 24h), publishes it to Research Labs as a styled post, and emails a rich preview digest to every user who hasn't opted out (`notification_settings.email_enabled`). Idempotent per UTC day; publishes nothing when every data source is down (no empty shells, no fabricated numbers). Kill switch: `RESEARCH_DIGEST_EMAIL=false` publishes web-only.
+- **Research Labs detail page** — added the missing `/research/[id]` route and `/api/research/[id]` endpoint; cards in the public list previously linked to a 404. Detail page renders the brief's HTML on the Naka aurora canvas with cover, category, read time, and a live view counter.
+- **Schema fix** — `research_posts` was missing the `category` and `image_url` columns the admin + public routes read/write, so every insert/select errored and the table stayed empty. Added both additively (migration `2026_research_posts_add_category_image`), unblocking the whole subsystem.
+- **Dash-free formatting** — brief and digest render negatives with ▲/▼ arrows and magnitudes (never a leading minus) and use middots as separators, per the product's no-dash rule.
+
+### Wallet Intelligence next-gen surfaces (June 2026)
+
+- **Realized PnL best/worst trade** — the FIFO realized-PnL card now highlights the single most profitable and most painful closed position; the worst slot shows a truthful "None in window" when the trader has no losers.
+- **Activity heatmap** — buckets a wallet's real transaction timestamps into a 7-day × 4-block (6h) UTC grid so users can see when it trades; self-hides below 4 timestamped txs (no synthetic fill).
+- **Multi-chain net worth** — new lazy `/api/wallet-intelligence/multichain` fans the EVM intelligence pipeline across all six supported chains (`allSettled`, cache-warm for the viewed chain) and sums priced balances into one figure plus a per-chain proportion bar.
+- **Top counterparties** — derives who a wallet trades with most from its real recent transactions (inbound/outbound split), tagging known CEX/DEX/bridge/mixer entities from the on-chain registry.
+
 ### Whale Tracker revival + feed hardening (June 2026)
 
 - **Whale ingestion restored** — the cost-sweep demand gate had scoped the poll/price crons to *followed* whales only; with near-zero follows, `whale_activity` ingestion went dark ~45 days ago and every `value_usd` was NULL (so every size filter excluded 100% of rows). The poll cron now rotates through **all** active whales (bounded by `WHALE_POLL_BATCH`), polls **both** transfer directions, and **prices `value_usd` at ingest** (CoinGecko/Birdeye, deduped per token). The price cron is now an ungated, recency-bounded safety net (never re-prices the multi-year backlog at today's prices). Webhooks (Alchemy/Helius) also price at ingest in their deferred `after()` block.
