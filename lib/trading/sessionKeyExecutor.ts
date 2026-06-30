@@ -45,6 +45,10 @@ interface ActiveSession {
 export interface SnipeExecResult {
   txHash: string;
   kernelAddress: string;
+  /** Actual 0x-quoted fill amounts in base units (audit #47/#68 H4) — so callers
+   *  record real on-chain amounts, not price-derived estimates. */
+  sellAmountBaseUnits?: string;
+  buyAmountBaseUnits?: string;
 }
 
 /**
@@ -102,7 +106,7 @@ async function executeSessionSwap(params: {
   buyToken: string;
   sellAmountBaseUnits: string;
   slippageBps: number;
-}): Promise<string | null> {
+}): Promise<{ txHash: string; sellAmountBaseUnits: string; buyAmountBaseUnits: string } | null> {
   // Validate the token addresses on the money path before they reach 0x / the
   // approve calldata (audit #47 M2) and clamp slippage server-side (M3).
   if (!isAddress(params.sellToken) || !isAddress(params.buyToken)) return null;
@@ -135,7 +139,7 @@ async function executeSessionSwap(params: {
     args: [quote.allowanceTarget as Address, BigInt(params.sellAmountBaseUnits)],
   });
 
-  return executeSessionKeyTx({
+  const txHash = await executeSessionKeyTx({
     sessionPrivateKey: params.sessionPrivateKey,
     approval: params.session.approval!,
     chainSlug: params.chain,
@@ -148,6 +152,8 @@ async function executeSessionSwap(params: {
       },
     ],
   });
+  // Report the quoted fill amounts so callers record real on-chain magnitudes.
+  return { txHash, sellAmountBaseUnits: params.sellAmountBaseUnits, buyAmountBaseUnits: String(quote.buyAmount) };
 }
 
 export async function tryExecuteSnipeViaSessionKey(params: {
@@ -171,28 +177,20 @@ export async function tryExecuteSnipeViaSessionKey(params: {
     return null;
   }
 
-  // Software daily USD cap (#46). The on-chain rate policy bounds the *count* of
-  // trades/24h, not their notional — so a swarm of small caps could still drain
-  // the kernel. Enforce the configured daily_cap_usd here by summing the user's
-  // AA buys on this chain over the trailing 24h before committing another.
+  // Software daily USD cap (#46, audit #68 C3). The on-chain rate policy bounds
+  // the *count* of trades/24h, not their notional. Enforce daily_cap_usd by
+  // summing the user's AA buys on this chain over the trailing 24h — across BOTH
+  // the sniper AND the market maker (unified RPC), so the bot can't slip the cap.
   if (session.daily_cap_usd != null) {
     const since = new Date(Date.now() - 86_400_000).toISOString();
-    const { data: recent } = await getSupabaseAdmin()
-      .from('sniper_executions')
-      .select('buy_amount_usd')
-      .eq('user_id', params.userId)
-      .eq('chain', chain)
-      .gte('executed_at', since)
-      .not('buy_amount_usd', 'is', null);
-    const spent = (recent ?? []).reduce(
-      (s: number, r: { buy_amount_usd: number | null }) => s + Number(r.buy_amount_usd ?? 0),
-      0,
-    );
-    if (spent + params.amountUsd > Number(session.daily_cap_usd)) return null;
+    const { data: spent } = await getSupabaseAdmin().rpc('aa_daily_spend_usd', {
+      p_user: params.userId, p_chain: chain, p_since: since,
+    });
+    if (Number(spent ?? 0) + params.amountUsd > Number(session.daily_cap_usd)) return null;
   }
 
   // Buy: USDC -> token. Sell amount is denominated in USDC (6dp).
-  const txHash = await executeSessionSwap({
+  const res = await executeSessionSwap({
     session,
     sessionPrivateKey,
     chain,
@@ -202,9 +200,9 @@ export async function tryExecuteSnipeViaSessionKey(params: {
     sellAmountBaseUnits: String(Math.round(params.amountUsd * 1e6)),
     slippageBps: params.slippageBps,
   });
-  if (!txHash) return null;
+  if (!res) return null;
 
-  return { txHash, kernelAddress: session.kernel_address! };
+  return { txHash: res.txHash, kernelAddress: session.kernel_address!, sellAmountBaseUnits: res.sellAmountBaseUnits, buyAmountBaseUnits: res.buyAmountBaseUnits };
 }
 
 /**
@@ -245,7 +243,7 @@ export async function tryExecuteSellViaSessionKey(params: {
     }
   } catch { /* fall back to requested amount on read failure */ }
 
-  const txHash = await executeSessionSwap({
+  const res = await executeSessionSwap({
     session,
     sessionPrivateKey,
     chain,
@@ -255,7 +253,7 @@ export async function tryExecuteSellViaSessionKey(params: {
     sellAmountBaseUnits: sellAmount,
     slippageBps: params.slippageBps,
   });
-  if (!txHash) return null;
+  if (!res) return null;
 
-  return { txHash, kernelAddress: session.kernel_address! };
+  return { txHash: res.txHash, kernelAddress: session.kernel_address!, sellAmountBaseUnits: res.sellAmountBaseUnits, buyAmountBaseUnits: res.buyAmountBaseUnits };
 }

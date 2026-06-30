@@ -58,6 +58,7 @@ interface Strategy {
   max_inventory_usd: number | null; max_slippage_bps: number; band_pct: number | null;
   range_lower_pct: number | null; range_upper_pct: number | null;
   status: string; realized_pnl_usd: number; inventory_tokens: number; spent_usd: number;
+  gross_deployed_usd: number; inventory_cost_usd: number;
 }
 
 async function referencePrice(s: Strategy): Promise<number | null> {
@@ -86,6 +87,13 @@ export async function runStrategyTick(s: Strategy): Promise<TickResult> {
   const price = await getDexPrice(s.token_address).catch(() => 0);
   if (!(price > 0)) return { id: s.id, action: 'skip', reason: 'no market price' };
 
+  // H3: a manual reference far from the live price would make the grid buy into a
+  // falling knife (or dump everything) every tick. Refuse to trade when the
+  // manual ref drifts > 50% from market — the user must refresh it.
+  if (s.reference_price_mode === 'manual' && Math.abs(price - ref) / ref > 0.5) {
+    return { id: s.id, action: 'skip', reason: 'manual reference price stale vs market' };
+  }
+
   const ladder = s.strategy_type === 'range'
     ? [
         { level: 1, side: 'buy' as const, targetPrice: ref * (1 + (s.range_lower_pct ?? -20) / 100) },
@@ -95,48 +103,71 @@ export async function runStrategyTick(s: Strategy): Promise<TickResult> {
   const sb = getSupabaseAdmin();
   const inventoryUsd = (s.inventory_tokens ?? 0) * price;
 
+  // H2: re-read status immediately before any execution so pause/stop is a real
+  // kill switch even mid-tick (the active-only select happened up to ~2m ago).
+  const stillActive = async (): Promise<boolean> => {
+    const { data } = await sb.from('mm_strategies').select('status').eq('id', s.id).single();
+    return (data as { status?: string } | null)?.status === 'active';
+  };
+
   // SELL side: price at/above the lowest sell rung and we hold inventory.
   const sellRung = ladder.filter((l) => l.side === 'sell' && price >= l.targetPrice).sort((a, b) => a.targetPrice - b.targetPrice)[0];
   if (sellRung && (s.inventory_tokens ?? 0) > 0) {
     const decimals = await getEvmTokenDecimals(s.chain, s.token_address).catch(() => 18);
     const tokensToSell = Math.min(s.order_size_usd / price, s.inventory_tokens);
-    const baseUnits = BigInt(Math.floor(tokensToSell * 1e6)) * (BigInt(10) ** BigInt(decimals)) / BigInt(1e6);
-    if (baseUnits > BigInt(0)) {
-      const res = await tryExecuteSellViaSessionKey({
-        userId: s.user_id, chain: s.chain, tokenAddress: s.token_address,
-        tokenAmountBaseUnits: baseUnits.toString(), slippageBps: s.max_slippage_bps,
-      }).catch(() => null);
-      if (res?.txHash) {
-        const proceedsUsd = tokensToSell * price;
-        await sb.from('mm_fills').insert({ strategy_id: s.id, user_id: s.user_id, side: 'sell', price, amount_usd: proceedsUsd, amount_tokens: tokensToSell, tx_hash: res.txHash });
-        await sb.from('mm_orders').insert({ strategy_id: s.id, user_id: s.user_id, level: sellRung.level, side: 'sell', target_price: sellRung.targetPrice, size_usd: proceedsUsd, status: 'filled', tx_hash: res.txHash, filled_at: new Date().toISOString() });
-        await sb.from('mm_strategies').update({
-          inventory_tokens: Math.max(0, s.inventory_tokens - tokensToSell),
-          realized_pnl_usd: (s.realized_pnl_usd ?? 0) + proceedsUsd,
-          spent_usd: Math.max(0, (s.spent_usd ?? 0) - proceedsUsd),
-          last_run_at: new Date().toISOString(),
-        }).eq('id', s.id);
-        return { id: s.id, action: 'sell', txHash: res.txHash };
-      }
+    // M3: decimal-safe base-units (avoid float truncation to 0 for tiny amounts).
+    const baseUnits = (BigInt(Math.round(tokensToSell * 1e9)) * (BigInt(10) ** BigInt(decimals))) / BigInt(1e9);
+    if (baseUnits <= BigInt(0)) return { id: s.id, action: 'hold', reason: 'sell amount rounds to dust' };
+    if (!(await stillActive())) return { id: s.id, action: 'skip', reason: 'paused/stopped before execution' };
+    const res = await tryExecuteSellViaSessionKey({
+      userId: s.user_id, chain: s.chain, tokenAddress: s.token_address,
+      tokenAmountBaseUnits: baseUnits.toString(), slippageBps: s.max_slippage_bps,
+    }).catch(() => null);
+    if (res?.txHash) {
+      // H4: use the ACTUAL on-chain fill amounts (0x quote), not price estimates.
+      const tokensSold = res.sellAmountBaseUnits ? Number(res.sellAmountBaseUnits) / 10 ** decimals : tokensToSell;
+      const proceedsUsd = res.buyAmountBaseUnits ? Number(res.buyAmountBaseUnits) / 1e6 : tokensToSell * price;
+      // C1: realized PnL = proceeds - cost basis of the tokens sold (NET, not gross).
+      const inv = s.inventory_tokens || 0;
+      const avgCost = inv > 0 ? (s.inventory_cost_usd ?? 0) / inv : 0;
+      const costOfSold = avgCost * tokensSold;
+      const realizedDelta = proceedsUsd - costOfSold;
+      await sb.from('mm_fills').insert({ strategy_id: s.id, user_id: s.user_id, side: 'sell', price, amount_usd: proceedsUsd, amount_tokens: tokensSold, pnl_usd: realizedDelta, tx_hash: res.txHash });
+      await sb.from('mm_orders').insert({ strategy_id: s.id, user_id: s.user_id, level: sellRung.level, side: 'sell', target_price: sellRung.targetPrice, size_usd: proceedsUsd, status: 'filled', tx_hash: res.txHash, filled_at: new Date().toISOString() });
+      await sb.from('mm_strategies').update({
+        inventory_tokens: Math.max(0, inv - tokensSold),
+        inventory_cost_usd: Math.max(0, (s.inventory_cost_usd ?? 0) - costOfSold),
+        realized_pnl_usd: (s.realized_pnl_usd ?? 0) + realizedDelta,
+        // C2: do NOT credit the budget back on a sell — gross_deployed_usd is the
+        // monotonic lifetime spend cap; only inventory exposure is freed.
+        last_run_at: new Date().toISOString(),
+      }).eq('id', s.id);
+      return { id: s.id, action: 'sell', txHash: res.txHash };
     }
   }
 
   // BUY side: price at/below the highest buy rung, budget + inventory room left.
   const buyRung = ladder.filter((l) => l.side === 'buy' && price <= l.targetPrice).sort((a, b) => b.targetPrice - a.targetPrice)[0];
   if (buyRung) {
-    if ((s.spent_usd ?? 0) + s.order_size_usd > s.budget_usd) return { id: s.id, action: 'hold', reason: 'budget exhausted' };
+    // C2: gate against MONOTONIC lifetime deployed USD, not the revolving spent_usd.
+    if ((s.gross_deployed_usd ?? 0) + s.order_size_usd > s.budget_usd) return { id: s.id, action: 'hold', reason: 'budget (lifetime) exhausted' };
     if (s.max_inventory_usd != null && inventoryUsd >= s.max_inventory_usd) return { id: s.id, action: 'hold', reason: 'max inventory reached' };
+    if (!(await stillActive())) return { id: s.id, action: 'skip', reason: 'paused/stopped before execution' };
     const res = await tryExecuteSnipeViaSessionKey({
       userId: s.user_id, chain: s.chain, tokenAddress: s.token_address,
       amountUsd: s.order_size_usd, slippageBps: s.max_slippage_bps,
     }).catch(() => null);
     if (res?.txHash) {
-      const tokensBought = s.order_size_usd / price;
+      const decimals = await getEvmTokenDecimals(s.chain, s.token_address).catch(() => 18);
+      // H4: actual tokens received from the quote, not order_size/price.
+      const tokensBought = res.buyAmountBaseUnits ? Number(res.buyAmountBaseUnits) / 10 ** decimals : s.order_size_usd / price;
       await sb.from('mm_fills').insert({ strategy_id: s.id, user_id: s.user_id, side: 'buy', price, amount_usd: s.order_size_usd, amount_tokens: tokensBought, tx_hash: res.txHash });
       await sb.from('mm_orders').insert({ strategy_id: s.id, user_id: s.user_id, level: buyRung.level, side: 'buy', target_price: buyRung.targetPrice, size_usd: s.order_size_usd, status: 'filled', tx_hash: res.txHash, filled_at: new Date().toISOString() });
       await sb.from('mm_strategies').update({
         inventory_tokens: (s.inventory_tokens ?? 0) + tokensBought,
-        spent_usd: (s.spent_usd ?? 0) + s.order_size_usd,
+        inventory_cost_usd: (s.inventory_cost_usd ?? 0) + s.order_size_usd,
+        spent_usd: (s.spent_usd ?? 0) + s.order_size_usd,               // net open exposure proxy
+        gross_deployed_usd: (s.gross_deployed_usd ?? 0) + s.order_size_usd, // monotonic lifetime cap
         last_run_at: new Date().toISOString(),
       }).eq('id', s.id);
       return { id: s.id, action: 'buy', txHash: res.txHash };

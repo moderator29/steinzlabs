@@ -74,9 +74,14 @@ export async function POST(req: NextRequest) {
   if (!b.token_address || !validAddressForChain(chain, b.token_address)) {
     return NextResponse.json({ error: 'invalid token_address for chain' }, { status: 400 });
   }
-  if (!b.order_size_usd || b.order_size_usd <= 0) return NextResponse.json({ error: 'order_size_usd must be positive' }, { status: 400 });
+  // M2: a sub-gas order size is a guaranteed loss every fill. Enforce a floor.
+  const MIN_ORDER_USD = 5;
+  if (!b.order_size_usd || b.order_size_usd < MIN_ORDER_USD) return NextResponse.json({ error: `order_size_usd must be at least $${MIN_ORDER_USD}` }, { status: 400 });
   if (!b.budget_usd || b.budget_usd <= 0) return NextResponse.json({ error: 'budget_usd must be positive' }, { status: 400 });
   if (b.order_size_usd > b.budget_usd) return NextResponse.json({ error: 'order size cannot exceed budget' }, { status: 400 });
+  // M1/L1: numeric bounds so engine math can't be fed degenerate config.
+  if (b.max_inventory_usd != null && b.max_inventory_usd <= 0) return NextResponse.json({ error: 'max_inventory_usd must be positive' }, { status: 400 });
+  if (b.band_pct != null && b.band_pct <= 0) return NextResponse.json({ error: 'band_pct must be positive' }, { status: 400 });
   if (b.reference_price_mode === 'manual' && (!b.manual_reference_price || b.manual_reference_price <= 0)) {
     return NextResponse.json({ error: 'manual reference price required' }, { status: 400 });
   }
@@ -88,6 +93,9 @@ export async function POST(req: NextRequest) {
     const lo = b.range_lower_pct, hi = b.range_upper_pct;
     if (lo == null || hi == null || lo >= hi) {
       return NextResponse.json({ error: 'range requires lower_pct < upper_pct' }, { status: 400 });
+    }
+    if (lo <= -100) {
+      return NextResponse.json({ error: 'range lower_pct must be greater than -100' }, { status: 400 });
     }
   }
 

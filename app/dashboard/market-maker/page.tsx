@@ -45,6 +45,7 @@ interface Strategy {
   realized_pnl_usd: number | null;
   inventory_tokens: number | null;
   spent_usd: number | null;
+  gross_deployed_usd: number | null;
   created_at: string;
 }
 
@@ -215,7 +216,8 @@ function StrategyCard({ s, busy, onSetStatus }: { s: Strategy; busy: boolean; on
     : s.status === 'paused' ? 'text-amber-300 bg-amber-500/15 border-amber-500/30'
     : 'text-white/50 bg-white/5 border-white/10';
 
-  const spent = Number(s.spent_usd ?? 0);
+  // Lifetime deployed (monotonic) vs the budget cap — the true spend ceiling.
+  const spent = Number(s.gross_deployed_usd ?? s.spent_usd ?? 0);
   const budget = Number(s.budget_usd ?? 0);
   const spentPct = budget > 0 ? Math.min(100, (spent / budget) * 100) : 0;
   const pnl = s.realized_pnl_usd != null ? Number(s.realized_pnl_usd) : null;
