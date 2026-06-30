@@ -484,10 +484,10 @@ export default function ResearchPage() {
                   <button
                     key={label}
                     onClick={() => { setCategory(label); setPage(1); }}
-                    className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all ${
+                    className={`px-3.5 py-2 rounded-xl text-[11px] font-semibold transition-all ${
                       category === label
                         ? 'bg-[#0066FF] text-white'
-                        : 'bg-white/[0.04] text-gray-500 hover:bg-white/[0.08] hover:text-gray-300 border border-white/[0.06]'
+                        : 'nl-glass nl-glass--interactive text-gray-300'
                     }`}
                   >
                     {label}
@@ -518,16 +518,16 @@ export default function ResearchPage() {
           )}
         </div>
 
-        {/* ── Category Tabs ── */}
-        <div className="flex gap-1.5 overflow-x-auto pb-2 mb-5 scrollbar-hide">
+        {/* ── Category Tabs — glass square cards ── */}
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-5 scrollbar-hide">
           {CATEGORIES.map((label) => (
             <button
               key={label}
               onClick={() => { setCategory(label); setPage(1); }}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${
+              className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-[11px] font-semibold transition-all ${
                 category === label
-                  ? 'bg-[#0066FF] text-white shadow-[0_0_12px_rgba(0,102,255,0.4)]'
-                  : 'bg-white/[0.04] text-gray-500 hover:bg-white/[0.08] hover:text-gray-300 border border-white/[0.06]'
+                  ? 'bg-[#0066FF] text-white shadow-[0_0_16px_rgba(0,102,255,0.45)]'
+                  : 'nl-glass nl-glass--interactive text-gray-300'
               }`}
             >
               {label}
