@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import { verifyCron, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { canonicalAction } from "@/lib/whales/labels";
+import { normalizeAddress } from "@/lib/utils/addressNormalize";
 import { sendWhaleAlert } from "@/lib/services/resend";
 import { sendTelegramNotification } from "@/lib/telegram/notify";
 import { sendPushToUser } from "@/lib/services/webpush";
@@ -104,11 +105,15 @@ export async function GET(request: NextRequest) {
     type WhaleStat = { label: string | null; whale_score: number | null; archetype: string | null; entity_type: string | null; active_days_7d: number | null };
     const whaleCache = new Map<string, WhaleStat | null>();
     const resolveWhale = async (address: string, chain: string): Promise<WhaleStat | null> => {
-      const key = `${chain}:${address}`;
+      // Normalize so a checksummed (mixed-case) EVM follow matches the lowercase
+      // `whales` row; Solana case is preserved. Without this, mixed-case follows
+      // resolved to null and the enriched email (score/AI take) was stripped.
+      const addr = normalizeAddress(address, chain);
+      const key = `${chain}:${addr}`;
       if (whaleCache.has(key)) return whaleCache.get(key) ?? null;
       const { data } = await sb.from('whales')
         .select('label, whale_score, archetype, entity_type, active_days_7d')
-        .eq('address', address).eq('chain', chain).maybeSingle();
+        .eq('address', addr).eq('chain', chain).maybeSingle();
       whaleCache.set(key, (data as WhaleStat | null) ?? null);
       return (data as WhaleStat | null) ?? null;
     };
@@ -122,19 +127,42 @@ export async function GET(request: NextRequest) {
 
       // Newest priced moves for this whale since the watermark, ascending so we
       // notify in chronological order and stamp the watermark at the latest.
-      const { data: acts } = await sb
+      // Solana is case-sensitive → exact match; EVM is case-insensitive AND the
+      // activity table holds mixed-case EVM rows (some writers don't normalize),
+      // so EVM must stay case-insensitive to find them all.
+      const isSolana = f.chain.toLowerCase() === "solana";
+      let actsQuery = sb
         .from("whale_activity")
         .select("id, whale_address, chain, action, token_symbol, value_usd, counterparty_label, tx_hash, timestamp")
-        .ilike("whale_address", f.whale_address)
         .eq("chain", f.chain)
         .gt("timestamp", sinceIso)
         .not("value_usd", "is", null)
         .gte("value_usd", threshold)
         .order("timestamp", { ascending: true })
         .limit(50);
+      actsQuery = isSolana
+        ? actsQuery.eq("whale_address", f.whale_address)
+        : actsQuery.ilike("whale_address", f.whale_address);
+      const { data: acts } = await actsQuery;
 
       const rows = (acts ?? []) as ActivityRow[];
       if (rows.length === 0) continue;
+
+      // Claim this batch BEFORE sending: advance the watermark to the newest
+      // scanned move with a forward-only CAS. Only the tick that wins the update
+      // (rows returned) fans out notifications, so two overlapping ticks reading
+      // the same watermark can't both notify → no duplicate bell rows / emails.
+      // The timestamp is double-quoted so its '+'/':' survive the PostgREST
+      // `or` filter parser. Under-sending (a crash after claim) is the chosen
+      // trade-off over double-sending, consistent with the existing overflow cap.
+      const newest = rows[rows.length - 1].timestamp;
+      const { data: claimed } = await sb
+        .from("user_whale_follows")
+        .update({ last_alerted_at: newest })
+        .eq("id", f.id)
+        .or(`last_alerted_at.is.null,last_alerted_at.lt."${newest}"`)
+        .select("id");
+      if (!claimed || claimed.length === 0) continue; // another tick owns this batch
 
       const channels = (f.alert_channels ?? []) as string[];
       const wantsEmail = channels.includes("email");
@@ -217,16 +245,7 @@ export async function GET(request: NextRequest) {
           } catch { /* push best-effort */ }
         }
       }
-
-      // Advance the watermark to the newest move scanned (not just notified) so
-      // the capped overflow isn't re-sent next tick.
-      const newest = rows[rows.length - 1].timestamp;
-      await sb
-        .from("user_whale_follows")
-        .update({ last_alerted_at: newest })
-        .eq("id", f.id)
-        // Only move forward — guard against an overlapping tick rewinding it.
-        .or(`last_alerted_at.is.null,last_alerted_at.lt.${newest}`);
+      // Watermark was already advanced by the claim above (CAS before fan-out).
     }
 
     await logCronExecution(NAME, "success", Date.now() - startedAt, undefined, notified);

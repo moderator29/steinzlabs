@@ -23,6 +23,11 @@ import type { SessionCopyParams, SessionCopyResult } from '@/lib/trading/session
  * pending-trade confirm flow. It NEVER throws into the money path.
  */
 
+// Server-side hard ceiling on auto-copy slippage. Slippage is economic scope
+// the session key signs, but the signed scope doesn't bound it, so clamp here
+// (3% = 300 bps) regardless of what the upstream intent requests.
+const MAX_AUTO_SLIPPAGE_BPS = 300;
+
 function heliusRpcUrl(): string | null {
   const key = process.env.HELIUS_API_KEY_1 ?? process.env.HELIUS_API_KEY_2;
   if (key) return `https://mainnet.helius-rpc.com/?api-key=${key}`;
@@ -131,13 +136,20 @@ export async function executeSolanaWithSessionKey(p: SessionCopyParams): Promise
       if (!kp) { await releaseClaim(); return null; }
       const owner = kp.publicKey.toBase58();
 
-      const quote = await getQuote(p.fromTokenAddress, p.toTokenAddress, amountIn, p.slippageBps);
+      // Clamp slippage to a server-side ceiling. The signed session scope caps
+      // per-trade USD and the token allowlist but NOT slippage, so an upstream
+      // bug/compromise could otherwise have the key sign a high-slippage swap
+      // that drains value within the per-trade cap. Never sign blind on slippage.
+      const slippageBps = Math.min(Math.max(Math.round(p.slippageBps) || 0, 0), MAX_AUTO_SLIPPAGE_BPS);
+
+      const quote = await getQuote(p.fromTokenAddress, p.toTokenAddress, amountIn, slippageBps);
       if (!quote) { await releaseClaim(); return null; }
 
       const built = await buildSwapTransaction(quote, owner);
       if (!built?.swapTransaction) { await releaseClaim(); return null; }
 
       const tx = VersionedTransaction.deserialize(Buffer.from(built.swapTransaction, 'base64'));
+      const blockhash = tx.message.recentBlockhash;
       tx.sign([kp]);
 
       const conn = new Connection(rpc, 'confirmed');
@@ -146,16 +158,33 @@ export async function executeSolanaWithSessionKey(p: SessionCopyParams): Promise
         preflightCommitment: 'confirmed',
         maxRetries: 3,
       });
-      // SPEND COMMITTED. Record the signature (best-effort — never releases) and
-      // treat confirmation as non-fatal: the tx is already submitted whether or
-      // not we observe finality here.
       broadcastHash = sig;
       await admin.from('session_key_spends')
         .update({ broadcast_tx_hash: broadcastHash }).eq('id', claim.id)
         .then(() => {}, () => { /* hash persist is best-effort; never releases */ });
+
+      // Confirm with the blockhash strategy (the deprecated single-arg form uses
+      // a legacy ~30s polling timeout that throws even on success). Inspect the
+      // result: a tx can LAND in a block but REVERT (slippage failure, etc.),
+      // which resolves with value.err != null — it does NOT throw. In that case
+      // the swap never happened (only fees moved), so release the claim to
+      // restore daily-cap budget + idempotency and let the trade fall back/retry.
+      // A timeout/throw is UNKNOWN finality → do NOT release (it may have landed).
       try {
-        await conn.confirmTransaction(sig, 'confirmed');
-      } catch { /* already submitted; confirmation only */ }
+        const conf = await conn.confirmTransaction(
+          { signature: sig, blockhash, lastValidBlockHeight: built.lastValidBlockHeight },
+          'confirmed',
+        );
+        if (conf.value.err) {
+          await releaseClaim();
+          Sentry.captureMessage('Solana auto-copy tx reverted on-chain', {
+            level: 'warning',
+            tags: { module: 'solanaSessionKeySigner.execute', chain: p.chain },
+            extra: { sig, err: JSON.stringify(conf.value.err) },
+          });
+          return null;
+        }
+      } catch { /* unknown finality; tx was submitted, treat as executed */ }
       return { executed: true, broadcastTxHash: broadcastHash };
     } catch (err) {
       if (!broadcastHash) await releaseClaim();

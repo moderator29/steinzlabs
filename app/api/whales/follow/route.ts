@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { withTierGate } from "@/lib/subscriptions/apiTierGate";
+import { normalizeAddress } from "@/lib/utils/addressNormalize";
 
 export const runtime = "nodejs";
 
@@ -53,7 +54,7 @@ export const GET = withTierGate("pro", async (request: NextRequest) => {
     .from("user_whale_follows")
     .select("whale_address")
     .eq("user_id", user.id)
-    .eq("whale_address", whaleAddress)
+    .eq("whale_address", normalizeAddress(whaleAddress, chain))
     .eq("chain", chain)
     .maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -70,10 +71,12 @@ export const POST = withTierGate("pro", async (request: NextRequest) => {
     return NextResponse.json({ error: "Missing whale_address or chain" }, { status: 400 });
   }
 
+  // Normalize on write so the dispatcher's exact-match (Solana) and the
+  // following/unfollow lookups all agree: EVM lowercased, Solana case preserved.
   const { error } = await supabase.from("user_whale_follows").upsert(
     {
       user_id: user.id,
-      whale_address,
+      whale_address: normalizeAddress(whale_address, chain),
       chain,
       label: label ?? null,
       copy_mode: copy_mode ?? "alerts",
@@ -98,7 +101,7 @@ export const DELETE = withTierGate("pro", async (request: NextRequest) => {
     .from("user_whale_follows")
     .delete()
     .eq("user_id", user.id)
-    .eq("whale_address", whaleAddress)
+    .eq("whale_address", normalizeAddress(whaleAddress, chain))
     .eq("chain", chain);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
