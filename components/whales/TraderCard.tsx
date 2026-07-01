@@ -130,8 +130,8 @@ export default function TraderCard({ trader, watched, onOpen, onFollow, onToggle
             aria-label={watched ? 'Remove from watchlist' : 'Add to watchlist'}
             onClick={(e) => { e.stopPropagation(); onToggleWatch(); }}
             className={`inline-flex items-center justify-center h-7 w-7 rounded-md border transition-colors ${
-              watched ? 'bg-amber-400/15 border-amber-400/40 text-amber-300'
-                : 'bg-white/[0.04] border-white/10 text-slate-400 hover:text-amber-300 hover:border-amber-400/30'
+              watched ? 'bg-[#0066FF]/15 border-[#0066FF]/45 text-[#8FA3FF]'
+                : 'bg-white/[0.04] border-white/10 text-slate-400 hover:text-[#8FA3FF] hover:border-[#0066FF]/30'
             }`}
           >
             <Star className="w-3.5 h-3.5" fill={watched ? 'currentColor' : 'none'} />
@@ -170,7 +170,7 @@ export default function TraderCard({ trader, watched, onOpen, onFollow, onToggle
               aria-label="Copy trade this whale"
               title="Copy trade"
               onClick={(e) => { e.stopPropagation(); onCopy(); }}
-              className="inline-flex items-center justify-center gap-1 h-7 px-3 rounded-md bg-emerald-500/25 hover:bg-emerald-500/35 border border-emerald-400/50 ring-1 ring-emerald-400/20 text-emerald-100 text-[11px] font-bold transition-colors"
+              className="inline-flex items-center justify-center gap-1 h-7 px-3 rounded-md nl-glass border border-[#0066FF]/45 text-[#8FA3FF] hover:text-white hover:border-[#0066FF]/70 text-[11px] font-bold transition-colors"
             >
               <CopyIcon className="w-3.5 h-3.5" /> Copy
             </button>
@@ -184,7 +184,7 @@ export default function TraderCard({ trader, watched, onOpen, onFollow, onToggle
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onOpen(); }}
-            className="inline-flex items-center justify-center gap-0.5 h-7 px-2.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-[11px] text-slate-300 group-hover:text-white transition-colors"
+            className="inline-flex items-center justify-center gap-0.5 h-7 px-2.5 rounded-md nl-glass border border-[#0066FF]/30 text-[11px] text-[#8FA3FF] hover:text-white hover:border-[#0066FF]/60 transition-colors"
           >
             View <ChevronRight className="w-3 h-3" />
           </button>

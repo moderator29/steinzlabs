@@ -260,6 +260,14 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
     }
   }
 
+  // Rules of Hooks: useTabListKeys() is a hook (it calls useCallback), so it
+  // MUST run on every render in the same order. It was previously called
+  // inline in JSX below the `loading`/`!data` early returns, so a successful
+  // load reached one extra hook vs. the loading render → React threw
+  // "Rendered more hooks than during the previous render", which the error
+  // boundary showed as "Couldn't load this whale". Hoist it above the returns.
+  const onTabKeyDown = useTabListKeys(WHALE_TABS, WHALE_TABS.indexOf(tab), (t) => setTab(t));
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -389,7 +397,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
           <div
             role="tablist"
             aria-label="Whale detail sections"
-            onKeyDown={useTabListKeys(WHALE_TABS, WHALE_TABS.indexOf(tab), (t) => setTab(t))}
+            onKeyDown={onTabKeyDown}
             className="mt-5 flex gap-1 border-b border-slate-800 -mb-px overflow-x-auto"
           >
             {WHALE_TABS.map((t) => {
@@ -500,7 +508,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
                   unbackfilled rows; .toLocaleString() on undefined throws. */}
               <StatCard label="Followers" value={(data.followerCount ?? 0).toLocaleString()} />
               <StatCard label="Entity" value={w.entity_type ?? "unknown"} />
-              <StatCard label="Score" value={w.whale_score.toString()} />
+              <StatCard label="Score" value={w.whale_score?.toString() ?? 'n/a'} />
               <StatCard label="First seen" value={safeDateLabel(w.first_seen_at) || "n/a"} />
               <StatCard label="Last active" value={w.last_active_at ? relativeTime(w.last_active_at) : "n/a"} />
             </div>

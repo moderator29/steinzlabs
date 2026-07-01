@@ -14,7 +14,7 @@ import {
   getTokenDetail, getTopTokens, getTopGainers, getTrendingTokens,
   searchTokens, getCoinMarketChart, getMarketsByIds,
 } from '@/lib/services/coingecko';
-import { searchPairs, getNewPairs } from '@/lib/services/dexscreener';
+import { searchPairs, getNewPairs, getTokenPairs, type DexPair } from '@/lib/services/dexscreener';
 
 // Recognised majors → CoinGecko id. For these we price from CoinGecko and omit
 // a contract address, so the card never lands on a same-ticker DexScreener
@@ -1452,14 +1452,49 @@ export async function POST(request: NextRequest) {
       return null;
     })();
 
+    const isAddressQuery = Boolean(tokenDetected || chartPayload?.address);
     const cardQuery = tokenDetected || chartPayload?.address || symbolQuery;
     if (cardQuery) {
       try {
-        // Majors → CoinGecko (authoritative), no address so the client's
-        // symbol path stays on CoinGecko. Memecoins / pump.fun / four.meme
-        // tokens (queried by address, not in MAJOR_CG_ID) fall through to
-        // DexScreener below — the right source for on-chain long-tail tokens.
-        const cgId = symbolQuery && !tokenDetected && !chartPayload?.address
+        // Build a tokenCard from a DexScreener pair (on-chain long-tail source).
+        const cardFromPair = (p: DexPair): Record<string, unknown> => ({
+          symbol: p.baseToken.symbol,
+          name: p.baseToken.name,
+          address: p.baseToken.address,
+          chain: p.chainId,
+          price: parseFloat(p.priceUsd || '0'),
+          change24h: p.priceChange?.h24 ?? 0,
+          volume24h: p.volume?.h24 ?? 0,
+          marketCap: p.marketCap ?? p.fdv ?? 0,
+          liquidity: p.liquidity?.usd ?? 0,
+          fdv: p.fdv ?? 0,
+          pairAddress: p.pairAddress,
+          dexId: p.dexId,
+          // DexScreener token-image CDN (allow-listed in next.config images)
+          // when the pair has no embedded imageUrl. TokenLogo degrades to the
+          // symbol initial if even this 404s.
+          logo: p.info?.imageUrl
+            || (p.baseToken.address && p.chainId
+              ? `https://dd.dexscreener.com/ds-data/tokens/${p.chainId}/${p.baseToken.address}.png`
+              : null),
+        });
+        // Rank pairs: exact symbol match first (for ticker queries), then
+        // deepest liquidity — so a wash-traded clone can't outrank the token
+        // the user actually named.
+        const pickBestPair = (pairs: DexPair[], symbol?: string): DexPair | null => {
+          if (pairs.length === 0) return null;
+          return [...pairs].sort((a, b) => {
+            if (symbol) {
+              const am = a.baseToken.symbol?.toUpperCase() === symbol.toUpperCase() ? 1 : 0;
+              const bm = b.baseToken.symbol?.toUpperCase() === symbol.toUpperCase() ? 1 : 0;
+              if (am !== bm) return bm - am;
+            }
+            return (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0);
+          })[0];
+        };
+
+        // 1) Majors → CoinGecko by known id (authoritative).
+        const cgId = symbolQuery && !isAddressQuery
           ? MAJOR_CG_ID[symbolQuery.toUpperCase()]
           : null;
         if (cgId) {
@@ -1477,34 +1512,48 @@ export async function POST(request: NextRequest) {
             };
           }
         }
-        const pairs = tokenCard ? [] : await searchPairs(cardQuery);
-        if (!tokenCard && pairs.length > 0) {
-          // Prefer the highest-liquidity pair so we don't land on a scam fork.
-          const p = [...pairs].sort(
-            (a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0),
-          )[0];
-          tokenCard = {
-            symbol: p.baseToken.symbol,
-            name: p.baseToken.name,
-            address: p.baseToken.address,
-            chain: p.chainId,
-            price: parseFloat(p.priceUsd || '0'),
-            change24h: p.priceChange?.h24 ?? 0,
-            volume24h: p.volume?.h24 ?? 0,
-            marketCap: p.marketCap ?? p.fdv ?? 0,
-            liquidity: p.liquidity?.usd ?? 0,
-            fdv: p.fdv ?? 0,
-            pairAddress: p.pairAddress,
-            dexId: p.dexId,
-            // Fall back to the DexScreener token-image CDN (allow-listed in
-            // next.config images) when the pair has no embedded imageUrl —
-            // majors like SOL arrive with info.imageUrl null otherwise.
-            // TokenLogo degrades to the symbol initial if even this 404s.
-            logo: p.info?.imageUrl
-              || (p.baseToken.address && p.chainId
-                ? `https://dd.dexscreener.com/ds-data/tokens/${p.chainId}/${p.baseToken.address}.png`
-                : null),
-          };
+
+        // 2) Non-major TICKER (e.g. $naka) → resolve through CoinGecko search
+        //    FIRST so a wash-traded DexScreener clone can't outrank the real
+        //    listed token. Only fall to DexScreener when CoinGecko has nothing.
+        if (!tokenCard && symbolQuery && !isAddressQuery) {
+          try {
+            const { coins } = await searchTokens(symbolQuery);
+            const ranked = coins
+              .filter((c) => c.symbol?.toUpperCase() === symbolQuery.toUpperCase())
+              .sort((a, b) => (a.market_cap_rank ?? Number.MAX_SAFE_INTEGER) - (b.market_cap_rank ?? Number.MAX_SAFE_INTEGER));
+            const best = ranked[0];
+            if (best?.id) {
+              const [m] = await getMarketsByIds([best.id], false);
+              if (m) {
+                tokenCard = {
+                  symbol: (m.symbol || symbolQuery).toUpperCase(),
+                  name: m.name,
+                  price: m.current_price ?? 0,
+                  change24h: m.price_change_percentage_24h ?? 0,
+                  volume24h: m.total_volume ?? 0,
+                  marketCap: m.market_cap ?? 0,
+                  fdv: m.fully_diluted_valuation ?? m.market_cap ?? 0,
+                  logo: m.image || null,
+                };
+              }
+            }
+          } catch { /* fall through to DexScreener */ }
+        }
+
+        // 3) ADDRESS query → EXACT token lookup (getTokenPairs), not a fuzzy
+        //    text search. Deepest-liquidity pair for that exact token address.
+        if (!tokenCard && isAddressQuery) {
+          const addr = (tokenDetected || chartPayload?.address) as string;
+          const p = pickBestPair(await getTokenPairs(addr));
+          if (p) tokenCard = cardFromPair(p);
+        }
+
+        // 4) Last resort — ticker with no CoinGecko listing → DexScreener
+        //    search, ranked by exact-symbol match then liquidity.
+        if (!tokenCard && symbolQuery) {
+          const p = pickBestPair(await searchPairs(symbolQuery), symbolQuery);
+          if (p) tokenCard = cardFromPair(p);
         }
       } catch (err) {
         logger.error({ err: err }, '[vtx-ai] Token card build failed:');

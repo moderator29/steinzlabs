@@ -567,8 +567,8 @@ function WhaleCard({ row, watched, onOpen, onFollow, onToggleWatch, onCopy }: {
             onClick={(e) => { e.stopPropagation(); onToggleWatch(); }}
             className={`inline-flex items-center justify-center h-7 w-7 rounded-md border transition-colors ${
               watched
-                ? 'bg-amber-400/15 border-amber-400/40 text-amber-300'
-                : 'bg-white/[0.04] border-white/10 text-slate-400 hover:text-amber-300 hover:border-amber-400/30'
+                ? 'bg-[#0066FF]/15 border-[#0066FF]/45 text-[#8FA3FF]'
+                : 'bg-white/[0.04] border-white/10 text-slate-400 hover:text-[#8FA3FF] hover:border-[#0066FF]/30'
             }`}
           >
             <Star className="w-3.5 h-3.5" fill={watched ? 'currentColor' : 'none'} />
@@ -617,7 +617,7 @@ function WhaleCard({ row, watched, onOpen, onFollow, onToggleWatch, onCopy }: {
               type="button"
               aria-label="Copy trade this whale"
               onClick={(e) => { e.stopPropagation(); onCopy(); }}
-              className="inline-flex items-center justify-center h-7 w-7 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 transition-colors"
+              className="inline-flex items-center justify-center h-7 w-7 rounded-md nl-glass border border-[#0066FF]/45 text-[#8FA3FF] hover:text-white hover:border-[#0066FF]/70 transition-colors"
               title="Copy trade"
             >
               <CopyIcon className="w-3.5 h-3.5" />
@@ -632,7 +632,7 @@ function WhaleCard({ row, watched, onOpen, onFollow, onToggleWatch, onCopy }: {
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onOpen(); }}
-            className="inline-flex items-center justify-center gap-0.5 h-7 px-2.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-[11px] text-slate-300 group-hover:text-white transition-colors"
+            className="inline-flex items-center justify-center gap-0.5 h-7 px-2.5 rounded-md nl-glass border border-[#0066FF]/30 text-[11px] text-[#8FA3FF] hover:text-white hover:border-[#0066FF]/60 transition-colors"
           >
             View <ChevronRight className="w-3 h-3" />
           </button>

@@ -52,21 +52,26 @@ export function BackButton({ href, label, className = "", compact = false }: Bac
         whileHover={{ x: -1 }}
         whileTap={{ scale: 0.9 }}
         aria-label={label || "Go back"}
-        className={`group inline-flex items-center justify-center h-7 w-7 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors ${className}`}
+        className={`group inline-flex items-center justify-center h-8 w-8 rounded-lg nl-glass border border-white/10 text-slate-400 hover:text-[#0066FF] hover:border-[#0066FF]/40 transition-colors ${className}`}
       >
         <ArrowLeft size={15} className="transition-colors" />
       </motion.button>
     );
   }
 
+  // Default: a small square glass container around the icon (platform-wide
+  // back-button spec) with the optional label sitting beside it.
   return (
     <motion.button
       onClick={handleClick}
       whileHover={{ x: -2 }}
       whileTap={{ scale: 0.95 }}
-      className={`group inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900/40 hover:nl-glass/50 hover:border-blue-500/30 transition-all ${className}`}
+      aria-label={label || "Go back"}
+      className={`group inline-flex items-center gap-2 ${className}`}
     >
-      <ArrowLeft size={16} className="text-slate-400 group-hover:text-blue-400 transition-colors" />
+      <span className="inline-flex items-center justify-center h-8 w-8 rounded-lg nl-glass border border-white/10 group-hover:border-[#0066FF]/40 transition-colors">
+        <ArrowLeft size={16} className="text-slate-400 group-hover:text-[#0066FF] transition-colors" />
+      </span>
       {label && <span className="text-sm text-slate-400 group-hover:text-slate-200 transition-colors">{label}</span>}
     </motion.button>
   );
