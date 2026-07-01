@@ -55,7 +55,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuroraBackground fullHeight>
-    <div className="min-h-screen text-white flex">
+    <div className="naka-auth-page min-h-screen text-white flex">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[20%] left-[10%] w-[600px] h-[600px] bg-[#0066FF]/[0.04] rounded-full blur-[150px]" />
         <div className="absolute bottom-[10%] right-[5%] w-[400px] h-[400px] bg-[#7C3AED]/[0.03] rounded-full blur-[150px]" />
