@@ -49,6 +49,13 @@ export interface PriceCardProps {
   pctUnlocked?: number | null;
   /** Deep link to the token's full intelligence view ("Orb"). Hidden when absent. */
   orbUrl?: string;
+  /**
+   * Whether the price series has finished loading. Defaults to true because
+   * the card can't otherwise distinguish "still fetching" from "no data".
+   * While false we show a pulse skeleton; once true, an insufficient series
+   * resolves to a terminal "Chart unavailable" state instead of pulsing forever.
+   */
+  chartLoaded?: boolean;
 }
 
 function Stat({ label, value, sub, tile = false }: { label: string; value: string; sub?: React.ReactNode; tile?: boolean }) {
@@ -67,6 +74,7 @@ export function PriceCard(props: PriceCardProps) {
     price, change24h, points,
     volume24h, volumeChange24h,
     marketCap, liquidity, supply, fdv, pctUnlocked, orbUrl,
+    chartLoaded = true,
   } = props;
 
   const [copied, setCopied] = useState(false);
@@ -136,6 +144,10 @@ export function PriceCard(props: PriceCardProps) {
         <div className="mt-3 h-28 w-full">
           {points && points.length > 1 ? (
             <SparklineChart data={points} isPositive={positive} height={112} />
+          ) : chartLoaded ? (
+            <div className="h-full w-full flex items-center justify-center">
+              <span className="text-[11px] text-gray-500">Chart unavailable</span>
+            </div>
           ) : (
             <div className="h-full w-full flex items-center" aria-hidden>
               <div className="w-full h-16 rounded bg-gradient-to-r from-white/[0.02] via-white/[0.06] to-white/[0.02] animate-pulse" />

@@ -508,7 +508,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
                   unbackfilled rows; .toLocaleString() on undefined throws. */}
               <StatCard label="Followers" value={(data.followerCount ?? 0).toLocaleString()} />
               <StatCard label="Entity" value={w.entity_type ?? "unknown"} />
-              <StatCard label="Score" value={w.whale_score.toString()} />
+              <StatCard label="Score" value={w.whale_score?.toString() ?? 'n/a'} />
               <StatCard label="First seen" value={safeDateLabel(w.first_seen_at) || "n/a"} />
               <StatCard label="Last active" value={w.last_active_at ? relativeTime(w.last_active_at) : "n/a"} />
             </div>

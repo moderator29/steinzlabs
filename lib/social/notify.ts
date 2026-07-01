@@ -30,6 +30,17 @@ import { queueTelegramNotification } from '@/lib/telegram/notify';
  * existence check within a short window).
  */
 
+/** Escape HTML-significant characters so user-controlled content can't inject
+ *  markup into the notification email (phishing / spoofed CTAs). */
+function escapeHtml(input: unknown): string {
+  return String(input ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export type SocialEvent =
   | 'new_follower'           // someone followed you
   | 'follow_request'         // someone wants to follow your private account
@@ -232,7 +243,7 @@ export async function notifySocialEvent({ recipient_id, event, metadata }: Notif
             to: emailRow.email,
             from: process.env.RESEND_FROM_EMAIL ?? 'alerts@nakalabs.xyz',
             subject: title,
-            html: `<p>${body}</p>${url ? `<p><a href="https://nakalabs.xyz${url}">Open in Naka</a></p>` : ''}<p style="color:#94a3b8;font-size:12px;">NakaLabs · <a href="https://nakalabs.xyz">nakalabs.xyz</a></p>`,
+            html: `<p>${escapeHtml(body)}</p>${url ? `<p><a href="https://nakalabs.xyz${escapeHtml(url)}">Open in Naka</a></p>` : ''}<p style="color:#94a3b8;font-size:12px;">NakaLabs · <a href="https://nakalabs.xyz">nakalabs.xyz</a></p>`,
           });
         }
       } catch (err) {

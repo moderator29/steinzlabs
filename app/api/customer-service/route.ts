@@ -1,6 +1,7 @@
 import 'server-only';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { vtxQuery } from '@/lib/services/anthropic';
+import { guardRoute } from '@/lib/api/guardRoute';
 
 const SUPPORT_SYSTEM_PROMPT = `You are the NAKA LABS AI Customer Service assistant. You help users with questions about the platform, its features, troubleshooting, and general crypto guidance.
 
@@ -86,7 +87,12 @@ A: NAKA LABS is an independent on-chain intelligence platform built for professi
 - If unsure, escalate to human support.
 - Keep responses under 150 words unless a detailed explanation is genuinely needed.`;
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // This calls the LLM on every request; without a guard it's an
+  // unauthenticated cost/abuse vector. Rate-limit (anon allowed — support
+  // is available pre-login).
+  const guard = await guardRoute(request, { rate: 'med', allowAnon: true });
+  if (!guard.ok) return guard.response;
   try {
     const { message, history } = await request.json();
 

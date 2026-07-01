@@ -403,9 +403,17 @@ function InlineChart({ type, token, address, data }: ChartInfo) {
       <div className="mt-2 p-3 bg-[#0d1117] rounded-lg border border-white/10">
         <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-2">Top Holders Distribution</p>
         {holders.length === 0 ? (
-          <div className="flex items-center gap-2 text-xs text-gray-500 py-2">
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-500" />
-            Fetching holder data from Sargon Archive...
+          <div className="text-xs text-gray-500 py-2">
+            {address ? (
+              <a
+                href={`/dashboard/bubble-map?address=${address}`}
+                className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300 transition-colors"
+              >
+                Open the full Bubble Map for live holder data →
+              </a>
+            ) : (
+              'Holder distribution is not available for this token right now.'
+            )}
           </div>
         ) : (
           holders.map((holder, i) => (
@@ -501,9 +509,17 @@ function InlineChart({ type, token, address, data }: ChartInfo) {
       <div className="mt-2 p-3 bg-[#0d1117] rounded-lg border border-white/10">
         <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-2">Holder Bubble Map</p>
         {holders.length === 0 ? (
-          <div className="flex items-center gap-2 text-xs text-gray-500 py-2">
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-500" />
-            Fetching holder data from Sargon Archive...
+          <div className="text-xs text-gray-500 py-2">
+            {address ? (
+              <a
+                href={`/dashboard/bubble-map?address=${address}`}
+                className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300 transition-colors"
+              >
+                Open the full Bubble Map for live holder data →
+              </a>
+            ) : (
+              'Holder distribution is not available for this token right now.'
+            )}
           </div>
         ) : (
           <>
@@ -768,7 +784,7 @@ export default function VtxAiTab() {
             const dataLine = event.split('\n').find(l => l.startsWith('data:'));
             if (!dataLine) continue;
             try {
-              const json = JSON.parse(dataLine.slice(5).trim()) as { delta?: string; done?: boolean; reply?: string; error?: string; suggestions?: unknown };
+              const json = JSON.parse(dataLine.slice(5).trim()) as { delta?: string; done?: boolean; reply?: string; error?: string; suggestions?: unknown; chartType?: string; chartData?: unknown; chartAddress?: string; chartToken?: string };
               if (json.error) {
                 throw new Error(json.error);
               }
@@ -794,6 +810,18 @@ export default function VtxAiTab() {
                 let chartInfo: ChartInfo | undefined;
                 if (chartTagMatch) {
                   chartInfo = { type: chartTagMatch[1].toLowerCase() as ChartInfo['type'] };
+                }
+                // The route may stream structured chart fields alongside the
+                // reply (e.g. holder/bubble token-card data). When present,
+                // use them so those charts render with real data instead of an
+                // empty panel; otherwise the [CHART:...] tag behaviour stands.
+                if (!chartInfo && typeof json.chartType === 'string') {
+                  chartInfo = { type: json.chartType.toLowerCase() as ChartInfo['type'] };
+                }
+                if (chartInfo) {
+                  if (json.chartData !== undefined) chartInfo.data = json.chartData;
+                  if (typeof json.chartAddress === 'string') chartInfo.address = json.chartAddress;
+                  if (typeof json.chartToken === 'string') chartInfo.token = json.chartToken;
                 }
                 const streamedSuggestions: string[] | undefined = Array.isArray(json.suggestions)
                   ? (json.suggestions as unknown[]).filter((s): s is string => typeof s === 'string').slice(0, 4)
@@ -838,14 +866,25 @@ export default function VtxAiTab() {
         // Parse chart signals from the API response
         let chartInfo: ChartInfo | undefined;
 
-        // 1. Check if the API explicitly returned a chart field
+        // 1. Check if the API explicitly returned a chart field. The route
+        //    returns an object ({ type, token, address, data }); older shapes
+        //    may still send a bare type string, so handle both.
         if (data.chart) {
-          chartInfo = {
-            type: data.chart as ChartInfo['type'],
-            token: data.chartToken,
-            address: data.chartAddress,
-            data: data.chartData,
-          };
+          if (typeof data.chart === 'object') {
+            chartInfo = {
+              type: data.chart.type as ChartInfo['type'],
+              token: data.chart.token ?? data.chartToken,
+              address: data.chart.address ?? data.chartAddress,
+              data: data.chart.data ?? data.chartData,
+            };
+          } else {
+            chartInfo = {
+              type: data.chart as ChartInfo['type'],
+              token: data.chartToken,
+              address: data.chartAddress,
+              data: data.chartData,
+            };
+          }
         }
 
         // 2. Scan reply text for [CHART:type] tags
@@ -1213,11 +1252,16 @@ export default function VtxAiTab() {
             const cleanedAssistant =
               msg.role === 'assistant'
                 ? msg.content
-                    .replace(/\*\*/g, '')
-                    .replace(/\*/g, '')
+                    // Strip emphasis to a space so inline bold with no leading
+                    // space ("now.**Straight**") doesn't glue into "now.Straight".
+                    .replace(/\*\*/g, ' ')
+                    .replace(/\*/g, ' ')
                     .replace(/^#{1,6}\s/gm, '')
                     .replace(/^[-]+\s/gm, '')
                     .replace(/^—\s/gm, '')
+                    .replace(/[ \t]{2,}/g, ' ')
+                    .replace(/[ \t]+\n/g, '\n')
+                    .replace(/\n[ \t]+/g, '\n')
                 : msg.content;
             return (
               <div

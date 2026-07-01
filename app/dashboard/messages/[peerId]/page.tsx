@@ -3,7 +3,7 @@
 import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Lock, LockOpen, Send, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Lock, LockOpen, Send, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import {
   decryptMessage,
@@ -69,6 +69,10 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
   // only claims "Encrypted" when this is true AND the key is actually loaded,
   // so the UI never overstates what's happening to the bytes.
   const [isEncrypted, setIsEncrypted] = useState(false);
+  // TOFU: true when the peer's server-provided public key differs from the one
+  // first pinned for them. Encryption is server-mediated (the server hands back
+  // the peer key), so a change may indicate a MITM key swap — warn, don't hide.
+  const [peerKeyChanged, setPeerKeyChanged] = useState(false);
   const [me, setMe] = useState<string | null>(null);
   // #43: whether *I* have blocked the peer. The send API shadow-accepts a
   // blocked peer's message (they don't learn they're blocked), so the row
@@ -159,10 +163,11 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
       let myKeys: { publicKey: string; privateKey: string } | null = null;
       try {
         myKeys = await ensureKeyVault();
-        const peerPub = await fetchPeerPublicKey(peerId);
+        const peerKey = await fetchPeerPublicKey(peerId);
+        if (!cancelled && peerKey.changed) setPeerKeyChanged(true);
         freshKey = await generateConversationKey();
         sealedSelf = await sealConversationKey(freshKey, myKeys.publicKey);
-        sealedPeer = await sealConversationKey(freshKey, peerPub);
+        sealedPeer = await sealConversationKey(freshKey, peerKey.publicKey);
       } catch {
         // Peer has no published key (or vault failed) — plaintext fallback.
         sealedSelf = undefined;
@@ -479,9 +484,18 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
           )}
           <div className="min-w-0">
             <div className="text-sm font-semibold text-white truncate leading-tight">{peerName}</div>
-            <div className="inline-flex items-center gap-1 text-[10px] leading-tight" title={isEncrypted && convKey ? 'End-to-end encrypted' : 'Not end-to-end encrypted'}>
+            <div
+              className="inline-flex items-center gap-1 text-[10px] leading-tight"
+              title={
+                isEncrypted && convKey
+                  ? 'Encrypted. Message content is encrypted with libsodium, but public keys are distributed through our server, so we do not call this fully end-to-end verified.'
+                  : 'Not encrypted'
+              }
+            >
               {isEncrypted && convKey
-                ? <span className="text-emerald-300/90 inline-flex items-center gap-1"><ShieldCheck className="w-2.5 h-2.5" />Encrypted</span>
+                ? peerKeyChanged
+                  ? <span className="text-amber-300 inline-flex items-center gap-1"><AlertTriangle className="w-2.5 h-2.5" />Key changed</span>
+                  : <span className="text-emerald-300/90 inline-flex items-center gap-1"><ShieldCheck className="w-2.5 h-2.5" />Encrypted</span>
                 : plaintext
                   ? <span className="text-slate-500 inline-flex items-center gap-1"><LockOpen className="w-2.5 h-2.5" />Not encrypted</span>
                   : <span className="text-slate-500">{peer?.username ? `@${peer.username}` : ''}</span>}
@@ -489,6 +503,20 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
           </div>
         </Link>
       </div>
+
+      {/* Peer key changed — TOFU warning. The key distributed by the server for
+          this peer differs from the one we first pinned, which can mean the peer
+          reset their device/keypair OR that key distribution was tampered with.
+          Surface it instead of silently trusting the new key. */}
+      {peerKeyChanged && (
+        <div className="mx-3 mt-3 rounded-xl border border-amber-400/40 bg-amber-400/[0.08] p-3 flex items-start gap-2 shrink-0">
+          <AlertTriangle className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
+          <div className="min-w-0 text-[12px] text-amber-100/90">
+            <span className="font-semibold text-amber-200">This contact’s encryption key changed.</span>{' '}
+            New messages are encrypted to the new key. This is expected if they reset their device, but if you weren’t expecting it, verify with them through another channel before sharing anything sensitive.
+          </div>
+        </div>
+      )}
 
       {/* Incoming request banner */}
       {isIncomingRequest && (
@@ -544,7 +572,7 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
             </Link>
             <p className="text-[11px] text-slate-500 max-w-xs inline-flex items-center gap-1.5 mt-1">
               {isEncrypted && convKey ? <Lock className="w-3 h-3" /> : <LockOpen className="w-3 h-3" />}
-              {isEncrypted && convKey ? 'Messages in this thread are end-to-end encrypted.' : 'Messages are not end-to-end encrypted.'}
+              {isEncrypted && convKey ? 'Messages in this thread are encrypted. Keys are distributed through our server.' : 'Messages are not encrypted.'}
             </p>
           </div>
         ) : (

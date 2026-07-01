@@ -18,7 +18,7 @@ export interface OnboardingCard {
 export const ONBOARDING_CARDS: OnboardingCard[] = [
   {
     index: 1,
-    title: { a: 'Welcome to Steinz Labs', b: 'Welcome to Naka Labs' },
+    title: { a: 'Welcome to Naka Labs', b: 'Welcome to Naka Labs' },
     body: {
       a: 'Multi-chain crypto intelligence and trading. Built for serious traders.\nLet\'s walk through what makes us different.',
       b: 'The professional intelligence layer for on-chain markets. Built for traders who measure twice.\nLet\'s tour what makes Naka different.',
@@ -85,7 +85,7 @@ export const ONBOARDING_CARDS: OnboardingCard[] = [
     index: 9,
     title: { a: 'Customize Your Experience' },
     body: {
-      a: 'Dark or light mode. Personalize notifications. Choose your default chain.\nMake Steinz Labs feel like home.',
+      a: 'Dark or light mode. Personalize notifications. Choose your default chain.\nMake Naka Labs feel like home.',
     },
     illustration: 'palette',
   },

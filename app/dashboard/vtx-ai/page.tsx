@@ -16,6 +16,7 @@ import { SwapCard, type SwapCardData } from '@/components/vtx/SwapCard';
 import { PriceCard } from '@/components/market/PriceCard';
 import { useNakaWallet } from '@/lib/hooks/useNakaWallet';
 import { useFeatureUsageLog } from '@/lib/hooks/useFeatureUsageLog';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 // TokenCardData accepts both legacy string fields (parsed from reply text)
 // and the richer server shape (numbers + contractAddress + chain) so the
@@ -92,19 +93,28 @@ function saveHistory(messages: Message[]) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-50))); } catch { /* localStorage unavailable — silently ignore */ }
 }
 
-async function syncHistoryToSupabase(messages: Message[]) {
+// Persists the active thread to Supabase. Sends the thread's conversation
+// id (when known) so the server UPSERTs a single row instead of INSERTing a
+// fresh row on every assistant message — the latter created ~50 duplicate
+// "snapshot" rows per thread. Returns the row id so the caller can pin it
+// for subsequent syncs.
+async function syncHistoryToSupabase(messages: Message[], conversationId: string | null): Promise<string | null> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) return conversationId;
     const recent = messages.slice(-50);
     const title = recent.find(m => m.role === 'user')?.content?.slice(0, 60) || 'VTX Conversation';
-    await fetch('/api/vtx/conversations', {
+    const res = await fetch('/api/vtx/conversations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, messages: recent }),
+      body: JSON.stringify({ id: conversationId ?? undefined, title, messages: recent }),
     });
+    if (!res.ok) return conversationId;
+    const json = await res.json().catch(() => null);
+    return json?.conversation?.id ?? conversationId;
   } catch (err) {
     console.error('[VTX] Failed to sync history to Supabase:', err instanceof Error ? err.message : err);
+    return conversationId;
   }
 }
 
@@ -149,7 +159,10 @@ function parseTokenCards(content: string): TokenCardData[] {
         marketCap: `$${match[4]}`,
         volume: `$${match[5]}`,
         chain: 'multi',
-        logo: `https://assets.coingecko.com/coins/images/1/small/bitcoin.png`,
+        // No logo here — this text-parsed fallback has no real logo URL.
+        // Leave undefined so <TokenLogo> renders the symbol initial instead
+        // of falsely showing the Bitcoin icon for every token.
+        logo: undefined,
       });
     }
   }
@@ -201,8 +214,13 @@ function chartCacheKey(token: TokenCardData): string {
   // crashed the entire messages.map() render. That's the source of the
   // 'empty middle column' bug — every TokenCard inside any prior message
   // would explode and React would bail on the whole map.
-  const key = String(token.address ?? token.symbol ?? 'unknown');
-  return `${key.toLowerCase()}:${String(token.chain ?? '').toLowerCase()}`;
+  // Address must stay case-sensitive for Solana (base58) — route it through
+  // the shared normalizer instead of a raw .toLowerCase(), which would
+  // collide or mis-key Solana mints. Symbol fallback can lowercase safely.
+  const key = token.address
+    ? normalizeAddress(token.address, token.chain)
+    : String(token.symbol ?? 'unknown').toLowerCase();
+  return `${key}:${String(token.chain ?? '').toLowerCase()}`;
 }
 
 function TokenCard({ token }: { token: TokenCardData }) {
@@ -232,6 +250,8 @@ function TokenCard({ token }: { token: TokenCardData }) {
       ? { volume24h: cachedFresh.volume24h, liquidity: cachedFresh.liquidity, marketCap: cachedFresh.marketCap, fdv: cachedFresh.fdv, supply: cachedFresh.supply, name: cachedFresh.name, holders: cachedFresh.holders, trusted: cachedFresh.trusted, orbUrl: cachedFresh.orbUrl }
       : null,
   );
+  // Whether the /api/vtx/token-card fetch has resolved (cached = already done).
+  const [chartResolved, setChartResolved] = useState<boolean>(!!cachedFresh);
 
   useEffect(() => {
     if (cachedFresh) return;
@@ -282,7 +302,11 @@ function TokenCard({ token }: { token: TokenCardData }) {
           });
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      // Mark the chart fetch resolved (success, non-OK, or error) so PriceCard
+      // shows a terminal "Chart unavailable" instead of pulsing forever when a
+      // token genuinely has no chart points.
+      .finally(() => { if (!cancelled) setChartResolved(true); });
     return () => { cancelled = true; };
   }, [token.address, token.chain, token.symbol, cacheKey, cachedFresh]);
 
@@ -303,6 +327,7 @@ function TokenCard({ token }: { token: TokenCardData }) {
       price={numericPrice}
       change24h={numericChange}
       points={chart?.points}
+      chartLoaded={chartResolved}
       volume24h={stats?.volume24h ?? null}
       marketCap={stats?.marketCap ?? null}
       liquidity={stats?.liquidity ?? null}
@@ -411,6 +436,10 @@ function VtxAiPageInner() {
   const inputRef = useRef<HTMLInputElement>(null);
   const initialized = useRef(false);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Stable id of the Supabase row backing the active thread. Sent on every
+  // sync so the server updates ONE row instead of inserting a new snapshot
+  // row per assistant message. null = new/unsaved thread (first sync inserts).
+  const conversationIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!initialized.current) {
@@ -426,26 +455,41 @@ function VtxAiPageInner() {
           if (Array.isArray(parsed)) setChatSessions(parsed);
         }
       } catch { /* Malformed JSON — return default */ }
-      // Background: load conversation history from Supabase.
-      // Dedupe by conversation id — the API can return one row per message
-      // tuple if the schema joins messages, which would stack 8 copies of
-      // "tell me about squidgrow" in the rail (reported bug).
+      // Background: load conversation history from Supabase, collapsing the
+      // duplicate "snapshot" rows a prior sync bug produced (see below).
       fetch('/api/vtx/conversations')
         .then(r => r.json())
         .then(({ conversations }) => {
           if (conversations && conversations.length > 0) {
-            const seen = new Set<string>();
-            const entries: ChatHistoryEntry[] = [];
-            for (const c of conversations as { id: string; title: string; messages: Message[]; updated_at: string }[]) {
-              if (!c?.id || seen.has(c.id)) continue;
-              seen.add(c.id);
-              entries.push({
-                id: c.id,
-                date: c.updated_at,
-                messages: c.messages || [],
-                preview: c.title || 'VTX Conversation',
-              });
+            // Collapse the "snapshot" duplicates a prior sync bug created:
+            // one row was inserted per assistant message, all sharing a
+            // title. Keep, per title, the row with the MOST messages (the
+            // complete thread); newest wins on a tie. Date comes from
+            // created_at so an actively-updated thread still shows when it
+            // actually started, not "today".
+            const byTitle = new Map<string, ChatHistoryEntry & { _count: number; _updated: string }>();
+            for (const c of conversations as { id: string; title: string; messages: Message[]; created_at: string; updated_at: string }[]) {
+              if (!c?.id) continue;
+              const title = c.title || 'VTX Conversation';
+              const count = Array.isArray(c.messages) ? c.messages.length : 0;
+              const existing = byTitle.get(title);
+              if (
+                !existing ||
+                count > existing._count ||
+                (count === existing._count && c.updated_at > existing._updated)
+              ) {
+                byTitle.set(title, {
+                  id: c.id,
+                  date: c.created_at,
+                  messages: c.messages || [],
+                  preview: title,
+                  _count: count,
+                  _updated: c.updated_at,
+                });
+              }
             }
+            const entries: ChatHistoryEntry[] = Array.from(byTitle.values())
+              .map(({ _count, _updated, ...e }) => e);
             setChatSessions(entries);
           }
         })
@@ -461,6 +505,8 @@ function VtxAiPageInner() {
           .then(({ conversation }) => {
             if (conversation?.messages && Array.isArray(conversation.messages)) {
               setMessages(conversation.messages);
+              // Pin the thread so continued messages update this row.
+              conversationIdRef.current = conversation.id ?? conversationId;
             }
           })
           .catch(() => { /* fall through to normal state */ });
@@ -476,7 +522,9 @@ function VtxAiPageInner() {
     saveHistory(messages);
     const lastMsg = messages[messages.length - 1];
     if (lastMsg?.role === 'assistant') {
-      syncHistoryToSupabase(messages);
+      void syncHistoryToSupabase(messages, conversationIdRef.current).then((id) => {
+        conversationIdRef.current = id;
+      });
     }
   }, [messages]);
   // §vtx-scroll-race — was scrollIntoView({ behavior: 'smooth' }) on every
@@ -537,11 +585,17 @@ function VtxAiPageInner() {
       setMessages(entry.messages);
       saveHistory(entry.messages);
     }
+    // Only pin the id when it's a Supabase UUID (contains hyphens). Local
+    // sessions use a Date.now() numeric id that must NOT be sent as the
+    // Supabase row id; those start a fresh row on next sync.
+    conversationIdRef.current = entry.id.includes('-') ? entry.id : null;
     setShowHistory(false);
   };
 
   const clearChat = () => {
     saveChatSession();
+    // New thread → next sync inserts a fresh row rather than updating the old.
+    conversationIdRef.current = null;
     const fresh: Message[] = [{ role: 'assistant', content: 'New chat started. VTX Agent ready. What do you need?', timestamp: Date.now() }];
     setMessages(fresh);
     saveHistory(fresh);
@@ -724,7 +778,22 @@ function VtxAiPageInner() {
   };
 
   const cleanContent = (text: string) => {
-    return text.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^#{1,6}\s/gm, '').replace(/^[-]\s/gm, '').replace(/^[•]\s/gm, '').replace(/\s*---\s*/g, '\n\n').replace(/\s*--\s*/g, ' ');
+    // Strip markdown emphasis to a SPACE (not ''), otherwise the model's
+    // inline bold with no leading space (e.g. "right now.**Straight answer:**")
+    // collapses to "now.Straight". Then collapse the runs of spaces we may
+    // have introduced — but only spaces/tabs, never newlines (paragraph
+    // breaks are intentional and rendered via whitespace-pre-wrap).
+    return text
+      .replace(/\*\*/g, ' ')
+      .replace(/\*/g, ' ')
+      .replace(/^#{1,6}\s/gm, '')
+      .replace(/^[-]\s/gm, '')
+      .replace(/^[•]\s/gm, '')
+      .replace(/\s*---\s*/g, '\n\n')
+      .replace(/\s*--\s*/g, ' ')
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n[ \t]+/g, '\n');
   };
 
   // Aggregate sidecar data from current message stream.
@@ -1181,7 +1250,10 @@ function VtxAiPageInner() {
                 )}
                 {msg.role === 'assistant' && msg.suggestions && msg.suggestions.length > 0 && i === messages.length - 1 && (
                   <div className="mt-3 pt-3 border-t border-white/[0.06]">
-                    <div className="flex flex-wrap gap-1.5">
+                    {/* pe-8 reserves the bottom-right corner so the absolutely
+                        positioned Copy button never overlays the last chip
+                        (visible on touch where :hover sticks after a tap). */}
+                    <div className="flex flex-wrap gap-1.5 pe-8">
                       {msg.suggestions.map((s, si) => (
                         <button key={si} onClick={() => handleSend(s)} className="px-2.5 py-1.5 bg-[#0066FF]/[0.06] border border-[#0066FF]/15 rounded-lg text-[10px] text-[#0066FF] hover:bg-[#0066FF]/10 transition-all">
                           {s}
@@ -1241,9 +1313,6 @@ function VtxAiPageInner() {
         )}
 
         <div className="flex gap-2 items-start">
-          <button onClick={() => setShowTools(!showTools)} className={`p-3 rounded-xl transition-all flex-shrink-0 border ${showTools ? 'bg-[#0066FF]/10 border-[#0066FF]/20 text-[#0066FF]' : 'bg-white/[0.02] border-white/[0.06] text-gray-500 hover:text-gray-300'}`}>
-            <Wrench className="w-4 h-4" />
-          </button>
           <div className="flex-1 flex items-start nl-glass/50 rounded-xl px-3 py-2 focus-within:border-[#0066FF]/40 focus-within:shadow-[0_0_0_3px_rgba(0,102,255,0.08)] transition-all">
             {settings.webSearch && (
               <div className="flex items-center gap-1 px-1.5 py-0.5 bg-[#0066FF]/10 rounded text-[9px] text-[#0066FF] font-semibold me-2 mt-1.5 flex-shrink-0">

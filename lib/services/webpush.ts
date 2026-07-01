@@ -1,4 +1,5 @@
 import 'server-only';
+import crypto from 'node:crypto';
 import { SignJWT, importPKCS8 } from 'jose';
 
 /**
@@ -29,6 +30,70 @@ export interface PushPayload {
   data?: Record<string, unknown>;
 }
 
+/**
+ * Single-block HKDF (RFC 5869) — all Web Push derivations output <= 32 bytes,
+ * so one HMAC-Expand round suffices. Returns the first `length` bytes.
+ */
+function hkdf(salt: Buffer, ikm: Buffer, info: Buffer, length: number): Buffer {
+  const prk = crypto.createHmac('sha256', salt).update(ikm).digest();
+  const okm = crypto
+    .createHmac('sha256', prk)
+    .update(Buffer.concat([info, Buffer.from([0x01])]))
+    .digest();
+  return okm.subarray(0, length);
+}
+
+/**
+ * Encrypt a Web Push payload using RFC 8291 (aes128gcm content encoding).
+ * Performs ECDH P-256 against the subscription's p256dh key, derives the
+ * content-encryption key + nonce via HKDF, then AES-128-GCM encrypts a single
+ * record. The returned buffer is the full aes128gcm body:
+ *   salt(16) | rs(4) | idlen(1) | server_public_key(65) | ciphertext | tag(16)
+ */
+function encryptPayload(
+  plaintextJson: string,
+  p256dhB64Url: string,
+  authB64Url: string
+): Buffer {
+  const clientPublicKey = Buffer.from(p256dhB64Url, 'base64url');
+  const clientAuthSecret = Buffer.from(authB64Url, 'base64url');
+
+  const localKeys = crypto.createECDH('prime256v1');
+  localKeys.generateKeys();
+  const serverPublicKey = localKeys.getPublicKey(); // 65-byte uncompressed point
+  const sharedSecret = localKeys.computeSecret(clientPublicKey);
+
+  const salt = crypto.randomBytes(16);
+
+  // RFC 8291 §3.3 — derive the input keying material from the ECDH secret.
+  const keyInfo = Buffer.concat([
+    Buffer.from('WebPush: info\0', 'utf8'),
+    clientPublicKey,
+    serverPublicKey,
+  ]);
+  const ikm = hkdf(clientAuthSecret, sharedSecret, keyInfo, 32);
+
+  // RFC 8188 §2.2 — content-encryption key + nonce for aes128gcm.
+  const cek = hkdf(salt, ikm, Buffer.from('Content-Encoding: aes128gcm\0', 'utf8'), 16);
+  const nonce = hkdf(salt, ikm, Buffer.from('Content-Encoding: nonce\0', 'utf8'), 12);
+
+  // Single, final record: payload followed by the 0x02 padding delimiter.
+  const record = Buffer.concat([Buffer.from(plaintextJson, 'utf8'), Buffer.from([0x02])]);
+
+  const cipher = crypto.createCipheriv('aes-128-gcm', cek, nonce);
+  const ciphertext = Buffer.concat([cipher.update(record), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+
+  const recordSize = 4096;
+  const header = Buffer.alloc(16 + 4 + 1 + serverPublicKey.length);
+  salt.copy(header, 0);
+  header.writeUInt32BE(recordSize, 16);
+  header.writeUInt8(serverPublicKey.length, 20);
+  serverPublicKey.copy(header, 21);
+
+  return Buffer.concat([header, ciphertext, authTag]);
+}
+
 async function getVapidToken(audience: string): Promise<string> {
   if (!VAPID_PRIVATE) throw new Error('VAPID_PRIVATE_KEY not set');
   const privateKey = await importPKCS8(
@@ -50,19 +115,27 @@ export async function sendWebPush(
   if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
     return { ok: false, error: 'VAPID keys not configured' };
   }
+  if (!subscription.keys?.p256dh || !subscription.keys?.auth) {
+    return { ok: false, error: 'Subscription missing p256dh/auth keys' };
+  }
   try {
     const { origin } = new URL(subscription.endpoint);
     const token = await getVapidToken(origin);
-    const body = JSON.stringify(payload);
+    // RFC 8291: the payload must be encrypted with the subscription's keys.
+    const body = encryptPayload(
+      JSON.stringify(payload),
+      subscription.keys.p256dh,
+      subscription.keys.auth
+    );
     const res = await fetch(subscription.endpoint, {
       method: 'POST',
       headers: {
         Authorization: `vapid t=${token},k=${VAPID_PUBLIC}`,
-        'Content-Type': 'application/json',
-        'Content-Encoding': 'aesgcm',
+        'Content-Type': 'application/octet-stream',
+        'Content-Encoding': 'aes128gcm',
         TTL: '86400',
       },
-      body,
+      body: new Uint8Array(body),
       signal: AbortSignal.timeout(TIMEOUT),
     });
     if (!res.ok && res.status !== 201) {

@@ -156,7 +156,9 @@ export async function setTelegramWebhook(url: string, secret: string): Promise<b
     const res = await fetchWithRetry(`${API_BASE}/bot${t}/setWebhook`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url, secret_token: secret, allowed_updates: ["message"] }),
+      // Must include callback_query or inline-button taps (help menu, chart
+      // refresh, etc.) are never delivered and every button silently no-ops.
+      body: JSON.stringify({ url, secret_token: secret, allowed_updates: ["message", "callback_query"] }),
       source: "telegram.setWebhook",
       timeoutMs: 5000,
       retries: 1,

@@ -1,5 +1,6 @@
 import 'server-only';
 import { cache, cacheKey, TTL, withCache } from '../api/cache-manager';
+import { normalizeAddress, type Chain } from '../utils/addressNormalize';
 
 /**
  * Dexscreener Service
@@ -58,7 +59,7 @@ export interface DexRecentTrade {
 // ─── API Functions ────────────────────────────────────────────────────────────
 
 export async function getTokenPairs(tokenAddress: string): Promise<DexPair[]> {
-  const key = cacheKey('dexscreener', 'token_pairs', { tokenAddress: tokenAddress.toLowerCase() });
+  const key = cacheKey('dexscreener', 'token_pairs', { tokenAddress: normalizeAddress(tokenAddress) });
   return withCache(key, TTL.TOKEN_PRICE, async () => {
     const data = await dexFetch(`/latest/dex/tokens/${tokenAddress}`) as { pairs: DexPair[] | null };
     return data.pairs ?? [];
@@ -66,7 +67,7 @@ export async function getTokenPairs(tokenAddress: string): Promise<DexPair[]> {
 }
 
 export async function getPair(chain: string, pairAddress: string): Promise<DexPair | null> {
-  const key = cacheKey('dexscreener', 'pair', { chain, pairAddress: pairAddress.toLowerCase() });
+  const key = cacheKey('dexscreener', 'pair', { chain, pairAddress: normalizeAddress(pairAddress, chain) });
   return withCache(key, TTL.TOKEN_PRICE, async () => {
     const data = await dexFetch(`/latest/dex/pairs/${chain}/${pairAddress}`) as { pairs: DexPair[] | null };
     return data.pairs?.[0] ?? null;
@@ -120,9 +121,16 @@ export async function getDexPriceForChain(tokenAddress: string, chain: string): 
  * Batch fetch token data for up to 30 token addresses at once.
  * Returns a map of mintAddress → best pair (highest liquidity).
  * Used for logo resolution and identity verification.
+ *
+ * Map keys are canonicalized via normalizeAddress(addr, chain): EVM addresses
+ * are lowercased, Solana (and other case-sensitive chains) are preserved.
+ * Pass `chain` when the caller knows it so two Solana mints differing only by
+ * case cannot collide; without it, address shape decides (0x-hex → lowercase,
+ * otherwise case-preserved). Look up results with the same normalization.
  */
 export async function getTokensMulti(
-  tokenAddresses: string[]
+  tokenAddresses: string[],
+  chain?: Chain
 ): Promise<Map<string, DexPair>> {
   const result = new Map<string, DexPair>();
   if (tokenAddresses.length === 0) return result;
@@ -130,11 +138,11 @@ export async function getTokensMulti(
   // Check individual caches first
   const uncached: string[] = [];
   for (const addr of tokenAddresses) {
-    const key = cacheKey('dexscreener', 'token_pairs', { tokenAddress: addr.toLowerCase() });
+    const key = cacheKey('dexscreener', 'token_pairs', { tokenAddress: normalizeAddress(addr, chain) });
     const hit = cache.get<DexPair[]>(key);
     if (hit && hit.length > 0) {
       const best = hit.sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0))[0];
-      result.set(addr.toLowerCase(), best);
+      result.set(normalizeAddress(addr, chain), best);
     } else {
       uncached.push(addr);
     }
@@ -156,7 +164,7 @@ export async function getTokensMulti(
       // Group by base token address, pick highest-liquidity pair per token
       const byToken = new Map<string, DexPair>();
       for (const pair of pairs) {
-        const addr = pair.baseToken.address.toLowerCase();
+        const addr = normalizeAddress(pair.baseToken.address, pair.chainId);
         const existing = byToken.get(addr);
         if (!existing || (pair.liquidity?.usd ?? 0) > (existing.liquidity?.usd ?? 0)) {
           byToken.set(addr, pair);
@@ -165,11 +173,12 @@ export async function getTokensMulti(
 
       // Write results + cache each token's pairs
       for (const addr of chunk) {
-        const best = byToken.get(addr.toLowerCase());
+        const norm = normalizeAddress(addr, chain);
+        const best = byToken.get(norm);
         if (best) {
-          result.set(addr.toLowerCase(), best);
+          result.set(norm, best);
           cache.set(
-            cacheKey('dexscreener', 'token_pairs', { tokenAddress: addr.toLowerCase() }),
+            cacheKey('dexscreener', 'token_pairs', { tokenAddress: norm }),
             [best],
             TTL.TOKEN_PRICE
           );

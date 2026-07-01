@@ -4,6 +4,7 @@ import * as Sentry from '@sentry/nextjs';
 import { getTopTokens, getTrendingTokens } from '@/lib/services/coingecko';
 import { guardRoute } from '@/lib/api/guardRoute';
 import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export interface NotificationItem {
   id: string;
@@ -29,6 +30,14 @@ function timeAgo(date: Date): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
+// Deterministic per-hour bucket for market-signal ids. Embedding Date.now()
+// in the id made every poll mint a "new" id, so read-state never stuck and the
+// unread badge stayed permanently inflated. Bucketing by the hour keeps the id
+// stable across polls while still rotating as the signal genuinely refreshes.
+function currentHourBucket(): number {
+  return Math.floor(Date.now() / 3_600_000);
+}
+
 async function fetchPriceAlerts(): Promise<NotificationItem[]> {
   try {
     const coins = await getTopTokens(1, 50);
@@ -39,7 +48,7 @@ async function fetchPriceAlerts(): Promise<NotificationItem[]> {
         const direction = change1h > 0 ? 'up' : 'down';
         const price = coin.current_price?.toLocaleString(undefined, { style: 'currency', currency: 'USD' }) || '$0';
         alerts.push({
-          id: `price-${coin.id}-${Date.now()}`,
+          id: `price-${coin.id}-${currentHourBucket()}`,
           type: 'price',
           title: 'Price Break',
           message: `${coin.name} (${coin.symbol?.toUpperCase()}) ${direction} ${Math.abs(change1h).toFixed(1)}% in 1h — now at ${price}`,
@@ -56,7 +65,7 @@ async function fetchTrending(): Promise<NotificationItem[]> {
   try {
     const coins = await getTrendingTokens();
     return coins.slice(0, 5).map((coin, i) => ({
-      id: `trending-${coin.id}-${Date.now()}-${i}`,
+      id: `trending-${coin.id}-${currentHourBucket()}`,
       type: 'trending' as const,
       title: 'Trending Token',
       message: `${coin.name} (${coin.symbol?.toUpperCase()}) is trending on CoinGecko`,
@@ -74,10 +83,12 @@ async function fetchSecurityAlerts(): Promise<NotificationItem[]> {
       const change1h = coin.price_change_percentage_1h_in_currency;
       if (change1h && change1h < -10) {
         alerts.push({
-          id: `security-${coin.id}-${Date.now()}`,
+          id: `security-${coin.id}-${currentHourBucket()}`,
           type: 'security',
-          title: 'Security Alert',
-          message: `${coin.name} (${coin.symbol?.toUpperCase()}) crashed ${Math.abs(change1h).toFixed(1)}% in 1h — potential risk event`,
+          // Market-movement signal, not a per-user security alert: this is a
+          // sharp 1h price drop across the market, honestly labelled as such.
+          title: 'Sharp Price Drop',
+          message: `${coin.name} (${coin.symbol?.toUpperCase()}) dropped ${Math.abs(change1h).toFixed(1)}% in the last 1h`,
           time: timeAgo(new Date(coin.last_updated || Date.now())),
           read: false,
         });
@@ -87,10 +98,10 @@ async function fetchSecurityAlerts(): Promise<NotificationItem[]> {
       const suspicious = coins.filter(c => (c.total_volume || 0) / (c.market_cap || 1) > 2);
       for (const coin of suspicious.slice(0, 2)) {
         alerts.push({
-          id: `security-vol-${coin.id}-${Date.now()}`,
+          id: `security-vol-${coin.id}-${currentHourBucket()}`,
           type: 'security',
-          title: 'Security Alert',
-          message: `${coin.name} (${coin.symbol?.toUpperCase()}) has unusually high volume-to-mcap ratio — monitor closely`,
+          title: 'High Volume-to-MCap',
+          message: `${coin.name} (${coin.symbol?.toUpperCase()}) has an unusually high 24h volume-to-market-cap ratio`,
           time: timeAgo(new Date(coin.last_updated || Date.now())),
           read: false,
         });
@@ -107,10 +118,12 @@ async function fetchWhaleAlerts(): Promise<NotificationItem[]> {
       const vol = coin.total_volume || 0;
       const volStr = vol >= 1e9 ? `$${(vol / 1e9).toFixed(1)}B` : `$${(vol / 1e6).toFixed(0)}M`;
       return {
-        id: `whale-${coin.id}-${Date.now()}-${i}`,
+        // Market-movement signal, not a per-user whale alert: this is the
+        // token's aggregate 24h trading volume, honestly labelled.
+        id: `whale-${coin.id}-${currentHourBucket()}`,
         type: 'whale' as const,
-        title: 'Whale Alert',
-        message: `${coin.name} 24h volume at ${volStr} — large institutional activity detected`,
+        title: 'High Trading Volume',
+        message: `${coin.name} 24h trading volume at ${volStr}`,
         time: timeAgo(new Date(Date.now() - i * 600000)),
         read: false,
       };
@@ -202,7 +215,7 @@ export async function POST(req: NextRequest) {
   if (!guard.ok) return guard.response;
   try {
     const body = await req.json();
-    const { type, metadata, userEmail, eventId } = body;
+    const { type, metadata, eventId } = body;
     // Security (#40): never trust a client-supplied user_id. A public caller may
     // only write a notification to its OWN session user; a trusted server caller
     // (cron/webhook fanout) authenticates with the CRON_SECRET bearer and may
@@ -261,19 +274,34 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       Sentry.captureException(err, { tags: { route: 'notifications', stage: 'persist' } });
     }
-    const emailAlertTypes = ['whale_alert', 'price_target'];
-    if (emailAlertTypes.includes(type) && userEmail) {
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-      fetch(`${baseUrl}/api/send-notification-email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, message, type, userEmail }),
-      }).catch(() => {});
-    }
+    // Fan-out (email + Telegram) is keyed strictly off the server-derived
+    // targetUserId — NEVER the raw client body.userId or a client-supplied
+    // userEmail. Trusting client fields here let a caller redirect another
+    // user's alert to an attacker-controlled address (cross-account vector).
+    if (targetUserId) {
+      const emailAlertTypes = ['whale_alert', 'price_target'];
+      if (emailAlertTypes.includes(type)) {
+        try {
+          // Recipient email is resolved from auth.users for the target user —
+          // profiles has no email column — so it can't be spoofed by the body.
+          const admin = getSupabaseAdmin();
+          const { data: authUser } = await admin.auth.admin.getUserById(targetUserId);
+          const recipientEmail = authUser?.user?.email ?? null;
+          if (recipientEmail) {
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+            fetch(`${baseUrl}/api/send-notification-email`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ title, message, type, userEmail: recipientEmail }),
+            }).catch(() => {});
+          }
+        } catch (err) {
+          Sentry.captureException(err, { tags: { route: 'notifications', stage: 'email-fanout' } });
+        }
+      }
 
-    // Outbound Telegram push — runs fire-and-forget so notification
-    // creation latency isn't tied to Telegram's response.
-    if (body.userId) {
+      // Outbound Telegram push — runs fire-and-forget so notification
+      // creation latency isn't tied to Telegram's response.
       try {
         const { queueTelegramNotification } = await import('@/lib/telegram/notify');
         const kindMap: Record<string, 'price' | 'whale' | 'security' | 'alert' | 'sniper' | 'copy' | 'general'> = {
@@ -285,13 +313,13 @@ export async function POST(req: NextRequest) {
           welcome: 'general', system: 'general', prediction: 'general',
         };
         queueTelegramNotification({
-          userId: body.userId,
+          userId: targetUserId,
           kind: kindMap[type] ?? 'general',
           title,
           body: message,
         });
       } catch (err) {
-        console.warn('[notifications POST] telegram push failed (non-fatal):', err);
+        Sentry.captureException(err, { tags: { route: 'notifications', stage: 'telegram-fanout' } });
       }
     }
 

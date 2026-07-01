@@ -65,9 +65,73 @@ export async function ensureKeyVault(): Promise<UnwrappedKeys> {
   return { publicKey, privateKey };
 }
 
-export async function fetchPeerPublicKey(peerId: string): Promise<string> {
+/**
+ * Result of resolving a peer's public key with trust-on-first-use pinning.
+ *  - `publicKey` is the key just returned by the server (always the current one).
+ *  - `changed` is true when a DIFFERENT key was previously pinned for this peer
+ *    — a signal the server-mediated key distribution may be compromised (MITM)
+ *    or the peer legitimately reset their keypair. The UI surfaces this rather
+ *    than silently trusting the new key.
+ *  - `previousKey` is the key we had pinned before, present only when changed.
+ */
+export interface PeerKeyResult {
+  publicKey: string;
+  changed: boolean;
+  previousKey?: string;
+}
+
+/** localStorage key under which we pin the first-seen public key for a peer. */
+function pinStorageKey(peerId: string): string {
+  return `naka:dm:peerkey:${peerId}`;
+}
+
+/**
+ * Fetch a peer's published box public key and apply trust-on-first-use pinning.
+ *
+ * The server hands back the peer's public key, so it is technically able to
+ * substitute its own (a MITM on key distribution). TOFU pinning defends against
+ * a silent swap: the FIRST key we see for a peer is persisted in localStorage,
+ * and every later fetch is compared against it. If the server ever returns a
+ * different key we do NOT overwrite the pin — we flag `changed` so the caller
+ * can warn the user instead of blindly sealing to a possibly-attacker key.
+ */
+export async function fetchPeerPublicKey(peerId: string): Promise<PeerKeyResult> {
   const res = await fetch(`/api/social/keypair?user_id=${peerId}`);
   if (!res.ok) throw new Error('Peer has not enabled encrypted DM yet');
   const json = await res.json();
-  return json.public_key as string;
+  const publicKey = json.public_key as string;
+  if (!publicKey) throw new Error('Peer has not enabled encrypted DM yet');
+
+  if (typeof window === 'undefined') {
+    // No persistent store (SSR / non-browser) — cannot pin, so cannot claim
+    // the key is verified. Report it as-is without a false "unchanged".
+    return { publicKey, changed: false };
+  }
+
+  let pinned: string | null = null;
+  try {
+    pinned = window.localStorage.getItem(pinStorageKey(peerId));
+  } catch {
+    // localStorage unavailable (private mode / blocked) — degrade gracefully.
+    return { publicKey, changed: false };
+  }
+
+  if (!pinned) {
+    // First contact — trust and pin. Exact-match string compare only; these are
+    // base64 crypto keys, not wallet addresses, so no case normalization.
+    try {
+      window.localStorage.setItem(pinStorageKey(peerId), publicKey);
+    } catch {
+      // Best-effort pin; a failed write just means we can't detect future swaps.
+    }
+    return { publicKey, changed: false };
+  }
+
+  if (pinned !== publicKey) {
+    // The server returned a key that differs from the one we first pinned. Do
+    // NOT overwrite the pin — surface the change so the UI can warn the user.
+    return { publicKey, changed: true, previousKey: pinned };
+  }
+
+  return { publicKey, changed: false };
 }

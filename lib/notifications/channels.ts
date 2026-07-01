@@ -25,6 +25,17 @@ interface ChannelRow {
   discord_enabled: boolean;
 }
 
+/** Escape HTML-significant characters so user-controlled content can't inject
+ *  markup into the notification email (phishing / spoofed CTAs). */
+function escapeHtml(input: unknown): string {
+  return String(input ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 interface DiscordPayload { username: string; embeds: Array<Record<string, unknown>>; }
 
 function buildDiscordPayload(payload: FanOutPayload): DiscordPayload {
@@ -162,7 +173,7 @@ export async function fanOutNotification(payload: FanOutPayload): Promise<{
       to: profile.email,
       from: process.env.RESEND_FROM_EMAIL ?? 'alerts@nakalabs.xyz',
       subject: payload.title,
-      html: `<p>${payload.message}</p><p style="color:#94a3b8;font-size:12px;">NakaLabs · <a href="https://nakalabs.xyz">nakalabs.xyz</a></p>`,
+      html: `<p>${escapeHtml(payload.message)}</p><p style="color:#94a3b8;font-size:12px;">NakaLabs · <a href="https://nakalabs.xyz">nakalabs.xyz</a></p>`,
     });
     return r.ok;
   })();

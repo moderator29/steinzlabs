@@ -9,6 +9,11 @@ const STALE_KEY_PREFIXES = [
   'bookmarks_',
   'preferences_',
   'vtx_',
+  // Hyphenated VTX keys (vtx-ai-page-history, vtx-ai-chat-history,
+  // vtx-ai-daily-usage) were NOT matched by the 'vtx_' prefix, so a
+  // previous account's VTX chat history survived an on-device account
+  // switch and rendered for the next user. Cover the hyphen form too.
+  'vtx-',
   'naka_wallet_',
   'naka_watchlist_',
   'naka_prefs_',

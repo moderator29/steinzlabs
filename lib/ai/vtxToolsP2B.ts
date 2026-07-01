@@ -163,6 +163,10 @@ const EVM_RPC_BY_CHAIN: Record<string, string | undefined> = {
   polygon:  process.env.POLYGON_RPC_URL  ?? (process.env.ALCHEMY_API_KEY ? `https://polygon-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}` : undefined),
   optimism: process.env.OPTIMISM_RPC_URL ?? (process.env.ALCHEMY_API_KEY ? `https://opt-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}` : undefined),
   bsc:      process.env.BSC_RPC_URL      ?? 'https://bsc-dataseed.binance.org',
+  // Avalanche C-chain — the system prompt + tool descriptions advertise
+  // Avalanche support but it was missing here, so avax token lookups no-op'd.
+  // Public C-chain RPC is the always-on fallback when no key is configured.
+  avalanche: process.env.AVALANCHE_RPC_URL ?? (process.env.ALCHEMY_API_KEY ? `https://avax-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}` : 'https://api.avax.network/ext/bc/C/rpc'),
 };
 
 async function rpc<T = unknown>(chain: string, method: string, params: unknown[]): Promise<T | null> {

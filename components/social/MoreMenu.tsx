@@ -61,7 +61,7 @@ export function MoreMenu({ targetId, targetUsername, isBlocked, isMuted, onChang
     try {
       const url = `${window.location.origin}/u/${targetUsername}`;
       if (typeof navigator.share === 'function') {
-        await navigator.share({ title: `@${targetUsername} on Steinz Labs`, url });
+        await navigator.share({ title: `@${targetUsername} on Naka Labs`, url });
       } else {
         await navigator.clipboard.writeText(url);
       }

@@ -200,7 +200,7 @@ export default function VaultDocsPage() {
             <section className="mb-16">
               <H id="introduction" eyebrow="01 — Lore + Premise">Introduction</H>
               <P>
-                The Naka Vault is the inner chamber of the Steinz Labs platform. It is not a feature — it is a private
+                The Naka Vault is the inner chamber of the Naka Labs platform. It is not a feature — it is a private
                 house owned by the holders of <Code>$NAKA</Code> and the bearers of the NakaLabs NFTs. Inside live three
                 rooms: the Conclave, the Oracle, and the Sanctum. Each room is earned, none are given.
               </P>
@@ -448,7 +448,7 @@ export default function VaultDocsPage() {
               </UL>
               <H3>Phase 4 — Cross-platform expansion</H3>
               <UL>
-                <li>Cult-only API for builders outside the Steinz Labs platform.</li>
+                <li>Cult-only API for builders outside the Naka Labs platform.</li>
                 <li>Cross-chain detection (NAKA wrapping on Solana, etc.).</li>
               </UL>
               <Callout tone="gold">

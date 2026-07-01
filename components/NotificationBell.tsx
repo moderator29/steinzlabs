@@ -27,6 +27,12 @@ interface NotificationRowPayload {
 // tab backgrounded, network blip). 5 minutes is plenty given Realtime.
 const POLL_INTERVAL_MS = 5 * 60 * 1000;
 
+// Cap the persisted read-id list. handleMarkRead appends an id every time a
+// notification is opened; without a bound this localStorage array grew forever
+// and could blow the storage quota. We keep the most-recent N ids (read-state
+// for anything older naturally ages out as those notifications leave the feed).
+const MAX_READ_IDS = 500;
+
 interface DisplayNotification {
   id: string;
   type: LocalNotification['type'] | 'whale' | 'price' | 'prediction' | 'trending';
@@ -267,7 +273,8 @@ export default function NotificationBell() {
     })();
     if (!readIds.includes(id)) {
       readIds.push(id);
-      localStorage.setItem('steinz_read_notifs', JSON.stringify(readIds));
+      const pruned = readIds.length > MAX_READ_IDS ? readIds.slice(-MAX_READ_IDS) : readIds;
+      localStorage.setItem('steinz_read_notifs', JSON.stringify(pruned));
     }
     // DB-authoritative: persist read-state for Supabase-backed rows. The PATCH
     // route binds the update to the session user (no IDOR).
@@ -278,8 +285,14 @@ export default function NotificationBell() {
   const handleMarkAllRead = async () => {
     markAllNotificationsRead();
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    const allIds = notifications.map(n => n.id);
-    localStorage.setItem('steinz_read_notifs', JSON.stringify(allIds));
+    // Merge with the existing read-ids (so ids for notifications not currently
+    // in view keep their read-state), dedupe, then cap so the list stays bounded.
+    const existingReadIds: string[] = (() => {
+      try { return JSON.parse(localStorage.getItem('steinz_read_notifs') || '[]'); } catch { /* Malformed JSON — return default */ return []; }
+    })();
+    const mergedIds = Array.from(new Set([...existingReadIds, ...notifications.map(n => n.id)]));
+    const prunedIds = mergedIds.length > MAX_READ_IDS ? mergedIds.slice(-MAX_READ_IDS) : mergedIds;
+    localStorage.setItem('steinz_read_notifs', JSON.stringify(prunedIds));
     // DB-authoritative: the RPC is RLS-safe and marks every unread row for the
     // session user in one round-trip.
     try {

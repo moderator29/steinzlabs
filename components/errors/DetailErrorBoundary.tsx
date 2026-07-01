@@ -46,9 +46,12 @@ export function DetailErrorBoundary({
           </button>
           <Link
             href={backHref}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-sm font-semibold border border-white/10"
+            className="group inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-sm font-semibold border border-white/10"
           >
-            <ArrowLeft className="w-3.5 h-3.5" aria-hidden />{backLabel}
+            <span className="inline-flex items-center justify-center h-8 w-8 rounded-lg nl-glass border border-white/10 group-hover:border-[#0066FF]/40 transition-colors">
+              <ArrowLeft size={16} className="text-slate-400 group-hover:text-[#0066FF] transition-colors" aria-hidden />
+            </span>
+            {backLabel}
           </Link>
         </div>
       </div>

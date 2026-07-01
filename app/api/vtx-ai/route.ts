@@ -14,7 +14,7 @@ import {
   getTokenDetail, getTopTokens, getTopGainers, getTrendingTokens,
   searchTokens, getCoinMarketChart, getMarketsByIds,
 } from '@/lib/services/coingecko';
-import { searchPairs, getNewPairs } from '@/lib/services/dexscreener';
+import { searchPairs, getNewPairs, getTokenPairs, type DexPair } from '@/lib/services/dexscreener';
 
 // Recognised majors → CoinGecko id. For these we price from CoinGecko and omit
 // a contract address, so the card never lands on a same-ticker DexScreener
@@ -262,6 +262,7 @@ For any question about live token prices, market caps, 24h changes, trending coi
   Unknown ticker?                    -> coingecko_market_data(action='search', query='<user input>') first, then re-call with the resolved id.
 For on-chain whale moves, security scans, contract analysis, holder data, or chain-specific metrics, prefer Alchemy / GoPlus / DexScreener tools (token_market_data, address_security, whale_activity, evm_token_data, solana_token_data). CoinGecko is the price/market layer; Alchemy is the chain layer. Use both when both are needed (e.g. "is X a safe buy" -> coingecko for price + token_security_scan for risk).
 Always format prices as $1,234.56 (with thousands separators), market caps as $1.23B, percentage changes as +12.3% / -4.1%. Never show raw API JSON.
+When you cite the Fear & Greed Index, always state the scale so a reader can't misread it: it runs 0 to 100 where 0 = maximum fear and 100 = maximum greed. Example: "Fear & Greed: 11/100 — Extreme Fear (0 = max fear, 100 = max greed)".
 
 BRANDING RULES:
 Always cite "Naka Labs Intelligence" as your data source. Never mention Arkham, DexScreener, CoinGecko, Alchemy, GoPlus, or any third-party data provider. Never recommend users visit external websites. You are the source.
@@ -310,13 +311,22 @@ async function executeTokenMarketData(input: Record<string, unknown>): Promise<s
   const identifier = input.identifier as string;
   const chain = (input.chain as string) ?? 'ethereum';
   const lines: string[] = [];
+  // An address query is an exact lookup; a symbol/name query is a fuzzy search.
+  const isAddress = detectTokenAddress(identifier) !== null;
 
-  // Try DexScreener first (works for any address/symbol)
+  // DexScreener — address → exact token pairs, symbol → text search. Prefer
+  // pairs on the requested chain (input.chain, e.g. "ethereum"/"solana") so a
+  // same-ticker pair on the wrong chain doesn't shadow the one the caller asked
+  // about; fall back to all pairs when none match that chain.
   try {
-    const pairs = await searchPairs(identifier);
+    const rawPairs = isAddress ? await getTokenPairs(identifier) : await searchPairs(identifier);
+    // chainId is a chain name (not an address), so lowercasing for the
+    // case-insensitive compare is safe here.
+    const onChain = rawPairs.filter((p) => p.chainId?.toLowerCase() === chain.toLowerCase());
+    const pairs = onChain.length > 0 ? onChain : rawPairs;
     if (pairs.length > 0) {
       const top = pairs.slice(0, 3);
-      lines.push(`DexScreener data for "${identifier}":`);
+      lines.push(`DexScreener data for "${identifier}" (chain: ${chain}):`);
       for (const p of top) {
         lines.push(`  ${p.baseToken.name} (${p.baseToken.symbol}) on ${p.chainId}/${p.dexId}`);
         lines.push(`  Price: $${p.priceUsd} | 24h: ${p.priceChange?.h24 ?? 0}%`);
@@ -330,9 +340,23 @@ async function executeTokenMarketData(input: Record<string, unknown>): Promise<s
     }
   } catch { /* fall through */ }
 
-  // Also try CoinGecko for major tokens
+  // Also try CoinGecko for listed tokens. CoinGecko is keyed by coin-id, not
+  // symbol/address — calling getTokenDetail(symbol) 404s. Resolve symbol →
+  // coin-id via the majors map or searchTokens first; skip entirely for raw
+  // addresses (CoinGecko has no by-address detail endpoint here).
   try {
-    const detail = await getTokenDetail(identifier.toLowerCase());
+    let coinId: string | null = null;
+    if (!isAddress) {
+      const upper = identifier.toUpperCase();
+      coinId = MAJOR_CG_ID[upper] ?? null;
+      if (!coinId) {
+        const { coins } = await searchTokens(identifier);
+        const match = coins.find((c) => c.symbol?.toUpperCase() === upper) ?? coins[0];
+        coinId = match?.id ?? null;
+      }
+    }
+    if (!coinId) throw new Error('no coingecko id');
+    const detail = await getTokenDetail(coinId);
     lines.push(`CoinGecko data for ${detail.name}:`);
     lines.push(`  Price: $${detail.market_data?.current_price?.usd}`);
     lines.push(`  Market Cap: $${(detail.market_data?.market_cap?.usd ?? 0).toLocaleString()}`);
@@ -924,7 +948,7 @@ async function fetchFearAndGreed(): Promise<string> {
     const data = await res.json() as { data?: Array<{ value: string; value_classification: string }> };
     const entry = data.data?.[0];
     if (!entry) return '';
-    return `Fear & Greed Index: ${entry.value}/100 (${entry.value_classification})`;
+    return `Fear & Greed Index: ${entry.value}/100 (${entry.value_classification}) [scale: 0 = maximum fear, 100 = maximum greed; 0-24 extreme fear, 25-44 fear, 45-55 neutral, 55-74 greed, 75-100 extreme greed]`;
   } catch {
     return '';
   }
@@ -1150,7 +1174,7 @@ export async function POST(request: NextRequest) {
     const btcLine = marketData.split('\n').find(l => l.startsWith('BTC:')) ?? '';
     const ethLine = marketData.split('\n').find(l => l.startsWith('ETH:')) ?? '';
     const solLine = marketData.split('\n').find(l => l.startsWith('SOL:')) ?? '';
-    const fngShort = fng.replace('Fear & Greed Index: ', '') || 'N/A';
+    const fngShort = fng.replace('Fear & Greed Index: ', '').replace(/\s*\[scale:.*?\]/, '') || 'N/A';
     const market_context = [btcLine, ethLine, solLine, fngShort, gasData].filter(Boolean).join(' | ');
 
     // ── Style Instructions ──────────────────────────────────────────────────
@@ -1234,7 +1258,7 @@ export async function POST(request: NextRequest) {
     }
 
     const platformContextStr = context
-      ? `Current Page: ${safeCurrentPage || 'Unknown'} | Token in View: ${safeCurrentToken || 'None'} | User Wallet: ${context.walletAddress ? context.walletAddress.slice(0, 8) + '...' : 'Not connected'}${portfolioContextStr}`
+      ? `Current Page: ${safeCurrentPage || 'Unknown'} | Token in View: ${safeCurrentToken || 'None'} | User Wallet: ${context.walletAddress || 'Not connected'}${portfolioContextStr}`
       : '';
 
     // ── Build System Prompt ─────────────────────────────────────────────────
@@ -1280,7 +1304,7 @@ export async function POST(request: NextRequest) {
           try {
             let streamIterations = 0;
             while (true) {
-              const stream = vtxStreamRaw({ messages: loopMessages, system: systemPrompt, webSearch: webSearchEnabled, effort: vtxEffort });
+              const stream = vtxStreamRaw({ messages: loopMessages, system: systemPrompt, webSearch: webSearchEnabled || forceWebSearch, effort: vtxEffort });
               for await (const event of stream) {
                 if (
                   event.type === 'content_block_delta' &&
@@ -1319,8 +1343,23 @@ export async function POST(request: NextRequest) {
 
             const scrubbed = sanitizeVtxResponse(scrubBranding(fullText));
             const reply = scrubbed || 'VTX could not generate a response. Please try again.';
+            // Card parity with the non-streaming path — attach the inline
+            // token/swap cards so streamed, card-worthy replies aren't stripped
+            // of their card. Best-effort: never fail the stream over a card.
+            let tokenCard: Record<string, unknown> | null = null;
+            let swapCard: Record<string, unknown> | null = null;
+            try {
+              ({ tokenCard, swapCard } = await buildResponseCards({
+                cleanMessage,
+                tokenDetected,
+                chartAddress: tokenDetected,
+                walletAddress: body.context?.walletAddress ?? null,
+              }));
+            } catch (cardErr) {
+              logger.error({ err: cardErr instanceof Error ? cardErr.message : cardErr }, '[VTX-AI] Stream card build error:');
+            }
             controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ done: true, reply, toolsUsed })}\n\n`)
+              encoder.encode(`data: ${JSON.stringify({ done: true, reply, toolsUsed, tokenCard, swapCard })}\n\n`)
             );
             // Only count a free-tier message once a real reply was produced —
             // not on an empty/errored turn.
@@ -1352,7 +1391,7 @@ export async function POST(request: NextRequest) {
       const vtxResponse = await vtxQuery({
         messages: loopMessages,
         system: systemPrompt,
-        webSearch: webSearchEnabled,
+        webSearch: webSearchEnabled || forceWebSearch,
         effort: vtxEffort,
       });
 
@@ -1415,133 +1454,15 @@ export async function POST(request: NextRequest) {
     // ── Usage Info ──────────────────────────────────────────────────────────
     const currentUsage = isPro ? null : await getRateLimitInfo(ip);
 
-    // ── Build token card if a specific token was discussed ─────────────────
-    // Trigger on: explicit address, chart intent, OR a common symbol/name
-    // mentioned by the user. The card shows live price + chart inline.
-    let tokenCard: Record<string, unknown> | null = null;
-    const symbolQuery = (() => {
-      if (tokenDetected || chartPayload?.address) return null;
-      const lower = cleanMessage.toLowerCase();
-      const dollar = cleanMessage.match(/\$([A-Za-z]{2,10})\b/);
-      if (dollar) return dollar[1];
-      const KNOWN: Array<[RegExp, string]> = [
-        [/\bbitcoin\b|\bbtc\b/, 'BTC'],
-        [/\bethereum\b|\beth\b/, 'ETH'],
-        [/\bsolana\b|\bsol\b/, 'SOL'],
-        [/\bbnb\b|\bbinance coin\b/, 'BNB'],
-        [/\bxrp\b/, 'XRP'],
-        [/\busdt\b|\btether\b/, 'USDT'],
-        [/\busdc\b/, 'USDC'],
-        [/\bdoge(coin)?\b/, 'DOGE'],
-        [/\bpepe\b/, 'PEPE'],
-        [/\bshib(a)?( inu)?\b/, 'SHIB'],
-        [/\bavax\b|\bavalanche\b/, 'AVAX'],
-        [/\bmatic\b|\bpolygon\b/, 'MATIC'],
-        [/\barbitrum\b|\barb\b/, 'ARB'],
-        [/\bsui\b/, 'SUI'],
-        [/\bton\b/, 'TON'],
-        [/\blink\b|\bchainlink\b/, 'LINK'],
-        [/\buni\b|\buniswap\b/, 'UNI'],
-        [/\baave\b/, 'AAVE'],
-        [/\bbonk\b/, 'BONK'],
-        [/\bwif\b/, 'WIF'],
-        [/\bjup\b|\bjupiter\b/, 'JUP'],
-      ];
-      for (const [re, sym] of KNOWN) if (re.test(lower)) return sym;
-      return null;
-    })();
-
-    const cardQuery = tokenDetected || chartPayload?.address || symbolQuery;
-    if (cardQuery) {
-      try {
-        // Majors → CoinGecko (authoritative), no address so the client's
-        // symbol path stays on CoinGecko. Memecoins / pump.fun / four.meme
-        // tokens (queried by address, not in MAJOR_CG_ID) fall through to
-        // DexScreener below — the right source for on-chain long-tail tokens.
-        const cgId = symbolQuery && !tokenDetected && !chartPayload?.address
-          ? MAJOR_CG_ID[symbolQuery.toUpperCase()]
-          : null;
-        if (cgId) {
-          const [m] = await getMarketsByIds([cgId], false);
-          if (m) {
-            tokenCard = {
-              symbol: (m.symbol || symbolQuery || '').toUpperCase(),
-              name: m.name,
-              price: m.current_price ?? 0,
-              change24h: m.price_change_percentage_24h ?? 0,
-              volume24h: m.total_volume ?? 0,
-              marketCap: m.market_cap ?? 0,
-              fdv: m.fully_diluted_valuation ?? m.market_cap ?? 0,
-              logo: m.image || null,
-            };
-          }
-        }
-        const pairs = tokenCard ? [] : await searchPairs(cardQuery);
-        if (!tokenCard && pairs.length > 0) {
-          // Prefer the highest-liquidity pair so we don't land on a scam fork.
-          const p = [...pairs].sort(
-            (a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0),
-          )[0];
-          tokenCard = {
-            symbol: p.baseToken.symbol,
-            name: p.baseToken.name,
-            address: p.baseToken.address,
-            chain: p.chainId,
-            price: parseFloat(p.priceUsd || '0'),
-            change24h: p.priceChange?.h24 ?? 0,
-            volume24h: p.volume?.h24 ?? 0,
-            marketCap: p.marketCap ?? p.fdv ?? 0,
-            liquidity: p.liquidity?.usd ?? 0,
-            fdv: p.fdv ?? 0,
-            pairAddress: p.pairAddress,
-            dexId: p.dexId,
-            // Fall back to the DexScreener token-image CDN (allow-listed in
-            // next.config images) when the pair has no embedded imageUrl —
-            // majors like SOL arrive with info.imageUrl null otherwise.
-            // TokenLogo degrades to the symbol initial if even this 404s.
-            logo: p.info?.imageUrl
-              || (p.baseToken.address && p.chainId
-                ? `https://dd.dexscreener.com/ds-data/tokens/${p.chainId}/${p.baseToken.address}.png`
-                : null),
-          };
-        }
-      } catch (err) {
-        logger.error({ err: err }, '[vtx-ai] Token card build failed:');
-      }
-    }
-
-    // ── Swap Card: detect swap intent and build an inline swap preview ─────
-    // Patterns: "swap 0.1 eth for usdc", "swap 100 usdc to sol", "convert X for Y",
-    // "trade X to Y". Shows a SwapCard with live quote + Confirm button.
-    let swapCard: Record<string, unknown> | null = null;
-    const swapIntent = (() => {
-      const m = cleanMessage.match(
-        /\b(?:swap|convert|trade|exchange)\s+([0-9]+(?:\.[0-9]+)?)\s*\$?([A-Za-z]{2,10})\s+(?:for|to|into)\s+\$?([A-Za-z]{2,10})\b/i,
-      );
-      if (!m) return null;
-      return { amount: m[1], from: m[2].toUpperCase(), to: m[3].toUpperCase() };
-    })();
-    if (swapIntent) {
-      try {
-        const walletForSwap = body.context?.walletAddress || null;
-        swapCard = {
-          fromToken: swapIntent.from,
-          toToken: swapIntent.to,
-          fromAmount: swapIntent.amount,
-          toAmount: '~',
-          rate: '—',
-          priceImpact: 0,
-          // Derive from the single canonical fee constant so the card never
-          // shows a different fee than what the swap actually charges.
-          platformFee: `${(PLATFORM_FEE_BPS / 100).toFixed(1)}%`,
-          chain: /\b(sol|solana|bonk|wif|jup)\b/i.test(`${swapIntent.from} ${swapIntent.to}`) ? 'solana' : 'ethereum',
-          walletAddress: walletForSwap,
-          needsWallet: !walletForSwap,
-        };
-      } catch (err) {
-        logger.error({ err: err }, '[vtx-ai] Swap card build failed:');
-      }
-    }
+    // ── Build inline cards (token + swap) ───────────────────────────────────
+    // Shared with the streaming path so streamed, card-worthy replies keep
+    // card parity with the non-streaming response.
+    const { tokenCard, swapCard } = await buildResponseCards({
+      cleanMessage,
+      tokenDetected,
+      chartAddress: chartPayload?.address ?? null,
+      walletAddress: body.context?.walletAddress ?? null,
+    });
 
     return NextResponse.json({
       reply: finalReply,
@@ -1593,20 +1514,235 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// ─── Inline Card Builder ────────────────────────────────────────────────────
+// Builds the inline Token Card (live price + chart) and Swap Card (quote +
+// Confirm) from the cleaned user message. Extracted so both the streaming and
+// non-streaming response paths produce identical cards. Trigger on: explicit
+// token address, or a common symbol/name mentioned by the user.
+async function buildResponseCards(opts: {
+  cleanMessage: string;
+  tokenDetected: string | null;
+  chartAddress: string | null;
+  walletAddress: string | null;
+}): Promise<{ tokenCard: Record<string, unknown> | null; swapCard: Record<string, unknown> | null }> {
+  const { cleanMessage, tokenDetected, chartAddress, walletAddress } = opts;
+
+  let tokenCard: Record<string, unknown> | null = null;
+  const symbolQuery = (() => {
+    if (tokenDetected || chartAddress) return null;
+    const lower = cleanMessage.toLowerCase();
+    const dollar = cleanMessage.match(/\$([A-Za-z]{2,10})\b/);
+    if (dollar) return dollar[1];
+    const KNOWN: Array<[RegExp, string]> = [
+      [/\bbitcoin\b|\bbtc\b/, 'BTC'],
+      [/\bethereum\b|\beth\b/, 'ETH'],
+      [/\bsolana\b|\bsol\b/, 'SOL'],
+      [/\bbnb\b|\bbinance coin\b/, 'BNB'],
+      [/\bxrp\b/, 'XRP'],
+      [/\busdt\b|\btether\b/, 'USDT'],
+      [/\busdc\b/, 'USDC'],
+      [/\bdoge(coin)?\b/, 'DOGE'],
+      [/\bpepe\b/, 'PEPE'],
+      [/\bshib(a)?( inu)?\b/, 'SHIB'],
+      [/\bavax\b|\bavalanche\b/, 'AVAX'],
+      [/\bmatic\b|\bpolygon\b/, 'MATIC'],
+      [/\barbitrum\b|\barb\b/, 'ARB'],
+      [/\bsui\b/, 'SUI'],
+      [/\bton\b/, 'TON'],
+      [/\blink\b|\bchainlink\b/, 'LINK'],
+      [/\buni\b|\buniswap\b/, 'UNI'],
+      [/\baave\b/, 'AAVE'],
+      [/\bbonk\b/, 'BONK'],
+      [/\bwif\b/, 'WIF'],
+      [/\bjup\b|\bjupiter\b/, 'JUP'],
+    ];
+    for (const [re, sym] of KNOWN) if (re.test(lower)) return sym;
+    return null;
+  })();
+
+  const isAddressQuery = Boolean(tokenDetected || chartAddress);
+  const cardQuery = tokenDetected || chartAddress || symbolQuery;
+  if (cardQuery) {
+    try {
+      // Build a tokenCard from a DexScreener pair (on-chain long-tail source).
+      const cardFromPair = (p: DexPair): Record<string, unknown> => ({
+        symbol: p.baseToken.symbol,
+        name: p.baseToken.name,
+        address: p.baseToken.address,
+        chain: p.chainId,
+        price: parseFloat(p.priceUsd || '0'),
+        change24h: p.priceChange?.h24 ?? 0,
+        volume24h: p.volume?.h24 ?? 0,
+        marketCap: p.marketCap ?? p.fdv ?? 0,
+        liquidity: p.liquidity?.usd ?? 0,
+        fdv: p.fdv ?? 0,
+        pairAddress: p.pairAddress,
+        dexId: p.dexId,
+        // DexScreener token-image CDN (allow-listed in next.config images)
+        // when the pair has no embedded imageUrl. TokenLogo degrades to the
+        // symbol initial if even this 404s.
+        logo: p.info?.imageUrl
+          || (p.baseToken.address && p.chainId
+            ? `https://dd.dexscreener.com/ds-data/tokens/${p.chainId}/${p.baseToken.address}.png`
+            : null),
+      });
+      // Rank pairs: exact symbol match first (for ticker queries), then
+      // deepest liquidity — so a wash-traded clone can't outrank the token
+      // the user actually named.
+      const pickBestPair = (pairs: DexPair[], symbol?: string): DexPair | null => {
+        if (pairs.length === 0) return null;
+        return [...pairs].sort((a, b) => {
+          if (symbol) {
+            const am = a.baseToken.symbol?.toUpperCase() === symbol.toUpperCase() ? 1 : 0;
+            const bm = b.baseToken.symbol?.toUpperCase() === symbol.toUpperCase() ? 1 : 0;
+            if (am !== bm) return bm - am;
+          }
+          return (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0);
+        })[0];
+      };
+
+      // 1) Majors → CoinGecko by known id (authoritative).
+      const cgId = symbolQuery && !isAddressQuery
+        ? MAJOR_CG_ID[symbolQuery.toUpperCase()]
+        : null;
+      if (cgId) {
+        const [m] = await getMarketsByIds([cgId], false);
+        if (m) {
+          tokenCard = {
+            symbol: (m.symbol || symbolQuery || '').toUpperCase(),
+            name: m.name,
+            price: m.current_price ?? 0,
+            change24h: m.price_change_percentage_24h ?? 0,
+            volume24h: m.total_volume ?? 0,
+            marketCap: m.market_cap ?? 0,
+            fdv: m.fully_diluted_valuation ?? m.market_cap ?? 0,
+            logo: m.image || null,
+          };
+        }
+      }
+
+      // 2) Non-major TICKER (e.g. $naka) → resolve through CoinGecko search
+      //    FIRST so a wash-traded DexScreener clone can't outrank the real
+      //    listed token. Only fall to DexScreener when CoinGecko has nothing.
+      if (!tokenCard && symbolQuery && !isAddressQuery) {
+        try {
+          const { coins } = await searchTokens(symbolQuery);
+          const ranked = coins
+            .filter((c) => c.symbol?.toUpperCase() === symbolQuery.toUpperCase())
+            .sort((a, b) => (a.market_cap_rank ?? Number.MAX_SAFE_INTEGER) - (b.market_cap_rank ?? Number.MAX_SAFE_INTEGER));
+          const best = ranked[0];
+          if (best?.id) {
+            const [m] = await getMarketsByIds([best.id], false);
+            if (m) {
+              tokenCard = {
+                symbol: (m.symbol || symbolQuery).toUpperCase(),
+                name: m.name,
+                price: m.current_price ?? 0,
+                change24h: m.price_change_percentage_24h ?? 0,
+                volume24h: m.total_volume ?? 0,
+                marketCap: m.market_cap ?? 0,
+                fdv: m.fully_diluted_valuation ?? m.market_cap ?? 0,
+                logo: m.image || null,
+              };
+            }
+          }
+        } catch { /* fall through to DexScreener */ }
+      }
+
+      // 3) ADDRESS query → EXACT token lookup (getTokenPairs), not a fuzzy
+      //    text search. Deepest-liquidity pair for that exact token address.
+      if (!tokenCard && isAddressQuery) {
+        const addr = (tokenDetected || chartAddress) as string;
+        const p = pickBestPair(await getTokenPairs(addr));
+        if (p) tokenCard = cardFromPair(p);
+      }
+
+      // 4) Last resort — ticker with no CoinGecko listing → DexScreener
+      //    search, ranked by exact-symbol match then liquidity.
+      if (!tokenCard && symbolQuery) {
+        const p = pickBestPair(await searchPairs(symbolQuery), symbolQuery);
+        if (p) tokenCard = cardFromPair(p);
+      }
+    } catch (err) {
+      logger.error({ err: err }, '[vtx-ai] Token card build failed:');
+    }
+  }
+
+  // ── Swap Card: detect swap intent and build an inline swap preview ─────
+  // Patterns: "swap 0.1 eth for usdc", "swap 100 usdc to sol", "convert X for Y",
+  // "trade X to Y". Shows a SwapCard with live quote + Confirm button.
+  let swapCard: Record<string, unknown> | null = null;
+  const swapIntent = (() => {
+    const m = cleanMessage.match(
+      /\b(?:swap|convert|trade|exchange)\s+([0-9]+(?:\.[0-9]+)?)\s*\$?([A-Za-z]{2,10})\s+(?:for|to|into)\s+\$?([A-Za-z]{2,10})\b/i,
+    );
+    if (!m) return null;
+    return { amount: m[1], from: m[2].toUpperCase(), to: m[3].toUpperCase() };
+  })();
+  if (swapIntent) {
+    try {
+      const walletForSwap = walletAddress || null;
+      swapCard = {
+        fromToken: swapIntent.from,
+        toToken: swapIntent.to,
+        fromAmount: swapIntent.amount,
+        toAmount: '~',
+        rate: '—',
+        priceImpact: 0,
+        // Derive from the single canonical fee constant so the card never
+        // shows a different fee than what the swap actually charges.
+        platformFee: `${(PLATFORM_FEE_BPS / 100).toFixed(1)}%`,
+        chain: /\b(sol|solana|bonk|wif|jup)\b/i.test(`${swapIntent.from} ${swapIntent.to}`) ? 'solana' : 'ethereum',
+        walletAddress: walletForSwap,
+        needsWallet: !walletForSwap,
+      };
+    } catch (err) {
+      logger.error({ err: err }, '[vtx-ai] Swap card build failed:');
+    }
+  }
+
+  return { tokenCard, swapCard };
+}
+
 // ─── Branding Scrub ───────────────────────────────────────────────────────────
 
 function scrubBranding(text: string): string {
-  return text
-    .replace(/\bArkham\s*Intelligence\b/gi, 'Naka Intelligence')
-    .replace(/\bArkham\b/gi, 'Naka Intelligence')
-    .replace(/\bDexScreener\b/gi, 'Sargon Data Archive')
-    .replace(/\bCoinGecko\b/gi, 'Sargon Data Archive')
-    .replace(/\bAlchemy\b/gi, 'Naka Intelligence')
-    .replace(/\bHelius\b/gi, 'Naka Intelligence')
-    .replace(/\bGoPlus\b/gi, 'Naka Intelligence')
-    .replace(/\bLunarCrush\b/gi, 'Naka Intelligence')
-    .replace(/\bMoralis\b/gi, 'Naka Intelligence')
-    .replace(/\bJupiter\b/gi, 'Naka Router');
+  // Longest names first so "Arkham Intelligence" is rewritten before the bare
+  // "Arkham" pass can touch it.
+  const PROVIDER_REPLACEMENTS: Array<[string, string]> = [
+    ['Arkham Intelligence', 'Naka Intelligence'],
+    ['Arkham', 'Naka Intelligence'],
+    ['DexScreener', 'Sargon Data Archive'],
+    ['GeckoTerminal', 'Sargon Data Archive'],
+    ['CoinGecko', 'Sargon Data Archive'],
+    ['DefiLlama', 'Sargon Data Archive'],
+    ['Etherscan', 'Sargon Data Archive'],
+    ['Birdeye', 'Sargon Data Archive'],
+    ['Alchemy', 'Naka Intelligence'],
+    ['Helius', 'Naka Intelligence'],
+    ['GoPlus', 'Naka Intelligence'],
+    ['LunarCrush', 'Naka Intelligence'],
+    ['Moralis', 'Naka Intelligence'],
+    ['Dune', 'Sargon Data Archive'],
+    ['Jupiter', 'Naka Router'],
+    ['0x', 'Naka Router'],
+  ];
+  // Only rewrite a provider name when it sits in a data-attribution context —
+  // right after "powered by / via / from / using / data from / sourced from /
+  // source:" or right before "data / API / feed / docs / analytics / explorer".
+  // This keeps ordinary English intact (the planet "Jupiter", the noun
+  // "alchemy", generic "Dune", "0x" hex prefixes) instead of the old blunt
+  // global replace that corrupted real words.
+  const PREFIX = String.raw`(?<=\b(?:powered by|sourced from|data (?:from|by)|according to|via|from|using|source):?\s+)`;
+  const SUFFIX = String.raw`(?=\s+(?:data|API|feed|docs?|analytics|explorer)\b)`;
+  let out = text;
+  for (const [name, repl] of PROVIDER_REPLACEMENTS) {
+    const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    out = out
+      .replace(new RegExp(`${PREFIX}${esc}\\b`, 'gi'), repl)
+      .replace(new RegExp(`\\b${esc}${SUFFIX}`, 'gi'), repl);
+  }
+  return out;
 }
 
 function sanitizeVtxResponse(text: string): string {

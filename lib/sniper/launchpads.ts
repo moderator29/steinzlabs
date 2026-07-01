@@ -41,7 +41,9 @@ export const LAUNCHPADS: Launchpad[] = [
   { id: 'uniswap',   label: 'Uniswap',    iconSlug: 'uniswap',    chains: ['ethereum', 'base', 'arbitrum', 'optimism', 'polygon'] },
   { id: 'aerodrome', label: 'Aerodrome',  iconSlug: 'aerodrome',  chains: ['base'] },
   { id: 'pancakeswap', label: 'PancakeSwap', iconSlug: 'pancakeswap', chains: ['bsc'] },
-  { id: 'traderjoe', label: 'Trader Joe', iconSlug: 'traderjoe',  chains: ['avalanche'] },
+  { id: 'traderjoe', label: 'LFJ',        iconSlug: 'traderjoe',  chains: ['avalanche'] },
+  { id: 'fourmeme',  label: 'Four.meme',  iconSlug: null,         chains: ['bsc'] },
+  { id: 'bankr',     label: 'Bankr',      iconSlug: null,         chains: ['base'] },
   { id: 'dex',       label: 'DEX',        iconSlug: null,         chains: ['ethereum', 'base', 'arbitrum', 'optimism', 'polygon', 'bsc', 'avalanche', 'solana'] },
 ];
 
@@ -95,7 +97,11 @@ export function detectLaunchpad(params: {
   if (dex.includes('orca')) return 'orca';
   if (dex.includes('aerodrome')) return 'aerodrome';
   if (dex.includes('pancake')) return 'pancakeswap';
-  if (dex.includes('traderjoe') || dex.includes('joe')) return 'traderjoe';
+  // Trader Joe rebranded to "LFJ" (dex names "LFJ" / "LFJ V2.2") — the old
+  // 'joe'/'traderjoe' match never caught the new name, so these fell to 'dex'.
+  if (dex.includes('traderjoe') || dex.includes('joe') || dex.includes('lfj')) return 'traderjoe';
+  if (dex.includes('four.meme') || dex.includes('fourmeme')) return 'fourmeme';
+  if (dex.includes('bankr')) return 'bankr';
   if (dex.includes('uniswap') || dex.includes('uni')) return 'uniswap';
 
   return 'dex';
