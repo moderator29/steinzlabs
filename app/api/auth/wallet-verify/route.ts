@@ -135,6 +135,10 @@ export async function POST(request: NextRequest) {
     // already email-safe (base58, no symbols), use them as-is.
     const email = chain === "evm" ? `${normalized}@wallet.nakalabs.com` : `${normalized.toLowerCase()}@wallet.nakalabs.com`;
     let userId: string;
+    // Returning wallet → reuse the existing account (sign IN); only mint a new
+    // one when this wallet has never been seen (sign UP). Surfaced to the client
+    // so it can route/celebrate correctly and never treats a returning user as new.
+    const isNewUser = !existing;
 
     if (existing) {
       userId = existing.user_id;
@@ -204,6 +208,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       userId,
+      isNewUser,
       actionLink: linkData.properties.action_link,
       // What the connect unlocked, so the client can route/celebrate. The
       // durable first-time Max welcome is gated server-side by

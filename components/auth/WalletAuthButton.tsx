@@ -5,23 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useAccount, useSignMessage, useDisconnect } from 'wagmi';
 import { useAppKit } from '@reown/appkit/react';
 import { Loader2, Wallet } from 'lucide-react';
-import { toHex } from 'viem';
 import { HAS_APPKIT } from '@/lib/wallet/appkit';
+import { signSiweMessage } from '@/lib/auth/walletSign';
 import { useToast } from '@/components/Toast';
-
-/** Minimal EIP-1193 provider surface we need for the raw personal_sign fallback. */
-interface Eip1193 { request: (args: { method: string; params?: unknown[] }) => Promise<unknown>; }
-
-/** True when an error looks like "personal_sign isn't available" (JSON-RPC
- *  -32601 / viem MethodNotFound), which is what we see when the sign request is
- *  misrouted to a public RPC node instead of the connected wallet. */
-function isMethodNotFound(err: unknown): boolean {
-  const m = (err instanceof Error ? err.message : String(err ?? '')).toLowerCase();
-  return m.includes('method not found')
-    || m.includes('does not exist')
-    || m.includes('is not available')
-    || m.includes('-32601');
-}
 
 type Mode = 'signin' | 'signup';
 
@@ -59,25 +45,12 @@ export function WalletAuthButton({ mode, redirectTo = '/dashboard', className }:
   const [busy, setBusy] = useState(false);
   const [waitingForConnect, setWaitingForConnect] = useState(false);
 
-  // Sign the SIWE message resiliently. wagmi's signMessage normally routes
-  // personal_sign to the connected wallet, but some WalletConnect sessions
-  // (seen on mobile) surface it as "personal_sign method not found" (-32601) —
-  // the signature of the request hitting a public RPC node, which doesn't
-  // implement wallet methods. On that specific failure, retry against the
-  // connector's own EIP-1193 provider, which always targets the wallet.
-  const signAuthMessage = useCallback(async (msg: string, addr: `0x${string}`): Promise<`0x${string}`> => {
-    try {
-      return await signMessageAsync({ message: msg, account: addr });
-    } catch (err) {
-      if (!isMethodNotFound(err) || !connector?.getProvider) throw err;
-      const provider = (await connector.getProvider()) as Eip1193 | undefined;
-      if (!provider?.request) throw err;
-      // personal_sign params are [hexMessage, address].
-      const sig = await provider.request({ method: 'personal_sign', params: [toHex(msg), addr] });
-      if (typeof sig !== 'string' || !sig.startsWith('0x')) throw err;
-      return sig as `0x${string}`;
-    }
-  }, [signMessageAsync, connector]);
+  // Sign the SIWE message resiliently (shared helper — wagmi first, connector's
+  // raw provider on a personal_sign method-not-found failure).
+  const signAuthMessage = useCallback(
+    (msg: string, addr: `0x${string}`) => signSiweMessage({ signMessageAsync, connector, message: msg, address: addr }),
+    [signMessageAsync, connector],
+  );
 
   const verify = useCallback(async (addr: `0x${string}`) => {
     setBusy(true);
@@ -98,7 +71,9 @@ export function WalletAuthButton({ mode, redirectTo = '/dashboard', className }:
       const verifyRes = await fetch('/api/auth/wallet-verify', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ address: addr, signature, nonce, chain: 'evm' }),
+        // Pass redirectTo so the magic link lands the user IN the app (dashboard)
+        // instead of Supabase's default Site URL (the landing page).
+        body: JSON.stringify({ address: addr, signature, nonce, chain: 'evm', redirectTo }),
       });
       if (!verifyRes.ok) throw new Error((await verifyRes.json()).error || 'Verification failed');
       const { actionLink } = await verifyRes.json();
@@ -112,7 +87,7 @@ export function WalletAuthButton({ mode, redirectTo = '/dashboard', className }:
       try { disconnect(); } catch { /* ignore */ }
       setBusy(false);
     }
-  }, [signAuthMessage, disconnect, showToast]);
+  }, [signAuthMessage, disconnect, showToast, redirectTo]);
 
   // Auto-trigger SIWE the moment a wallet finishes connecting (only when the
   // user opted in by clicking the button). Avoids re-prompting on every page

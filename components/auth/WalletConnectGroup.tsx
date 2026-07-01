@@ -20,13 +20,15 @@ import { SolanaWalletAuthButton } from './SolanaWalletAuthButton';
 
 interface Props {
   mode: 'signin' | 'signup';
+  /** Where to land after auth. Defaults to /dashboard inside each button. */
+  redirectTo?: string;
 }
 
-export function WalletConnectGroup({ mode }: Props) {
+export function WalletConnectGroup({ mode, redirectTo }: Props) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-      <WalletAuthButton mode={mode} />
-      <SolanaWalletAuthButton mode={mode} />
+      <WalletAuthButton mode={mode} redirectTo={redirectTo} />
+      <SolanaWalletAuthButton mode={mode} redirectTo={redirectTo} />
     </div>
   );
 }

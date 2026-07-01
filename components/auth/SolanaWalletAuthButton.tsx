@@ -22,6 +22,8 @@ import { useToast } from '@/components/Toast';
 
 interface Props {
   mode: 'signin' | 'signup';
+  /** Same-origin relative path to land on after the magic link is consumed. */
+  redirectTo?: string;
   className?: string;
 }
 
@@ -84,7 +86,7 @@ function bytesToBase58(bytes: Uint8Array): string {
   return out;
 }
 
-export function SolanaWalletAuthButton({ mode, className }: Props) {
+export function SolanaWalletAuthButton({ mode, redirectTo = '/dashboard', className }: Props) {
   const { showToast } = useToast();
   const [busy, setBusy] = useState(false);
 
@@ -141,7 +143,9 @@ export function SolanaWalletAuthButton({ mode, className }: Props) {
       const verifyRes = await fetch('/api/auth/wallet-verify', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ address, signature: sigBase58, nonce, chain: 'solana' }),
+        // redirectTo lands the user IN the app after the magic link, not on the
+        // default Site URL (landing page).
+        body: JSON.stringify({ address, signature: sigBase58, nonce, chain: 'solana', redirectTo }),
       });
       if (!verifyRes.ok) {
         throw new Error((await verifyRes.json()).error || 'Verification failed');
