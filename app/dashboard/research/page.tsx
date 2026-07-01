@@ -8,13 +8,14 @@ import { toast } from 'sonner';
 // Naka Labs brand icons — most swap. BookOpen / Tag / SlidersHorizontal /
 // Zap / Loader2 not yet in brand library; stay on lucide.
 import {
-  Search, Calendar, ChevronRight, Clock, RefreshCw, TrendingUp, X,
+  Search, Calendar, ChevronRight, Clock, RefreshCw, TrendingUp, X, FileText,
 } from '@/components/icons/brand';
-import { BookOpen, Tag, Loader2, SlidersHorizontal, Zap } from 'lucide-react';
+import { BookOpen, Tag, Loader2, SlidersHorizontal } from 'lucide-react';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { TiltCard } from '@/components/brand/TiltCard';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { researchHowItWorks } from '@/lib/howItWorks/content/research';
+import { LiveWire } from '@/components/research/LiveWire';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface ResearchPost {
@@ -297,6 +298,85 @@ function ArticleView({ post, onBack }: { post: ResearchPost; onBack: () => void 
   );
 }
 
+// ── Market Brief ─────────────────────────────────────────────────────────────
+// The platform's twice-daily market brief is a research_posts row authored by
+// the research-daily-brief cron (category "Daily Brief", HTML content). We
+// render it inline at full length, never truncated to a stub, with a clean
+// expand/collapse so the page leads with a real, detailed read.
+function isBriefPost(p: ResearchPost): boolean {
+  return p.category === 'Daily Brief' || /^Market Brief/i.test(p.title || '');
+}
+
+function MarketBriefCard({ post, onOpen }: { post: ResearchPost; onOpen: () => void }) {
+  const [expanded, setExpanded] = useState(true);
+  const isHtml = /<\/?[a-z][\s\S]*>/i.test(post.content);
+
+  return (
+    <section className="mb-8 nl-fade-up nl-fade-up-1">
+      <div className="flex items-center gap-2 mb-3">
+        <FileText className="w-4 h-4 text-[#0066FF] flex-shrink-0" />
+        <h2 className="text-[15px] font-heading font-bold text-white">Market Brief</h2>
+        <span className="text-[10px] text-gray-500 ms-auto flex items-center gap-1 whitespace-nowrap">
+          <Calendar className="w-3 h-3" />
+          {formatDate(post.published_at || post.created_at)}
+        </span>
+      </div>
+
+      <div className="rounded-2xl nl-glass nl-sheen overflow-hidden">
+        {post.image_url && (
+          <div className="h-40 sm:h-48 w-full overflow-hidden">
+            <img src={post.image_url} alt={post.title} className="w-full h-full object-cover" />
+          </div>
+        )}
+        <div className="p-5">
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <CategoryBadge category="Market Analysis" />
+            <span className="text-[10px] text-gray-500 flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              {estimateReadTime(post.content)} min read
+            </span>
+          </div>
+          <h3 className="text-lg font-heading font-bold text-white mb-2 leading-snug">{post.title}</h3>
+          <p className="text-[12.5px] text-gray-400 leading-relaxed mb-4">{post.summary}</p>
+
+          <div
+            className={`relative overflow-hidden transition-all ${expanded ? '' : 'max-h-64'}`}
+          >
+            {isHtml ? (
+              <div
+                className="nl-research-content text-[13px]"
+                dangerouslySetInnerHTML={{ __html: post.content }}
+              />
+            ) : (
+              <div className="text-[13px] text-gray-300 leading-relaxed whitespace-pre-wrap">{post.content}</div>
+            )}
+            {!expanded && (
+              <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#0a0e1a] to-transparent pointer-events-none" />
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 mt-4 pt-4 border-t border-white/[0.06]">
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              className="text-[12px] font-semibold text-gray-300 hover:text-white transition-colors"
+            >
+              {expanded ? 'Show less' : 'Read the full brief'}
+            </button>
+            <button
+              type="button"
+              onClick={onOpen}
+              className="ms-auto inline-flex items-center gap-1 text-[12px] font-semibold text-[#6B7FFF] hover:gap-2 transition-all"
+            >
+              Open in reader <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default function ResearchPage() {
   const router = useRouter();
@@ -395,21 +475,28 @@ export default function ResearchPage() {
     );
   }
 
-  const featured = !search ? filtered[0] : null;
-  const rest = !search ? filtered.slice(1) : filtered;
+  // The newest brief leads the page in its own dedicated section, so it is
+  // pulled out of the article grid. Only show it on the default view (no
+  // search, no category narrowing) where it reads as the lead story.
+  const showLead = !search && category === 'All';
+  const brief = showLead ? posts.find(isBriefPost) ?? null : null;
+  const articles = brief ? filtered.filter((p) => p.id !== brief.id) : filtered;
+  const featured = !search ? articles[0] : null;
+  const rest = !search ? articles.slice(1) : articles;
 
   return (
     <AuroraBackground fullHeight>
     <div className="text-white">
       <div className="max-w-2xl mx-auto px-4 py-6 pb-24">
 
-        {/* ── Header ── */}
-        <div className="flex items-center gap-3 mb-5">
-          <BackButton />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-heading font-bold text-white">Research Labs</h1>
-              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-400 uppercase tracking-widest">
+        {/* ── Header ── two rows so the title, live badge and actions never
+            crowd each other on a narrow (390px) viewport. */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2.5">
+            <BackButton />
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <h1 className="text-xl font-heading font-bold text-white truncate">Research Labs</h1>
+              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-400 uppercase tracking-widest flex-shrink-0">
                 <span className="relative flex h-1.5 w-1.5">
                   <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75 animate-ping" />
                   <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
@@ -417,36 +504,48 @@ export default function ResearchPage() {
                 Live
               </span>
             </div>
-            <p className="text-[11px] text-gray-500">On-chain newsroom · real-time market intel</p>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <HowItWorksButton content={researchHowItWorks} className="shrink-0" />
+              <button
+                onClick={() => fetchPosts(true)}
+                disabled={refreshing}
+                className="p-2 hover:bg-white/5 rounded-lg transition-colors disabled:opacity-40"
+                title="Refresh"
+                aria-label="Refresh research"
+              >
+                <RefreshCw className={`w-4 h-4 text-gray-400 ${refreshing ? 'animate-spin' : ''}`} />
+              </button>
+              <button
+                onClick={() => setShowFilters((v) => !v)}
+                className={`p-2 rounded-lg transition-colors ${
+                  showFilters ? 'bg-[#0066FF]/20 text-[#6B7FFF]' : 'hover:bg-white/5 text-gray-400'
+                }`}
+                title="Filters"
+                aria-label="Toggle filters"
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <HowItWorksButton content={researchHowItWorks} className="shrink-0" />
+          <div className="flex items-center justify-between gap-2 mt-2 ps-[2.75rem]">
+            <p className="text-[11px] text-gray-500 truncate">
+              On-chain newsroom, real-time market intelligence sourced from our own data.
+            </p>
             {lastUpdated && (
-              <span className="text-[10px] text-gray-600 flex items-center gap-1 whitespace-nowrap">
+              <span className="text-[10px] text-gray-600 flex items-center gap-1 whitespace-nowrap flex-shrink-0">
                 <RefreshCw className={`w-2.5 h-2.5 ${refreshing ? 'animate-spin text-[#0066FF]' : ''}`} />
                 {/* eslint-disable-next-line react-hooks/exhaustive-deps */}
                 {timeAgo(lastUpdated)}
               </span>
             )}
-            <button
-              onClick={() => fetchPosts(true)}
-              disabled={refreshing}
-              className="p-1.5 hover:bg-white/5 rounded-lg transition-colors disabled:opacity-40"
-              title="Refresh"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 text-gray-400 ${refreshing ? 'animate-spin' : ''}`} />
-            </button>
-            <button
-              onClick={() => setShowFilters((v) => !v)}
-              className={`p-1.5 rounded-lg transition-colors ${
-                showFilters ? 'bg-[#0066FF]/20 text-[#6B7FFF]' : 'hover:bg-white/5 text-gray-400'
-              }`}
-              title="Filters"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-            </button>
           </div>
         </div>
+
+        {/* ── Live Wire — the platform's own real-time on-chain news wire ── */}
+        <LiveWire />
+
+        {/* ── Market Brief — full, detailed, inline ── */}
+        {brief && <MarketBriefCard post={brief} onOpen={() => setSelected(brief)} />}
 
         {/* ── Filter/Sort Panel ── */}
         {showFilters && (
@@ -501,6 +600,12 @@ export default function ResearchPage() {
           </div>
         )}
 
+        {/* ── Latest Research — published stories and analysis ── */}
+        <div className="flex items-center gap-2 mb-3 pt-2">
+          <BookOpen className="w-4 h-4 text-[#0066FF] flex-shrink-0" />
+          <h2 className="text-[15px] font-heading font-bold text-white">Latest Research</h2>
+        </div>
+
         {/* ── Search ── */}
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
@@ -544,14 +649,14 @@ export default function ResearchPage() {
             <Loader2 className="w-6 h-6 text-[#0066FF] animate-spin mb-3" />
             <p className="text-xs text-gray-500">Fetching latest research...</p>
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
+        ) : articles.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-14 h-14 bg-white/[0.04] rounded-2xl flex items-center justify-center mb-4">
               <BookOpen className="w-7 h-7 text-gray-600" />
             </div>
             <p className="text-sm font-semibold text-gray-300 mb-1">No research found</p>
             <p className="text-xs text-gray-600">
-              {search ? `No results for "${search}"` : 'Try a different category or check back soon'}
+              {search ? `No results for "${search}"` : 'Try a different category, or check the Live Wire above for real-time activity.'}
             </p>
           </div>
         ) : (

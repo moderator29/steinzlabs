@@ -2,8 +2,6 @@ import { ReactNode } from 'react';
 import type { Metadata } from 'next';
 import SessionGuardProvider from '@/components/SessionGuardProvider';
 import PlatformEventMonitor from '@/components/PlatformEventMonitor';
-import NotificationBell from '@/components/NotificationBell';
-import GlobalControls from '@/components/GlobalControls';
 import { PendingTradesBanner } from '@/components/trading/PendingTradesBanner';
 import PendingSignerProvider from '@/components/trading/PendingSignerProvider';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
@@ -31,16 +29,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <PendingSignerProvider />
         <PendingTradesBanner />
         <MaxWelcomeJourney />
-        {/* Persistent top-right header cluster — the realtime notification bell
-            now lives in the layout so it renders on EVERY authenticated route,
-            not just the dashboard home tab. */}
-        <div
-          className="fixed top-3 right-3 z-[var(--z-header-items)] flex items-center gap-2 print:hidden"
-          data-no-translate
-        >
-          <GlobalControls />
-          <NotificationBell />
-        </div>
         {children}
       </div>
     </AuroraBackground>

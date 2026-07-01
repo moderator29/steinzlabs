@@ -367,6 +367,9 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
     if (!conversationId) return;
     const ch = supabase.channel(`dm-typing:${conversationId}`, { config: { broadcast: { self: false } } });
     ch.on('broadcast', { event: 'typing' }, (msg) => {
+      // Shadow-block consistency: if the peer is blocked we drop their messages
+      // from the live thread, so we must not render their typing indicator either.
+      if (blockedPeerRef.current) return;
       const p = msg.payload as { user_id?: string };
       if (p?.user_id && p.user_id === peerId) {
         setPeerTyping(true);
@@ -396,6 +399,8 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
   // Throttle typing broadcasts to ~1 every 2s.
   const notifyTyping = useCallback(() => {
     if (!me || !typingChannelRef.current) return;
+    // Don't broadcast typing to a peer we've blocked (shadow-block consistency).
+    if (blockedPeerRef.current) return;
     const now = Date.now();
     if (now - lastTypingSentRef.current < 2000) return;
     lastTypingSentRef.current = now;

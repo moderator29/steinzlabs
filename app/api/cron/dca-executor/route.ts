@@ -4,8 +4,9 @@ import { verifyCron, cronResponse } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getDexPrice } from "@/lib/services/dexscreener";
 import { executeTrade } from "@/lib/trading/relayer";
-import { usdcForChain } from "@/lib/trading/usdc";
-import { getEvmTokenDecimals } from "@/lib/sniper/priceFeed";
+import { usdcForChain, usdToUsdcBaseUnits } from "@/lib/trading/usdc";
+import { getTokenDecimalsForSizing } from "@/lib/sniper/priceFeed";
+import { addressesEqual } from "@/lib/utils/addressNormalize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -113,8 +114,28 @@ export async function GET(request: NextRequest) {
     const dcaFromAddr = /^0x[a-fA-F0-9]{40}$/.test(bot.from_token_address)
       ? bot.from_token_address
       : (usdcForChain(bot.chain) ?? bot.from_token_address);
-    const dcaFromDecimals = await getEvmTokenDecimals(bot.chain, dcaFromAddr);
-    const dcaAmountInBase = (BigInt(Math.round(Number(bot.amount_per_execution) * 1e6)) * (BigInt(10) ** BigInt(dcaFromDecimals)) / BigInt(1e6)).toString();
+    // Size the spend leg into base units. When spending USDC use the
+    // DETERMINISTIC per-chain helper (no RPC, correct 6/18dp) — critical because
+    // the spend amount is the order notional: an RPC blip defaulting decimals to
+    // 18 on a 6-dp USDC chain would scale a $50 buy into $50,000,000,000,000.
+    // For a non-USDC from-token, resolve real decimals and SKIP on failure
+    // rather than guessing 18.
+    let dcaAmountInBase: string;
+    const dcaChainUsdc = usdcForChain(bot.chain);
+    // Case-insensitive address compare (CLAUDE.md): usdcForChain returns a
+    // mixed-case EVM address while a stored from_token_address is often
+    // lowercased — a raw === would false-miss USDC and strand the order on an
+    // RPC blip. addressesEqual lowercases EVM and preserves case for Solana.
+    if (dcaChainUsdc && addressesEqual(dcaFromAddr, dcaChainUsdc)) {
+      dcaAmountInBase = usdToUsdcBaseUnits(Number(bot.amount_per_execution), bot.chain);
+    } else {
+      const dec = await getTokenDecimalsForSizing(bot.chain, dcaFromAddr);
+      if (dec == null) {
+        Sentry.captureMessage(`dca-executor: from-token decimals unavailable for ${bot.chain}:${dcaFromAddr} — skipping bot ${bot.id} this tick`);
+        continue;
+      }
+      dcaAmountInBase = (BigInt(Math.round(Number(bot.amount_per_execution) * 1e6)) * (BigInt(10) ** BigInt(dec)) / BigInt(1e6)).toString();
+    }
 
     const result = await executeTrade({
       userId: bot.user_id,

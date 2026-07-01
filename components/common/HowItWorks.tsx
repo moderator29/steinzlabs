@@ -43,7 +43,9 @@ const TAG_STYLES: Record<WhatsNewTag, string> = {
 export function HowItWorksButton({
   content,
   className = '',
-  iconOnly = false,
+  // Default to the compact icon so the control is the SAME small size in every
+  // feature header and never competes for width with a page's own buttons.
+  iconOnly = true,
 }: {
   content: HowItWorksContent;
   className?: string;
@@ -59,11 +61,11 @@ export function HowItWorksButton({
         aria-haspopup="dialog"
         aria-label={`How ${content.title} works`}
         title="How it works"
-        className={`inline-flex items-center gap-1.5 rounded-full border border-[#0066FF]/50 bg-[#0066FF]/15 text-[#cfe0ff] shadow-[0_0_12px_rgba(0,102,255,0.30)] transition-colors hover:border-[#0066FF] hover:bg-[#0066FF]/25 hover:text-white ${
-          iconOnly ? 'p-1.5' : 'px-2.5 py-1'
+        className={`inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full border border-[#0066FF]/50 bg-[#0066FF]/15 text-[#cfe0ff] shadow-[0_0_12px_rgba(0,102,255,0.30)] transition-colors hover:border-[#0066FF] hover:bg-[#0066FF]/25 hover:text-white ${
+          iconOnly ? 'h-8 w-8' : 'px-2.5 py-1'
         } ${className}`}
       >
-        <HelpCircle className="h-3.5 w-3.5 flex-shrink-0 text-[#4DA2FF]" />
+        <HelpCircle className="h-4 w-4 flex-shrink-0 text-[#4DA2FF]" />
         {!iconOnly && <span className="text-[11px] font-semibold leading-none">How it works</span>}
       </button>
       {open && <HowItWorksPanel content={content} onClose={() => setOpen(false)} />}
