@@ -72,8 +72,18 @@ export async function POST(request: NextRequest) {
     // branch is only hit for the 5-minute nonce-TTL window after deploy.
     const host = request.headers.get("host");
     const { domain, uri } = resolveSiweOrigin(host);
-    const issuedAt = nonceRow.issued_at as string | null | undefined;
     const chainIdStored = nonceRow.chain_id as number | null | undefined;
+    // CRITICAL: the nonce route built the signed message with the JS
+    // `Date.toISOString()` form ("…123Z"), but Postgres returns timestamptz as
+    // "…123+00:00". Rebuilding the SIWE message from the raw DB strings produced
+    // DIFFERENT `Issued At:` / `Expiration Time:` bytes than the user actually
+    // signed, so verifyMessage failed for EVERY wallet ("Signature verification
+    // failed"). Normalize both timestamps back through Date.toISOString() so the
+    // rebuilt message is byte-identical to the one that was signed. (The nonce
+    // route only ever writes millisecond-precision ISO, so this round-trips exactly.)
+    const issuedAtRaw = nonceRow.issued_at as string | null | undefined;
+    const issuedAt = issuedAtRaw ? new Date(issuedAtRaw).toISOString() : null;
+    const expirationTime = new Date(nonceRow.expires_at as string).toISOString();
     const message = issuedAt
       ? buildSiweMessage({
           domain,
@@ -83,7 +93,7 @@ export async function POST(request: NextRequest) {
           chainId: typeof chainIdStored === "number" ? chainIdStored : undefined,
           nonce,
           issuedAt,
-          expirationTime: nonceRow.expires_at,
+          expirationTime,
         })
       : `Sign this message to authenticate with Naka Labs.\n\nAddress: ${nonceRow.address}\nNonce: ${nonce}\nExpires: ${nonceRow.expires_at}`;
 
