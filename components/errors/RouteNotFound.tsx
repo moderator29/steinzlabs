@@ -25,9 +25,12 @@ export function RouteNotFound({ subject = 'page', home = '/dashboard' }: Props) 
         <div className="flex gap-2 justify-center">
           <button
             onClick={() => router.back()}
-            className="inline-flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm text-white transition-colors"
+            className="group inline-flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm text-white transition-colors"
           >
-            <ArrowLeft className="w-3.5 h-3.5" /> Back
+            <span className="inline-flex items-center justify-center h-8 w-8 rounded-lg nl-glass border border-white/10 group-hover:border-[#0066FF]/40 transition-colors">
+              <ArrowLeft size={16} className="text-slate-400 group-hover:text-[#0066FF] transition-colors" />
+            </span>
+            Back
           </button>
           <button
             onClick={() => router.push(home)}

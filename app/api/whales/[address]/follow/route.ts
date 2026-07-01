@@ -6,6 +6,7 @@ import { withTierGate } from '@/lib/subscriptions/apiTierGate';
 import { sendTelegramNotification } from '@/lib/telegram/notify';
 import { sendPushToUser } from '@/lib/services/webpush';
 import { sendBroadcast } from '@/lib/services/resend';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 // Phase 6 — rich follow payload (alert threshold + channels, copy-trade rules).
 // Persists both the follow row and, when mode ≠ 'alerts', a copy-rules row.
@@ -98,10 +99,14 @@ export const POST = withTierGate('pro', async (
   if (!body.chain) return NextResponse.json({ error: 'Missing chain' }, { status: 400 });
   const mode = body.mode || 'alerts';
 
+  // Normalize so a checksummed EVM address from the follow modal targets the
+  // same DB key as the lowercase-stored whale (Solana stays case-preserved).
+  const normalizedAddress = normalizeAddress(address, body.chain);
+
   // 1) Upsert follow record
   const followRow: Record<string, unknown> = {
     user_id: user.id,
-    whale_address: address,
+    whale_address: normalizedAddress,
     chain: body.chain,
     copy_mode: mode,
     alert_enabled: true,
@@ -137,7 +142,7 @@ export const POST = withTierGate('pro', async (
     const canonicalMode = mode === 'auto' ? 'auto_copy' : 'oneclick';
     const ruleRow: Record<string, unknown> = {
       user_id: user.id,
-      whale_address: address,
+      whale_address: normalizedAddress,
       chain: body.chain,
       mode: canonicalMode,
       max_per_trade_usd: body.copy_rules.max_per_trade_usd ?? null,
@@ -173,11 +178,15 @@ export const DELETE = withTierGate('pro', async (
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  // Normalize so a detail-page unfollow (which may carry a checksummed EVM
+  // address) deletes the same row the modal follow wrote.
+  const normalizedAddress = normalizeAddress(address, chain);
+
   await Promise.all([
     supabase.from('user_whale_follows').delete()
-      .eq('user_id', user.id).eq('whale_address', address).eq('chain', chain),
+      .eq('user_id', user.id).eq('whale_address', normalizedAddress).eq('chain', chain),
     supabase.from('user_copy_rules').delete()
-      .eq('user_id', user.id).eq('whale_address', address).eq('chain', chain),
+      .eq('user_id', user.id).eq('whale_address', normalizedAddress).eq('chain', chain),
   ]);
   return NextResponse.json({ ok: true });
 });

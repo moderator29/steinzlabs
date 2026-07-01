@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { withTierGate } from '@/lib/subscriptions/apiTierGate';
 import { getAssetTransfers } from '@/lib/services/alchemy';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -151,11 +152,17 @@ export const GET = withTierGate('mini', async (
       }, { status: arkham ? 200 : 404 });
     }
 
+    // Canonical key for the child-table lookups: whale_activity and
+    // user_whale_follows store the normalized (lowercase EVM) address, so a
+    // checksummed URL address must be normalized or the activity feed and
+    // follower count come back empty even though the whale row matched via ilike.
+    const normalizedAddress = normalizeAddress(address, whale.chain);
+
     // 2) DB activity
     const { data: storedActivity } = await supabase
       .from('whale_activity')
       .select('*')
-      .eq('whale_address', address)
+      .eq('whale_address', normalizedAddress)
       .order('timestamp', { ascending: false })
       .limit(50);
 
@@ -163,7 +170,7 @@ export const GET = withTierGate('mini', async (
     const { count: followerCount } = await supabase
       .from('user_whale_follows')
       .select('user_id', { count: 'exact', head: true })
-      .eq('whale_address', address);
+      .eq('whale_address', normalizedAddress);
 
     // 4) Arkham + live activity (parallel, best-effort, each time-boxed so a
     //    slow/down external source can never hang the whole route past the
