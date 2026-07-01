@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkTierServer } from '@/lib/subscriptions/serverTierCheck';
 import { getTokenSecurity } from '@/lib/services/goplus';
 import { getTokenPairs, searchPairs, type DexPair } from '@/lib/services/dexscreener';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 /**
  * GET /api/sniper/token-detail?chain=&address=&symbol=
@@ -52,7 +53,8 @@ function mapHolders(raw: unknown): RelatedWallet[] {
 }
 
 function mapSimilar(pairs: DexPair[], selfAddr: string, chain: string): SimilarToken[] {
-  const self = selfAddr.toLowerCase();
+  // The self address is on the requested chain — normalize against it.
+  const self = normalizeAddress(selfAddr, chain);
   const seen = new Set<string>([self]);
   const out: SimilarToken[] = [];
   // Prefer same chain first, then anything else.
@@ -63,7 +65,7 @@ function mapSimilar(pairs: DexPair[], selfAddr: string, chain: string): SimilarT
     return (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0);
   });
   for (const p of ordered) {
-    const addr = p.baseToken.address.toLowerCase();
+    const addr = normalizeAddress(p.baseToken.address, p.chainId);
     if (seen.has(addr)) continue;
     seen.add(addr);
     out.push({
