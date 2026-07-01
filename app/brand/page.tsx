@@ -1,7 +1,7 @@
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import * as BrandIcons from '@/components/icons/brand';
 
-export const metadata = { title: 'Brand · Steinz Labs', robots: { index: false } };
+export const metadata = { title: 'Brand · Naka Labs', robots: { index: false } };
 
 const ICONS = [
   // Starter (Phase 2)

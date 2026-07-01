@@ -1050,9 +1050,9 @@ export default function ProfileTab() {
   if (subPage === 'help') {
     const faqs = [
       { q: 'How do I connect my wallet?', a: 'Go to the Wallet tab in the bottom navigation and click "Connect Wallet". We support MetaMask, WalletConnect, and Phantom for Solana.' },
-      { q: 'What is a Trust Score?', a: 'Trust Score is a 0-100 rating STEINZ assigns to every on-chain event, token, and wallet. It considers contract verification, liquidity, holder distribution, developer history, and more.' },
+      { q: 'What is a Trust Score?', a: 'Trust Score is a 0-100 rating NAKA LABS assigns to every on-chain event, token, and wallet. It considers contract verification, liquidity, holder distribution, developer history, and more.' },
       { q: 'How does VTX AI work?', a: 'VTX AI uses a proprietary AI engine to analyze real-time on-chain data, market trends, and your portfolio to give you actionable intelligence in plain English.' },
-      { q: 'Is my wallet data safe?', a: 'Yes. STEINZ is 100% non-custodial. We only READ public blockchain data. Your private keys never leave your wallet. We cannot move your funds.' },
+      { q: 'Is my wallet data safe?', a: 'Yes. NAKA LABS is 100% non-custodial. We only READ public blockchain data. Your private keys never leave your wallet. We cannot move your funds.' },
       { q: 'How do I cancel my subscription?', a: 'Go to Profile > Settings and click "Manage Subscription". You can cancel anytime with one click. No hidden fees or contracts.' },
       { q: 'What chains are supported?', a: 'Ethereum, Solana, BNB Chain, Polygon, Arbitrum, Optimism, Avalanche, Base, Fantom, Bitcoin, and Tron. More coming based on demand.' },
     ];
@@ -1130,7 +1130,7 @@ export default function ProfileTab() {
                   {msg.role === 'assistant' && (
                     <div className="flex items-center gap-1.5 mb-1">
                       <Bot className="w-3 h-3 text-[#0066FF]" />
-                      <span className="text-[9px] text-[#0066FF] font-semibold">STEINZ Support</span>
+                      <span className="text-[9px] text-[#0066FF] font-semibold">NAKA LABS Support</span>
                     </div>
                   )}
                   <p className="text-xs text-gray-200 leading-relaxed whitespace-pre-wrap">{msg.content}</p>
@@ -1145,7 +1145,7 @@ export default function ProfileTab() {
                 <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-2">
                   <div className="flex items-center gap-1.5 mb-1">
                     <Bot className="w-3 h-3 text-[#0066FF]" />
-                    <span className="text-[9px] text-[#0066FF] font-semibold">STEINZ Support</span>
+                    <span className="text-[9px] text-[#0066FF] font-semibold">NAKA LABS Support</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="w-1.5 h-1.5 bg-[#0066FF] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />

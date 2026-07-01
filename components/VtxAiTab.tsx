@@ -403,9 +403,17 @@ function InlineChart({ type, token, address, data }: ChartInfo) {
       <div className="mt-2 p-3 bg-[#0d1117] rounded-lg border border-white/10">
         <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-2">Top Holders Distribution</p>
         {holders.length === 0 ? (
-          <div className="flex items-center gap-2 text-xs text-gray-500 py-2">
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-500" />
-            Fetching holder data from Sargon Archive...
+          <div className="text-xs text-gray-500 py-2">
+            {address ? (
+              <a
+                href={`/dashboard/bubble-map?address=${address}`}
+                className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300 transition-colors"
+              >
+                Open the full Bubble Map for live holder data →
+              </a>
+            ) : (
+              'Holder distribution is not available for this token right now.'
+            )}
           </div>
         ) : (
           holders.map((holder, i) => (
@@ -501,9 +509,17 @@ function InlineChart({ type, token, address, data }: ChartInfo) {
       <div className="mt-2 p-3 bg-[#0d1117] rounded-lg border border-white/10">
         <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-2">Holder Bubble Map</p>
         {holders.length === 0 ? (
-          <div className="flex items-center gap-2 text-xs text-gray-500 py-2">
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-500" />
-            Fetching holder data from Sargon Archive...
+          <div className="text-xs text-gray-500 py-2">
+            {address ? (
+              <a
+                href={`/dashboard/bubble-map?address=${address}`}
+                className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300 transition-colors"
+              >
+                Open the full Bubble Map for live holder data →
+              </a>
+            ) : (
+              'Holder distribution is not available for this token right now.'
+            )}
           </div>
         ) : (
           <>
@@ -1213,11 +1229,16 @@ export default function VtxAiTab() {
             const cleanedAssistant =
               msg.role === 'assistant'
                 ? msg.content
-                    .replace(/\*\*/g, '')
-                    .replace(/\*/g, '')
+                    // Strip emphasis to a space so inline bold with no leading
+                    // space ("now.**Straight**") doesn't glue into "now.Straight".
+                    .replace(/\*\*/g, ' ')
+                    .replace(/\*/g, ' ')
                     .replace(/^#{1,6}\s/gm, '')
                     .replace(/^[-]+\s/gm, '')
                     .replace(/^—\s/gm, '')
+                    .replace(/[ \t]{2,}/g, ' ')
+                    .replace(/[ \t]+\n/g, '\n')
+                    .replace(/\n[ \t]+/g, '\n')
                 : msg.content;
             return (
               <div

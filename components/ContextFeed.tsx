@@ -119,7 +119,7 @@ function SharePopup({ event, onClose, onShared }: { event: any; onClose: () => v
   };
 
   const shareTwitter = () => {
-    const text = encodeURIComponent(`${event.title}\n\nPowered by @SteinzLabs\n${shareUrl}`);
+    const text = encodeURIComponent(`${event.title}\n\nPowered by @nakalabs\n${shareUrl}`);
     window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
     onShared();
   };

@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: 'alerts@steinz.app',
+          from: process.env.RESEND_FROM_EMAIL ?? 'alerts@nakalabs.xyz',
           to: userEmail,
           subject: title,
           html: htmlBody,
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           personalizations: [{ to: [{ email: userEmail }] }],
-          from: { email: 'alerts@steinz.app', name: 'NAKA LABS' },
+          from: { email: process.env.RESEND_FROM_EMAIL ?? 'alerts@nakalabs.xyz', name: 'NAKA LABS' },
           subject: title,
           content: [{ type: 'text/html', value: htmlBody }],
         }),

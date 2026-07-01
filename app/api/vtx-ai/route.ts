@@ -262,6 +262,7 @@ For any question about live token prices, market caps, 24h changes, trending coi
   Unknown ticker?                    -> coingecko_market_data(action='search', query='<user input>') first, then re-call with the resolved id.
 For on-chain whale moves, security scans, contract analysis, holder data, or chain-specific metrics, prefer Alchemy / GoPlus / DexScreener tools (token_market_data, address_security, whale_activity, evm_token_data, solana_token_data). CoinGecko is the price/market layer; Alchemy is the chain layer. Use both when both are needed (e.g. "is X a safe buy" -> coingecko for price + token_security_scan for risk).
 Always format prices as $1,234.56 (with thousands separators), market caps as $1.23B, percentage changes as +12.3% / -4.1%. Never show raw API JSON.
+When you cite the Fear & Greed Index, always state the scale so a reader can't misread it: it runs 0 to 100 where 0 = maximum fear and 100 = maximum greed. Example: "Fear & Greed: 11/100 — Extreme Fear (0 = max fear, 100 = max greed)".
 
 BRANDING RULES:
 Always cite "Naka Labs Intelligence" as your data source. Never mention Arkham, DexScreener, CoinGecko, Alchemy, GoPlus, or any third-party data provider. Never recommend users visit external websites. You are the source.
@@ -924,7 +925,7 @@ async function fetchFearAndGreed(): Promise<string> {
     const data = await res.json() as { data?: Array<{ value: string; value_classification: string }> };
     const entry = data.data?.[0];
     if (!entry) return '';
-    return `Fear & Greed Index: ${entry.value}/100 (${entry.value_classification})`;
+    return `Fear & Greed Index: ${entry.value}/100 (${entry.value_classification}) [scale: 0 = maximum fear, 100 = maximum greed; 0-24 extreme fear, 25-44 fear, 45-55 neutral, 55-74 greed, 75-100 extreme greed]`;
   } catch {
     return '';
   }
@@ -1150,7 +1151,7 @@ export async function POST(request: NextRequest) {
     const btcLine = marketData.split('\n').find(l => l.startsWith('BTC:')) ?? '';
     const ethLine = marketData.split('\n').find(l => l.startsWith('ETH:')) ?? '';
     const solLine = marketData.split('\n').find(l => l.startsWith('SOL:')) ?? '';
-    const fngShort = fng.replace('Fear & Greed Index: ', '') || 'N/A';
+    const fngShort = fng.replace('Fear & Greed Index: ', '').replace(/\s*\[scale:.*?\]/, '') || 'N/A';
     const market_context = [btcLine, ethLine, solLine, fngShort, gasData].filter(Boolean).join(' | ');
 
     // ── Style Instructions ──────────────────────────────────────────────────
@@ -1234,7 +1235,7 @@ export async function POST(request: NextRequest) {
     }
 
     const platformContextStr = context
-      ? `Current Page: ${safeCurrentPage || 'Unknown'} | Token in View: ${safeCurrentToken || 'None'} | User Wallet: ${context.walletAddress ? context.walletAddress.slice(0, 8) + '...' : 'Not connected'}${portfolioContextStr}`
+      ? `Current Page: ${safeCurrentPage || 'Unknown'} | Token in View: ${safeCurrentToken || 'None'} | User Wallet: ${context.walletAddress || 'Not connected'}${portfolioContextStr}`
       : '';
 
     // ── Build System Prompt ─────────────────────────────────────────────────
