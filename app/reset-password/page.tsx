@@ -34,7 +34,7 @@ function ResetPasswordInner() {
   if (!token || !uid) {
     return (
       <AuroraBackground fullHeight>
-      <div className="min-h-screen text-white flex items-center justify-center">
+      <div className="naka-auth-page min-h-screen text-white flex items-center justify-center">
         <div className="text-center max-w-md px-6">
           <div className="w-16 h-16 mx-auto bg-[#0066FF]/10 rounded-2xl flex items-center justify-center mb-4 border border-[#0066FF]/20">
             <Shield className="w-8 h-8 text-[#0066FF]" />
@@ -95,7 +95,7 @@ function ResetPasswordInner() {
 
   return (
     <AuroraBackground fullHeight>
-    <div className="min-h-screen text-white flex">
+    <div className="naka-auth-page min-h-screen text-white flex">
 
       <div className="hidden lg:flex lg:w-[50%] flex-col justify-between p-12 relative">
         <Link href="/" className="flex items-center gap-2.5">

@@ -1605,41 +1605,36 @@ html body {
   animation: naka-card-slide-in 220ms ease-out both;
 }
 
-/* ─── §13b: Light theme support for auth pages ─────────────────────────────
-   login/page.tsx and signup/page.tsx render with inline style={{ background: ... }}
-   — those win over class-based CSS specificity. We wrap the page roots in a
-   `.naka-auth-page` class and override the most visible surfaces here when
-   the active theme is light. Inline styles on inputs / buttons stay dark-blue
-   gradient by design (brand consistency); only the surrounding canvas + body
-   text flip. Industry-standard !important is acceptable here because we're
-   defeating an inline style on a single brand-controlled surface.
+/* ─── §13b: Auth pages are always dark by design ───────────────────────────
+   login/page.tsx and signup/page.tsx are full-bleed branded dark surfaces
+   with inline dark backgrounds. The light theme's blanket `.min-h-screen`
+   whitewash (background #F8FAFC !important) was overriding that inline
+   background and turning the whole sign-in screen white in light mode. Force
+   these surfaces to stay dark in EVERY theme so the auth flow always matches
+   the brand. The higher-specificity `.naka-auth-page.min-h-screen` selector
+   defeats the blanket `.min-h-screen` rule. */
 
-   NOTE: also extend .naka-text-* size tokens to meet WCAG AAA's 15px body
-   minimum on every surface, not just auth. The previous
-   .naka-text-secondary at 14px / .naka-text-tertiary at 13px were below
-   the bar set by the audit page contrast pass. */
-
-[data-theme="light"] .naka-auth-page {
-  background: #f6f7fb !important;
-  color: #0a0e1a !important;
+[data-theme="light"] .naka-auth-page,
+[data-theme="light"] .naka-auth-page.min-h-screen,
+[data-theme="light"] .naka-auth-page .min-h-screen {
+  background: #07090f !important;
+  color: #ffffff !important;
+  color-scheme: dark;
 }
 [data-theme="light"] .naka-auth-page h1,
 [data-theme="light"] .naka-auth-page h2,
 [data-theme="light"] .naka-auth-page h3,
 [data-theme="light"] .naka-auth-page label,
 [data-theme="light"] .naka-auth-page p {
-  color: #0a0e1a !important;
+  color: #ffffff !important;
 }
 [data-theme="light"] .naka-auth-page input {
-  background: #ffffff !important;
-  color: #0a0e1a !important;
+  background: rgba(10, 10, 30, 0.8) !important;
+  color: #ffffff !important;
   border-color: rgba(0, 102, 255, 0.25) !important;
 }
 [data-theme="light"] .naka-auth-page input::placeholder {
-  color: rgba(10, 14, 26, 0.45) !important;
-}
-[data-theme="light"] .naka-auth-page a {
-  color: #0066FF !important;
+  color: rgba(255, 255, 255, 0.5) !important;
 }
 
 /* ── §3.4 Appearance system ───────────────────────────────────────────────
