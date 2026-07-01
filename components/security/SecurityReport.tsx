@@ -3,12 +3,35 @@
 import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { SecurityBadge } from "@/components/security/SecurityBadge";
 
+/** One contributing source's state, mirrored from lib/security/addressEnrich. */
+export interface EnrichSourceView {
+  source: "goplus" | "etherscan" | "chainabuse";
+  status: "ok" | "unavailable" | "skip";
+  malicious: boolean;
+  detail: string;
+}
+
 export interface RiskAssessmentView {
   score: number;
   level: "safe" | "low" | "medium" | "high" | "critical";
   reasons: string[];
   sections: Record<string, { ok: boolean; detail?: string }>;
+  /** Address-scan only: resolved human label from a verified source, else null. */
+  label?: string | null;
+  labelSource?: "known-list" | "etherscan" | null;
+  /** Address-scan only: number of independent sources flagging it malicious. */
+  maliciousSourceCount?: number;
+  /** Address-scan only: community scam reports (Chainabuse), null when unavailable. */
+  scamReportCount?: number | null;
+  /** Address-scan only: per-source corroboration for transparency. */
+  sources?: EnrichSourceView[];
 }
+
+const SOURCE_LABELS: Record<EnrichSourceView["source"], string> = {
+  goplus: "Security Scanner",
+  etherscan: "Etherscan labels",
+  chainabuse: "Chainabuse reports",
+};
 
 const SECTION_LABELS: Record<string, string> = {
   honeypot: "Honeypot check",
@@ -46,6 +69,48 @@ export function SecurityReport({
           <p className="text-[10px] text-slate-500">Score {assessment.score} / 100</p>
         </div>
       </div>
+
+      {assessment.label && (
+        <div className="p-3 rounded-xl nl-glass flex items-center justify-between gap-3" style={{ boxShadow: '0 0 0 1px rgba(139,124,255,.35)' }}>
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-wide text-slate-500">Resolved identity</p>
+            <p className="text-sm font-semibold text-white truncate">{assessment.label}</p>
+          </div>
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#8B7CFF]/10 border border-[#8B7CFF]/30 text-[#8B7CFF] font-mono flex-shrink-0">
+            {assessment.labelSource === "etherscan" ? "verified name" : "known list"}
+          </span>
+        </div>
+      )}
+
+      {assessment.sources && assessment.sources.length > 0 && (
+        <div className="rounded-xl nl-glass p-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">Source corroboration</p>
+            {(assessment.maliciousSourceCount ?? 0) > 1 && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/30 text-red-300 font-mono">
+                {assessment.maliciousSourceCount} sources agree
+              </span>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            {assessment.sources.map((s) => (
+              <div key={s.source} className="flex items-start gap-2">
+                {s.status === "unavailable" ? (
+                  <AlertTriangle size={12} className="text-slate-500 flex-shrink-0 mt-0.5" />
+                ) : s.malicious ? (
+                  <XCircle size={12} className="text-red-400 flex-shrink-0 mt-0.5" />
+                ) : (
+                  <CheckCircle2 size={12} className="text-green-400 flex-shrink-0 mt-0.5" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-semibold text-white">{SOURCE_LABELS[s.source]}</p>
+                  <p className="text-[10px] text-slate-400">{s.detail}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {assessment.reasons.length > 0 && (
         <div className="p-3 rounded-xl bg-red-500/5 border border-red-500/20 flex items-start gap-2">

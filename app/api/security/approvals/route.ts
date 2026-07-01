@@ -1,16 +1,31 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getTokenApprovals, getTokenMetadata } from '@/lib/services/alchemy';
-import { getAddressSecurity } from '@/lib/services/goplus';
+import {
+  getTokenApprovals,
+  getTokenMetadata,
+  getPermit2Approvals,
+  getNftApprovals,
+  buildPermit2RevokeCalldata,
+  buildNftRevokeCalldata,
+  type Permit2Allowance,
+  type NftOperatorApproval,
+} from '@/lib/services/alchemy';
 import { getTokensMulti } from '@/lib/services/dexscreener';
+import { getTokenPrice } from '@/lib/services/coingecko';
 import { normalizeAddress } from '@/lib/utils/addressNormalize';
+import { enrichAddress, displayLabel, type AddressEnrichment, type EnrichSourceState } from '@/lib/security/addressEnrich';
 
 export const runtime = 'nodejs';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+/** ERC-20 allowance, Permit2 time-bounded grant, or an NFT operator approval. */
+export type ApprovalKind = 'erc20' | 'permit2' | 'nft';
+
 export interface ApprovalResult {
+  /** Which approval standard this row represents. */
+  kind: ApprovalKind;
   tokenAddress: string;
   tokenSymbol: string;
   tokenName: string;
@@ -18,7 +33,7 @@ export interface ApprovalResult {
   decimals: number;
   spender: string;
   spenderLabel: string;
-  /** Human-readable allowance ("Unlimited", "0", "1,234.5"). */
+  /** Human-readable allowance ("Unlimited", "0", "1,234.5", "All items"). */
   allowance: string;
   /** Raw allowance in base units (string bigint) so the client shows exact caps. */
   allowanceRaw: string;
@@ -31,43 +46,60 @@ export interface ApprovalResult {
   riskLevel: 'safe' | 'warning' | 'danger';
   /** approve(spender, 0) calldata the wallet signs to revoke. */
   revokeCalldata: string;
+  /**
+   * On-chain target the revoke tx is sent TO. For ERC-20 this is the token
+   * contract; for Permit2 it is the canonical Permit2 contract; for NFT it is
+   * the collection contract. The client sends the tx to this address, not to
+   * `tokenAddress` (which for Permit2 is the underlying token, not the target).
+   */
+  revokeTarget: string;
+  /** Permit2 grants are time-bounded; unix seconds. Only set when kind==='permit2'. */
+  permit2Expiration?: number;
+  /** NFT operator grant metadata (kind==='nft' only). */
+  nft?: {
+    tokenType: string;
+    ownedCount: number | null;
+    floorNative: number | null;
+    /** USD value of the owned floor exposure when a native price exists. */
+    floorUsdExposure: number | null;
+  };
   spenderRisk?: {
     isMalicious: boolean;
     isPhishing: boolean;
     isBlacklisted: boolean;
     labels: string[];
+    /** Number of independent sources that flag the spender malicious (corroboration). */
+    maliciousSourceCount: number;
+    /** Community scam reports from Chainabuse, when configured. null = unavailable. */
+    scamReportCount: number | null;
+    /** True when the spender is a contract with unverified source (Etherscan). null = unknown. */
+    isUnverifiedContract: boolean | null;
+    /** Per-source status so the UI can show which sources agree / were unavailable. */
+    sources: EnrichSourceState[];
   };
+  /** Where `spenderLabel` was resolved from: a verified Etherscan name, a curated list, or null (truncated address). */
+  spenderLabelSource: AddressEnrichment['labelSource'];
 }
 
-// ─── Known Spender Labels ─────────────────────────────────────────────────────
-// Map well-known protocol addresses to friendly labels (EVM mainnet).
-// Keys are lowercase — these are EVM-scoped, so lowercasing is correct.
-
-const KNOWN_SPENDERS: Record<string, string> = {
-  '0x7a250d5630b4cf539739df2c5dacb4c659f2488d': 'Uniswap V2 Router',
-  '0xe592427a0aece92de3edee1f18e0157c05861564': 'Uniswap V3 Router',
-  '0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45': 'Uniswap V3 Router 2',
-  '0x1111111254fb6c44bac0bed2854e76f90643097d': '1inch V4',
-  '0x1111111254eeb25477b68fb85ed929f73a960582': '1inch V5',
-  '0xdef1c0ded9bec7f1a1670819833240f027b25eff': '0x Exchange Proxy',
-  '0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f': 'SushiSwap Router',
-  '0x11111112542d85b3ef69ae05771c2dccff4faa26': '1inch V3',
-  '0x3fc91a3afd70395cd496c647d5a6cc9d4b2b7fad': 'Uniswap Universal Router',
-  '0x000000000022d473030f116ddee9f6b43ac78ba3': 'Permit2',
-  '0x1bd435f3c054b6e901b7b108a0ab7617c808677b': 'ParaSwap',
-  '0x216b4b4ba9f3e719726886d34a177484278bfcae': 'ParaSwap V5',
-  '0xa2f78ab2355fe2f984d808b5cee7fd0a93d5270e': 'OpenSea Seaport',
-  '0x00000000000000adc04c56bf30ac9d3c0aaf14dc': 'OpenSea Seaport 1.5',
-};
+// Spender labels + malicious verdicts now come from the shared multi-source
+// enrichment (lib/security/addressEnrich.ts): verified Etherscan contract name,
+// a curated known-spender fallback, GoPlus flags and Chainabuse scam reports.
 
 // Uniswap Permit2 — a single canonical contract across every EVM chain. An
 // approval to Permit2 is itself standard (the router gateway), but it then
 // sub-delegates via signatures, so we tag it for clarity.
 const PERMIT2_ADDRESS = '0x000000000022d473030f116ddee9f6b43ac78ba3';
 
-function getSpenderLabel(address: string): string {
-  return KNOWN_SPENDERS[address.toLowerCase()] || `${address.slice(0, 6)}…${address.slice(-4)}`;
-}
+// Chain → CoinGecko id of the native gas token, so NFT floor exposure quoted in
+// native units can be converted to USD. Omitted chains yield null (honest).
+const NATIVE_COIN_ID: Record<string, string> = {
+  ethereum: 'ethereum',
+  base: 'ethereum',
+  arbitrum: 'ethereum',
+  optimism: 'ethereum',
+  bsc: 'binancecoin',
+  polygon: 'matic-network',
+};
 
 // uint256 max sentinel. Many tokens use a slightly-below-max value for
 // "unlimited", so treat anything at/above 2^255 as an unlimited grant.
@@ -112,6 +144,209 @@ const schema = z.object({
   chain: z.string().trim().default('ethereum'),
 });
 
+type SpenderRiskInfo = ApprovalResult['spenderRisk'];
+
+/** Map a merged multi-source enrichment into the row's spenderRisk block. */
+function spenderRiskInfo(e: AddressEnrichment): SpenderRiskInfo {
+  return {
+    isMalicious: e.isMalicious,
+    isPhishing: e.isPhishing,
+    isBlacklisted: e.isBlacklisted,
+    labels: e.labels,
+    maliciousSourceCount: e.maliciousSourceCount,
+    scamReportCount: e.scamReportCount,
+    isUnverifiedContract: e.isUnverifiedContract,
+    sources: e.sources,
+  };
+}
+
+function isFlagged(r: SpenderRiskInfo): boolean {
+  return !!(r?.isMalicious || r?.isPhishing || r?.isBlacklisted);
+}
+
+// ─── Per-kind enrichment ────────────────────────────────────────────────────
+
+/** Enrich one raw ERC-20 approval into a display row. */
+async function enrichErc20(
+  approval: { tokenAddress: string; spender: string; allowance: string; balanceRaw: string },
+  chain: string,
+  priceMap: Map<string, { priceUsd?: string; info?: { imageUrl?: string } }>,
+): Promise<ApprovalResult> {
+  const [meta, spenderEnrich] = await Promise.all([
+    getTokenMetadata(approval.tokenAddress, chain).catch(() => null),
+    enrichAddress(approval.spender, chain),
+  ]);
+
+  const tokenMeta = meta;
+  const spenderRisk = spenderRiskInfo(spenderEnrich);
+  const decimals = typeof tokenMeta?.decimals === 'number' ? tokenMeta.decimals : 18;
+
+  const { display: allowanceDisplay, isUnlimited, value: allowanceVal } =
+    classifyAllowance(approval.allowance, decimals);
+
+  const isPermit2Spender = normalizeAddress(approval.spender, chain) === PERMIT2_ADDRESS;
+
+  const pair = priceMap.get(approval.tokenAddress.toLowerCase());
+  const priceUsd = pair?.priceUsd ? parseFloat(pair.priceUsd) || 0 : 0;
+
+  let balanceHuman: number | null = null;
+  let usdAtRisk: number | null = null;
+  try {
+    const bal = BigInt(approval.balanceRaw);
+    balanceHuman = toHuman(bal, decimals);
+    if (priceUsd > 0) {
+      const exposedRaw = allowanceVal === null ? bal : (allowanceVal < bal ? allowanceVal : bal);
+      usdAtRisk = toHuman(exposedRaw, decimals) * priceUsd;
+    }
+  } catch {
+    balanceHuman = null;
+  }
+
+  let riskLevel: 'safe' | 'warning' | 'danger' = 'safe';
+  if (isFlagged(spenderRisk)) riskLevel = 'danger';
+  else if (isUnlimited) riskLevel = 'warning';
+
+  return {
+    kind: 'erc20',
+    tokenAddress: approval.tokenAddress,
+    tokenSymbol: tokenMeta?.symbol ?? '???',
+    tokenName: tokenMeta?.name ?? 'Unknown Token',
+    tokenLogo: tokenMeta?.logo ?? pair?.info?.imageUrl ?? null,
+    decimals,
+    spender: approval.spender,
+    spenderLabel: displayLabel(spenderEnrich),
+    spenderLabelSource: spenderEnrich.labelSource,
+    allowance: allowanceDisplay,
+    allowanceRaw: approval.allowance,
+    isUnlimited,
+    isPermit2: isPermit2Spender,
+    usdAtRisk,
+    balance: balanceHuman,
+    riskLevel,
+    revokeCalldata: buildRevokeCalldata(approval.spender),
+    revokeTarget: approval.tokenAddress,
+    spenderRisk,
+  };
+}
+
+/** Enrich one live Permit2 grant. Revoke targets the Permit2 contract. */
+async function enrichPermit2(
+  a: Permit2Allowance,
+  chain: string,
+  priceMap: Map<string, { priceUsd?: string; info?: { imageUrl?: string } }>,
+): Promise<ApprovalResult> {
+  const [meta, spenderEnrich] = await Promise.all([
+    getTokenMetadata(a.tokenAddress, chain).catch(() => null),
+    enrichAddress(a.spender, chain),
+  ]);
+  const tokenMeta = meta;
+  const spenderRisk = spenderRiskInfo(spenderEnrich);
+  const decimals = typeof tokenMeta?.decimals === 'number' ? tokenMeta.decimals : 18;
+
+  const { display: allowanceDisplay, isUnlimited, value: allowanceVal } =
+    classifyAllowance(a.amount, decimals);
+
+  const pair = priceMap.get(a.tokenAddress.toLowerCase());
+  const priceUsd = pair?.priceUsd ? parseFloat(pair.priceUsd) || 0 : 0;
+
+  let balanceHuman: number | null = null;
+  let usdAtRisk: number | null = null;
+  try {
+    const bal = BigInt(a.balanceRaw);
+    balanceHuman = toHuman(bal, decimals);
+    if (priceUsd > 0 && allowanceVal !== null) {
+      const exposedRaw = allowanceVal < bal ? allowanceVal : bal;
+      usdAtRisk = toHuman(exposedRaw, decimals) * priceUsd;
+    }
+  } catch {
+    balanceHuman = null;
+  }
+
+  // A live Permit2 grant is directly spendable, so an unlimited one is a
+  // warning at minimum; a flagged spender is danger.
+  let riskLevel: 'safe' | 'warning' | 'danger' = 'safe';
+  if (isFlagged(spenderRisk)) riskLevel = 'danger';
+  else if (isUnlimited) riskLevel = 'warning';
+
+  return {
+    kind: 'permit2',
+    tokenAddress: a.tokenAddress,
+    tokenSymbol: tokenMeta?.symbol ?? '???',
+    tokenName: tokenMeta?.name ?? 'Unknown Token',
+    tokenLogo: tokenMeta?.logo ?? pair?.info?.imageUrl ?? null,
+    decimals,
+    spender: a.spender,
+    spenderLabel: displayLabel(spenderEnrich),
+    spenderLabelSource: spenderEnrich.labelSource,
+    allowance: allowanceDisplay,
+    allowanceRaw: a.amount,
+    isUnlimited,
+    isPermit2: true,
+    usdAtRisk,
+    balance: balanceHuman,
+    riskLevel,
+    revokeCalldata: buildPermit2RevokeCalldata(a.tokenAddress, a.spender),
+    revokeTarget: PERMIT2_ADDRESS,
+    permit2Expiration: a.expiration,
+    spenderRisk,
+  };
+}
+
+/** Enrich one live NFT operator grant. Revoke targets the collection. */
+async function enrichNft(
+  a: NftOperatorApproval,
+  chain: string,
+  nativeUsd: number | null,
+): Promise<ApprovalResult> {
+  const operatorEnrich = await enrichAddress(a.operator, chain);
+  const spenderRisk = spenderRiskInfo(operatorEnrich);
+
+  // Floor-price USD exposure = ownedCount x floorNative x nativeUsd, when all
+  // three are known. Otherwise honest null (Alchemy has no floor for most sets).
+  let floorUsdExposure: number | null = null;
+  if (a.floorNative !== null && a.ownedCount !== null && nativeUsd !== null && a.ownedCount > 0) {
+    floorUsdExposure = a.floorNative * a.ownedCount * nativeUsd;
+  }
+
+  // An operator grant lets the spender move EVERY token in the collection.
+  // Flagged operator → danger; otherwise it is a standing warning by nature.
+  let riskLevel: 'safe' | 'warning' | 'danger' = 'warning';
+  if (isFlagged(spenderRisk)) riskLevel = 'danger';
+
+  // Collection display name: prefer Alchemy's on-chain collection name, else a
+  // truncated collection address. Never fabricated.
+  const collectionLabel = a.name ?? `${a.collection.slice(0, 6)}…${a.collection.slice(-4)}`;
+
+  return {
+    kind: 'nft',
+    tokenAddress: a.collection,
+    tokenSymbol: a.symbol ?? a.name ?? 'NFT Collection',
+    tokenName: collectionLabel,
+    tokenLogo: a.logo,
+    decimals: 0,
+    spender: a.operator,
+    // The operator (spender) label comes from the shared multi-source enrichment.
+    spenderLabel: displayLabel(operatorEnrich),
+    spenderLabelSource: operatorEnrich.labelSource,
+    allowance: 'All items',
+    allowanceRaw: 'all',
+    isUnlimited: true,
+    isPermit2: false,
+    usdAtRisk: floorUsdExposure,
+    balance: a.ownedCount,
+    riskLevel,
+    revokeCalldata: buildNftRevokeCalldata(a.operator),
+    revokeTarget: a.collection,
+    nft: {
+      tokenType: a.tokenType,
+      ownedCount: a.ownedCount,
+      floorNative: a.floorNative,
+      floorUsdExposure,
+    },
+    spenderRisk,
+  };
+}
+
 // ─── POST Handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -127,92 +362,52 @@ export async function POST(req: NextRequest) {
 
     const { address, chain } = parsed.data;
 
-    // Chunked/paginated Alchemy scan (asset-transfer discovery + per-token
-    // Approval logs). Returns current allowance + owner balance per pair.
-    const rawApprovals = await getTokenApprovals(address, chain);
+    // Three independent on-chain scans in parallel: ERC-20 allowances, Permit2
+    // time-bounded grants, and ERC-721/1155 operator approvals. Each degrades to
+    // an empty set on failure so one source failing never blanks the others.
+    const [erc20Settled, permit2Settled, nftSettled] = await Promise.allSettled([
+      getTokenApprovals(address, chain),
+      getPermit2Approvals(address, chain),
+      getNftApprovals(address, chain),
+    ]);
 
-    if (rawApprovals.length === 0) {
+    const rawErc20 = erc20Settled.status === 'fulfilled' ? erc20Settled.value : [];
+    const rawPermit2 = permit2Settled.status === 'fulfilled' ? permit2Settled.value : [];
+    const rawNft = nftSettled.status === 'fulfilled' ? nftSettled.value : [];
+
+    if (rawErc20.length === 0 && rawPermit2.length === 0 && rawNft.length === 0) {
       return NextResponse.json({
         approvals: [], totalRisk: 'safe', unlimitedCount: 0, dangerCount: 0,
-        totalUsdAtRisk: 0, scannedAt: new Date().toISOString(),
+        totalUsdAtRisk: 0, erc20Count: 0, permit2Count: 0, nftCount: 0,
+        scannedAt: new Date().toISOString(),
       });
     }
 
-    // Batch live USD prices for every distinct token (DexScreener, free).
-    const uniqueTokens = Array.from(new Set(rawApprovals.map(a => a.tokenAddress)));
-    const priceMap = await getTokensMulti(uniqueTokens).catch(() => new Map());
+    // Batch live USD prices for every distinct fungible token (DexScreener).
+    const uniqueTokens = Array.from(new Set([
+      ...rawErc20.map(a => a.tokenAddress),
+      ...rawPermit2.map(a => a.tokenAddress),
+    ]));
+    const priceMap = uniqueTokens.length > 0
+      ? await getTokensMulti(uniqueTokens).catch(() => new Map())
+      : new Map();
 
-    const enriched: ApprovalResult[] = await Promise.all(
-      rawApprovals.map(async (approval): Promise<ApprovalResult> => {
-        const [meta, spenderSecurity] = await Promise.allSettled([
-          getTokenMetadata(approval.tokenAddress, chain),
-          getAddressSecurity(approval.spender, chain),
-        ]);
+    // Native gas-token USD price, only fetched when there is NFT floor exposure
+    // to convert (keeps the CoinGecko call off the hot path otherwise).
+    let nativeUsd: number | null = null;
+    if (rawNft.some(n => n.floorNative !== null && (n.ownedCount ?? 0) > 0)) {
+      const coinId = NATIVE_COIN_ID[chain.toLowerCase()];
+      if (coinId) {
+        const p = await getTokenPrice(coinId).catch(() => 0);
+        nativeUsd = p > 0 ? p : null;
+      }
+    }
 
-        const tokenMeta = meta.status === 'fulfilled' ? meta.value : null;
-        const spenderRisk = spenderSecurity.status === 'fulfilled' ? spenderSecurity.value : null;
-        const decimals = typeof tokenMeta?.decimals === 'number' ? tokenMeta.decimals : 18;
-
-        const { display: allowanceDisplay, isUnlimited, value: allowanceVal } =
-          classifyAllowance(approval.allowance, decimals);
-
-        const isPermit2 = normalizeAddress(approval.spender, chain) === PERMIT2_ADDRESS;
-        const spenderLabel = getSpenderLabel(approval.spender);
-
-        // USD-at-risk = min(current balance, allowance) x live price.
-        const pair = priceMap.get(approval.tokenAddress.toLowerCase());
-        const priceUsd = pair?.priceUsd ? parseFloat(pair.priceUsd) || 0 : 0;
-
-        let balanceHuman: number | null = null;
-        let usdAtRisk: number | null = null;
-        try {
-          const bal = BigInt(approval.balanceRaw);
-          balanceHuman = toHuman(bal, decimals);
-          if (priceUsd > 0) {
-            // Exposure is capped by what the wallet actually holds.
-            const exposedRaw = allowanceVal === null
-              ? bal // unknown allowance — assume balance fully exposed
-              : (allowanceVal < bal ? allowanceVal : bal);
-            usdAtRisk = toHuman(exposedRaw, decimals) * priceUsd;
-          }
-        } catch {
-          balanceHuman = null;
-        }
-
-        // Risk classification: a flagged spender is always danger; an unlimited
-        // grant is a warning (escalated in the UI when real USD is exposed).
-        let riskLevel: 'safe' | 'warning' | 'danger' = 'safe';
-        if (spenderRisk?.isMalicious || spenderRisk?.isPhishing || spenderRisk?.isBlacklisted) {
-          riskLevel = 'danger';
-        } else if (isUnlimited) {
-          riskLevel = 'warning';
-        }
-
-        return {
-          tokenAddress: approval.tokenAddress,
-          tokenSymbol: tokenMeta?.symbol ?? '???',
-          tokenName: tokenMeta?.name ?? 'Unknown Token',
-          tokenLogo: tokenMeta?.logo ?? pair?.info?.imageUrl ?? null,
-          decimals,
-          spender: approval.spender,
-          spenderLabel,
-          allowance: allowanceDisplay,
-          allowanceRaw: approval.allowance,
-          isUnlimited,
-          isPermit2,
-          usdAtRisk,
-          balance: balanceHuman,
-          riskLevel,
-          revokeCalldata: buildRevokeCalldata(approval.spender),
-          spenderRisk: spenderRisk ? {
-            isMalicious: spenderRisk.isMalicious,
-            isPhishing: spenderRisk.isPhishing,
-            isBlacklisted: spenderRisk.isBlacklisted,
-            labels: spenderRisk.labels,
-          } : undefined,
-        };
-      })
-    );
+    const enriched: ApprovalResult[] = await Promise.all([
+      ...rawErc20.map(a => enrichErc20(a, chain, priceMap)),
+      ...rawPermit2.map(a => enrichPermit2(a, chain, priceMap)),
+      ...rawNft.map(a => enrichNft(a, chain, nativeUsd)),
+    ]);
 
     // Sort: danger first, then by USD-at-risk descending.
     const order = { danger: 0, warning: 1, safe: 2 };
@@ -233,6 +428,9 @@ export async function POST(req: NextRequest) {
       unlimitedCount: sorted.filter(a => a.isUnlimited).length,
       dangerCount: sorted.filter(a => a.riskLevel === 'danger').length,
       totalUsdAtRisk: sorted.reduce((sum, a) => sum + (a.usdAtRisk ?? 0), 0),
+      erc20Count: rawErc20.length,
+      permit2Count: rawPermit2.length,
+      nftCount: rawNft.length,
       scannedAt: new Date().toISOString(),
     });
   } catch (err: unknown) {

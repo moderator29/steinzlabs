@@ -6,6 +6,8 @@ import {
   Gavel, Fingerprint, PieChart, Wallet, Plug, ArrowRight, type LucideIcon,
 } from 'lucide-react';
 import { SecurityHealthCard } from '@/components/security/SecurityHealthCard';
+import { LiveThreatFeed } from '@/components/security/LiveThreatFeed';
+import { HealthTrendCard } from '@/components/security/HealthTrendCard';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { securityCenterHowItWorks } from '@/lib/howItWorks/content/security';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
@@ -121,17 +123,24 @@ export default function SecurityPage() {
           <HowItWorksButton content={securityCenterHowItWorks} className="ms-auto shrink-0" />
         </div>
 
-        {/* Live composite health score, breach banner and 2FA CTA — real data. */}
+        {/* Live composite health score, breach banner and 2FA CTA · real data. */}
         <SecurityHealthCard />
 
-        <div className="flex items-center justify-between nl-fade-up nl-fade-up-1">
+        {/* Live threat feed + health-score trend, both backed by real per-user
+            rows with honest empty / single-snapshot states. */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 nl-fade-up nl-fade-up-1">
+          <LiveThreatFeed />
+          <HealthTrendCard />
+        </div>
+
+        <div className="flex items-center justify-between nl-fade-up nl-fade-up-2">
           <div>
             <h2 className="text-sm font-bold">Security tools</h2>
             <p className="text-[11px] text-gray-500">Every tool is backed by live data. Nothing here is simulated.</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 nl-fade-up nl-fade-up-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 nl-fade-up nl-fade-up-3">
           {TOOLS.map((tool) => (
             <TiltCard key={tool.href} max={6}>
               <Link
@@ -170,7 +179,7 @@ export default function SecurityPage() {
 
         <Link
           href="/dashboard/risk-scanner"
-          className="nl-glass nl-glass--interactive rounded-2xl p-4 flex items-center gap-3 nl-fade-up nl-fade-up-3 group"
+          className="nl-glass nl-glass--interactive rounded-2xl p-4 flex items-center gap-3 nl-fade-up nl-fade-up-4 group"
         >
           <div className="w-10 h-10 rounded-xl bg-[#EF4444]/10 flex items-center justify-center flex-shrink-0">
             <Target className="w-5 h-5 text-[#EF4444]" aria-hidden="true" />
