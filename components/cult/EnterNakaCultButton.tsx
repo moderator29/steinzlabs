@@ -5,7 +5,7 @@ import { useAccount, useSignMessage, useDisconnect } from 'wagmi';
 import { useAppKit } from '@reown/appkit/react';
 import { Loader2, KeyRound } from 'lucide-react';
 import { HAS_APPKIT } from '@/lib/wallet/appkit';
-import { signSiweMessage } from '@/lib/auth/walletSign';
+import { signSiweMessage, finishWalletSession } from '@/lib/auth/walletSign';
 
 /**
  * EnterNakaCultButton · wallet-connect entry to the NakaCult Vault.
@@ -61,11 +61,11 @@ export function EnterNakaCultButton({ className, label = 'Enter NakaCult' }: Pro
         body: JSON.stringify({ address: addr, signature, nonce, chain: 'evm', redirectTo: '/vault' }),
       });
       if (!verifyRes.ok) throw new Error((await verifyRes.json()).error || 'Verification failed');
-      const { actionLink, unlocked } = await verifyRes.json();
+      const { actionLink, tokenHash, unlocked } = await verifyRes.json();
 
       if (unlocked?.cult) {
-        // Eligible · consume the magic link (lands directly in /vault).
-        window.location.href = actionLink;
+        // Eligible · establish the session in place and land directly in /vault.
+        await finishWalletSession({ tokenHash, actionLink, redirectTo: '/vault' });
         return;
       }
       // Authenticated but the wallet doesn't meet the cult threshold yet.

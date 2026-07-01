@@ -217,6 +217,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       userId,
       isNewUser,
+      // Preferred: the client exchanges this hashed_token for a session IN PLACE
+      // via supabase.auth.verifyOtp — no cross-domain hop to the Supabase
+      // action_link (which drops the session in mobile in-app browsers and dumps
+      // the user on the email-login screen). actionLink kept as a fallback.
+      tokenHash: linkData.properties.hashed_token,
       actionLink: linkData.properties.action_link,
       // What the connect unlocked, so the client can route/celebrate. The
       // durable first-time Max welcome is gated server-side by
