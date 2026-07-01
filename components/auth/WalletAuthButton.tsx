@@ -6,7 +6,7 @@ import { useAccount, useSignMessage, useDisconnect } from 'wagmi';
 import { useAppKit } from '@reown/appkit/react';
 import { Loader2, Wallet } from 'lucide-react';
 import { HAS_APPKIT } from '@/lib/wallet/appkit';
-import { signSiweMessage } from '@/lib/auth/walletSign';
+import { signSiweMessage, finishWalletSession } from '@/lib/auth/walletSign';
 import { useToast } from '@/components/Toast';
 
 type Mode = 'signin' | 'signup';
@@ -76,10 +76,10 @@ export function WalletAuthButton({ mode, redirectTo = '/dashboard', className }:
         body: JSON.stringify({ address: addr, signature, nonce, chain: 'evm', redirectTo }),
       });
       if (!verifyRes.ok) throw new Error((await verifyRes.json()).error || 'Verification failed');
-      const { actionLink } = await verifyRes.json();
+      const { actionLink, tokenHash } = await verifyRes.json();
 
-      // Step 4 — consume the magic-link to set the Supabase session
-      window.location.href = actionLink;
+      // Step 4 — establish the session in place (verifyOtp) and enter the app.
+      await finishWalletSession({ tokenHash, actionLink, redirectTo });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Wallet auth failed';
       showToast(msg, 'error');

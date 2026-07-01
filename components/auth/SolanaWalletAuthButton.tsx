@@ -19,6 +19,7 @@ import { PhantomLogo } from '@/components/wallet/WalletLogo';
 
 import { useState } from 'react';
 import { useToast } from '@/components/Toast';
+import { finishWalletSession } from '@/lib/auth/walletSign';
 
 interface Props {
   mode: 'signin' | 'signup';
@@ -150,9 +151,10 @@ export function SolanaWalletAuthButton({ mode, redirectTo = '/dashboard', classN
       if (!verifyRes.ok) {
         throw new Error((await verifyRes.json()).error || 'Verification failed');
       }
-      const { actionLink } = await verifyRes.json() as { actionLink: string };
+      const { actionLink, tokenHash } = await verifyRes.json() as { actionLink?: string; tokenHash?: string };
 
-      window.location.href = actionLink;
+      // Establish the session in place (verifyOtp) and enter the app.
+      await finishWalletSession({ tokenHash, actionLink, redirectTo });
     } catch (err) {
       const code = (err as { code?: number })?.code;
       const msg = code === 4001 ? 'Solana sign-in cancelled.'

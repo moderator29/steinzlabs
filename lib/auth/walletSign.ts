@@ -55,3 +55,37 @@ export async function signSiweMessage(opts: {
     return sig as `0x${string}`;
   }
 }
+
+/**
+ * Establish the Supabase session after /api/auth/wallet-verify succeeds, then
+ * navigate into the app.
+ *
+ * Preferred path: exchange the hashed_token for a session IN PLACE via
+ * verifyOtp — no navigation to the Supabase action_link. The action_link
+ * round-trip (browser → project.supabase.co → back) drops the session in mobile
+ * in-app browsers (Trust/MetaMask webview), so /auth/callback times out and
+ * bounces the user to the email login screen. verifyOtp sets the session on the
+ * current origin's client directly, so we can hard-navigate straight to the app.
+ * Falls back to the action_link only if the token exchange is unavailable.
+ */
+export async function finishWalletSession(opts: {
+  tokenHash?: string | null;
+  actionLink?: string | null;
+  redirectTo: string;
+}): Promise<void> {
+  const { tokenHash, actionLink, redirectTo } = opts;
+  if (tokenHash) {
+    const { supabase } = await import('@/lib/supabase');
+    const { data, error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'magiclink' });
+    if (!error && data?.session) {
+      // Hard navigation so the middleware/session cookie is picked up fresh.
+      window.location.href = redirectTo;
+      return;
+    }
+  }
+  if (actionLink) {
+    window.location.href = actionLink;
+    return;
+  }
+  throw new Error('Could not establish your session. Please try again.');
+}
