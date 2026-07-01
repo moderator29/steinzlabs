@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       if (listErr) break;
       const batch = list?.users ?? [];
       for (const u of batch) {
-        if (u.email && u.email.includes('@') && !u.email.endsWith('@wallet.nakalabs.com') && targetIds.has(u.id)) {
+        if (u.email && u.email.includes('@') && !u.email.includes('@wallet.nakalabs.') && targetIds.has(u.id)) {
           recipients.push(u.email);
         }
       }

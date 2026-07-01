@@ -5,6 +5,7 @@ import { useAccount, useSignMessage, useDisconnect } from 'wagmi';
 import { useAppKit } from '@reown/appkit/react';
 import { Loader2, KeyRound } from 'lucide-react';
 import { HAS_APPKIT } from '@/lib/wallet/appkit';
+import { signSiweMessage } from '@/lib/auth/walletSign';
 
 /**
  * EnterNakaCultButton · wallet-connect entry to the NakaCult Vault.
@@ -35,7 +36,7 @@ type Status =
 
 export function EnterNakaCultButton({ className, label = 'Enter NakaCult' }: Props) {
   const { open } = useAppKit();
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, connector } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const { disconnect } = useDisconnect();
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
@@ -52,7 +53,7 @@ export function EnterNakaCultButton({ className, label = 'Enter NakaCult' }: Pro
       if (!nonceRes.ok) throw new Error((await nonceRes.json()).error || 'Failed to issue nonce');
       const { nonce, message } = await nonceRes.json();
 
-      const signature = await signMessageAsync({ message });
+      const signature = await signSiweMessage({ signMessageAsync, connector, message, address: addr });
 
       const verifyRes = await fetch('/api/auth/wallet-verify', {
         method: 'POST',
@@ -75,7 +76,7 @@ export function EnterNakaCultButton({ className, label = 'Enter NakaCult' }: Pro
       setStatus({ kind: 'error', message });
       try { disconnect(); } catch { /* ignore */ }
     }
-  }, [signMessageAsync, disconnect]);
+  }, [signMessageAsync, connector, disconnect]);
 
   // Auto-continue to SIWE once a wallet finishes connecting (only after the
   // user opted in by clicking).
