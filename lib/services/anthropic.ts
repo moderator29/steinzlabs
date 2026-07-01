@@ -5,16 +5,16 @@ import { DUNE_TOOLS } from '@/lib/ai/vtxToolsDune';
 /**
  * VTX AI Engine — Advisor Strategy Architecture
  *
- * Executor: claude-sonnet-4-6  (handles all requests, calls tools)
+ * Executor: claude-sonnet-5   (handles all requests, calls tools)
  * Advisor:  claude-opus-4-8    (consulted on complex decisions, max 2x per request)
  *
  * The Advisor tool is invoked via the anthropic-beta: advisor-tool-2026-03-01 header.
  * This delivers near-Opus quality at ~80-90% Sonnet cost.
  *
  * IMPORTANT — advisor pairing: the advisor model must be at least as capable as
- * the executor. For a claude-sonnet-4-6 executor the ONLY valid advisors are
- * claude-opus-4-8 / claude-opus-4-7; claude-opus-4-6 is rejected with HTTP 400
- * (this was the cause of every VTX advisor call silently failing).
+ * the executor. For a claude-sonnet-5 executor the ONLY valid advisors are
+ * claude-opus-4-8 / claude-opus-4-7; less-capable Opus builds are rejected with
+ * HTTP 400 (this was the cause of every VTX advisor call silently failing).
  */
 
 const API_TIMEOUT_MS = parseInt(process.env.API_TIMEOUT_MS || '900000', 10);
@@ -27,9 +27,11 @@ const client = new Anthropic({
 
 // VTX model configuration.
 // The advisor tool requires an advisor model at least as capable as the
-// executor. For a claude-sonnet-4-6 executor the only valid advisors are
-// claude-opus-4-8 / claude-opus-4-7 — claude-opus-4-6 is rejected with HTTP 400.
-const VTX_EXECUTOR_MODEL = 'claude-sonnet-4-6';
+// executor. For a claude-sonnet-5 executor the only valid advisors are
+// claude-opus-4-8 / claude-opus-4-7.
+// On claude-sonnet-5 adaptive thinking is the default; we set it explicitly on
+// the deep (tool-calling) path so the effort mapping below is meaningful.
+const VTX_EXECUTOR_MODEL = 'claude-sonnet-5';
 const VTX_ADVISOR_MODEL = 'claude-opus-4-8';
 const ADVISOR_BETA = 'advisor-tool-2026-03-01';
 
@@ -332,7 +334,7 @@ export interface VTXQueryOptions {
   maxAdvisorUses?: number;
   stream?: boolean;
   system?: string;       // Override the default VTX_SYSTEM_PROMPT
-  maxTokens?: number;    // Override default 4096
+  maxTokens?: number;    // Override default (8192 on the deep/tool path, 4096 text stream)
   // §C4 — when the client sends the [WEB_SEARCH] flag, attach Anthropic's
   // hosted web_search server tool so VTX can pull live information past its
   // training cutoff. The flag was parsed by the route but never wired to a
@@ -352,7 +354,7 @@ function effortConfig(effort?: 'low' | 'medium' | 'high'): { output_config: { ef
 }
 
 // Hosted web-search server tool. The `_20260209` variant (dynamic filtering)
-// is the right version for the Sonnet 4.6 executor; results return inline as
+// is the right version for the Sonnet 5 executor; results return inline as
 // `web_search_tool_result` blocks — no client-side execution loop needed, so
 // it composes with the existing advisor/custom-tool loop. Inserted BEFORE the
 // custom tools so a cacheable custom tool stays the cache breakpoint.
@@ -391,7 +393,7 @@ function tagToolsForCache(tools: Anthropic.Tool[]): Anthropic.Tool[] {
 }
 
 export async function vtxQuery(options: VTXQueryOptions): Promise<Anthropic.Message> {
-  const { messages, tools = VTX_TOOLS, maxAdvisorUses = 2, system, maxTokens = 4096, webSearch, effort } = options;
+  const { messages, tools = VTX_TOOLS, maxAdvisorUses = 2, system, maxTokens = 8192, webSearch, effort } = options;
 
   // Advisor Strategy: Sonnet as executor, Opus as advisor on hard decisions
   const advisorTool = {
@@ -405,6 +407,8 @@ export async function vtxQuery(options: VTXQueryOptions): Promise<Anthropic.Mess
     {
       model: VTX_EXECUTOR_MODEL,
       max_tokens: maxTokens,
+      // Adaptive thinking (default on sonnet-5; set explicitly so effort maps).
+      thinking: { type: 'adaptive' },
       ...effortConfig(effort),
       system: buildCachedSystem(system ?? VTX_SYSTEM_PROMPT),
       tools: tagToolsForCache([advisorTool, ...withWebSearch(tools, webSearch)] as Anthropic.Tool[]),
@@ -518,7 +522,7 @@ export async function vtxStream(options: VTXQueryOptions): Promise<ReadableStrea
  * answers instead of returning empty replies.
  */
 export function vtxStreamRaw(options: VTXQueryOptions): ReturnType<typeof client.messages.stream> {
-  const { messages, tools = VTX_TOOLS, maxAdvisorUses = 2, system, maxTokens = 4096, webSearch, effort } = options;
+  const { messages, tools = VTX_TOOLS, maxAdvisorUses = 2, system, maxTokens = 8192, webSearch, effort } = options;
 
   const advisorTool = {
     type: 'advisor_20260301' as Anthropic.Tool['type'],
@@ -531,6 +535,8 @@ export function vtxStreamRaw(options: VTXQueryOptions): ReturnType<typeof client
     {
       model: VTX_EXECUTOR_MODEL,
       max_tokens: maxTokens,
+      // Adaptive thinking (default on sonnet-5; set explicitly so effort maps).
+      thinking: { type: 'adaptive' },
       ...effortConfig(effort),
       system: buildCachedSystem(system ?? VTX_SYSTEM_PROMPT),
       tools: tagToolsForCache([advisorTool, ...withWebSearch(tools, webSearch)] as Anthropic.Tool[]),

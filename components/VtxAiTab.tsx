@@ -784,7 +784,7 @@ export default function VtxAiTab() {
             const dataLine = event.split('\n').find(l => l.startsWith('data:'));
             if (!dataLine) continue;
             try {
-              const json = JSON.parse(dataLine.slice(5).trim()) as { delta?: string; done?: boolean; reply?: string; error?: string; suggestions?: unknown };
+              const json = JSON.parse(dataLine.slice(5).trim()) as { delta?: string; done?: boolean; reply?: string; error?: string; suggestions?: unknown; chartType?: string; chartData?: unknown; chartAddress?: string; chartToken?: string };
               if (json.error) {
                 throw new Error(json.error);
               }
@@ -810,6 +810,18 @@ export default function VtxAiTab() {
                 let chartInfo: ChartInfo | undefined;
                 if (chartTagMatch) {
                   chartInfo = { type: chartTagMatch[1].toLowerCase() as ChartInfo['type'] };
+                }
+                // The route may stream structured chart fields alongside the
+                // reply (e.g. holder/bubble token-card data). When present,
+                // use them so those charts render with real data instead of an
+                // empty panel; otherwise the [CHART:...] tag behaviour stands.
+                if (!chartInfo && typeof json.chartType === 'string') {
+                  chartInfo = { type: json.chartType.toLowerCase() as ChartInfo['type'] };
+                }
+                if (chartInfo) {
+                  if (json.chartData !== undefined) chartInfo.data = json.chartData;
+                  if (typeof json.chartAddress === 'string') chartInfo.address = json.chartAddress;
+                  if (typeof json.chartToken === 'string') chartInfo.token = json.chartToken;
                 }
                 const streamedSuggestions: string[] | undefined = Array.isArray(json.suggestions)
                   ? (json.suggestions as unknown[]).filter((s): s is string => typeof s === 'string').slice(0, 4)
@@ -854,14 +866,25 @@ export default function VtxAiTab() {
         // Parse chart signals from the API response
         let chartInfo: ChartInfo | undefined;
 
-        // 1. Check if the API explicitly returned a chart field
+        // 1. Check if the API explicitly returned a chart field. The route
+        //    returns an object ({ type, token, address, data }); older shapes
+        //    may still send a bare type string, so handle both.
         if (data.chart) {
-          chartInfo = {
-            type: data.chart as ChartInfo['type'],
-            token: data.chartToken,
-            address: data.chartAddress,
-            data: data.chartData,
-          };
+          if (typeof data.chart === 'object') {
+            chartInfo = {
+              type: data.chart.type as ChartInfo['type'],
+              token: data.chart.token ?? data.chartToken,
+              address: data.chart.address ?? data.chartAddress,
+              data: data.chart.data ?? data.chartData,
+            };
+          } else {
+            chartInfo = {
+              type: data.chart as ChartInfo['type'],
+              token: data.chartToken,
+              address: data.chartAddress,
+              data: data.chartData,
+            };
+          }
         }
 
         // 2. Scan reply text for [CHART:type] tags

@@ -334,7 +334,13 @@ export function AdvancedChart({
     return () => {
       chart.remove();
     };
-  }, [candles, compareCandles, compareToken, chartType, indicators, height, tf, onPriceClick, staticChart, replayIndex]);
+    // `indicators` is an inline object literal from the parent, so its identity
+    // changes on every parent render. Depending on it directly tore down and
+    // recreated the whole chart (flicker) on unrelated re-renders. Serializing
+    // the config gives a stable primitive that only changes when a toggle
+    // actually flips.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candles, compareCandles, compareToken, chartType, JSON.stringify(indicators), height, tf, onPriceClick, staticChart, replayIndex]);
 
   return (
     <div className={`relative ${className}`} style={{ height }}>

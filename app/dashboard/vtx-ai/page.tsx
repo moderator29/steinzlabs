@@ -250,6 +250,8 @@ function TokenCard({ token }: { token: TokenCardData }) {
       ? { volume24h: cachedFresh.volume24h, liquidity: cachedFresh.liquidity, marketCap: cachedFresh.marketCap, fdv: cachedFresh.fdv, supply: cachedFresh.supply, name: cachedFresh.name, holders: cachedFresh.holders, trusted: cachedFresh.trusted, orbUrl: cachedFresh.orbUrl }
       : null,
   );
+  // Whether the /api/vtx/token-card fetch has resolved (cached = already done).
+  const [chartResolved, setChartResolved] = useState<boolean>(!!cachedFresh);
 
   useEffect(() => {
     if (cachedFresh) return;
@@ -300,7 +302,11 @@ function TokenCard({ token }: { token: TokenCardData }) {
           });
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      // Mark the chart fetch resolved (success, non-OK, or error) so PriceCard
+      // shows a terminal "Chart unavailable" instead of pulsing forever when a
+      // token genuinely has no chart points.
+      .finally(() => { if (!cancelled) setChartResolved(true); });
     return () => { cancelled = true; };
   }, [token.address, token.chain, token.symbol, cacheKey, cachedFresh]);
 
@@ -321,6 +327,7 @@ function TokenCard({ token }: { token: TokenCardData }) {
       price={numericPrice}
       change24h={numericChange}
       points={chart?.points}
+      chartLoaded={chartResolved}
       volume24h={stats?.volume24h ?? null}
       marketCap={stats?.marketCap ?? null}
       liquidity={stats?.liquidity ?? null}
