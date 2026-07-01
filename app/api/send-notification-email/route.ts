@@ -1,6 +1,17 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 
+/** Escape HTML-significant characters so user-controlled content can't inject
+ *  markup into the notification email (phishing / spoofed CTAs). */
+function escapeHtml(input: unknown): string {
+  return String(input ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function buildEmailHtml(title: string, message: string, type: string): string {
   const typeColors: Record<string, string> = {
     whale_alert: '#0066FF',
@@ -12,13 +23,16 @@ function buildEmailHtml(title: string, message: string, type: string): string {
     system: '#6B7280',
   };
   const color = typeColors[type] || '#0066FF';
+  const safeTitle = escapeHtml(title);
+  const safeMessage = escapeHtml(message);
+  const safeTypeLabel = escapeHtml(type.replace(/_/g, ' '));
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${title}</title>
+  <title>${safeTitle}</title>
 </head>
 <body style="margin:0;padding:0;background:#0A0E1A;font-family:'Segoe UI',Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#0A0E1A;padding:40px 0;">
@@ -34,7 +48,7 @@ function buildEmailHtml(title: string, message: string, type: string): string {
                     <span style="display:block;font-size:11px;color:#6B7280;margin-top:2px;letter-spacing:2px;text-transform:uppercase;">Crypto Intelligence Platform</span>
                   </td>
                   <td align="right">
-                    <span style="display:inline-block;padding:4px 12px;background:${color}33;border:1px solid ${color}66;border-radius:20px;font-size:10px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:1px;">${type.replace(/_/g, ' ')}</span>
+                    <span style="display:inline-block;padding:4px 12px;background:${color}33;border:1px solid ${color}66;border-radius:20px;font-size:10px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:1px;">${safeTypeLabel}</span>
                   </td>
                 </tr>
               </table>
@@ -42,8 +56,8 @@ function buildEmailHtml(title: string, message: string, type: string): string {
           </tr>
           <tr>
             <td style="padding:32px;">
-              <h1 style="margin:0 0 16px;font-size:20px;font-weight:700;color:#FFFFFF;line-height:1.3;">${title}</h1>
-              <p style="margin:0 0 24px;font-size:14px;color:#9CA3AF;line-height:1.6;">${message}</p>
+              <h1 style="margin:0 0 16px;font-size:20px;font-weight:700;color:#FFFFFF;line-height:1.3;">${safeTitle}</h1>
+              <p style="margin:0 0 24px;font-size:14px;color:#9CA3AF;line-height:1.6;">${safeMessage}</p>
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>

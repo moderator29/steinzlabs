@@ -19,7 +19,7 @@ interface SubscribeBody {
     endpoint: string;
     keys: { p256dh: string; auth: string };
   };
-  deviceInfo?: string;
+  vapidKeyVersion?: number | null;
 }
 
 export async function POST(request: Request) {
@@ -36,40 +36,35 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json() as SubscribeBody;
-    if (!body?.subscription?.endpoint || !body?.subscription?.keys) {
+    if (
+      !body?.subscription?.endpoint ||
+      !body?.subscription?.keys?.p256dh ||
+      !body?.subscription?.keys?.auth
+    ) {
       return NextResponse.json({ error: 'Invalid subscription object' }, { status: 400 });
     }
 
-    const ua = request.headers.get('user-agent') ?? '';
-    const deviceInfo = body.deviceInfo ?? (
-      ua.includes('iPhone') || ua.includes('iPad') ? 'iOS Safari' :
-      ua.includes('Android') ? 'Android' :
-      ua.includes('Chrome') ? 'Chrome' :
-      ua.includes('Firefox') ? 'Firefox' : 'Browser'
-    );
+    const userAgent = request.headers.get('user-agent')?.slice(0, 200) ?? null;
 
-    // Upsert by endpoint — same device re-subscribing should update, not duplicate
+    // Live push_subscriptions schema is flat: endpoint/p256dh/auth as columns,
+    // unique on endpoint. Upsert so the same device re-subscribing updates its
+    // row (and reassigns ownership) instead of duplicating.
     const { error } = await supabase
       .from('push_subscriptions')
       .upsert({
         user_id: user.id,
-        subscription: body.subscription,
-        device_info: deviceInfo,
-        is_active: true,
-        last_used_at: new Date().toISOString(),
+        endpoint: body.subscription.endpoint,
+        p256dh: body.subscription.keys.p256dh,
+        auth: body.subscription.keys.auth,
+        user_agent: userAgent,
+        vapid_key_version: body.vapidKeyVersion ?? null,
       }, {
-        onConflict: 'user_id,subscription->endpoint',
+        onConflict: 'endpoint',
         ignoreDuplicates: false,
       });
 
     if (error) {
-      // Fallback: plain insert if upsert fails (endpoint not unique constrained)
-      await supabase.from('push_subscriptions').insert({
-        user_id: user.id,
-        subscription: body.subscription,
-        device_info: deviceInfo,
-        is_active: true,
-      });
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     // Create default notification settings row if not exists

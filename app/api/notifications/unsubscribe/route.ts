@@ -30,19 +30,23 @@ export async function DELETE(request: Request) {
     const { searchParams } = new URL(request.url);
     const endpoint = searchParams.get('endpoint');
 
+    // Live push_subscriptions schema is flat with `endpoint` as a real column
+    // and no is_active flag — unsubscribing deletes the dead row(s).
     if (endpoint) {
-      // Remove specific subscription by endpoint
-      await supabase
+      // Remove the specific device subscription by endpoint.
+      const { error } = await supabase
         .from('push_subscriptions')
-        .update({ is_active: false })
+        .delete()
         .eq('user_id', user.id)
-        .contains('subscription', { endpoint });
+        .eq('endpoint', endpoint);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     } else {
-      // Remove all subscriptions for user
-      await supabase
+      // Remove all subscriptions for the user.
+      const { error } = await supabase
         .from('push_subscriptions')
-        .update({ is_active: false })
+        .delete()
         .eq('user_id', user.id);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true });
