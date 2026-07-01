@@ -132,9 +132,15 @@ export async function POST(request: NextRequest) {
 
     // Email synthesis must be deterministic per (address, chain). Lower-case
     // the EVM canonical form for email-safe characters; Solana addresses are
-    // already email-safe (base58, no symbols), use them as-is.
-    const email = chain === "evm" ? `${normalized}@wallet.nakalabs.com` : `${normalized.toLowerCase()}@wallet.nakalabs.com`;
+    // already email-safe (base58, no symbols), use them as-is. Domain is
+    // wallet.nakalabs.xyz (the product domain); these mailboxes are internal
+    // identifiers only — no mail is ever delivered to them.
+    const email = chain === "evm" ? `${normalized}@wallet.nakalabs.xyz` : `${normalized.toLowerCase()}@wallet.nakalabs.xyz`;
     let userId: string;
+    // The email used for the magic link. New users get the synthesized address
+    // above; a returning user keeps their ACTUAL stored email (which may be a
+    // legacy wallet.nakalabs.com address) so the magic link always resolves.
+    let linkEmail = email;
     // Returning wallet → reuse the existing account (sign IN); only mint a new
     // one when this wallet has never been seen (sign UP). Surfaced to the client
     // so it can route/celebrate correctly and never treats a returning user as new.
@@ -142,6 +148,8 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       userId = existing.user_id;
+      const { data: existingUser } = await supabase.auth.admin.getUserById(userId);
+      if (existingUser?.user?.email) linkEmail = existingUser.user.email;
     } else {
       // Industry-standard default identity: ENS name if the wallet has one,
       // else a stable friendly handle; deterministic unique @username. The
@@ -194,7 +202,7 @@ export async function POST(request: NextRequest) {
 
     const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
       type: "magiclink",
-      email,
+      email: linkEmail,
       ...(redirectTo
         ? { options: { redirectTo: `${new URL(request.url).origin}${redirectTo}` } }
         : {}),

@@ -52,7 +52,8 @@ export async function POST(request: Request) {
     const targetIds = new Set((profRows ?? []).map((p: { id: string }) => p.id));
 
     // Resolve emails from auth.users (paginated). Skip synthesized wallet-auth
-    // addresses (@wallet.nakalabs.com) — those mailboxes don't exist.
+    // addresses (@wallet.nakalabs.xyz, and legacy @wallet.nakalabs.com) —
+    // those mailboxes don't exist.
     const emails: string[] = [];
     const PAGE = 1000;
     for (let page = 1; page <= 50; page++) {
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
       if (listErr) break;
       const batch = list?.users ?? [];
       for (const u of batch) {
-        if (u.email && u.email.includes('@') && !u.email.endsWith('@wallet.nakalabs.com') && targetIds.has(u.id)) {
+        if (u.email && u.email.includes('@') && !u.email.includes('@wallet.nakalabs.') && targetIds.has(u.id)) {
           emails.push(u.email);
         }
       }
