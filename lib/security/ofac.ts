@@ -1,5 +1,6 @@
 import 'server-only';
 import { cacheGet, cacheSet } from '@/lib/cache/redis';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 /**
  * OFAC SDN blocklist check.
@@ -26,8 +27,9 @@ export interface OfacCheckResult {
 }
 
 export async function checkOfac(address: string): Promise<OfacCheckResult> {
-  const norm = address.toLowerCase();
-  const key = `ofac:${norm}`;
+  // Cache key must preserve Solana case (base58 is case-sensitive); EVM is
+  // lowercased. A raw .toLowerCase() collided distinct Solana addresses.
+  const key = `ofac:${normalizeAddress(address)}`;
 
   const cached = await cacheGet<OfacCheckResult>(key);
   if (cached) return { ...cached, source: 'cache' };

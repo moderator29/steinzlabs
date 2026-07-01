@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Wallet, Search, ExternalLink } from 'lucide-react';
 import { ShadowGuardianScan } from '@/components/security/ShadowGuardianScan';
 import { useNakaWallet } from '@/lib/hooks/useNakaWallet';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 
 export default function WalletAnalysisPage() {
   const naka = useNakaWallet();
@@ -24,13 +25,14 @@ export default function WalletAnalysisPage() {
   };
 
   return (
+    <AuroraBackground fullHeight className="text-white">
     <div className="p-4 space-y-4">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 nl-fade-up">
         <Wallet className="w-4 h-4 text-[#0066FF]" aria-hidden="true" />
         <h2 className="text-sm font-bold">Wallet Analysis</h2>
       </div>
 
-      <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+      <div className="nl-glass rounded-2xl p-4 nl-fade-up nl-fade-up-1" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         <label htmlFor="wa-input" className="block text-[10px] uppercase tracking-wider text-gray-500 mb-2">
           Wallet or token contract address
         </label>
@@ -87,5 +89,6 @@ export default function WalletAnalysisPage() {
         </div>
       )}
     </div>
+    </AuroraBackground>
   );
 }
