@@ -448,6 +448,277 @@ export async function getTokenApprovals(
   });
 }
 
+// ─── Permit2 allowances ─────────────────────────────────────────────────────
+// Uniswap's Permit2 is a single canonical contract deployed at the SAME address
+// on every EVM chain. Once a wallet grants Permit2 an ERC-20 approval, Permit2
+// holds a SECOND, independent allowance ledger: allowance(owner, token, spender)
+// → (uint160 amount, uint48 expiration, uint48 nonce). A live Permit2 grant to a
+// spender is spendable even if the underlying ERC-20 approval looks routine, so
+// we surface it as a first-class approval the user can revoke.
+
+const PERMIT2_CONTRACT = '0x000000000022d473030f116ddee9f6b43ac78ba3';
+// keccak256("Approval(address,address,address,uint160,uint48)")
+const PERMIT2_APPROVAL_TOPIC = '0xda9fa7c1b00402c17d0161b249b1ab8bbec047c5a52207b9c112deffd817036b';
+// keccak256("Permit(address,address,address,uint160,uint48,uint48)")
+const PERMIT2_PERMIT_TOPIC = '0xc6a377bfc4eb120024a8ac08eef205be16b817020812c73223e81d1bdb9708ec';
+// allowance(address owner,address token,address spender) → (uint160,uint48,uint48)
+const PERMIT2_ALLOWANCE_SELECTOR = '0x927da105';
+// approve(address token,address spender,uint160 amount,uint48 expiration)
+const PERMIT2_APPROVE_SELECTOR = '0x87517c45';
+// lockdown((address token,address spender)[]) — Permit2 batch-revoke entrypoint
+const PERMIT2_LOCKDOWN_SELECTOR = '0xcc53287f';
+
+/** A live Permit2 (token, spender) allowance for the wallet. */
+export interface Permit2Allowance {
+  tokenAddress: string;
+  spender: string;
+  /** uint160 amount, base units, as a decimal string. */
+  amount: string;
+  /** uint48 unix expiration; 0 = no live time-bound (treat as expired/unset). */
+  expiration: number;
+  /** Owner ERC-20 balance of the token (base units), for USD-at-risk capping. */
+  balanceRaw: string;
+}
+
+/**
+ * Discover and resolve every LIVE Permit2 allowance for a wallet.
+ *
+ * We scan Permit2's own Approval + Permit logs filtered to owner (topic[1]),
+ * collect the (token, spender) pairs, then read the CURRENT
+ * allowance(owner, token, spender) on the Permit2 contract. A grant is live only
+ * when amount > 0 AND expiration is in the future (Permit2 allowances are
+ * time-bounded, unlike ERC-20). Anything expired or zeroed is dropped.
+ */
+export async function getPermit2Approvals(
+  walletAddress: string,
+  chain: string,
+): Promise<Permit2Allowance[]> {
+  if (!isAlchemySupported(chain)) {
+    throw new Error(`Chain '${chain}' is not supported by Alchemy SDK`);
+  }
+  const key = cacheKey('alchemy', 'permit2', { walletAddress: walletAddress.toLowerCase(), chain });
+  return withCache(key, TTL.WALLET_BALANCE, async () => {
+    const alchemy = getAlchemy(chain);
+    const owner = walletAddress.toLowerCase();
+    const ownerPadded = '0x000000000000000000000000' + owner.replace('0x', '');
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    // 1. Owner-indexed Permit2 Approval + Permit logs → (token, spender) pairs.
+    const pairMap = new Map<string, { tokenAddress: string; spender: string }>();
+    for (const topic of [PERMIT2_APPROVAL_TOPIC, PERMIT2_PERMIT_TOPIC]) {
+      try {
+        const logs = await withAlchemyRetry(() => alchemy.core.getLogs({
+          address: PERMIT2_CONTRACT,
+          fromBlock: '0x0',
+          toBlock: 'latest',
+          topics: [topic, ownerPadded],
+        }));
+        for (const log of logs) {
+          // topics: [sig, owner, token, spender]
+          if (!log.topics?.[2] || !log.topics?.[3]) continue;
+          const token = '0x' + log.topics[2].slice(26).toLowerCase();
+          const spender = '0x' + log.topics[3].slice(26).toLowerCase();
+          pairMap.set(`${token}:${spender}`, { tokenAddress: token, spender });
+        }
+      } catch {
+        /* Permit2 log scan failed for this topic — keep the other */
+      }
+    }
+    if (pairMap.size === 0) return [];
+
+    // 2. Resolve CURRENT Permit2 allowance() + owner ERC-20 balance per pair.
+    const ownerEncoded = owner.replace('0x', '').padStart(64, '0');
+    const resolved = await mapWithConcurrency(
+      Array.from(pairMap.values()),
+      10,
+      async ({ tokenAddress, spender }): Promise<Permit2Allowance | null> => {
+        const tokenEncoded = tokenAddress.replace('0x', '').padStart(64, '0');
+        const spenderEncoded = spender.replace('0x', '').padStart(64, '0');
+        const [allowanceRes, balanceRes] = await Promise.allSettled([
+          withAlchemyRetry(() => alchemy.core.call({
+            to: PERMIT2_CONTRACT,
+            data: PERMIT2_ALLOWANCE_SELECTOR + ownerEncoded + tokenEncoded + spenderEncoded,
+          })),
+          withAlchemyRetry(() => alchemy.core.call({
+            to: tokenAddress,
+            data: ERC20_BALANCEOF_SELECTOR + ownerEncoded,
+          })),
+        ]);
+
+        if (allowanceRes.status !== 'fulfilled') return null;
+        const hex = allowanceRes.value;
+        if (!hex || hex === '0x') return null;
+        // Return is three 32-byte words: amount (uint160), expiration, nonce.
+        const body = hex.replace(/^0x/, '');
+        if (body.length < 192) return null;
+        let amount: bigint;
+        let expiration: number;
+        try {
+          amount = BigInt('0x' + body.slice(0, 64));
+          expiration = Number(BigInt('0x' + body.slice(64, 128)));
+        } catch {
+          return null;
+        }
+        // Live only: non-zero amount AND a future expiration. A zero expiration
+        // is Permit2's "already expired" sentinel, so we drop it too.
+        if (amount === BigInt(0) || expiration <= nowSec) return null;
+
+        let balanceRaw = '0';
+        if (balanceRes.status === 'fulfilled') {
+          const b = balanceRes.value;
+          try { balanceRaw = b && b !== '0x' ? BigInt(b).toString() : '0'; } catch { balanceRaw = '0'; }
+        }
+        return { tokenAddress, spender, amount: amount.toString(), expiration, balanceRaw };
+      },
+    );
+
+    return resolved.filter((a): a is Permit2Allowance => a !== null);
+  });
+}
+
+/** Build Permit2 approve(token, spender, 0, 0) calldata to revoke one grant. */
+export function buildPermit2RevokeCalldata(token: string, spender: string): string {
+  const t = token.replace(/^0x/, '').toLowerCase().padStart(64, '0');
+  const s = spender.replace(/^0x/, '').toLowerCase().padStart(64, '0');
+  // amount = 0 (uint160), expiration = 0 (uint48) → fully zeroed grant.
+  return PERMIT2_APPROVE_SELECTOR + t + s + '0'.repeat(64) + '0'.repeat(64);
+}
+
+// ─── NFT operator approvals (ERC-721 / ERC-1155 setApprovalForAll) ──────────
+// keccak256("ApprovalForAll(address,address,bool)")
+const APPROVAL_FOR_ALL_TOPIC = '0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31';
+// setApprovalForAll(address operator,bool approved)
+const SET_APPROVAL_FOR_ALL_SELECTOR = '0xa22cb465';
+// isApprovedForAll(address owner,address operator) → bool
+const IS_APPROVED_FOR_ALL_SELECTOR = '0xe985e9c5';
+
+/** A live NFT operator (setApprovalForAll) grant for the wallet. */
+export interface NftOperatorApproval {
+  /** The NFT collection contract (ERC-721 or ERC-1155). */
+  collection: string;
+  /** The operator granted transfer rights over the whole collection. */
+  operator: string;
+  /** Collection name/symbol when Alchemy has metadata, else null. */
+  name: string | null;
+  symbol: string | null;
+  logo: string | null;
+  /** ERC-721 | ERC-1155 | UNKNOWN per Alchemy contract metadata. */
+  tokenType: string;
+  /** How many NFTs of this collection the owner currently holds (exposure). */
+  ownedCount: number | null;
+  /** Floor price in native token (ETH-equivalent) when Alchemy has it, else null. */
+  floorNative: number | null;
+}
+
+/**
+ * Discover and resolve every LIVE ERC-721 / ERC-1155 setApprovalForAll operator
+ * grant for a wallet. Operator approvals are the NFT-drainer vector: one
+ * setApprovalForAll lets a contract move EVERY token in a collection.
+ *
+ * Strategy mirrors the ERC-20 scan: enumerate the wallet's ApprovalForAll logs
+ * (owner-indexed via topic[1]) to collect (collection, operator) pairs, then
+ * read the CURRENT isApprovedForAll(owner, operator) on-chain and drop anything
+ * already revoked. Enrich live grants with collection metadata + owned count.
+ */
+export async function getNftApprovals(
+  walletAddress: string,
+  chain: string,
+): Promise<NftOperatorApproval[]> {
+  if (!isAlchemySupported(chain)) {
+    throw new Error(`Chain '${chain}' is not supported by Alchemy SDK`);
+  }
+  const key = cacheKey('alchemy', 'nft_approvals', { walletAddress: walletAddress.toLowerCase(), chain });
+  return withCache(key, TTL.WALLET_BALANCE, async () => {
+    const alchemy = getAlchemy(chain);
+    const owner = walletAddress.toLowerCase();
+    const ownerPadded = '0x000000000000000000000000' + owner.replace('0x', '');
+
+    // 1. All ApprovalForAll(owner=wallet) logs across every collection.
+    //    Not filtered by collection address, so it's a single owner-scoped scan
+    //    (ApprovalForAll is rare per wallet — the result set stays small).
+    let logs: Awaited<ReturnType<typeof alchemy.core.getLogs>> = [];
+    try {
+      logs = await withAlchemyRetry(() => alchemy.core.getLogs({
+        fromBlock: '0x0',
+        toBlock: 'latest',
+        topics: [APPROVAL_FOR_ALL_TOPIC, ownerPadded],
+      }));
+    } catch {
+      return [];
+    }
+
+    const pairMap = new Map<string, { collection: string; operator: string }>();
+    for (const log of logs) {
+      if (!log.address || !log.topics?.[2]) continue;
+      const collection = log.address.toLowerCase();
+      const operator = '0x' + log.topics[2].slice(26).toLowerCase();
+      pairMap.set(`${collection}:${operator}`, { collection, operator });
+    }
+    if (pairMap.size === 0) return [];
+
+    // 2. Resolve CURRENT isApprovedForAll per pair; drop revoked grants.
+    const ownerEncoded = owner.replace('0x', '').padStart(64, '0');
+    const resolved = await mapWithConcurrency(
+      Array.from(pairMap.values()),
+      10,
+      async ({ collection, operator }): Promise<NftOperatorApproval | null> => {
+        const operatorEncoded = operator.replace('0x', '').padStart(64, '0');
+        let approved = false;
+        try {
+          const res = await withAlchemyRetry(() => alchemy.core.call({
+            to: collection,
+            data: IS_APPROVED_FOR_ALL_SELECTOR + ownerEncoded + operatorEncoded,
+          }));
+          approved = !!res && res !== '0x' && BigInt(res) !== BigInt(0);
+        } catch {
+          // Call reverted (e.g. self-destructed collection) — treat as not live.
+          return null;
+        }
+        if (!approved) return null;
+
+        // Metadata + owner exposure are best-effort enrichment.
+        let name: string | null = null;
+        let symbol: string | null = null;
+        let logo: string | null = null;
+        let tokenType = 'UNKNOWN';
+        let floorNative: number | null = null;
+        let ownedCount: number | null = null;
+        try {
+          const md = await withAlchemyRetry(() => alchemy.nft.getContractMetadata(collection));
+          name = md.name ?? null;
+          symbol = md.symbol ?? null;
+          tokenType = md.tokenType ?? 'UNKNOWN';
+          logo = (md as { openSeaMetadata?: { imageUrl?: string } }).openSeaMetadata?.imageUrl ?? null;
+          const floor = (md as { openSeaMetadata?: { floorPrice?: number } }).openSeaMetadata?.floorPrice;
+          floorNative = typeof floor === 'number' && floor > 0 ? floor : null;
+        } catch {
+          /* metadata best-effort */
+        }
+        try {
+          const owned = await withAlchemyRetry(() => alchemy.nft.getNftsForOwner(owner, {
+            contractAddresses: [collection],
+            omitMetadata: true,
+            pageSize: 100,
+          }));
+          ownedCount = owned.totalCount ?? owned.ownedNfts?.length ?? null;
+        } catch {
+          /* count best-effort */
+        }
+
+        return { collection, operator, name, symbol, logo, tokenType, ownedCount, floorNative };
+      },
+    );
+
+    return resolved.filter((a): a is NftOperatorApproval => a !== null);
+  });
+}
+
+/** Build setApprovalForAll(operator, false) calldata to revoke an NFT operator. */
+export function buildNftRevokeCalldata(operator: string): string {
+  const op = operator.replace(/^0x/, '').toLowerCase().padStart(64, '0');
+  return SET_APPROVAL_FOR_ALL_SELECTOR + op + '0'.repeat(64); // approved = false
+}
+
 export async function getGasPrice(chain: string): Promise<number> {
   if (!isAlchemySupported(chain)) return 0;
   const alchemy = getAlchemy(chain);

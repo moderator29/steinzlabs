@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Key, Search, AlertTriangle, CheckCircle,
   XCircle, Loader2, Info, ExternalLink, Shield, ShieldAlert,
-  Zap, DollarSign, Ban,
+  Zap, DollarSign, Ban, Image as ImageIcon, Clock,
 } from 'lucide-react';
 import type { ApprovalResult } from '@/app/api/security/approvals/route';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
@@ -23,6 +23,9 @@ interface ApprovalResponse {
   unlimitedCount: number;
   dangerCount: number;
   totalUsdAtRisk: number;
+  erc20Count: number;
+  permit2Count: number;
+  nftCount: number;
   scannedAt: string;
 }
 
@@ -49,7 +52,9 @@ const EXPLORERS: Record<string, string> = {
 };
 
 function approvalKey(a: ApprovalResult): string {
-  return `${a.tokenAddress}:${a.spender}`;
+  // Kind is part of the key: a token+spender pair can exist as BOTH an ERC-20
+  // and a Permit2 grant, and they revoke through different contracts.
+  return `${a.kind}:${a.tokenAddress}:${a.spender}`;
 }
 
 function fmtUsd(v: number | null): string {
@@ -57,6 +62,19 @@ function fmtUsd(v: number | null): string {
   if (v === 0) return '$0';
   if (v < 0.01) return '<$0.01';
   return `$${v.toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+}
+
+/** Relative "expires in" label for a Permit2 grant (or "expired"). */
+function fmtExpiry(unixSec: number | undefined): string | null {
+  if (!unixSec) return null;
+  const deltaMs = unixSec * 1000 - Date.now();
+  if (deltaMs <= 0) return 'expired';
+  const days = Math.floor(deltaMs / 86_400_000);
+  if (days >= 1) return `expires in ${days}d`;
+  const hours = Math.floor(deltaMs / 3_600_000);
+  if (hours >= 1) return `expires in ${hours}h`;
+  const mins = Math.max(1, Math.floor(deltaMs / 60_000));
+  return `expires in ${mins}m`;
 }
 
 // ─── Risk Badge ───────────────────────────────────────────────────────────────
@@ -81,6 +99,26 @@ function RiskBadge({ level }: { level: 'safe' | 'warning' | 'danger' }) {
       Safe
     </span>
   );
+}
+
+// ─── Kind Badge ─────────────────────────────────────────────────────────────
+
+function KindBadge({ kind }: { kind: ApprovalResult['kind'] }) {
+  if (kind === 'permit2') {
+    return (
+      <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-[#8B7CFF]/10 text-[#8B7CFF] border border-[#8B7CFF]/20">
+        PERMIT2
+      </span>
+    );
+  }
+  if (kind === 'nft') {
+    return (
+      <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-[#0066FF]/10 text-[#0066FF] border border-[#0066FF]/20 inline-flex items-center gap-0.5">
+        <ImageIcon className="w-2.5 h-2.5" /> NFT
+      </span>
+    );
+  }
+  return null;
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -175,7 +213,9 @@ export default function ApprovalManagerPage() {
     try {
       await eth.request({
         method: 'eth_sendTransaction',
-        params: [{ from: connectedAddress, to: a.tokenAddress, data: a.revokeCalldata, value: '0x0' }],
+        // revokeTarget is the contract the revoke tx goes to: the token for
+        // ERC-20, the Permit2 contract for Permit2, the collection for NFTs.
+        params: [{ from: connectedAddress, to: a.revokeTarget, data: a.revokeCalldata, value: '0x0' }],
       });
       setRevoking(prev => ({ ...prev, [key]: 'done' }));
       return true;
@@ -241,9 +281,10 @@ export default function ApprovalManagerPage() {
             <div className="flex items-start gap-3">
               <Shield className="w-5 h-5 text-[#8B7CFF] mt-0.5 flex-shrink-0" />
               <p className="text-[12px] text-gray-300 leading-relaxed">
-                Token approvals let contracts spend your tokens. We scan the wallet&apos;s real on-chain
-                approval history, price each open allowance against live liquidity to show the dollars
-                truly at risk, flag malicious spenders, and let you revoke with one click.
+                Approvals let contracts spend your assets. We scan the wallet&apos;s real on-chain history
+                across ERC20 allowances, Permit2 time-bounded grants, and ERC721 / ERC1155 operator
+                approvals, price the exposure against live liquidity, flag malicious spenders, and let
+                you revoke any of them with one click.
               </p>
             </div>
           </TiltCard>
@@ -252,8 +293,9 @@ export default function ApprovalManagerPage() {
           <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-3 flex items-start gap-3 nl-fade-up">
             <Info className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
             <p className="text-[11px] text-gray-400 leading-relaxed">
-              Unlimited approvals to contracts you no longer use are a standing risk. Revoke broadcasts
-              an approve(spender, 0) transaction signed by your own wallet. No key ever leaves your device.
+              Unlimited approvals to contracts you no longer use are a standing risk. Revoke broadcasts the
+              right zeroing call for each type (ERC20 approve to 0, Permit2 approve to 0, or NFT
+              setApprovalForAll to false) signed by your own wallet. No key ever leaves your device.
             </p>
           </div>
 
@@ -304,8 +346,8 @@ export default function ApprovalManagerPage() {
           {loading && (
             <div className="text-center py-10">
               <Loader2 className="w-8 h-8 text-[#8B7CFF] animate-spin mx-auto mb-3" />
-              <p className="text-sm text-gray-400">Scanning token approvals...</p>
-              <p className="text-[10px] text-gray-600 mt-1">Paginating transfer history then resolving live allowances</p>
+              <p className="text-sm text-gray-400">Scanning approvals…</p>
+              <p className="text-[10px] text-gray-600 mt-1">ERC20, Permit2, and NFT operator grants in parallel, then resolving live on-chain state</p>
             </div>
           )}
 
@@ -338,6 +380,19 @@ export default function ApprovalManagerPage() {
                   <p className="text-lg font-bold text-[#8B7CFF]">{fmtUsd(response.totalUsdAtRisk)}</p>
                   <p className="text-[10px] text-gray-500 mt-0.5">At risk</p>
                 </div>
+              </div>
+
+              {/* Approval-type breakdown */}
+              <div className="flex items-center justify-center gap-2 flex-wrap nl-fade-up">
+                <span className="text-[10px] px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-400">
+                  <span className="text-gray-200 font-bold">{response.erc20Count}</span> ERC20
+                </span>
+                <span className="text-[10px] px-2 py-1 rounded-lg bg-[#8B7CFF]/10 border border-[#8B7CFF]/20 text-[#8B7CFF]">
+                  <span className="font-bold">{response.permit2Count}</span> Permit2
+                </span>
+                <span className="text-[10px] px-2 py-1 rounded-lg bg-[#0066FF]/10 border border-[#0066FF]/20 text-[#0066FF]">
+                  <span className="font-bold">{response.nftCount}</span> NFT operator
+                </span>
               </div>
 
               {/* Batch action bar */}
@@ -425,10 +480,12 @@ export default function ApprovalManagerPage() {
                               aria-label={`Select ${approval.tokenSymbol} approval`}
                             />
                           )}
-                          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          <div className={`w-8 h-8 bg-white/5 flex items-center justify-center flex-shrink-0 overflow-hidden ${approval.kind === 'nft' ? 'rounded-md' : 'rounded-lg'}`}>
                             {approval.tokenLogo ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img src={approval.tokenLogo} alt="" className="w-full h-full object-cover" />
+                            ) : approval.kind === 'nft' ? (
+                              <ImageIcon className="w-4 h-4 text-[#0066FF]/70" />
                             ) : (
                               <span className="text-[10px] font-bold text-gray-400">
                                 {(approval.tokenSymbol || '??').slice(0, 2)}
@@ -441,8 +498,9 @@ export default function ApprovalManagerPage() {
                               {approval.spenderRisk?.isMalicious && (
                                 <XCircle className="w-3 h-3 text-red-400 flex-shrink-0" />
                               )}
-                              {approval.isPermit2 && (
-                                <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-[#8B7CFF]/10 text-[#8B7CFF] border border-[#8B7CFF]/20">PERMIT2</span>
+                              <KindBadge kind={approval.kind} />
+                              {approval.kind === 'nft' && approval.nft?.tokenType && approval.nft.tokenType !== 'UNKNOWN' && (
+                                <span className="text-[8px] text-gray-500 font-mono">{approval.nft.tokenType}</span>
                               )}
                             </div>
                             <a
@@ -451,15 +509,39 @@ export default function ApprovalManagerPage() {
                               rel="noopener noreferrer"
                               className="text-[10px] text-gray-500 truncate hover:text-gray-300 inline-flex items-center gap-1"
                             >
-                              {approval.spenderLabel}
+                              {approval.kind === 'nft' ? 'Operator: ' : ''}{approval.spenderLabel}
                               <ExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
                             </a>
+                            {approval.kind === 'permit2' && fmtExpiry(approval.permit2Expiration) && (
+                              <p className="text-[9px] text-gray-500 mt-0.5 inline-flex items-center gap-1">
+                                <Clock className="w-2.5 h-2.5" />
+                                {fmtExpiry(approval.permit2Expiration)}
+                              </p>
+                            )}
+                            {approval.kind === 'nft' && (
+                              <p className="text-[9px] text-gray-500 mt-0.5">
+                                {approval.nft?.ownedCount !== null && approval.nft?.ownedCount !== undefined
+                                  ? `${approval.nft.ownedCount} owned now`
+                                  : 'owned count unknown'}
+                                {approval.nft?.floorNative !== null && approval.nft?.floorNative !== undefined
+                                  ? ` · floor ${approval.nft.floorNative}` : ''}
+                              </p>
+                            )}
                             {(approval.spenderRisk?.isMalicious || approval.spenderRisk?.isPhishing || approval.spenderRisk?.isBlacklisted) && (
                               <p className="text-[10px] text-red-400 mt-0.5">
                                 {approval.spenderRisk.isMalicious && 'Flagged malicious. '}
                                 {approval.spenderRisk.isPhishing && 'Flagged phishing. '}
                                 {approval.spenderRisk.isBlacklisted && 'Blacklisted. '}
+                                {approval.spenderRisk.scamReportCount !== null && approval.spenderRisk.scamReportCount > 0 &&
+                                  `${approval.spenderRisk.scamReportCount} scam report${approval.spenderRisk.scamReportCount === 1 ? '' : 's'}. `}
+                                {(approval.spenderRisk.maliciousSourceCount ?? 0) > 1 &&
+                                  `${approval.spenderRisk.maliciousSourceCount} sources agree. `}
                                 Revoke now.
+                              </p>
+                            )}
+                            {!approval.spenderRisk?.isMalicious && approval.spenderRisk?.isUnverifiedContract === true && (
+                              <p className="text-[10px] text-amber-400 mt-0.5">
+                                Unverified contract source. Treat with caution.
                               </p>
                             )}
                           </div>
@@ -525,7 +607,7 @@ export default function ApprovalManagerPage() {
               </div>
 
               <p className="text-[10px] text-gray-600 text-center">
-                Scanned {response.approvals.length} active approvals · prices via DexScreener · spender risk via GoPlus · {new Date(response.scannedAt).toLocaleTimeString()}
+                Scanned {response.approvals.length} active approvals ({response.erc20Count} ERC20, {response.permit2Count} Permit2, {response.nftCount} NFT) · on-chain via Alchemy · prices via DexScreener &amp; CoinGecko · spender labels &amp; risk via Etherscan, GoPlus &amp; Chainabuse · {new Date(response.scannedAt).toLocaleTimeString()}
               </p>
             </>
           )}

@@ -66,7 +66,7 @@ export default function SecurityScannerPage() {
           <div>
             <h1 className="text-2xl font-bold">Security Scanner</h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Deep contract + address risk analysis powered by GoPlus. Every scan is logged to your history.
+              Deep contract + address risk analysis, corroborated across multiple security sources. Every scan is logged to your history.
             </p>
           </div>
         </div>

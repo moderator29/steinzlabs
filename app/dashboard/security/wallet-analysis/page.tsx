@@ -1,16 +1,46 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Wallet, Search, ExternalLink } from 'lucide-react';
 import { ShadowGuardianScan } from '@/components/security/ShadowGuardianScan';
+import { WalletHealthScoreCard } from '@/components/security/WalletHealthScoreCard';
 import { useNakaWallet } from '@/lib/hooks/useNakaWallet';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
+import { isEvmAddress } from '@/lib/utils/addressNormalize';
 
 export default function WalletAnalysisPage() {
+  return (
+    <Suspense fallback={
+      <AuroraBackground fullHeight className="text-white">
+        <div className="p-4 text-xs text-gray-500">Loading wallet analysis…</div>
+      </AuroraBackground>
+    }>
+      <WalletAnalysisInner />
+    </Suspense>
+  );
+}
+
+function WalletAnalysisInner() {
   const naka = useNakaWallet();
+  const searchParams = useSearchParams();
   const [input, setInput] = useState('');
   const [target, setTarget] = useState<string | null>(null);
+  const [chain, setChain] = useState('ethereum');
+
+  // Deep-link support for shared health cards: ?address=&chain= prefills and
+  // auto-runs the scan so a shared link lands on the same view.
+  useEffect(() => {
+    const addr = searchParams.get('address')?.trim();
+    const c = searchParams.get('chain')?.trim();
+    if (c) setChain(c);
+    if (addr) {
+      setInput(addr);
+      setTarget(addr);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const runScan = () => {
     const addr = input.trim();
@@ -66,6 +96,12 @@ export default function WalletAnalysisPage() {
           </button>
         )}
       </div>
+
+      {target && isEvmAddress(target) && (
+        <div className="nl-fade-up nl-fade-up-2">
+          <WalletHealthScoreCard address={target} chain={chain} />
+        </div>
+      )}
 
       {target && <ShadowGuardianScan tokenAddress={target} onComplete={() => {}} />}
 

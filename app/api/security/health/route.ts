@@ -119,6 +119,8 @@ export async function GET(_req: NextRequest) {
     honeypots: honeypotScore,
   };
 
+  const computedAt = new Date().toISOString();
+
   // Upsert the cache row. RLS only lets the owner SELECT; service role
   // writes here.
   await admin.from('user_security_profile').upsert({
@@ -128,14 +130,43 @@ export async function GET(_req: NextRequest) {
     approval_risk: approvalDanger,
     threat_count: threatCount,
     honeypot_count: honeypotCount,
-    computed_at: new Date().toISOString(),
+    computed_at: computedAt,
     metadata: { breakdown },
   }, { onConflict: 'user_id' });
+
+  // Append an immutable snapshot so the Security Center can render a real
+  // health-score trend over time. The cache row above is single-row-per-user
+  // (upsert), so it holds no history on its own. We only log when the score
+  // actually moved (or on the first ever snapshot) to avoid flat-lining the
+  // trend with identical no-op reads. Table is additive; degrade quietly if
+  // the migration hasn't been applied yet.
+  try {
+    const { data: last } = await admin
+      .from('user_security_profile_history')
+      .select('health_score')
+      .eq('user_id', user.id)
+      .order('computed_at', { ascending: false })
+      .limit(1)
+      .maybeSingle<{ health_score: number }>();
+
+    if (!last || last.health_score !== composite) {
+      await admin.from('user_security_profile_history').insert({
+        user_id: user.id,
+        health_score: composite,
+        reputation_score: reputationScore,
+        approval_risk: approvalDanger,
+        threat_count: threatCount,
+        honeypot_count: honeypotCount,
+        breakdown,
+        computed_at: computedAt,
+      });
+    }
+  } catch { /* history table absent until migration applied */ }
 
   return NextResponse.json({
     score: composite,
     breakdown,
     counts: { approvalDanger, threatCount, honeypotCount },
-    computedAt: new Date().toISOString(),
+    computedAt,
   });
 }
