@@ -260,13 +260,13 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
     }
   }
 
-  // Rules of Hooks: useTabListKeys() is a hook (it calls useCallback), so it
-  // MUST run on every render in the same order. It was previously called
-  // inline in JSX below the `loading`/`!data` early returns, so a successful
-  // load reached one extra hook vs. the loading render → React threw
-  // "Rendered more hooks than during the previous render", which the error
-  // boundary showed as "Couldn't load this whale". Hoist it above the returns.
-  const onTabKeyDown = useTabListKeys(WHALE_TABS, WHALE_TABS.indexOf(tab), (t) => setTab(t));
+  // A11Y5: tablist keyboard handler. MUST be created here — before any early
+  // return — so the hook (useTabListKeys wraps useCallback) runs on every
+  // render. Calling it inline in JSX below the `loading` / `!data.whale`
+  // returns changed the hook count between the spinner render and the loaded
+  // render, throwing "Rendered more hooks than during the previous render"
+  // straight into the route error boundary ("Couldn't load this whale").
+  const handleTabKeys = useTabListKeys(WHALE_TABS, WHALE_TABS.indexOf(tab), (t) => setTab(t));
 
   if (loading) {
     return (
@@ -397,7 +397,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
           <div
             role="tablist"
             aria-label="Whale detail sections"
-            onKeyDown={onTabKeyDown}
+            onKeyDown={handleTabKeys}
             className="mt-5 flex gap-1 border-b border-slate-800 -mb-px overflow-x-auto"
           >
             {WHALE_TABS.map((t) => {

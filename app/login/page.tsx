@@ -603,7 +603,7 @@ function LoginPageInner() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#07090f]" />}>
+    <Suspense fallback={<div className="naka-auth-page min-h-screen bg-[#07090f]" />}>
       <LoginPageInner />
     </Suspense>
   );
