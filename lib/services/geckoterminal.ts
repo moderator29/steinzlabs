@@ -53,7 +53,14 @@ interface GtPool {
     fdv_usd?: string | null;
     market_cap_usd?: string | null;
     pool_created_at?: string | null;
-    volume_usd?: { h24?: string | null };
+    volume_usd?: { m5?: string | null; h1?: string | null; h6?: string | null; h24?: string | null };
+    price_change_percentage?: { m5?: string | null; h1?: string | null; h6?: string | null; h24?: string | null };
+    transactions?: {
+      m5?: { buys?: number; sells?: number };
+      h1?: { buys?: number; sells?: number };
+      h6?: { buys?: number; sells?: number };
+      h24?: { buys?: number; sells?: number };
+    };
   };
   relationships?: {
     base_token?: { data?: { id?: string } };
@@ -107,9 +114,27 @@ function mapPoolsToPairs(chain: string, body: { data?: GtPool[]; included?: (GtT
       },
       priceNative: '0',
       priceUsd: a.base_token_price_usd ?? '0',
-      txns: { m5: { buys: 0, sells: 0 }, h1: { buys: 0, sells: 0 }, h6: { buys: 0, sells: 0 }, h24: { buys: 0, sells: 0 } },
-      volume: { h24: a.volume_usd?.h24 ? parseFloat(a.volume_usd.h24) : 0, h6: 0, h1: 0, m5: 0 },
-      priceChange: { m5: 0, h1: 0, h6: 0, h24: 0 },
+      // GeckoTerminal pool attributes carry real txn counts + price-change %
+      // per window — map them so the feed shows accurate TX 24h and 24h %
+      // even for pools with no DexScreener pair (previously hard-coded to 0).
+      txns: {
+        m5: { buys: a.transactions?.m5?.buys ?? 0, sells: a.transactions?.m5?.sells ?? 0 },
+        h1: { buys: a.transactions?.h1?.buys ?? 0, sells: a.transactions?.h1?.sells ?? 0 },
+        h6: { buys: a.transactions?.h6?.buys ?? 0, sells: a.transactions?.h6?.sells ?? 0 },
+        h24: { buys: a.transactions?.h24?.buys ?? 0, sells: a.transactions?.h24?.sells ?? 0 },
+      },
+      volume: {
+        h24: a.volume_usd?.h24 ? parseFloat(a.volume_usd.h24) : 0,
+        h6: a.volume_usd?.h6 ? parseFloat(a.volume_usd.h6) : 0,
+        h1: a.volume_usd?.h1 ? parseFloat(a.volume_usd.h1) : 0,
+        m5: a.volume_usd?.m5 ? parseFloat(a.volume_usd.m5) : 0,
+      },
+      priceChange: {
+        m5: a.price_change_percentage?.m5 ? parseFloat(a.price_change_percentage.m5) : 0,
+        h1: a.price_change_percentage?.h1 ? parseFloat(a.price_change_percentage.h1) : 0,
+        h6: a.price_change_percentage?.h6 ? parseFloat(a.price_change_percentage.h6) : 0,
+        h24: a.price_change_percentage?.h24 ? parseFloat(a.price_change_percentage.h24) : 0,
+      },
       liquidity: { usd: a.reserve_in_usd ? parseFloat(a.reserve_in_usd) : 0, base: 0, quote: 0 },
       fdv: a.fdv_usd ? parseFloat(a.fdv_usd) : undefined,
       marketCap: a.market_cap_usd ? parseFloat(a.market_cap_usd) : undefined,
