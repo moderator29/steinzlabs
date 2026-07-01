@@ -133,9 +133,12 @@ export default function MessagesInboxPage() {
 
   useEffect(() => { void loadConversations(); }, [loadConversations]);
 
-  // Supabase Realtime — keep the inbox live without a refresh. New DMs and
-  // last-message changes land on dm_conversations (via the DB trigger); new
-  // requests + unread-count changes are driven by dm_messages INSERT/UPDATE.
+  // Supabase Realtime — keep the inbox live without a refresh. The
+  // trg_dm_bump_last trigger writes last_message_at/preview/unread onto
+  // dm_conversations for every message, so a single subscription filtered to
+  // the two rows this user participates in captures new DMs, requests, and
+  // unread-count changes — no unfiltered platform-wide dm_messages listener
+  // (which never scaled and stormed refetches) required.
   // Mirrors the thread page's subscribe-and-resubscribe-on-visibility pattern.
   useEffect(() => {
     let cancelled = false;
@@ -149,10 +152,10 @@ export default function MessagesInboxPage() {
       if (!uid || cancelled) return;
 
       // Debounce the refetch: a single conversation can fire many
-      // dm_messages INSERT/UPDATE events in a burst (read-receipts, rapid
-      // back-and-forth), and an un-debounced refetch storms /api/social/dm/
-      // conversations once per event. Coalesce a burst into one trailing
-      // reload ~350ms after the last event.
+      // dm_conversations UPDATE events in a burst (read-receipts, rapid
+      // back-and-forth all bump last_message_at/unread), and an un-debounced
+      // refetch storms /api/social/dm/conversations once per event. Coalesce a
+      // burst into one trailing reload ~350ms after the last event.
       const onChange = () => {
         if (debounceTimer) clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => { void loadConversations(); }, 350);
@@ -163,9 +166,6 @@ export default function MessagesInboxPage() {
           // Either side of a conversation the user participates in.
           .on('postgres_changes', { event: '*', schema: 'public', table: 'dm_conversations', filter: `user_a_id=eq.${uid}` }, onChange)
           .on('postgres_changes', { event: '*', schema: 'public', table: 'dm_conversations', filter: `user_b_id=eq.${uid}` }, onChange)
-          // Message inserts/read-state changes shift unread counts + previews.
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dm_messages' }, onChange)
-          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'dm_messages' }, onChange)
           .subscribe();
 
       channel = subscribe('');
