@@ -282,16 +282,31 @@ export async function POST(req: NextRequest) {
       const emailAlertTypes = ['whale_alert', 'price_target'];
       if (emailAlertTypes.includes(type)) {
         try {
+          const admin = getSupabaseAdmin();
+          // Respect the user's email opt-out (notification_settings.email_enabled;
+          // absent row = default on) — otherwise every qualifying insert
+          // emails the user regardless of their preferences.
+          const { data: prefRow } = await admin
+            .from('notification_settings')
+            .select('email_enabled')
+            .eq('user_id', targetUserId)
+            .maybeSingle();
+          const emailOptedOut = prefRow?.email_enabled === false;
           // Recipient email is resolved from auth.users for the target user —
           // profiles has no email column — so it can't be spoofed by the body.
-          const admin = getSupabaseAdmin();
-          const { data: authUser } = await admin.auth.admin.getUserById(targetUserId);
-          const recipientEmail = authUser?.user?.email ?? null;
+          const recipientEmail = emailOptedOut
+            ? null
+            : (await admin.auth.admin.getUserById(targetUserId)).data?.user?.email ?? null;
           if (recipientEmail) {
             const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
             fetch(`${baseUrl}/api/send-notification-email`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                // Internal-only relay — the email route rejects calls without
+                // this secret so it can't be abused as an open mailer.
+                ...(process.env.CRON_SECRET ? { authorization: `Bearer ${process.env.CRON_SECRET}` } : {}),
+              },
               body: JSON.stringify({ title, message, type, userEmail: recipientEmail }),
             }).catch(() => {});
           }

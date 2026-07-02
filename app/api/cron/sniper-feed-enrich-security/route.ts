@@ -73,22 +73,35 @@ export async function GET(request: NextRequest) {
     if (!row.token_address || !row.chain) continue;
     try {
       const sec = await getTokenSecurity(row.token_address, row.chain);
+      const raw = (sec.raw ?? {}) as Record<string, unknown>;
+
+      // Brand-new tokens often come back from GoPlus with an EMPTY snapshot
+      // (no is_honeypot field, no holders) before it has indexed the contract.
+      // Writing that snapshot would permanently freeze is_honeypot=false /
+      // score=100 for a token GoPlus simply hadn't scanned yet (the cron only
+      // revisits rows with a null security_score). Skip those rows this tick;
+      // the next tick retries them. Solana derives honeypot from
+      // non_transferable, which GoPlus always returns, so it never skips.
+      const honeypotKnown = row.chain === 'solana'
+        || raw.is_honeypot === '0' || raw.is_honeypot === '1';
+      if (!honeypotKnown && sec.holderCount === 0) continue;
 
       // GoPlus buy/sell tax are decimal fractions (0.05 = 5%). The feed's
       // buy_tax / sell_tax / dev_holding_pct columns are stored as fractions
       // (the UI multiplies by 100 for display), so pass them through as-is.
-      // dev_sold_all: GoPlus returns the creator address and top holders — if
-      // the creator holds nothing in that set we treat the dev as having exited;
-      // if they still hold a share, they haven't. Unknown creator → leave null.
-      // Solana: getTokenSecurity's Solana branch hardcodes creatorHoldingPct=0,
-      // which would make this ALWAYS true — so only derive it for EVM chains and
-      // leave Solana null until a real creator-balance source is wired.
-      const devSoldAll = row.chain !== 'solana' && sec.creatorAddress
+      // dev_sold_all: only derivable when GoPlus actually returned a holders
+      // list — creatorHoldingPct defaults to 0 when the list is absent, which
+      // would fabricate "dev sold everything" for every unindexed token.
+      // Solana: the Solana branch hardcodes creatorHoldingPct=0, so EVM only.
+      const holdersList = Array.isArray(raw.holders)
+        ? raw.holders
+        : Array.isArray(raw._holders) ? raw._holders : [];
+      const devSoldAll = row.chain !== 'solana' && sec.creatorAddress && holdersList.length > 0
         ? sec.creatorHoldingPct <= 0
         : null;
 
       const patch: Record<string, unknown> = {
-        is_honeypot: sec.isHoneypot,
+        is_honeypot: honeypotKnown ? sec.isHoneypot : null,
         buy_tax: sec.buyTax,
         sell_tax: sec.sellTax,
         security_score: sec.trustScore,

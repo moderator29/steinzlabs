@@ -208,7 +208,10 @@ async function enrichTokensBatch(
   const [solanaMeta, birdeyePrices, dexPairs] = await Promise.all([
     getSolanaTokenMetaBatch(mints),
     getMultiTokenPrices(mints, 'solana'),
-    getTokensMulti(mints),
+    // Pass the chain: getTokensMulti keys its map via normalizeAddress(addr,
+    // chain), which preserves case for Solana — a lowercased lookup would
+    // miss every mint.
+    getTokensMulti(mints, 'solana'),
   ]);
 
   // Step 2: Build enriched token list
@@ -218,7 +221,7 @@ async function enrichTokensBatch(
     const mint = raw.mint;
     const meta = solanaMeta.get(mint);
     const birdeyePrice = birdeyePrices[mint];
-    const dexPair = dexPairs.get(mint.toLowerCase());
+    const dexPair = dexPairs.get(mint);
 
     // Name / Symbol resolution: DexScreener > Helius > well-known > fallback
     const symbol =

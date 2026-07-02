@@ -218,6 +218,29 @@ export async function ingestFeed(opts: { chains?: string[]; pagesPerChain?: numb
         }
       }
 
+      // Carry forward previously-enriched logo/socials: the upsert REPLACES
+      // the row, so a later tick where the budget ran out (or providers had
+      // nothing) would clobber a real logo/socials back to null. Per-row key
+      // stripping breaks PostgREST bulk upsert (all objects must share keys),
+      // so merge from the existing rows instead.
+      const { data: existingRows } = await sb
+        .from('sniper_feed_tokens')
+        .select('token_address, logo_url, socials, has_social')
+        .eq('chain', chain)
+        .in('token_address', rows.map((r) => r.token_address));
+      if (existingRows && existingRows.length > 0) {
+        const prevByAddr = new Map(existingRows.map((e) => [e.token_address as string, e]));
+        for (const r of rows) {
+          const prev = prevByAddr.get(r.token_address);
+          if (!prev) continue;
+          if (!r.logo_url && prev.logo_url) r.logo_url = prev.logo_url as string;
+          if (!r.has_social && prev.has_social) {
+            r.socials = prev.socials as FeedRow['socials'];
+            r.has_social = true;
+          }
+        }
+      }
+
       const { error } = await sb
         .from('sniper_feed_tokens')
         .upsert(rows, { onConflict: 'chain,token_address', ignoreDuplicates: false });

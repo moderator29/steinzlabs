@@ -440,6 +440,13 @@ function VtxAiPageInner() {
   // sync so the server updates ONE row instead of inserting a new snapshot
   // row per assistant message. null = new/unsaved thread (first sync inserts).
   const conversationIdRef = useRef<string | null>(null);
+  // Monotonic token guarding conversationIdRef against stale in-flight syncs:
+  // without it, a sync started for thread A resolving AFTER the user switched
+  // to a new chat would repoint the ref at A's row and the next sync would
+  // overwrite A's history with the new thread's messages. Bumped on every
+  // sync start and on every thread switch (clearChat / loadChatSession /
+  // ?conversation load); only the latest sync may commit its returned id.
+  const syncSeqRef = useRef(0);
 
   useEffect(() => {
     if (!initialized.current) {
@@ -461,35 +468,40 @@ function VtxAiPageInner() {
         .then(r => r.json())
         .then(({ conversations }) => {
           if (conversations && conversations.length > 0) {
-            // Collapse the "snapshot" duplicates a prior sync bug created:
-            // one row was inserted per assistant message, all sharing a
-            // title. Keep, per title, the row with the MOST messages (the
-            // complete thread); newest wins on a tie. Date comes from
-            // created_at so an actively-updated thread still shows when it
-            // actually started, not "today".
-            const byTitle = new Map<string, ChatHistoryEntry & { _count: number; _updated: string }>();
+            // Collapse the "snapshot" duplicates a prior sync bug created
+            // (one row per assistant message). Snapshots of ONE thread share
+            // the title AND the first message's timestamp, so group on that
+            // pair — two genuinely distinct chats that happen to start with
+            // the same question have different first-message timestamps and
+            // are NOT collapsed. Rows with no timestamp group by id (never
+            // collapsed). Keep the longest row per group; newest wins ties.
+            const byThread = new Map<string, ChatHistoryEntry & { _count: number; _updated: string }>();
             for (const c of conversations as { id: string; title: string; messages: Message[]; created_at: string; updated_at: string }[]) {
               if (!c?.id) continue;
               const title = c.title || 'VTX Conversation';
-              const count = Array.isArray(c.messages) ? c.messages.length : 0;
-              const existing = byTitle.get(title);
+              const msgs = Array.isArray(c.messages) ? c.messages : [];
+              const firstTs = msgs[0]?.timestamp;
+              const key = `${title}|${firstTs ?? c.id}`;
+              const count = msgs.length;
+              const existing = byThread.get(key);
               if (
                 !existing ||
                 count > existing._count ||
                 (count === existing._count && c.updated_at > existing._updated)
               ) {
-                byTitle.set(title, {
+                byThread.set(key, {
                   id: c.id,
                   date: c.created_at,
-                  messages: c.messages || [],
+                  messages: msgs,
                   preview: title,
                   _count: count,
                   _updated: c.updated_at,
                 });
               }
             }
-            const entries: ChatHistoryEntry[] = Array.from(byTitle.values())
-              .map(({ _count, _updated, ...e }) => e);
+            const entries: ChatHistoryEntry[] = Array.from(byThread.values())
+              .map(({ _count, _updated, ...e }) => e)
+              .sort((a, b) => (a.date < b.date ? 1 : -1));
             setChatSessions(entries);
           }
         })
@@ -505,7 +517,10 @@ function VtxAiPageInner() {
           .then(({ conversation }) => {
             if (conversation?.messages && Array.isArray(conversation.messages)) {
               setMessages(conversation.messages);
-              // Pin the thread so continued messages update this row.
+              // Pin the thread so continued messages update this row; bump the
+              // sync token so an in-flight sync for the previous thread can't
+              // repoint the ref after this switch.
+              syncSeqRef.current++;
               conversationIdRef.current = conversation.id ?? conversationId;
             }
           })
@@ -522,8 +537,11 @@ function VtxAiPageInner() {
     saveHistory(messages);
     const lastMsg = messages[messages.length - 1];
     if (lastMsg?.role === 'assistant') {
+      const seq = ++syncSeqRef.current;
       void syncHistoryToSupabase(messages, conversationIdRef.current).then((id) => {
-        conversationIdRef.current = id;
+        // Commit only if no newer sync started and no thread switch happened
+        // while this one was in flight (see syncSeqRef).
+        if (seq === syncSeqRef.current) conversationIdRef.current = id;
       });
     }
   }, [messages]);
@@ -587,7 +605,9 @@ function VtxAiPageInner() {
     }
     // Only pin the id when it's a Supabase UUID (contains hyphens). Local
     // sessions use a Date.now() numeric id that must NOT be sent as the
-    // Supabase row id; those start a fresh row on next sync.
+    // Supabase row id; those start a fresh row on next sync. Bump the sync
+    // token so an in-flight sync of the previous thread can't clobber this.
+    syncSeqRef.current++;
     conversationIdRef.current = entry.id.includes('-') ? entry.id : null;
     setShowHistory(false);
   };
@@ -595,6 +615,8 @@ function VtxAiPageInner() {
   const clearChat = () => {
     saveChatSession();
     // New thread → next sync inserts a fresh row rather than updating the old.
+    // Bump the sync token to invalidate any in-flight sync of the old thread.
+    syncSeqRef.current++;
     conversationIdRef.current = null;
     const fresh: Message[] = [{ role: 'assistant', content: 'New chat started. VTX Agent ready. What do you need?', timestamp: Date.now() }];
     setMessages(fresh);

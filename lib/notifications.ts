@@ -178,10 +178,16 @@ export function notifyAlertFired(
       (alertType === 'price_target' && prefs.emailPriceAlerts);
 
     if (shouldEmail) {
-      fetch('/api/send-notification-email', {
+      // The email relay is internal-only now (it accepted an arbitrary
+      // recipient address from the browser — an open-mailer vector). Route
+      // through POST /api/notifications instead: it authenticates the caller,
+      // resolves the recipient email server-side, respects
+      // notification_settings.email_enabled, and fans out email for
+      // whale_alert / price_target types.
+      fetch('/api/notifications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, message, type: alertType, userEmail }),
+        body: JSON.stringify({ type: alertType, title, message }),
       }).catch(() => {});
     }
   }
