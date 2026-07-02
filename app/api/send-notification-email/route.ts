@@ -87,6 +87,18 @@ function buildEmailHtml(title: string, message: string, type: string): string {
 
 export async function POST(req: NextRequest) {
   try {
+    // Internal-only relay. This route sends branded email to an arbitrary
+    // caller-supplied address, so an unauthenticated caller = an open mailer
+    // (spam/phishing under the Naka Labs domain). Only server-side callers
+    // holding CRON_SECRET may use it; browsers go through POST
+    // /api/notifications, which authenticates and resolves the recipient
+    // server-side. Fails closed when the secret is unset.
+    const internalSecret = process.env.CRON_SECRET;
+    const authz = req.headers.get('authorization') || '';
+    if (!internalSecret || authz !== `Bearer ${internalSecret}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { title, message, type, userEmail } = await req.json();
 
     if (!title || !message || !userEmail) {

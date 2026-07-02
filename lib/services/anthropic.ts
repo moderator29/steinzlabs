@@ -442,6 +442,9 @@ export async function vtxStream(options: VTXQueryOptions): Promise<ReadableStrea
     {
       model: VTX_EXECUTOR_MODEL,
       max_tokens: maxTokens,
+      // Parity with vtxQuery/vtxStreamRaw — adaptive is sonnet-5's default,
+      // set explicitly so the effort mapping applies consistently.
+      thinking: { type: 'adaptive' },
       ...effortConfig(effort),
       // §13b: same prompt-cache wrapping as vtxQuery — keeps streaming
       // and non-streaming paths on the same cached prefix.

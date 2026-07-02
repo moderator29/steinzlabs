@@ -309,7 +309,12 @@ async function executeTokenSecurityScan(input: Record<string, unknown>): Promise
 
 async function executeTokenMarketData(input: Record<string, unknown>): Promise<string> {
   const identifier = input.identifier as string;
-  const chain = (input.chain as string) ?? 'ethereum';
+  // Only honor an EXPLICIT chain from the model. Defaulting to 'ethereum'
+  // here made a chainless symbol query (e.g. "BONK") filter down to
+  // ethereum-only pairs — i.e. bridged/fake ERC-20 clones — hiding the real
+  // token that DexScreener's relevance ordering would have surfaced first.
+  const chainSpecified = typeof input.chain === 'string' && (input.chain as string).length > 0;
+  const chain = chainSpecified ? (input.chain as string) : null;
   const lines: string[] = [];
   // An address query is an exact lookup; a symbol/name query is a fuzzy search.
   const isAddress = detectTokenAddress(identifier) !== null;
@@ -322,11 +327,11 @@ async function executeTokenMarketData(input: Record<string, unknown>): Promise<s
     const rawPairs = isAddress ? await getTokenPairs(identifier) : await searchPairs(identifier);
     // chainId is a chain name (not an address), so lowercasing for the
     // case-insensitive compare is safe here.
-    const onChain = rawPairs.filter((p) => p.chainId?.toLowerCase() === chain.toLowerCase());
+    const onChain = chain ? rawPairs.filter((p) => p.chainId?.toLowerCase() === chain.toLowerCase()) : [];
     const pairs = onChain.length > 0 ? onChain : rawPairs;
     if (pairs.length > 0) {
       const top = pairs.slice(0, 3);
-      lines.push(`DexScreener data for "${identifier}" (chain: ${chain}):`);
+      lines.push(`DexScreener data for "${identifier}"${onChain.length > 0 ? ` (chain: ${chain})` : ''}:`);
       for (const p of top) {
         lines.push(`  ${p.baseToken.name} (${p.baseToken.symbol}) on ${p.chainId}/${p.dexId}`);
         lines.push(`  Price: $${p.priceUsd} | 24h: ${p.priceChange?.h24 ?? 0}%`);
@@ -1233,6 +1238,13 @@ export async function POST(request: NextRequest) {
     };
     const safeCurrentPage = sanitizeCtx(context?.currentPage, 64);
     const safeCurrentToken = sanitizeCtx(context?.currentToken, 32);
+    // walletAddress is client-supplied and lands in the SYSTEM prompt — only
+    // render it if it is shaped like a real address (full-string anchor), so a
+    // crafted value can't smuggle directives past sanitizeCtx.
+    const safeWallet = typeof context?.walletAddress === 'string'
+      && /^(0x[a-fA-F0-9]{40}|[1-9A-HJ-NP-Za-km-z]{32,44})$/.test(context.walletAddress)
+      ? context.walletAddress
+      : '';
     // Authenticated users get a 1-line portfolio summary injected into the
     // system prompt so the agent can answer "what's in my portfolio?"
     // questions without a separate tool roundtrip. Falls back silently when
@@ -1258,7 +1270,7 @@ export async function POST(request: NextRequest) {
     }
 
     const platformContextStr = context
-      ? `Current Page: ${safeCurrentPage || 'Unknown'} | Token in View: ${safeCurrentToken || 'None'} | User Wallet: ${context.walletAddress || 'Not connected'}${portfolioContextStr}`
+      ? `Current Page: ${safeCurrentPage || 'Unknown'} | Token in View: ${safeCurrentToken || 'None'} | User Wallet: ${safeWallet || 'Not connected'}${portfolioContextStr}`
       : '';
 
     // ── Build System Prompt ─────────────────────────────────────────────────

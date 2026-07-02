@@ -152,25 +152,33 @@ export const GET = withTierGate('mini', async (
       }, { status: arkham ? 200 : 404 });
     }
 
-    // Canonical key for the child-table lookups: whale_activity and
-    // user_whale_follows store the normalized (lowercase EVM) address, so a
-    // checksummed URL address must be normalized or the activity feed and
-    // follower count come back empty even though the whale row matched via ilike.
+    // Canonical key for the child-table lookups. whale_activity /
+    // user_whale_follows hold historical rows in MIXED case for EVM (webhook
+    // writers weren't always normalized), so an exact eq on the lowercased
+    // key still misses legacy rows — match EVM case-insensitively via ilike
+    // (safe: hex has no LIKE wildcards). Solana is case-sensitive → exact eq.
     const normalizedAddress = normalizeAddress(address, whale.chain);
+    const isEvmWhale = normalizedAddress.startsWith('0x');
 
     // 2) DB activity
-    const { data: storedActivity } = await supabase
+    let activityQuery = supabase
       .from('whale_activity')
-      .select('*')
-      .eq('whale_address', normalizedAddress)
+      .select('*');
+    activityQuery = isEvmWhale
+      ? activityQuery.ilike('whale_address', normalizedAddress)
+      : activityQuery.eq('whale_address', normalizedAddress);
+    const { data: storedActivity } = await activityQuery
       .order('timestamp', { ascending: false })
       .limit(50);
 
     // 3) Followers
-    const { count: followerCount } = await supabase
+    let followsQuery = supabase
       .from('user_whale_follows')
-      .select('user_id', { count: 'exact', head: true })
-      .eq('whale_address', normalizedAddress);
+      .select('user_id', { count: 'exact', head: true });
+    followsQuery = isEvmWhale
+      ? followsQuery.ilike('whale_address', normalizedAddress)
+      : followsQuery.eq('whale_address', normalizedAddress);
+    const { count: followerCount } = await followsQuery;
 
     // 4) Arkham + live activity (parallel, best-effort, each time-boxed so a
     //    slow/down external source can never hang the whole route past the

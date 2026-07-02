@@ -114,7 +114,9 @@ export async function POST(request: NextRequest) {
       messages,
       system: SUPPORT_SYSTEM_PROMPT,
       tools: [],
-      maxTokens: 500,
+      // vtxQuery runs with adaptive thinking, whose tokens count toward
+      // max_tokens — 500 could truncate the visible reply mid-sentence.
+      maxTokens: 1024,
     });
 
     const textBlock = response.content.find(b => b.type === 'text');
