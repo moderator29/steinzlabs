@@ -394,14 +394,17 @@ export interface DomainScanResult {
 }
 
 export async function scanDomain(url: string): Promise<DomainScanResult> {
-  try {
-    const encoded = encodeURIComponent(url);
-    const data = await goplusGet(`/phishing_site?url=${encoded}`);
-    return parseDomainScan(data, url);
-  } catch {
-    // Fallback heuristic scan
-    return heuristicDomainScan(url);
-  }
+  // This THROWS by design when the phishing-intel provider is unreachable.
+  // Callers MUST fail open to an 'unknown'/unavailable state, never to a clean
+  // pass — mirroring simulateTransaction's fail-closed contract in this file.
+  // Previously it swallowed the error and returned heuristicDomainScan()'s
+  // SAFE/85 verdict, which the Domain Shield reported as an authoritative
+  // "Phishing intelligence: clean" result during an outage. That fabricated
+  // confidence and is forbidden by CLAUDE.md. The heuristic signal is still
+  // available, but only via the separately-labeled 'heuristic' source.
+  const encoded = encodeURIComponent(url);
+  const data = await goplusGet(`/phishing_site?url=${encoded}`);
+  return parseDomainScan(data, url);
 }
 
 function parseDomainScan(d: any, url: string): DomainScanResult {
@@ -439,7 +442,14 @@ const CANONICAL_DOMAINS = new Set([
   'rainbow.me', 'trustwallet.com', 'safe.global', 'app.aave.com', 'jup.ag',
 ]);
 
-function heuristicDomainScan(url: string): DomainScanResult {
+/**
+ * Local, network-free URL heuristics (brand keywords, suspicious TLDs, raw IP,
+ * hyphenated wallet/secure patterns). Exported so Domain Shield can surface it
+ * as a clearly-labeled, SEPARATE 'heuristic' source. It is NEVER presented as a
+ * phishing-intelligence clean pass: a SAFE heuristic result carries no positive
+ * weight, it only ever contributes risk signals.
+ */
+export function heuristicDomainScan(url: string): DomainScanResult {
   const signals: string[] = [];
   let host = '';
   try {

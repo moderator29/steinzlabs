@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { normalizeAddress } from "@/lib/utils/addressNormalize";
 
 export const runtime = "nodejs";
 
@@ -48,7 +49,10 @@ export async function POST(request: NextRequest) {
   const { error } = await supabase.from("user_wallet_alerts").upsert(
     {
       user_id: user.id,
-      wallet_address: body.wallet_address.toLowerCase(),
+      // Solana addresses are case-sensitive; a raw .toLowerCase() corrupts the
+      // upsert key (and the on-chain lookup). normalizeAddress lowercases EVM
+      // only and preserves Solana base58 case.
+      wallet_address: normalizeAddress(body.wallet_address, body.chain),
       chain: body.chain,
       alert_on: body.alert_on ?? ["large_trade", "new_token"],
       min_trade_usd: body.min_trade_usd ?? null,

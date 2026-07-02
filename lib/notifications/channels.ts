@@ -15,6 +15,8 @@ interface FanOutPayload {
   title: string;
   message: string;
   type?: string;
+  /** Optional deep-link stored on the in-app notification row (drives the bell). */
+  url?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -109,6 +111,7 @@ export async function fanOutNotification(payload: FanOutPayload): Promise<{
     type: payload.type ?? 'alert',
     title: payload.title,
     body: payload.message,
+    ...(payload.url ? { url: payload.url } : {}),
     metadata: payload.metadata ?? {},
     read: false,
   });

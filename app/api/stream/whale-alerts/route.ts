@@ -1,18 +1,24 @@
 import 'server-only';
 import { NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import { getAddressTransfers } from '@/lib/services/arkham';
 import { getWhaleWatchlist } from '@/lib/services/supabase';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
  * SSE Whale Alert Feed
- * GET /api/stream/whale-alerts?userId=<id>&minUsd=100000
+ * GET /api/stream/whale-alerts?minUsd=100000
  *
- * Streams whale transactions for wallets in the user's watchlist.
- * Polls every 30 seconds, emits only new transactions seen since last poll.
- * minUsd — minimum USD value to emit (default $100,000)
+ * Streams whale transactions for wallets in the CALLER's own watchlist. The
+ * user is resolved from the authenticated session (supabase.auth.getUser) —
+ * never from a query param — so one user can't stream another's watchlist
+ * (was an IDOR). When the caller follows no whales the stream stays honestly
+ * empty; it never falls back to a fabricated placeholder wallet.
+ * minUsd · minimum USD value to emit (default $100,000)
  */
 
 interface WhaleAlert {
@@ -29,9 +35,26 @@ interface WhaleAlert {
 }
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = req.nextUrl;
-  const userId = searchParams.get('userId');
-  const minUsd = parseFloat(searchParams.get('minUsd') ?? '100000');
+  const minUsd = parseFloat(req.nextUrl.searchParams.get('minUsd') ?? '100000');
+
+  // Bind the stream to the authenticated caller. No userId query param — the
+  // watchlist we stream is always the session user's own.
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll: () => { /* read-only in a streaming handler */ },
+      },
+    },
+  );
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+  const userId = user.id;
 
   const encoder = new TextEncoder();
 
@@ -52,17 +75,10 @@ export async function GET(req: NextRequest) {
       const tick = async () => {
         if (!active) return;
 
-        // Get user watchlist
-        const watchlist = userId ? await getWhaleWatchlist(userId).catch(() => []) : [];
-
-        // Include well-known whale addresses even without watchlist
-        const defaultWhales = [
-          { address: 'binance-hot-wallet', chain: 'ethereum', label: 'Binance' },
-        ];
-
-        const targets = watchlist.length > 0
-          ? watchlist.map(w => ({ address: w.address, chain: w.chain, label: w.label }))
-          : defaultWhales;
+        // The caller's own watched whales. If they follow none, we stream
+        // nothing — never a fabricated placeholder wallet.
+        const watchlist = await getWhaleWatchlist(userId).catch(() => []);
+        const targets = watchlist.map(w => ({ address: w.address, chain: w.chain, label: w.label }));
 
         const alerts: WhaleAlert[] = [];
 
@@ -77,8 +93,11 @@ export async function GET(req: NextRequest) {
 
             seenHashes.add(tx.hash);
 
-            const direction = tx.from.address.toLowerCase() === target.address.toLowerCase()
-              ? 'sell' : 'buy';
+            // Solana is case-sensitive — compare via normalizeAddress, never
+            // a raw .toLowerCase() (which would corrupt base58 comparisons).
+            const direction =
+              normalizeAddress(tx.from.address, target.chain) === normalizeAddress(target.address, target.chain)
+                ? 'sell' : 'buy';
 
             alerts.push({
               hash: tx.hash,

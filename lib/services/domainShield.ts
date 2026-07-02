@@ -1,7 +1,12 @@
 import 'server-only';
 import { cache, cacheKey, TTL } from '../api/cache-manager';
 import { cacheGet, cacheSet } from '../cache/redis';
-import { scanDomain, type DomainScanResult } from '../security/goplusService';
+import { scanDomain, heuristicDomainScan, type DomainScanResult } from '../security/goplusService';
+import {
+  analyzeTyposquat,
+  registrableDomain,
+  type TyposquatResult,
+} from '../security/domainTyposquat';
 import { vtxAnalyze } from './anthropic';
 
 /**
@@ -14,7 +19,11 @@ import { vtxAnalyze } from './anthropic';
  *
  * Sources (all free / already integrated):
  *   - GoPlus phishing_site            → known phishing / malicious flag
- *   - MetaMask eth-phishing-detect    → community blocklist / allowlist (JSON)
+ *   - MetaMask eth-phishing-detect    → community blocklist / allowlist / fuzzylist
+ *   - Lookalike / typosquat engine    → proactive punycode + Damerau/Levenshtein
+ *                                       (pure, no key; catches fresh lookalikes
+ *                                        the reactive blocklists miss)
+ *   - URL heuristics                  → local keyword / TLD / IP signals only
  *   - RDAP (rdap.org)                 → registration date → domain age
  *   - Google Safe Browsing            → ONLY if GOOGLE_SAFE_BROWSING_KEY is set
  *
@@ -26,7 +35,7 @@ export type DomainVerdict = 'SAFE' | 'SUSPICIOUS' | 'PHISHING' | 'UNKNOWN';
 
 export interface DomainSource {
   /** Stable id for the source. */
-  id: 'goplus' | 'metamask' | 'rdap' | 'safebrowsing';
+  id: 'goplus' | 'metamask' | 'rdap' | 'safebrowsing' | 'heuristic' | 'lookalike';
   /** Human label shown in the UI. */
   label: string;
   /** Whether the source returned usable data this scan. */
@@ -48,6 +57,19 @@ export interface DomainShieldResult {
   safetyScore: number | null;
   signals: string[];
   sources: DomainSource[];
+  /**
+   * Structured lookalike / typosquat finding for a dedicated UI card, or null
+   * when no lookalike pattern was detected. Derived purely from the domain
+   * string, so every field traces to the input.
+   */
+  lookalike: {
+    severity: 'low' | 'high';
+    detail: string;
+    nearestBrand: string | null;
+    editDistance: number | null;
+    decodedUnicode: string | null;
+    hasPunycode: boolean;
+  } | null;
   /** Real registration date (ISO) when RDAP returns it, else null. */
   registeredAt: string | null;
   /** Whole days since registration when known, else null. */
@@ -183,13 +205,6 @@ interface RdapEvent {
 
 interface RdapResponse {
   events?: RdapEvent[];
-}
-
-/** Reduce a host to its registrable domain (last two labels) for RDAP. */
-function registrableDomain(host: string): string {
-  const parts = baseHost(host).split('.');
-  if (parts.length <= 2) return parts.join('.');
-  return parts.slice(-2).join('.');
 }
 
 interface RdapResult {
@@ -332,6 +347,93 @@ async function checkGoPlus(url: string): Promise<{
   }
 }
 
+// ─── Local URL heuristics (network-free, penalty-only) ────────────────────────
+
+/**
+ * Local heuristic signal (brand keywords, suspicious TLDs, raw-IP hosts). This
+ * is a SEPARATE source from GoPlus phishing intelligence and is never presented
+ * as an authoritative clean pass: a clean heuristic result carries no positive
+ * weight in the score, it only ever contributes risk penalties.
+ */
+function checkHeuristic(url: string): { source: DomainSource; scan: DomainScanResult } {
+  const scan = heuristicDomainScan(url);
+  if (scan.verdict === 'PHISHING' || scan.verdict === 'SUSPICIOUS') {
+    return {
+      source: {
+        id: 'heuristic',
+        label: 'URL heuristics',
+        available: true,
+        status: 'flagged',
+        detail: scan.signals[0] ?? 'Suspicious URL pattern detected',
+      },
+      scan,
+    };
+  }
+  return {
+    source: {
+      id: 'heuristic',
+      label: 'URL heuristics',
+      available: true,
+      status: 'info',
+      detail: 'No obvious red flags in the URL string (heuristic only)',
+    },
+    scan,
+  };
+}
+
+// ─── Lookalike / typosquat / homograph (pure, no key) ─────────────────────────
+
+/**
+ * Proactive lookalike detector. Uses the pure typosquat engine plus MetaMask's
+ * live fuzzylist as an extended brand set, and suppresses findings for domains
+ * the community has explicitly allowlisted.
+ */
+async function checkTyposquat(host: string): Promise<{ source: DomainSource; result: TyposquatResult }> {
+  const config = await getMetaMaskConfig();
+  const fuzzylist = config?.fuzzylist ?? [];
+  const result = analyzeTyposquat(host, fuzzylist);
+
+  // A community-allowlisted domain is vetted; never surface it as a lookalike.
+  if (config && listMatches(host, config.whitelist)) {
+    return {
+      source: {
+        id: 'lookalike',
+        label: 'Lookalike / typosquat',
+        available: true,
+        status: 'allowlisted',
+        detail: 'On the community allowlist; not treated as a lookalike',
+      },
+      result: { ...result, severity: 'none' },
+    };
+  }
+
+  if (result.severity === 'high' || result.severity === 'low') {
+    return {
+      source: {
+        id: 'lookalike',
+        label: 'Lookalike / typosquat',
+        available: true,
+        status: 'flagged',
+        detail: result.detail,
+      },
+      result,
+    };
+  }
+
+  return {
+    source: {
+      id: 'lookalike',
+      label: 'Lookalike / typosquat',
+      available: true,
+      status: result.isExactBrand ? 'allowlisted' : 'clean',
+      detail: result.isExactBrand
+        ? 'Exact match to a known dApp domain'
+        : 'No typosquat or homograph pattern detected',
+    },
+    result,
+  };
+}
+
 // ─── Google Safe Browsing (gated on env) ──────────────────────────────────────
 
 async function checkSafeBrowsing(url: string): Promise<DomainSource | null> {
@@ -414,19 +516,33 @@ function combine(
   goplus: DomainSource,
   metamask: DomainSource,
   rdap: RdapResult,
+  heuristic: { source: DomainSource; scan: DomainScanResult },
+  lookalike: { source: DomainSource; result: TyposquatResult },
   safeBrowsing: DomainSource | null
 ): Pick<DomainShieldResult, 'verdict' | 'safetyScore' | 'signals' | 'sources'> {
-  const sources: DomainSource[] = [goplus, metamask, rdap.source];
+  const sources: DomainSource[] = [
+    goplus,
+    metamask,
+    lookalike.source,
+    rdap.source,
+    heuristic.source,
+  ];
   if (safeBrowsing) sources.push(safeBrowsing);
 
-  const anyData = sources.some((s) => s.available);
-  if (!anyData) {
-    return { verdict: 'UNKNOWN', safetyScore: null, signals: [], sources };
-  }
+  // Only external intelligence sources establish that we have real data to
+  // render a SAFE verdict. The local overlays (heuristic, lookalike) can ADD
+  // risk but can NEVER manufacture safety — otherwise a heuristic SAFE during
+  // an outage would reintroduce the fabricated-clean bug the P0 fix removed.
+  const externalAvailable =
+    goplus.available || metamask.available || rdap.source.available || (safeBrowsing?.available ?? false);
 
   const signals: string[] = [];
   let score = 100;
   let hardFlag = false;
+  // A concrete risk finding lets us render a (non-clean) verdict even when no
+  // external source responded — e.g. an offline scan that is still a homograph.
+  let localRisk = false;
+  const allowlisted = metamask.status === 'allowlisted' || lookalike.source.status === 'allowlisted';
 
   // Confirmed-threat sources (GoPlus / Safe Browsing / MetaMask blocklist) are
   // authoritative: any one flag forces a PHISHING verdict.
@@ -446,10 +562,32 @@ function combine(
     score -= 70;
   }
 
+  // Lookalike / typosquat / homograph. A high-severity finding (distance-1 typo
+  // or a homoglyph impersonation of a real brand) is treated as a hard flag; a
+  // low-severity finding is a strong soft penalty. Suppressed when the domain is
+  // community-allowlisted.
+  if (!allowlisted && lookalike.source.status === 'flagged') {
+    signals.push(lookalike.result.detail);
+    localRisk = true;
+    if (lookalike.result.severity === 'high') {
+      hardFlag = true;
+      score -= 70;
+    } else {
+      score -= 40;
+    }
+  }
+
+  // Local URL heuristic (penalty-only, never authoritative).
+  if (heuristic.source.status === 'flagged') {
+    const penalty = heuristic.scan.verdict === 'PHISHING' ? 30 : 15;
+    signals.push(`URL heuristic: ${heuristic.source.detail}`);
+    localRisk = true;
+    score -= penalty;
+  }
+
   // Domain age is a soft signal: very new domains carry elevated risk. An
   // allowlist hit suppresses the soft age penalty (an established, vetted brand
   // can legitimately register fresh domains).
-  const allowlisted = metamask.status === 'allowlisted';
   if (rdap.ageDays !== null && !allowlisted) {
     if (rdap.ageDays < 30) {
       signals.push(rdap.source.detail);
@@ -465,6 +603,9 @@ function combine(
   let verdict: DomainVerdict;
   if (hardFlag) {
     verdict = 'PHISHING';
+  } else if (!externalAvailable && !localRisk) {
+    // No authoritative data and nothing locally suspicious → honest UNKNOWN.
+    return { verdict: 'UNKNOWN', safetyScore: null, signals, sources };
   } else if (score >= 70) {
     verdict = 'SAFE';
   } else {
@@ -525,6 +666,7 @@ export async function analyzeDomain(url: string): Promise<DomainShieldResult> {
       safetyScore: null,
       signals: ['URL could not be parsed'],
       sources: [],
+      lookalike: null,
       registeredAt: null,
       domainAgeDays: null,
       aiSummary: null,
@@ -536,14 +678,38 @@ export async function analyzeDomain(url: string): Promise<DomainShieldResult> {
   const cached = cache.get<DomainShieldResult>(key);
   if (cached) return cached;
 
-  const [goplus, metamask, rdap, safeBrowsing] = await Promise.all([
+  const [goplus, metamask, rdap, lookalike, safeBrowsing] = await Promise.all([
     checkGoPlus(url),
     checkMetaMask(host),
     checkRdap(host),
+    checkTyposquat(host),
     checkSafeBrowsing(url),
   ]);
+  const heuristic = checkHeuristic(url);
 
-  const combined = combine(url, host, goplus.source, metamask, rdap, safeBrowsing);
+  const combined = combine(
+    url,
+    host,
+    goplus.source,
+    metamask,
+    rdap,
+    heuristic,
+    lookalike,
+    safeBrowsing,
+  );
+
+  const lookalikeCard =
+    lookalike.source.status === 'flagged' &&
+    (lookalike.result.severity === 'high' || lookalike.result.severity === 'low')
+      ? {
+          severity: lookalike.result.severity,
+          detail: lookalike.result.detail,
+          nearestBrand: lookalike.result.nearestBrand,
+          editDistance: lookalike.result.editDistance,
+          decodedUnicode: lookalike.result.decodedUnicode,
+          hasPunycode: lookalike.result.hasPunycode,
+        }
+      : null;
 
   const aiSummary = await buildAiSummary(
     host,
@@ -560,6 +726,7 @@ export async function analyzeDomain(url: string): Promise<DomainShieldResult> {
     safetyScore: combined.safetyScore,
     signals: combined.signals,
     sources: combined.sources,
+    lookalike: lookalikeCard,
     registeredAt: rdap.registeredAt,
     domainAgeDays: rdap.ageDays,
     aiSummary,
