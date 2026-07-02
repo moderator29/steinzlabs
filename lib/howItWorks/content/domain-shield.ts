@@ -6,7 +6,9 @@ export const domainShieldHowItWorks: HowItWorksContent = {
   howItWorks: [
     'You enter a URL or domain and Domain Shield runs it through several independent safety sources at once, then combines what they return into a single clear verdict of Safe, Suspicious, Phishing, or Unknown.',
     'The sources are real and run in parallel: GoPlus phishing intelligence checks for known phishing and malicious flags, the MetaMask eth-phishing-detect community list checks whether the domain is blocklisted or sits on the allowlist of vetted legitimate sites, RDAP registration data establishes how old the domain is, and Google Safe Browsing is queried as an extra layer when it is available.',
-    'A transparent safety score from 0 to 100 is computed in code from those signals, starting at a neutral 100 and dropping for concrete findings, so a known threat flag forces a Phishing verdict while a very new registration applies a softer penalty that an allowlist hit can suppress.',
+    'Because those blocklists are reactive and lag freshly registered scam sites, Domain Shield also runs a proactive lookalike engine that needs no external service: it decodes punycode and flags mixed script homoglyph domains that render like a real brand, and it measures the edit distance of the domain against a curated list of well known wallets, exchanges, and protocols enriched with the live MetaMask fuzzylist, so a brand new typosquat such as a one character variant of a major brand is caught even before any blocklist knows about it.',
+    'A transparent safety score from 0 to 100 is computed in code from those signals, starting at a neutral 100 and dropping for concrete findings, so a known threat flag or a high confidence lookalike forces a Phishing verdict while a very new registration or a softer lookalike applies a smaller penalty that an allowlist hit can suppress.',
+    'The phishing intelligence source is fail open by design: if it cannot be reached it is reported as unavailable rather than as a clean pass, so an outage never reads as an all clear, and the local URL heuristic is shown as its own clearly labeled source that can only add caution and never certifies a site as safe.',
     'The Source breakdown panel shows each source on its own line with a Clean, Flagged, Allowlisted, Info, or No data label, so you can see exactly which checks contributed and which had nothing to report.',
     'When RDAP returns a registration date you also get a Domain age card, and domains under a month old are called out as carrying elevated risk since fresh registrations are a common phishing pattern.',
     'A grounded AI summary turns the same signals into two or three plain sentences of qualitative guidance with no invented numbers, and if no source returns data the result is an honest Unknown rather than a false all-clear.',
@@ -27,6 +29,16 @@ export const domainShieldHowItWorks: HowItWorksContent = {
     'The honest Unknown state matters too, because it tells you when no source has data on a domain so you know to verify independently rather than assuming a site is safe.',
   ],
   whatsNew: [
+    {
+      date: '2026',
+      tag: 'NEW',
+      text: 'Added a proactive lookalike and typosquat engine that decodes punycode, catches mixed script homoglyph domains, and measures edit distance against a curated brand list plus the live MetaMask fuzzylist, so freshly registered impersonation sites are flagged before any blocklist lists them.',
+    },
+    {
+      date: '2026',
+      tag: 'IMPROVED',
+      text: 'Phishing intelligence now fails open: when the provider cannot be reached the scan reports it as unavailable instead of a clean pass, so an outage can never be mistaken for an all clear.',
+    },
     {
       date: '2026',
       tag: 'IMPROVED',

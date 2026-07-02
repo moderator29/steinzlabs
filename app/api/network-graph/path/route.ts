@@ -1,6 +1,7 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 /**
  * §3 P2-C.4 — BFS path-finding between two wallet addresses over the
@@ -25,7 +26,11 @@ export async function GET(req: NextRequest) {
   const to = req.nextUrl.searchParams.get('to')?.trim();
   const maxHops = Math.min(8, Math.max(2, Number(req.nextUrl.searchParams.get('max_hops')) || 6));
   if (!from || !to) return NextResponse.json({ error: 'from and to required' }, { status: 400 });
-  if (from.toLowerCase() === to.toLowerCase()) return NextResponse.json({ path: [from] });
+  // normalizeAddress lowercases EVM (case-insensitive) but preserves Solana
+  // base58 case, so distinct Solana addresses never collide.
+  const fromKey = normalizeAddress(from);
+  const toKey = normalizeAddress(to);
+  if (fromKey === toKey) return NextResponse.json({ path: [from] });
 
   const admin = getSupabaseAdmin();
 
@@ -33,8 +38,8 @@ export async function GET(req: NextRequest) {
   // in the current frontier; add new neighbors; track parent pointers so
   // we can reconstruct the path on goal hit.
   const parent = new Map<string, { prev: string; edge: EdgeRow }>();
-  const visited = new Set<string>([from.toLowerCase()]);
-  let frontier: string[] = [from.toLowerCase()];
+  const visited = new Set<string>([fromKey]);
+  let frontier: string[] = [fromKey];
 
   for (let hop = 0; hop < maxHops && frontier.length > 0; hop++) {
     const { data, error } = await admin
@@ -46,11 +51,11 @@ export async function GET(req: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     const nextFrontier: string[] = [];
     for (const e of data ?? []) {
-      const target = e.to_address.toLowerCase();
+      const target = normalizeAddress(e.to_address);
       if (visited.has(target)) continue;
       visited.add(target);
-      parent.set(target, { prev: e.from_address.toLowerCase(), edge: e });
-      if (target === to.toLowerCase()) {
+      parent.set(target, { prev: normalizeAddress(e.from_address), edge: e });
+      if (target === toKey) {
         // Reconstruct path
         const pathAddrs: string[] = [target];
         const pathEdges: EdgeRow[] = [];

@@ -73,6 +73,14 @@ const LEGEND_ITEMS: { type: NetworkNode['type']; label: string }[] = [
   { type: 'regular',       label: 'Regular Wallet' },
 ];
 
+// Risk-overlay ring colors. These mark real, sourced flags set by the API:
+// sanctioned (Chainalysis OFAC list), Tornado-adjacent (lib/security/tornado),
+// and Arkham-labeled entities. They render as rings/accents, never as invented
+// values.
+const SANCTION_COLOR = '#EF4444'; // red — OFAC sanctioned
+const TORNADO_COLOR  = '#F59E0B'; // amber — Tornado-adjacent
+const LABEL_COLOR    = '#8B7CFF'; // brand violet — labeled entity
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function shortAddr(addr: string): string {
@@ -316,15 +324,51 @@ function ForceGraph({
       .attr('stroke-width', d => (d.type === 'high-activity' || d.type === 'bridge') ? 2 : 1.2)
       .attr('filter', d => (d.type === 'high-activity' || d.type === 'bridge') ? 'url(#glow-strong)' : 'url(#glow)');
 
-    // Labels
+    // Tornado-adjacent ring (amber, dashed) — real lib/security/tornado flag.
+    nodeEls
+      .filter(d => !!d.flags?.tornado_adjacent)
+      .append('circle')
+      .attr('class', 'ring-tornado')
+      .attr('r', d => d.radius + 5)
+      .attr('fill', 'none')
+      .attr('stroke', TORNADO_COLOR)
+      .attr('stroke-width', 1.5)
+      .attr('stroke-dasharray', '3 2')
+      .attr('opacity', 0.85);
+
+    // Sanctioned ring (red, solid) — real Chainalysis OFAC flag. Drawn outermost
+    // so it always reads even on a small node.
+    nodeEls
+      .filter(d => !!d.flags?.ofac)
+      .append('circle')
+      .attr('class', 'ring-ofac')
+      .attr('r', d => d.radius + 8)
+      .attr('fill', 'none')
+      .attr('stroke', SANCTION_COLOR)
+      .attr('stroke-width', 2)
+      .attr('opacity', 0.95);
+
+    // Labeled-entity accent dot (Arkham) — a small violet marker at top-right.
+    nodeEls
+      .filter(d => !!d.entityLabel)
+      .append('circle')
+      .attr('class', 'label-dot')
+      .attr('cx', d => d.radius * 0.7)
+      .attr('cy', d => -d.radius * 0.7)
+      .attr('r', 2.5)
+      .attr('fill', LABEL_COLOR)
+      .attr('stroke', '#0A0E27')
+      .attr('stroke-width', 0.5);
+
+    // Labels — Arkham entity name when known, otherwise the shortened address.
     nodeEls.append('text')
       .attr('text-anchor', 'middle')
       .attr('dy', d => d.radius + 10)
       .attr('font-size', '9')
-      .attr('fill', '#6B7280')
-      .attr('font-family', 'monospace')
+      .attr('fill', d => d.entityLabel ? LABEL_COLOR : '#6B7280')
+      .attr('font-family', d => d.entityLabel ? 'inherit' : 'monospace')
       .attr('pointer-events', 'none')
-      .text(d => shortAddr(d.address));
+      .text(d => d.entityLabel ? d.entityLabel.name : shortAddr(d.address));
 
     // Drag behavior
     const drag = d3.drag<SVGGElement, D3Node>()
@@ -412,9 +456,17 @@ function ForceGraph({
         .attr('stroke', isHighlighted ? nodeColor(d) : '#374151')
         .attr('stroke-width', d.id === selectedNodeId ? 3 : (d.type === 'high-activity' || d.type === 'bridge') ? 2 : 1.2);
       el.select('text')
-        .attr('fill', isHighlighted ? '#9CA3AF' : '#374151');
+        .attr('fill', isHighlighted ? (d.entityLabel ? LABEL_COLOR : '#9CA3AF') : '#374151');
       el.select('.halo')
         .attr('opacity', isHighlighted ? 0.25 : 0.05);
+      // Risk rings stay legible even when dimmed — a sanctioned node must never
+      // disappear — but drop back when out of the highlighted set.
+      el.select('.ring-ofac')
+        .attr('opacity', isHighlighted ? 0.95 : 0.3);
+      el.select('.ring-tornado')
+        .attr('opacity', isHighlighted ? 0.85 : 0.25);
+      el.select('.label-dot')
+        .attr('opacity', isHighlighted ? 1 : 0.3);
     });
 
     svg.selectAll<SVGLineElement, D3Link>('line').each(function (d) {
@@ -519,7 +571,12 @@ export default function NetworkGraphPage() {
   const stats: NetworkStats = data?.stats || {
     clusters: null, avgDegree: 0, density: 0,
     usdcTxns: 0, usdtTxns: 0, totalVolume: 0, timelineData: [],
+    sanctionedCount: 0, tornadoCount: 0, labeledCount: 0,
   };
+
+  // A liquidity map (DexScreener) describes token pairs, not wallet flows, so
+  // the UI labels figures honestly instead of implying per-address activity.
+  const isLiquidity = data?.kind === 'liquidity';
 
   const topWallets = [...nodes]
     .map(n => ({
@@ -528,6 +585,12 @@ export default function NetworkGraphPage() {
     }))
     .sort((a, b) => b.linkCount - a.linkCount)
     .slice(0, 6);
+
+  // Legend only advertises node types actually present in the returned graph —
+  // no phantom entries for tiers the classifier never emitted.
+  const presentTypes = new Set(nodes.map(n => n.type));
+  const legendItems = LEGEND_ITEMS.filter(i => presentTypes.has(i.type));
+  const hasRiskOverlay = stats.sanctionedCount > 0 || stats.tornadoCount > 0 || stats.labeledCount > 0;
 
   const tooltipWidth = 180;
   const containerW = graphContainerRef.current?.clientWidth || 800;
@@ -608,20 +671,33 @@ export default function NetworkGraphPage() {
                 <SideSection title="Network Overview">
                   <div className="space-y-0">
                     {[
+                      // Sanctioned exposure — real count of graph nodes on the
+                      // Chainalysis OFAC list. Always shown (0 is an honest
+                      // "no exposure" reading), highlighted red when > 0.
+                      { label: 'Sanctioned Exposure', value: stats.sanctionedCount, color: stats.sanctionedCount > 0 ? SANCTION_COLOR : undefined },
+                      ...(stats.tornadoCount > 0
+                        ? [{ label: 'Tornado-Adjacent', value: stats.tornadoCount, color: TORNADO_COLOR }]
+                        : []),
+                      ...(stats.labeledCount > 0
+                        ? [{ label: 'Labeled Entities', value: stats.labeledCount, color: LABEL_COLOR }]
+                        : []),
                       // Clusters is real community-detection output. When the API
                       // could not cluster honestly (too few nodes) it returns null
                       // and we omit the row entirely rather than show a fake value.
                       ...(stats.clusters !== null
-                        ? [{ label: 'Clusters', value: stats.clusters, accent: true }]
+                        ? [{ label: 'Clusters', value: stats.clusters, color: '#8B7CFF' }]
                         : []),
-                      { label: 'Avg Degree', value: stats.avgDegree, accent: false },
-                      { label: 'Density',    value: stats.density, accent: false },
-                      { label: 'USDC Txns',  value: stats.usdcTxns, accent: false },
-                      { label: 'USDT Txns',  value: stats.usdtTxns, accent: false },
-                    ].map(({ label, value, accent }) => (
+                      { label: 'Avg Degree', value: stats.avgDegree, color: undefined },
+                      { label: 'Density',    value: stats.density, color: undefined },
+                      { label: isLiquidity ? 'USDC Pairs' : 'USDC Txns', value: stats.usdcTxns, color: undefined },
+                      { label: isLiquidity ? 'USDT Pairs' : 'USDT Txns', value: stats.usdtTxns, color: undefined },
+                    ].map(({ label, value, color }) => (
                       <div key={label} className="flex items-center justify-between py-1.5 border-b border-white/[0.04]">
                         <span className="text-[10px] text-gray-500">{label}</span>
-                        <span className={`text-[10px] font-semibold tabular-nums ${accent ? 'text-[#8B7CFF]' : 'text-white'}`}>
+                        <span
+                          className="text-[10px] font-semibold tabular-nums"
+                          style={{ color: color ?? '#FFFFFF' }}
+                        >
                           {value.toLocaleString()}
                         </span>
                       </div>
@@ -669,9 +745,11 @@ export default function NetworkGraphPage() {
               <SideSection title="Legend">
                 <div className="space-y-2 pt-0.5">
                   <p className="text-[9px] text-gray-500 leading-snug">
-                    Fill color marks the detected community · ring &amp; label mark entity type.
+                    Fill color marks the detected community · dot color marks entity type.
                   </p>
-                  {LEGEND_ITEMS.map(({ type, label }) => (
+                  {legendItems.length === 0 ? (
+                    <p className="text-[10px] text-gray-600 italic">No nodes to describe</p>
+                  ) : legendItems.map(({ type, label }) => (
                     <div key={type} className="flex items-center gap-2">
                       <div
                         className="w-2 h-2 rounded-full flex-shrink-0"
@@ -680,6 +758,32 @@ export default function NetworkGraphPage() {
                       <span className="text-[10px] text-gray-400 leading-tight">{label}</span>
                     </div>
                   ))}
+
+                  {/* Risk overlays — only advertised when the graph actually
+                      carries a real flag from OFAC / Tornado / Arkham. */}
+                  {hasRiskOverlay && (
+                    <div className="pt-2 mt-1 border-t border-white/[0.06] space-y-2">
+                      <p className="text-[9px] text-gray-500 uppercase tracking-widest">Risk Overlays</p>
+                      {stats.sanctionedCount > 0 && (
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 border-2" style={{ borderColor: SANCTION_COLOR }} />
+                          <span className="text-[10px] text-gray-400 leading-tight">Sanctioned (OFAC)</span>
+                        </div>
+                      )}
+                      {stats.tornadoCount > 0 && (
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 border-2 border-dashed" style={{ borderColor: TORNADO_COLOR }} />
+                          <span className="text-[10px] text-gray-400 leading-tight">Tornado-adjacent</span>
+                        </div>
+                      )}
+                      {stats.labeledCount > 0 && (
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: LABEL_COLOR }} />
+                          <span className="text-[10px] text-gray-400 leading-tight">Labeled entity (Arkham)</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </SideSection>
             </div>
@@ -734,22 +838,45 @@ export default function NetworkGraphPage() {
               className="absolute z-20 pointer-events-none"
               style={{ left: tooltipX, top: tooltipY }}
             >
-              <div className="nl-glass rounded-xl p-3 shadow-2xl min-w-[160px]">
-                <p className="text-[9px] text-gray-500 font-mono mb-1 truncate max-w-[160px]">
+              <div className="nl-glass rounded-xl p-3 shadow-2xl min-w-[160px] max-w-[200px]">
+                {tooltip.node.entityLabel && (
+                  <p className="text-[11px] font-semibold text-[#8B7CFF] mb-0.5 truncate flex items-center gap-1">
+                    {tooltip.node.entityLabel.name}
+                    {tooltip.node.entityLabel.verified && <span title="Verified entity">✓</span>}
+                  </p>
+                )}
+                <p className="text-[9px] text-gray-500 font-mono mb-1 truncate max-w-[176px]">
                   {shortAddr(tooltip.node.address)}
                 </p>
                 <p className="text-sm font-bold text-white mb-0.5">
                   {fmtVolume(tooltip.node.volume)}
+                  <span className="text-[9px] font-normal text-gray-500 ms-1">
+                    {isLiquidity ? '24h DEX vol' : 'stablecoin vol'}
+                  </span>
                 </p>
                 <div className="flex items-center gap-2 mt-1">
                   <span
                     className="w-1.5 h-1.5 rounded-full flex-shrink-0"
                     style={{ backgroundColor: nodeColor(tooltip.node) }}
                   />
-                  <span className="text-[10px] text-gray-400 capitalize">{tooltip.node.type}</span>
+                  <span className="text-[10px] text-gray-400 capitalize">{tooltip.node.type.replace('-', ' ')}</span>
                 </div>
+                {(tooltip.node.flags?.ofac || tooltip.node.flags?.tornado_adjacent) && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {tooltip.node.flags?.ofac && (
+                      <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded" style={{ color: SANCTION_COLOR, backgroundColor: `${SANCTION_COLOR}1A` }}>
+                        OFAC SANCTIONED
+                      </span>
+                    )}
+                    {tooltip.node.flags?.tornado_adjacent && (
+                      <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded" style={{ color: TORNADO_COLOR, backgroundColor: `${TORNADO_COLOR}1A` }}>
+                        TORNADO-ADJACENT
+                      </span>
+                    )}
+                  </div>
+                )}
                 <p className="text-[9px] text-gray-600 mt-1">
-                  {tooltip.node.txCount} txns · {tooltip.connectedIds.size - 1} connected
+                  {tooltip.node.txCount} {isLiquidity ? 'pair txns' : 'txns'} · {tooltip.connectedIds.size - 1} connected
                 </p>
               </div>
             </div>
@@ -765,7 +892,7 @@ export default function NetworkGraphPage() {
                     style={{ backgroundColor: nodeColor(selectedNode) }}
                   />
                   <span className="text-[10px] font-semibold capitalize text-white">
-                    {selectedNode.type}
+                    {selectedNode.type.replace('-', ' ')}
                   </span>
                 </div>
                 <button
@@ -776,19 +903,50 @@ export default function NetworkGraphPage() {
                 </button>
               </div>
 
+              {selectedNode.entityLabel && (
+                <p className="text-[11px] font-semibold text-[#8B7CFF] mb-1 flex items-center gap-1">
+                  {selectedNode.entityLabel.name}
+                  {selectedNode.entityLabel.verified && <span title="Arkham verified">✓</span>}
+                </p>
+              )}
+
               <p className="text-[9px] font-mono text-gray-500 mb-2 break-all">
                 {selectedNode.address.length > 20
                   ? `${selectedNode.address.slice(0, 10)}...${selectedNode.address.slice(-8)}`
                   : selectedNode.address}
               </p>
 
+              {(selectedNode.flags?.ofac || selectedNode.flags?.tornado_adjacent) && (
+                <div className="flex flex-col gap-1 mb-2">
+                  {selectedNode.flags?.ofac && (
+                    <div
+                      className="text-[9px] font-semibold px-2 py-1 rounded-lg leading-snug"
+                      style={{ color: SANCTION_COLOR, backgroundColor: `${SANCTION_COLOR}1A` }}
+                    >
+                      OFAC Sanctioned
+                      {selectedNode.sanctionReason && (
+                        <span className="block font-normal opacity-80">{selectedNode.sanctionReason}</span>
+                      )}
+                    </div>
+                  )}
+                  {selectedNode.flags?.tornado_adjacent && (
+                    <div
+                      className="text-[9px] font-semibold px-2 py-1 rounded-lg"
+                      style={{ color: TORNADO_COLOR, backgroundColor: `${TORNADO_COLOR}1A` }}
+                    >
+                      Tornado Cash adjacent
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-1.5 text-[10px]">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-500">Volume</span>
+                  <span className="text-gray-500">{isLiquidity ? '24h DEX Vol' : 'Volume'}</span>
                   <span className="font-bold text-white">{fmtVolume(selectedNode.volume)}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-500">Transactions</span>
+                  <span className="text-gray-500">{isLiquidity ? 'Pair Txns' : 'Transactions'}</span>
                   <span className="font-bold text-white">{selectedNode.txCount.toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between">

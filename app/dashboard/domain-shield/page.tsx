@@ -4,6 +4,7 @@ import { useState } from 'react';
 import {
   Globe, Search, AlertTriangle, CheckCircle,
   XCircle, Shield, Loader2, Clock, Info, Brain, HelpCircle, Calendar, ShieldCheck,
+  Fingerprint,
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
@@ -22,6 +23,15 @@ interface DomainSource {
   detail: string;
 }
 
+interface LookalikeFinding {
+  severity: 'low' | 'high';
+  detail: string;
+  nearestBrand: string | null;
+  editDistance: number | null;
+  decodedUnicode: string | null;
+  hasPunycode: boolean;
+}
+
 interface ScanResult {
   url: string;
   host: string;
@@ -29,6 +39,7 @@ interface ScanResult {
   safetyScore: number | null;
   signals: string[];
   sources: DomainSource[];
+  lookalike: LookalikeFinding | null;
   registeredAt: string | null;
   domainAgeDays: number | null;
   aiSummary: string | null;
@@ -258,6 +269,78 @@ export default function DomainShieldPage() {
                 )}
               </div>
             </TiltCard>
+
+            {/* Lookalike / typosquat — proactive homograph + edit-distance signal */}
+            {result.lookalike && (
+              <TiltCard className="nl-fade-up">
+                <div
+                  className="nl-glass rounded-2xl p-4 border"
+                  style={{
+                    borderColor: result.lookalike.severity === 'high' ? '#EF444433' : '#F59E0B33',
+                    backgroundColor: result.lookalike.severity === 'high' ? '#EF44440D' : '#F59E0B0D',
+                  }}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: result.lookalike.severity === 'high' ? '#EF444419' : '#F59E0B19' }}
+                    >
+                      <Fingerprint
+                        className="w-4.5 h-4.5"
+                        style={{ color: result.lookalike.severity === 'high' ? '#EF4444' : '#F59E0B' }}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-bold text-gray-100">Lookalike / typosquat</span>
+                        <span
+                          className="text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded"
+                          style={{
+                            color: result.lookalike.severity === 'high' ? '#EF4444' : '#F59E0B',
+                            backgroundColor: result.lookalike.severity === 'high' ? '#EF44441A' : '#F59E0B1A',
+                          }}
+                        >
+                          {result.lookalike.severity === 'high' ? 'High confidence' : 'Possible'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-300 mt-1 leading-relaxed">{result.lookalike.detail}</p>
+
+                      <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5">
+                        {result.lookalike.nearestBrand && (
+                          <div className="flex items-center gap-1.5">
+                            <ShieldCheck className="w-3.5 h-3.5 text-[#0066FF]" />
+                            <span className="text-[10px] text-gray-500">
+                              Official site:{' '}
+                              <span className="font-mono text-gray-300">{result.lookalike.nearestBrand}</span>
+                            </span>
+                          </div>
+                        )}
+                        {result.lookalike.editDistance !== null && result.lookalike.editDistance > 0 && (
+                          <div className="flex items-center gap-1.5">
+                            <Info className="w-3.5 h-3.5 text-[#8B7CFF]" />
+                            <span className="text-[10px] text-gray-500">
+                              {result.lookalike.editDistance === 1
+                                ? 'One character different from the real domain'
+                                : `${result.lookalike.editDistance} characters different from the real domain`}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {result.lookalike.hasPunycode && result.lookalike.decodedUnicode && (
+                        <div className="mt-2.5 nl-glass rounded-xl p-2.5 flex items-center gap-2">
+                          <Globe className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                          <span className="text-[10px] text-gray-400">
+                            Punycode domain renders as{' '}
+                            <span className="font-mono text-amber-300">{result.lookalike.decodedUnicode}</span>
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </TiltCard>
+            )}
 
             {/* Unknown honest state */}
             {result.verdict === 'UNKNOWN' && (

@@ -1,5 +1,10 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
+import { checkOfac } from '@/lib/security/ofac';
+import { tornadoAdjacentSet } from '@/lib/security/tornado';
+import { getEntityLabel } from '@/lib/services/arkham';
+import { getAssetTransfers } from '@/lib/services/alchemy';
+import { normalizeAddress, isEvmAddress } from '@/lib/utils/addressNormalize';
 
 const SOLANA_RPC = process.env.NEXT_PUBLIC_ALCHEMY_SOLANA_RPC
   || `https://solana-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY || ''}`;
@@ -25,12 +30,24 @@ export interface NetworkNode {
   // a specific token (caller passes ?holdingToken=mint, server computes
   // holding_pct). Optional so existing consumers don't break.
   holding_pct?: number;
-  // §3 P2-C.5 — adjacency flags. Server can pre-compute; UI can also
-  // overlay client-side via lib/security/ofac.ts + lib/security/tornado.ts.
+  // §3 P2-C.5 — adjacency flags. Populated server-side by applyRiskOverlays:
+  // `ofac` from the Chainalysis public sanctioned-address list (lib/security/
+  // ofac.ts), `tornado_adjacent` from lib/security/tornado.ts over the observed
+  // edge set. Absent/false when the node was not looked up or came back clean.
   flags?: {
     ofac?: boolean;
     tornado_adjacent?: boolean;
   };
+  // Arkham entity label (env-gated behind ARKHAM_API_KEY). Present only when
+  // Arkham returns a known entity for the address; omitted cleanly otherwise.
+  entityLabel?: {
+    name: string;
+    type: string;
+    verified: boolean;
+  };
+  // Human-readable sanctioning detail from the OFAC list (category/name), used
+  // for the node tooltip. Present only when flags.ofac is true.
+  sanctionReason?: string;
   // Real community-detection assignment. Computed by label-propagation over
   // the actual edge set (see detectCommunities). Nodes in the same detected
   // community share a clusterId; the UI colors by it. Absent when clustering
@@ -63,6 +80,15 @@ export interface NetworkStats {
   usdtTxns: number;
   totalVolume: number;
   timelineData: number[];
+  // Real count of graph nodes flagged as OFAC-sanctioned by the Chainalysis
+  // public list (see applyRiskOverlays). 0 when none of the looked-up nodes
+  // are sanctioned — never fabricated.
+  sanctionedCount: number;
+  // Count of nodes flagged 1-hop adjacent to a sanctioned Tornado Cash pool.
+  tornadoCount: number;
+  // Count of nodes carrying an Arkham entity label. 0 when the Arkham key is
+  // unset (labels omitted cleanly) or no node resolved to a known entity.
+  labeledCount: number;
 }
 
 export interface NetworkGraphResponse {
@@ -70,6 +96,12 @@ export interface NetworkGraphResponse {
   edges: NetworkEdge[];
   stats: NetworkStats;
   source: 'alchemy' | 'dexscreener';
+  // What the graph actually represents, so the UI can label it honestly:
+  //  - 'fund-flow'  : nodes are wallets, edges are real stablecoin transfers
+  //                   between them (Solana + EVM paths).
+  //  - 'liquidity'  : nodes are tokens/pairs, edges are DEX pairs; figures are
+  //                   pair-level DEX volume, NOT per-wallet activity.
+  kind: 'fund-flow' | 'liquidity';
   available: boolean;
 }
 
@@ -90,13 +122,28 @@ function shortenAddress(addr: string): string {
   return `${addr.slice(0, 5)}...${addr.slice(-4)}`;
 }
 
+// Classifier over signals we can observe directly (known mints, known
+// protocol addresses, and observed volume/tx activity). It only ever emits
+// the types below; richer tiers (exchange / market-maker / smart-money) are
+// assigned later by applyRiskOverlays from real Arkham entity data, never
+// guessed here. The legend advertises exactly the types present in the graph.
 function classifyNode(address: string, volume: number, txCount: number): NetworkNode['type'] {
   if (address === 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v') return 'usdc';
   if (address === 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB') return 'usdt';
   if (KNOWN_PROTOCOLS[address]) return 'bridge';
-  if (volume > 500000 || txCount > 50) return 'high-activity';
   if (volume > 100000 || txCount > 20) return 'high-activity';
   return 'regular';
+}
+
+// Maps an Arkham entity type string onto one of our richer node tiers. Returns
+// null when the entity type doesn't map to a tier we render, so the base
+// classifier result stands. Driven entirely by real Arkham labels.
+function entityTypeToNodeTier(entityType: string): NetworkNode['type'] | null {
+  const t = entityType.toLowerCase();
+  if (t.includes('cex') || t.includes('exchange')) return 'exchange';
+  if (t.includes('market maker') || t.includes('market-maker') || t === 'mm') return 'market-maker';
+  if (t.includes('fund') || t.includes('smart money') || t.includes('trader')) return 'smart-money';
+  return null;
 }
 
 // ─── Real community detection (label propagation) ───────────────────────────
@@ -196,6 +243,99 @@ function detectCommunities(
   return { labels, count: remap.size };
 }
 
+// ─── Real risk overlays (OFAC · Tornado · Arkham) ────────────────────────────
+// Populates node.flags.ofac / node.flags.tornado_adjacent / node.entityLabel
+// from real sources and rolls the counts into stats. Every figure traces to an
+// upstream call; nodes that are not looked up simply carry no flag (honest
+// absence, never a fabricated "clean" claim beyond what we checked).
+
+// Cap how many addresses we resolve per request so the route stays fast. We
+// prioritise the highest-degree nodes — the hubs a fund-flow investigation
+// cares about most.
+const MAX_OVERLAY_NODES = 40;
+// Bounded concurrency for the upstream lookups (checkOfac / Arkham each have
+// their own short internal timeout + cache).
+const OVERLAY_CONCURRENCY = 8;
+
+/** Run async tasks over items with a fixed-size worker pool. */
+async function mapPool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let cursor = 0;
+  const workers = new Array(Math.min(limit, items.length)).fill(null).map(async () => {
+    while (cursor < items.length) {
+      const idx = cursor++;
+      results[idx] = await fn(items[idx]);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+async function applyRiskOverlays(
+  nodes: NetworkNode[],
+  edges: NetworkEdge[],
+  stats: NetworkStats,
+  chain?: string,
+): Promise<void> {
+  if (nodes.length === 0) return;
+
+  const addressOf = new Map(nodes.map(n => [n.id, n.address]));
+  const nodeByAddress = new Map(nodes.map(n => [normalizeAddress(n.address), n]));
+
+  // ── Tornado adjacency over the full observed edge set (cheap, in-memory). ──
+  // A node is flagged when it directly transacts with a sanctioned Tornado pool
+  // that appears as a counterparty in the graph.
+  const tornadoAddrs = tornadoAdjacentSet(
+    edges.map(e => ({ source: e.source, target: e.target })),
+    id => addressOf.get(id),
+  );
+  for (const addr of tornadoAddrs) {
+    const node = nodeByAddress.get(normalizeAddress(addr));
+    if (node) node.flags = { ...node.flags, tornado_adjacent: true };
+  }
+
+  // ── OFAC + Arkham label lookups for the top-N nodes by degree. ──
+  const degree = new Map<string, number>();
+  for (const e of edges) {
+    degree.set(e.source, (degree.get(e.source) ?? 0) + 1);
+    degree.set(e.target, (degree.get(e.target) ?? 0) + 1);
+  }
+  const ranked = [...nodes]
+    .sort((a, b) => (degree.get(b.id) ?? 0) - (degree.get(a.id) ?? 0) || b.volume - a.volume)
+    .slice(0, MAX_OVERLAY_NODES);
+
+  const arkhamEnabled = !!process.env.ARKHAM_API_KEY;
+
+  await mapPool(ranked, OVERLAY_CONCURRENCY, async (node) => {
+    // OFAC (Chainalysis public list — free, no key). checkOfac carries its own
+    // 4s timeout + 24h Redis cache and falls open on upstream failure.
+    const ofac = await checkOfac(node.address);
+    if (ofac.sanctioned) {
+      node.flags = { ...node.flags, ofac: true };
+      const id0 = ofac.identifications[0];
+      const reason = id0?.name || id0?.category || 'OFAC SDN listed';
+      node.sanctionReason = reason;
+    }
+
+    // Arkham entity label — env-gated, omitted cleanly when the key is unset.
+    if (arkhamEnabled) {
+      const label = await getEntityLabel(node.address, chain);
+      if (label && label.entity && label.entity !== 'Unknown') {
+        node.entityLabel = { name: label.entity, type: label.type, verified: label.verified };
+        const tier = entityTypeToNodeTier(label.type);
+        // Only upgrade the tier for non-special nodes so we never relabel a
+        // known mint/protocol.
+        if (tier && node.type === 'regular') node.type = tier;
+        if (tier && node.type === 'high-activity') node.type = tier;
+      }
+    }
+  });
+
+  stats.sanctionedCount = nodes.filter(n => n.flags?.ofac).length;
+  stats.tornadoCount = nodes.filter(n => n.flags?.tornado_adjacent).length;
+  stats.labeledCount = nodes.filter(n => n.entityLabel).length;
+}
+
 // ─── Empty fallback when APIs are unavailable ────────────────────────────────
 // No static / mock data is shipped per CLAUDE.md "Mock Data — Forbidden".
 // If both Alchemy Solana and DexScreener fail, we return an empty graph with
@@ -213,8 +353,12 @@ function emptyResponse(): NetworkGraphResponse {
       usdtTxns: 0,
       totalVolume: 0,
       timelineData: [],
+      sanctionedCount: 0,
+      tornadoCount: 0,
+      labeledCount: 0,
     },
     source: 'alchemy',
+    kind: 'fund-flow',
     available: false,
   };
 }
@@ -385,7 +529,7 @@ async function fetchSolanaGraphData(wallet: string): Promise<NetworkGraphRespons
     const maxBucket = Math.max(...buckets, 1);
     const timelineData = buckets.map(v => Math.round((v / maxBucket) * 100));
 
-    return {
+    const response: NetworkGraphResponse = {
       nodes,
       edges,
       stats: {
@@ -396,10 +540,166 @@ async function fetchSolanaGraphData(wallet: string): Promise<NetworkGraphRespons
         usdtTxns,
         totalVolume: nodes.reduce((s, nd) => s + nd.volume, 0),
         timelineData,
+        sanctionedCount: 0,
+        tornadoCount: 0,
+        labeledCount: 0,
       },
       source: 'alchemy',
+      kind: 'fund-flow',
       available: true,
     };
+
+    // Real OFAC / Tornado / Arkham overlays over the resolved wallets.
+    await applyRiskOverlays(response.nodes, response.edges, response.stats, 'solana');
+
+    return response;
+  } catch {
+    return null;
+  }
+}
+
+// ─── EVM fund-flow graph (Alchemy getAssetTransfers) ─────────────────────────
+// A 0x… wallet previously fell through Solana RPC → DexScreener → empty. We now
+// build a real 1-hop stablecoin transfer graph from Alchemy asset-transfer
+// history in BOTH directions: outgoing edges wallet→counterparty and incoming
+// edges counterparty→wallet, with real USD-valued amounts (USDC/USDT are the
+// dollar-pegged assets the graph models, mirroring the Solana path). No values
+// are invented; wallets that never moved stablecoins yield an honest empty
+// graph so the caller can fall through to other sources.
+async function fetchEvmGraphData(wallet: string, chain: string): Promise<NetworkGraphResponse | null> {
+  if (!process.env.ALCHEMY_API_KEY) return null;
+
+  try {
+    const [outbound, inbound] = await Promise.all([
+      getAssetTransfers(wallet, chain, 'from', 100),
+      getAssetTransfers(wallet, chain, 'to', 100),
+    ]);
+
+    const self = normalizeAddress(wallet);
+    const nodeMap = new Map<string, { volume: number; txCount: number; timestamps: number[] }>();
+    const edgeMap = new Map<string, { amount: number; count: number; type: 'usdc' | 'usdt' }>();
+
+    const ensureNode = (addr: string) => {
+      if (!nodeMap.has(addr)) nodeMap.set(addr, { volume: 0, txCount: 0, timestamps: [] });
+      return nodeMap.get(addr)!;
+    };
+
+    const classifyAsset = (asset: string): 'usdc' | 'usdt' | null => {
+      const a = asset.toUpperCase();
+      if (a === 'USDC') return 'usdc';
+      if (a === 'USDT') return 'usdt';
+      return null;
+    };
+
+    const addTransfer = (from: string, to: string, value: number, type: 'usdc' | 'usdt', ts?: number) => {
+      if (!from || !to || from === to || !(value > 0)) return;
+      const f = ensureNode(from);
+      const t = ensureNode(to);
+      f.volume += value; f.txCount += 1;
+      t.volume += value; t.txCount += 1;
+      if (ts) { f.timestamps.push(ts); t.timestamps.push(ts); }
+      const key = `${from}||${to}`;
+      const existing = edgeMap.get(key);
+      if (existing) { existing.amount += value; existing.count += 1; }
+      else edgeMap.set(key, { amount: value, count: 1, type });
+    };
+
+    for (const t of outbound) {
+      const type = classifyAsset(t.asset);
+      if (!type) continue;
+      addTransfer(self, normalizeAddress(t.to), Number(t.value) || 0, type, t.timestamp);
+    }
+    for (const t of inbound) {
+      const type = classifyAsset(t.asset);
+      if (!type) continue;
+      addTransfer(normalizeAddress(t.from), self, Number(t.value) || 0, type, t.timestamp);
+    }
+
+    if (nodeMap.size === 0) return null;
+
+    const addresses = Array.from(nodeMap.keys());
+    const addrIndex = new Map(addresses.map((a, i) => [a, i]));
+
+    const nodes: NetworkNode[] = addresses.map((addr, i) => {
+      const d = nodeMap.get(addr)!;
+      return {
+        id: `node-${i}`,
+        address: addr,
+        type: classifyNode(addr, d.volume, d.txCount),
+        volume: d.volume,
+        txCount: d.txCount,
+      };
+    });
+
+    const edges: NetworkEdge[] = Array.from(edgeMap.entries()).map(([key, val]) => {
+      const [from, to] = key.split('||');
+      return {
+        source: `node-${addrIndex.get(from)}`,
+        target: `node-${addrIndex.get(to)}`,
+        type: val.type,
+        amount: val.amount,
+        total_value_usd: val.amount,
+        count: val.count,
+      };
+    });
+
+    const usdcTxns = edges.filter(e => e.type === 'usdc').length;
+    const usdtTxns = edges.filter(e => e.type === 'usdt').length;
+    const n = nodes.length;
+    const maxEdges = n * (n - 1);
+    const density = maxEdges > 0 ? parseFloat((edges.length / maxEdges).toFixed(4)) : 0;
+    const avgDegree = parseFloat(((edges.length * 2) / Math.max(n, 1)).toFixed(2));
+
+    const communities = detectCommunities(
+      nodes.map(nd => nd.id),
+      edges.map(e => ({ source: e.source, target: e.target, count: e.count })),
+    );
+    if (communities) {
+      for (const nd of nodes) {
+        const lbl = communities.labels.get(nd.id);
+        if (lbl !== undefined) nd.clusterId = lbl;
+      }
+    }
+
+    // Timeline from real transfer timestamps (8 buckets × 3h = last 24h).
+    const bucketMs = 3 * 60 * 60 * 1000;
+    const windowMs = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const buckets = new Array(8).fill(0);
+    for (const d of nodeMap.values()) {
+      for (const tsSec of d.timestamps) {
+        const age = now - tsSec * 1000;
+        if (age < 0 || age >= windowMs) continue;
+        const idx = 7 - Math.floor(age / bucketMs);
+        if (idx >= 0 && idx < 8) buckets[idx]++;
+      }
+    }
+    const maxBucket = Math.max(...buckets, 1);
+    const timelineData = buckets.map(v => Math.round((v / maxBucket) * 100));
+
+    const response: NetworkGraphResponse = {
+      nodes,
+      edges,
+      stats: {
+        clusters: communities ? communities.count : null,
+        avgDegree,
+        density,
+        usdcTxns,
+        usdtTxns,
+        totalVolume: nodes.reduce((s, nd) => s + nd.volume, 0),
+        timelineData,
+        sanctionedCount: 0,
+        tornadoCount: 0,
+        labeledCount: 0,
+      },
+      source: 'alchemy',
+      kind: 'fund-flow',
+      available: true,
+    };
+
+    await applyRiskOverlays(response.nodes, response.edges, response.stats, chain);
+
+    return response;
   } catch {
     return null;
   }
@@ -416,6 +716,11 @@ async function fetchDexScreenerData(query: string): Promise<NetworkGraphResponse
     const pairs: any[] = data?.pairs || [];
     if (pairs.length === 0) return null;
 
+    // Token-pair LIQUIDITY map (NOT a per-wallet fund-flow graph). Nodes are
+    // tokens; each token's `volume` / `txCount` is the sum of the REAL 24h DEX
+    // volume / tx count of every listed pair it belongs to. There is no
+    // invented base/quote split — every figure is a DexScreener pair-level
+    // number, aggregated honestly per token.
     const nodeMap = new Map<string, { volume: number; txCount: number }>();
 
     const ensureNode = (addr: string, vol: number, txs: number) => {
@@ -433,13 +738,10 @@ async function fetchDexScreenerData(query: string): Promise<NetworkGraphResponse
       const quoteAddr = pair.quoteToken?.address || '';
       const vol24h = parseFloat(pair.volume?.h24 || '0');
       const txCount = parseInt(pair.txns?.h24?.buys || '0') + parseInt(pair.txns?.h24?.sells || '0');
-      const pairAddr = pair.pairAddress || '';
 
-      if (baseAddr) ensureNode(baseAddr, vol24h * 0.6, Math.floor(txCount * 0.6));
-      if (quoteAddr) ensureNode(quoteAddr, vol24h * 0.4, Math.floor(txCount * 0.4));
-      if (pairAddr && pairAddr !== baseAddr && pairAddr !== quoteAddr) {
-        ensureNode(pairAddr, vol24h, txCount);
-      }
+      // Both tokens in a pair carry that pair's real, unsplit 24h figures.
+      if (baseAddr) ensureNode(baseAddr, vol24h, txCount);
+      if (quoteAddr) ensureNode(quoteAddr, vol24h, txCount);
     }
 
     const addresses = Array.from(nodeMap.keys());
@@ -462,10 +764,10 @@ async function fetchDexScreenerData(query: string): Promise<NetworkGraphResponse
     for (const pair of pairs.slice(0, 20)) {
       const baseAddr = pair.baseToken?.address || '';
       const quoteAddr = pair.quoteToken?.address || '';
-      const pairAddr = pair.pairAddress || '';
       const vol = parseFloat(pair.volume?.h24 || '0');
       const txCount = parseInt(pair.txns?.h24?.buys || '0') + parseInt(pair.txns?.h24?.sells || '0');
 
+      // One edge per pair carrying that pair's REAL 24h volume + tx count.
       if (baseAddr && quoteAddr && addrIndex.has(baseAddr) && addrIndex.has(quoteAddr)) {
         const key = `${baseAddr}||${quoteAddr}`;
         if (!edgeSet.has(key)) {
@@ -479,20 +781,8 @@ async function fetchDexScreenerData(query: string): Promise<NetworkGraphResponse
             target: `node-${addrIndex.get(quoteAddr)}`,
             type: quoteSymbol.includes('USDT') ? 'usdt' : 'usdc',
             amount: vol,
+            total_value_usd: vol,
             count: txCount,
-          });
-        }
-      }
-      if (pairAddr && baseAddr && addrIndex.has(pairAddr) && addrIndex.has(baseAddr)) {
-        const key = `${pairAddr}||${baseAddr}`;
-        if (!edgeSet.has(key)) {
-          edgeSet.add(key);
-          edges.push({
-            source: `node-${addrIndex.get(pairAddr)}`,
-            target: `node-${addrIndex.get(baseAddr)}`,
-            type: 'usdc',
-            amount: vol * 0.5,
-            count: Math.floor(txCount * 0.5),
           });
         }
       }
@@ -537,7 +827,7 @@ async function fetchDexScreenerData(query: string): Promise<NetworkGraphResponse
     const maxBucket = Math.max(...rawBuckets, 1);
     const timelineData = rawBuckets.map(v => Math.round((v / maxBucket) * 100));
 
-    return {
+    const response: NetworkGraphResponse = {
       nodes,
       edges,
       stats: {
@@ -548,10 +838,20 @@ async function fetchDexScreenerData(query: string): Promise<NetworkGraphResponse
         usdtTxns,
         totalVolume: nodes.reduce((s, nd) => s + nd.volume, 0),
         timelineData,
+        sanctionedCount: 0,
+        tornadoCount: 0,
+        labeledCount: 0,
       },
       source: 'dexscreener',
+      kind: 'liquidity',
       available: true,
     };
+
+    // Overlays run on token contracts here (chain unknown, so Arkham resolves
+    // across chains). OFAC/Tornado still apply to any token/contract address.
+    await applyRiskOverlays(response.nodes, response.edges, response.stats);
+
+    return response;
   } catch {
     return null;
   }
@@ -559,15 +859,28 @@ async function fetchDexScreenerData(query: string): Promise<NetworkGraphResponse
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const wallet = searchParams.get('wallet') || '';
+  const wallet = (searchParams.get('wallet') || '').trim();
+  // Optional EVM chain hint (ethereum, base, arbitrum, …). Defaults to
+  // ethereum for 0x… addresses.
+  const chain = (searchParams.get('chain') || 'ethereum').toLowerCase();
 
   let result: NetworkGraphResponse | null = null;
 
   if (wallet) {
-    // Try Alchemy Solana first, then DexScreener
-    result = await fetchSolanaGraphData(wallet);
-    if (!result) {
-      result = await fetchDexScreenerData(wallet);
+    if (isEvmAddress(wallet)) {
+      // 0x… wallet → real EVM stablecoin transfer graph via Alchemy. Falls
+      // through to DexScreener (token/pair liquidity) only if it produces
+      // nothing (e.g. a contract address with no stablecoin transfers).
+      result = await fetchEvmGraphData(wallet, chain);
+      if (!result) {
+        result = await fetchDexScreenerData(wallet);
+      }
+    } else {
+      // Solana wallet path, then DexScreener as a token liquidity fallback.
+      result = await fetchSolanaGraphData(wallet);
+      if (!result) {
+        result = await fetchDexScreenerData(wallet);
+      }
     }
   }
 
