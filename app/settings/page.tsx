@@ -65,20 +65,14 @@ export default function SettingsPage() {
   const [theme, setTheme] = useState(stored?.theme ?? 'dark');
   const [expertMode, setExpertMode] = useState<boolean>(stored?.expertMode ?? false);
 
-  // §S2.4 — apply the theme class to <html> whenever it changes so the
-  // setting is actually observable (was being persisted but never read
-  // back to the DOM, so dark/light toggles had no visual effect).
+  // Platform is dark-only; light mode was removed. Always pin the root to dark
+  // so no legacy stored preference can flip a surface to light.
   useEffect(() => {
     if (typeof document === 'undefined') return;
     const root = document.documentElement;
-    if (theme === 'light') {
-      root.classList.add('light');
-      root.classList.remove('dark');
-    } else {
-      root.classList.add('dark');
-      root.classList.remove('light');
-    }
-  }, [theme]);
+    root.classList.add('dark');
+    root.classList.remove('light');
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {

@@ -61,7 +61,9 @@ const MOTION = new Set<Motion>(['full', 'reduced']);
 export function normalizeAppearance(raw: unknown): Appearance {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   return {
-    theme: THEMES.has(o.theme as ThemeMode) ? (o.theme as ThemeMode) : DEFAULT_APPEARANCE.theme,
+    // Platform is dark-only. Any stored light/system preference normalizes to
+    // dark so no surface can render in light mode.
+    theme: 'dark',
     accent: ACCENT_SET.has(o.accent as Accent) ? (o.accent as Accent) : DEFAULT_APPEARANCE.accent,
     glass: GLASS.has(o.glass as GlassIntensity) ? (o.glass as GlassIntensity) : DEFAULT_APPEARANCE.glass,
     density: DENSITY.has(o.density as Density) ? (o.density as Density) : DEFAULT_APPEARANCE.density,
@@ -70,15 +72,13 @@ export function normalizeAppearance(raw: unknown): Appearance {
   };
 }
 
-/** Resolve theme:'system' to the OS preference; dark/light pass through. */
-export function effectiveTheme(theme: ThemeMode): 'dark' | 'light' {
-  if (theme === 'system') {
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-    }
-    return 'dark';
-  }
-  return theme;
+/**
+ * The platform is dark-only. Light mode was removed because it caused
+ * inconsistent, half-styled surfaces (notably the auth pages rendering white).
+ * Every theme value resolves to dark.
+ */
+export function effectiveTheme(_theme: ThemeMode): 'dark' | 'light' {
+  return 'dark';
 }
 
 /**
