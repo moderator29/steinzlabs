@@ -1,5 +1,6 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
+import { searchTokens as gtSearchTokens } from '@/lib/services/geckoterminal';
 
 // Universal token search for the swap token selector. The selector's local
 // list only covers ~26 curated symbols; this endpoint lets users find ANY
@@ -39,14 +40,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ tokens: [] });
   }
   try {
-    const res = await fetch(
-      `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(q)}`,
-      { next: { revalidate: 60 } },
-    );
-    if (!res.ok) {
+    // Two keyless indexers in parallel — DexScreener (rich metadata + logos)
+    // and GeckoTerminal (widest network coverage). Between them virtually any
+    // DEX-traded token resolves; anything still missing imports via CA paste
+    // (token-meta's Alchemy/GT/on-chain path).
+    const [dsRes, gtHits] = await Promise.all([
+      fetch(`https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(q)}`, { next: { revalidate: 60 } }).catch(() => null),
+      gtSearchTokens(q, chainFilter || undefined).catch(() => []),
+    ]);
+    const data = (dsRes && dsRes.ok ? await dsRes.json() : { pairs: [] }) as { pairs?: DsPair[] };
+    if ((!data.pairs || data.pairs.length === 0) && gtHits.length === 0 && (!dsRes || !dsRes.ok)) {
       return NextResponse.json({ tokens: [], error: 'search_upstream_unavailable' }, { status: 502 });
     }
-    const data = (await res.json()) as { pairs?: DsPair[] };
     const best = new Map<string, { chain: string; address: string; symbol: string; name: string; logo: string | null; liquidityUsd: number; volume24hUsd: number; priceUsd: number | null }>();
     for (const p of data.pairs ?? []) {
       const chain = DS_CHAIN_TO_SWAP[(p.chainId || '').toLowerCase()];
@@ -67,6 +72,23 @@ export async function GET(request: NextRequest) {
         liquidityUsd: liq,
         volume24hUsd: p.volume?.h24 ?? 0,
         priceUsd: p.priceUsd ? Number(p.priceUsd) : null,
+      });
+    }
+    // Fold in GeckoTerminal hits DexScreener missed (keeps DS metadata when
+    // both indexers know the token — DS rows carry logos and volume).
+    for (const g of gtHits) {
+      if (!DS_CHAIN_TO_SWAP[g.chain] && !Object.values(DS_CHAIN_TO_SWAP).includes(g.chain)) continue;
+      const key = `${g.chain}:${g.address.toLowerCase()}`;
+      if (best.has(key)) continue;
+      best.set(key, {
+        chain: g.chain,
+        address: g.address,
+        symbol: g.symbol,
+        name: g.name,
+        logo: null,
+        liquidityUsd: g.liquidityUsd,
+        volume24hUsd: 0,
+        priceUsd: null,
       });
     }
     const tokens = Array.from(best.values())
