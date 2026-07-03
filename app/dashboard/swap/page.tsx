@@ -1198,9 +1198,10 @@ export default function SwapPage() {
       } else if (win?.solana && detectedWallet === 'solana') {
         // Solana wallet (Phantom etc)
         if (swapData.swapTransaction) {
-          const { Transaction } = await import('@solana/web3.js');
-          const txBytes = Buffer.from(swapData.swapTransaction, 'base64');
-          const tx = Transaction.from(txBytes);
+          // Jupiter returns a VersionedTransaction — legacy Transaction.from
+          // threw here on every Solana swap attempt.
+          const { deserializeSolanaTx } = await import('@/lib/wallet/solanaTx');
+          const tx = await deserializeSolanaTx(swapData.swapTransaction);
           const signed = await win.solana.signAndSendTransaction(tx);
           hash = signed.signature;
         } else {

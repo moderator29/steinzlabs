@@ -312,9 +312,8 @@ export function useSwapBroadcast() {
           const sol = await getSolanaProvider();
           if (!sol) throw new Error('Connect a Solana wallet (Phantom or WalletConnect) to sign this swap.');
           if (!quote.swapTransaction) throw new Error('No Solana transaction data received from the quote.');
-          const { Transaction } = await import('@solana/web3.js');
-          const txBytes = Buffer.from(quote.swapTransaction, 'base64');
-          const tx = Transaction.from(txBytes);
+          const { deserializeSolanaTx } = await import('@/lib/wallet/solanaTx');
+          const tx = await deserializeSolanaTx(quote.swapTransaction);
           setStatus('submitted');
           const signed = await sol.signAndSendTransaction(tx);
           // Phantom returns { signature }; the WalletConnect/AppKit provider may

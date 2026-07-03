@@ -152,9 +152,8 @@ async function signExternalSolana(trade: PendingTradeForSigning): Promise<Inline
   const swapData = (await quoteRes.json()) as { swapTransaction?: string };
   if (!swapData.swapTransaction) throw new Error("No Solana transaction returned");
 
-  const { Transaction } = await import("@solana/web3.js");
-  const txBytes = Buffer.from(swapData.swapTransaction, "base64");
-  const sTx = Transaction.from(txBytes);
+  const { deserializeSolanaTx } = await import("@/lib/wallet/solanaTx");
+  const sTx = await deserializeSolanaTx(swapData.swapTransaction);
   const signed = await win.solana.signAndSendTransaction(sTx);
   return { txHash: signed.signature };
 }

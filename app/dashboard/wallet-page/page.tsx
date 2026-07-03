@@ -1565,10 +1565,15 @@ export default function WalletPage() {
                   // ETH logo with no badge.
                   const isL2Native = token.symbol.toUpperCase() === 'ETH'
                     && !!rowChain && rowChain.id !== 'ethereum' && !token.contractAddress;
+                  // The balance API ships holdings[].logoUrl (Alchemy metadata /
+                  // DexScreener image) — the old read of `.logo` only matched
+                  // custom-token rows, so every on-chain ERC-20 outside the
+                  // COIN_LOGOS map fell back to a letter avatar.
                   const logoUrl = isL2Native
                     ? rowChain.logoUrl
                     : (COIN_LOGOS as Record<string, string>)[token.symbol.toUpperCase()]
                       || (token as { logo?: string }).logo
+                      || (token as { logoUrl?: string }).logoUrl
                       || CONTRACT_LOGOS[contractKey];
                   return (
                     <WalletTokenRow
@@ -3155,7 +3160,10 @@ function ReceiveView({
     }
     let cancelled = false;
     import('qrcode')
-      .then((m) => m.toDataURL(address, { margin: 1, width: 256, color: { dark: 'var(--nl-canvas-base)', light: '#ffffff' } }))
+      // qrcode requires literal hex colors — the CSS variable made toDataURL
+      // throw 'Invalid hex color' on every chain, so the QR never rendered
+      // and the Receive view showed the placeholder icon forever.
+      .then((m) => m.toDataURL(address, { margin: 1, width: 256, color: { dark: '#0A0E1A', light: '#ffffff' } }))
       .then((url) => {
         if (!cancelled) setQrDataUrl(url);
       })

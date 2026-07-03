@@ -272,7 +272,16 @@ export async function GET(request: Request) {
     if (detectedType === 'SOL') {
       walletData = await getSolData(address);
     } else {
-      const chain = chainParam !== 'auto' && EVM_CHAIN_CONFIG[chainParam] ? chainParam : 'ethereum';
+      // An explicitly requested chain we don't index must 400, not silently
+      // fall back to Ethereum — that fallback rendered Ethereum holdings
+      // under an "Optimism"/"Fantom"/"Linea" label, i.e. wrong balances.
+      if (chainParam !== 'auto' && !EVM_CHAIN_CONFIG[chainParam]) {
+        return NextResponse.json(
+          { error: `Chain not indexed yet: ${chainParam}. Supported: ${Object.keys(EVM_CHAIN_CONFIG).join(', ')}, solana.`, code: 'UNSUPPORTED_CHAIN' },
+          { status: 400 }
+        );
+      }
+      const chain = chainParam !== 'auto' ? chainParam : 'ethereum';
       walletData = await getEvmData(address, chain);
     }
 
