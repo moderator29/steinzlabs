@@ -17,6 +17,24 @@ import { getTrendingByVolume as birdeyeTrendingByVolume } from '@/lib/services/b
 import { normalizeAddress, isSolanaAddress } from '@/lib/utils/addressNormalize';
 import { getTrendingTokens as lcTrendingTokens, getSocialVelocity as lcSocialVelocity } from '@/lib/services/lunarcrush';
 
+// CoinGecko market events aren't inherently Ethereum — tagging them all
+// chain:'ethereum' gave SOL/BTC an ETH badge and an erroneous +35 ETH ranking
+// boost (lib/contextFeed/filter CHAIN_WEIGHT). Map known native coins to their
+// real chain; everything else is 'multi' (no chain-specific boost, honest label).
+const CG_NATIVE_CHAIN: Record<string, string> = {
+  bitcoin: 'bitcoin', ethereum: 'ethereum', solana: 'solana',
+  binancecoin: 'bsc', 'matic-network': 'polygon', 'avalanche-2': 'avalanche',
+  arbitrum: 'arbitrum', optimism: 'optimism', tron: 'tron', dogecoin: 'dogecoin',
+  ripple: 'ripple', litecoin: 'litecoin', cardano: 'cardano',
+};
+function cgChain(id?: string, symbol?: string): string {
+  if (id && CG_NATIVE_CHAIN[id]) return CG_NATIVE_CHAIN[id];
+  const sym = (symbol || '').toLowerCase();
+  const bySym: Record<string, string> = { btc: 'bitcoin', eth: 'ethereum', sol: 'solana', bnb: 'bsc', matic: 'polygon', avax: 'avalanche', trx: 'tron' };
+  return bySym[sym] || 'multi';
+}
+
+
 async function buildPersonalContext(request: Request): Promise<PersonalContext | undefined> {
   // 1.5 s hard ceiling. Personal context is a nice-to-have re-ranking input;
   // if Supabase / auth-getUser is blipping, we'd rather return an unpersonalised
@@ -343,7 +361,7 @@ async function fetchCoingeckoEvents(): Promise<WhaleEvent[]> {
         from: '', to: '',
         value: g.current_price,
         valueUsd: g.market_cap,
-        chain: 'ethereum',
+        chain: cgChain(g.id, g.symbol),
         trustScore: 80,
         txHash: '',
         blockNumber: 0,
@@ -366,11 +384,11 @@ async function fetchCoingeckoEvents(): Promise<WhaleEvent[]> {
         type: 'new_listing',
         sentiment: change >= 0 ? 'bullish' : 'neutral',
         title: `${t.symbol.toUpperCase()} is trending #${t.market_cap_rank ?? '—'}`,
-        summary: `${t.name} is one of the most-searched assets across the market right now.`,
+        summary: `${t.name} is one of the most-searched assets across the market right now.`, 
         from: '', to: '',
         value: 0,
         valueUsd: 0,
-        chain: 'ethereum',
+        chain: cgChain(t.id, t.symbol),
         trustScore: 70,
         txHash: '',
         blockNumber: 0,
@@ -390,10 +408,10 @@ async function fetchCoingeckoEvents(): Promise<WhaleEvent[]> {
         type: 'new_listing',
         sentiment: 'neutral',
         title: `${n.symbol.toUpperCase()} just listed`,
-        summary: `${n.name} (${n.symbol.toUpperCase()}) is a freshly listed asset. Treat new listings with caution — verify contract, liquidity, and team before any size.`,
+        summary: `${n.name} (${n.symbol.toUpperCase()}) is a freshly listed asset. Treat new listings with caution — verify contract, liquidity, and team before any size.`, 
         from: '', to: '',
         value: 0, valueUsd: 0,
-        chain: 'ethereum',
+        chain: cgChain(n.id, n.symbol),
         trustScore: 50,
         txHash: '',
         blockNumber: 0,
@@ -417,7 +435,7 @@ async function fetchCoingeckoEvents(): Promise<WhaleEvent[]> {
         from: '', to: '',
         value: c.current_price,
         valueUsd: c.market_cap,
-        chain: 'ethereum',
+        chain: cgChain(c.id, c.symbol),
         trustScore: 90,
         txHash: '',
         blockNumber: 0,
