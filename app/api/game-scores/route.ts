@@ -1,75 +1,95 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
-interface GameScore {
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+// Leaderboard persisted in Supabase (public.game_scores). Was an in-memory Map
+// — per-instance on serverless and wiped on every cold start, so the
+// leaderboard was effectively empty/random for users.
+
+interface Row {
   id: string;
   username: string;
   score: number;
   coins: number;
   distance: number;
-  timestamp: number;
-  gamesPlayed: number;
-  bestStreak: number;
+  games_played: number;
+  best_streak: number;
 }
 
-const scores: Map<string, GameScore> = new Map();
-
 export async function GET() {
-  const all = Array.from(scores.values()).sort((a, b) => b.score - a.score);
-  return NextResponse.json({
-    leaderboard: all.slice(0, 50),
-    totalPlayers: all.length,
-    totalGamesPlayed: all.reduce((s, p) => s + p.gamesPlayed, 0),
-    highestScore: all[0]?.score || 0,
-    topPlayer: all[0]?.username || 'N/A',
-  });
+  try {
+    const admin = getSupabaseAdmin();
+    const { data } = await admin
+      .from('game_scores')
+      .select('id, username, score, coins, distance, games_played, best_streak')
+      .order('score', { ascending: false })
+      .limit(50);
+    const rows = (data ?? []) as Row[];
+    const { count } = await admin.from('game_scores').select('id', { count: 'exact', head: true });
+    return NextResponse.json({
+      leaderboard: rows.map((r) => ({
+        id: r.id, username: r.username, score: r.score, coins: r.coins,
+        distance: r.distance, gamesPlayed: r.games_played, bestStreak: r.best_streak,
+      })),
+      totalPlayers: count ?? rows.length,
+      highestScore: rows[0]?.score ?? 0,
+      topPlayer: rows[0]?.username ?? 'N/A',
+    });
+  } catch {
+    return NextResponse.json({ leaderboard: [], totalPlayers: 0, highestScore: 0, topPlayer: 'N/A' });
+  }
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { username, score, coins, distance } = body;
-
     if (!username || typeof score !== 'number') {
       return NextResponse.json({ error: 'Username and score required' }, { status: 400 });
     }
-
-    const cleanName = username.trim().slice(0, 20);
+    const cleanName = String(username).trim().slice(0, 20);
     const id = cleanName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    if (!id) return NextResponse.json({ error: 'Invalid username' }, { status: 400 });
 
-    const existing = scores.get(id);
-    if (existing) {
-      existing.gamesPlayed += 1;
-      if (score > existing.score) {
-        existing.score = score;
-        existing.coins = coins || 0;
-        existing.distance = distance || 0;
-        existing.timestamp = Date.now();
-      }
-      if ((distance || 0) > existing.bestStreak) {
-        existing.bestStreak = distance || 0;
-      }
-    } else {
-      scores.set(id, {
-        id,
-        username: cleanName,
-        score,
-        coins: coins || 0,
-        distance: distance || 0,
-        timestamp: Date.now(),
-        gamesPlayed: 1,
-        bestStreak: distance || 0,
-      });
-    }
+    const admin = getSupabaseAdmin();
+    const { data: existing } = await admin
+      .from('game_scores')
+      .select('score, coins, distance, games_played, best_streak')
+      .eq('id', id)
+      .maybeSingle<Omit<Row, 'id' | 'username'>>();
 
-    const all = Array.from(scores.values()).sort((a, b) => b.score - a.score);
-    const rank = all.findIndex(s => s.id === id) + 1;
+    const nextScore = existing ? Math.max(existing.score, score) : score;
+    const nextCoins = existing ? (score > existing.score ? (coins || 0) : existing.coins) : (coins || 0);
+    const nextDistance = existing ? (score > existing.score ? (distance || 0) : existing.distance) : (distance || 0);
+    const nextGames = (existing?.games_played ?? 0) + 1;
+    const nextStreak = Math.max(existing?.best_streak ?? 0, distance || 0);
+
+    await admin.from('game_scores').upsert({
+      id,
+      username: cleanName,
+      score: nextScore,
+      coins: nextCoins,
+      distance: nextDistance,
+      games_played: nextGames,
+      best_streak: nextStreak,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'id' });
+
+    // Rank = number of players with a strictly higher score, +1.
+    const { count: higher } = await admin
+      .from('game_scores')
+      .select('id', { count: 'exact', head: true })
+      .gt('score', nextScore);
+    const { count: total } = await admin.from('game_scores').select('id', { count: 'exact', head: true });
 
     return NextResponse.json({
-      rank,
-      totalPlayers: all.length,
-      personalBest: scores.get(id)!.score,
-      gamesPlayed: scores.get(id)!.gamesPlayed,
+      rank: (higher ?? 0) + 1,
+      totalPlayers: total ?? 1,
+      personalBest: nextScore,
+      gamesPlayed: nextGames,
     });
   } catch {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
@@ -78,9 +98,6 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   // Admin-only — requires Authorization: Bearer <ADMIN_BEARER_TOKEN>.
-  // Previously this accepted ?password=<hardcoded plaintext> as a query
-  // param, which leaked the secret in URLs, logs, browser history, and
-  // referer headers. Removed entirely in favour of header-based auth.
   const expected = process.env.ADMIN_BEARER_TOKEN;
   if (!expected) {
     return NextResponse.json({ error: 'Admin auth not configured' }, { status: 503 });
@@ -89,12 +106,12 @@ export async function DELETE(req: Request) {
   if (authHeader !== `Bearer ${expected}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const { searchParams } = new URL(req.url);
-  const id = searchParams.get('id');
+  const admin = getSupabaseAdmin();
+  const id = new URL(req.url).searchParams.get('id');
   if (id) {
-    scores.delete(id);
+    await admin.from('game_scores').delete().eq('id', id);
   } else {
-    scores.clear();
+    await admin.from('game_scores').delete().neq('id', '');
   }
   return NextResponse.json({ success: true });
 }
