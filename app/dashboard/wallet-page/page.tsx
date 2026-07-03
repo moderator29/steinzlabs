@@ -484,7 +484,12 @@ export default function WalletPage() {
         const res = await fetch('/api/wallet/custom-tokens', { credentials: 'include' });
         if (!res.ok || cancelled) return;
         const { tokens } = (await res.json()) as { tokens: string[] };
-        const serverTokens = Array.isArray(tokens) ? tokens : [];
+        // NSFW purge must apply here too: this union effect races the mount
+        // cleanup's server DELETE, so without this filter the server copy of
+        // Pleasure Coin re-entered the list on every load (owner has asked
+        // twice for it to be gone).
+        const NSFW_RE = /0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19/i;
+        const serverTokens = (Array.isArray(tokens) ? tokens : []).filter((t) => !NSFW_RE.test(t));
         const localRaw = localStorage.getItem('steinz_custom_tokens');
         const localTokens: string[] = localRaw ? JSON.parse(localRaw) : [];
         const union = Array.from(new Set([...localTokens, ...serverTokens]));
@@ -696,11 +701,6 @@ export default function WalletPage() {
           symbol: 'NAKA',
           name: 'Naka Go',
           logo: 'https://assets.coingecko.com/coins/images/32878/small/nakamoto.png',
-        },
-        '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19': {
-          symbol: 'NSFW',
-          name: 'Pleasure Coin',
-          logo: 'https://assets.coingecko.com/coins/images/24834/small/pleasurecoinlogo200x200.png',
         },
       };
       const rows = await Promise.all(customTokens.map(async (entry) => {
@@ -1556,13 +1556,20 @@ export default function WalletPage() {
                   const CONTRACT_LOGOS: Record<string, string> = {
                     '0x6967b9a8c0b14849cfe8f9e5732b401433fd2898':
                       'https://assets.coingecko.com/coins/images/32878/small/nakamoto.png',
-                    '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19':
-                      'https://assets.coingecko.com/coins/images/31549/small/pleasure.png',
                   };
-                  const logoUrl =
-                    (COIN_LOGOS as Record<string, string>)[token.symbol.toUpperCase()]
-                    || (token as { logo?: string }).logo
-                    || CONTRACT_LOGOS[contractKey];
+                  const rowChain = chainById(token.chain);
+                  // Owner spec (2026-07-03): L2 natives (ETH on Arbitrum / Base /
+                  // Optimism…) show the CHAIN's own logo as the main icon with a
+                  // small Ethereum badge overlaid — matching how BNB / MATIC rows
+                  // carry their chain badge. Ethereum-mainnet ETH keeps the plain
+                  // ETH logo with no badge.
+                  const isL2Native = token.symbol.toUpperCase() === 'ETH'
+                    && !!rowChain && rowChain.id !== 'ethereum' && !token.contractAddress;
+                  const logoUrl = isL2Native
+                    ? rowChain.logoUrl
+                    : (COIN_LOGOS as Record<string, string>)[token.symbol.toUpperCase()]
+                      || (token as { logo?: string }).logo
+                      || CONTRACT_LOGOS[contractKey];
                   return (
                     <WalletTokenRow
                       key={`${token.chain}-${token.symbol}-${i}`}
@@ -1572,8 +1579,10 @@ export default function WalletPage() {
                       valueUsd={token.valueUsd}
                       contractAddress={token.contractAddress}
                       logoUrl={logoUrl}
-                      chainLabel={chainById(token.chain)?.name ?? ''}
-                      chainLogoUrl={chainById(token.chain)?.logoUrl}
+                      chainLabel={rowChain?.name ?? ''}
+                      // L2 natives carry the ETH badge on the chain logo (owner
+                      // spec); every other token keeps its network badge.
+                      chainLogoUrl={isL2Native ? COIN_LOGOS.ETH : rowChain?.logoUrl}
                       // Testnet tokens get NO price lookup (empty id) so we never
                       // render a mainnet USD price against a worthless test coin.
                       coinGeckoId={isTestnetChain(token.chain)
