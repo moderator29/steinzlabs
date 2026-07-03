@@ -172,13 +172,17 @@ export async function GET(request: Request) {
     const result: TrendsResponse = { cards, alerts, updatedAt: new Date().toISOString(), chains: uniqueChains };
     cache = { data: result, ts: Date.now() };
 
+    // Cache-poisoning fix: the chain filter used to mutate result.cards AFTER
+    // it was stored in the module cache by reference, so a filtered request
+    // permanently shrank the cached full set for every later caller. Build a
+    // fresh response object and never touch the cached one.
     const { searchParams } = new URL(request.url);
     const chainFilter = searchParams.get('chain');
-    if (chainFilter && chainFilter !== 'all') {
-      result.cards = result.cards.filter(c => c.chain.toLowerCase() === chainFilter.toLowerCase());
-    }
+    const responseBody: TrendsResponse = (chainFilter && chainFilter !== 'all')
+      ? { ...result, cards: result.cards.filter(c => c.chain.toLowerCase() === chainFilter.toLowerCase()) }
+      : result;
 
-    return NextResponse.json(result, { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } });
+    return NextResponse.json(responseBody, { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Failed to fetch on-chain trends';
     return NextResponse.json({ error: msg }, { status: 500 });

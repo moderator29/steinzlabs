@@ -28,25 +28,34 @@ async function fromCoinGecko(limit: number, category?: string) {
   return res.json();
 }
 
-async function fromCoinCap(limit: number) {
+// Fallback when CoinGecko is rate-limited/down. Was CoinCap v2
+// (api.coincap.io/v2) — deprecated and now key-gated, so the fallback itself
+// always failed. CoinPaprika is free, keyless, ranks by market cap, and
+// exposes 1h/24h/7d changes, so the table degrades gracefully with real data.
+async function fromCoinPaprika(limit: number) {
   const res = await fetch(
-    `https://api.coincap.io/v2/assets?limit=${limit}`,
+    `https://api.coinpaprika.com/v1/tickers?limit=${limit}`,
     { next: { revalidate: 300 } }
   );
-  if (!res.ok) throw new Error('CoinCap failed');
-  const { data } = await res.json();
-  return (data as any[]).map((c) => ({
-    id:                             c.id,
-    symbol:                         c.symbol?.toUpperCase() ?? '',
-    name:                           c.name ?? '',
-    current_price:                  parseFloat(c.priceUsd) || 0,
-    price_change_percentage_24h:    parseFloat(c.changePercent24Hr) || 0,
-    price_change_percentage_7d_in_currency: 0,
-    total_volume:                   parseFloat(c.volumeUsd24Hr) || 0,
-    market_cap:                     parseFloat(c.marketCapUsd) || 0,
-    sparkline_in_7d:                { price: [] },
-    image: `https://assets.coincap.io/assets/icons/${c.symbol?.toLowerCase()}@2x.png`,
-  }));
+  if (!res.ok) throw new Error(`CoinPaprika ${res.status}`);
+  const data = await res.json();
+  return (data as any[]).slice(0, limit).map((c) => {
+    const usd = c.quotes?.USD ?? {};
+    return {
+      id:                             c.id,
+      symbol:                         c.symbol?.toUpperCase() ?? '',
+      name:                           c.name ?? '',
+      current_price:                  usd.price ?? 0,
+      price_change_percentage_1h_in_currency:  usd.percent_change_1h ?? null,
+      price_change_percentage_24h:    usd.percent_change_24h ?? 0,
+      price_change_percentage_7d_in_currency:  usd.percent_change_7d ?? 0,
+      total_volume:                   usd.volume_24h ?? 0,
+      market_cap:                     usd.market_cap ?? 0,
+      market_cap_rank:                c.rank ?? null,
+      sparkline_in_7d:                { price: [] },
+      image: '',
+    };
+  });
 }
 
 export async function GET(request: Request) {
@@ -66,7 +75,11 @@ export async function GET(request: Request) {
     coins = await fromCoinGecko(limit, cgCategory);
   } catch {
     try {
-      coins = await fromCoinCap(limit);
+      // CoinPaprika has no category filter — only useful for the unfiltered
+      // top list. For a category request we'd rather return empty than the
+      // wrong set, so only fall back when no category is active.
+      if (cgCategory) throw new Error('no category fallback');
+      coins = await fromCoinPaprika(limit);
     } catch {
       return NextResponse.json(
         { tokens: [], category, total: 0, timestamp: new Date().toISOString() },
