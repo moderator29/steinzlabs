@@ -29,7 +29,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <PendingSignerProvider />
         <PendingTradesBanner />
         <MaxWelcomeJourney />
-        {children}
+        {/* Skip-link target (app/layout.tsx renders <a href="#main">). Was
+            missing entirely, so the WCAG 2.4.1 skip link went nowhere. */}
+        <main id="main" tabIndex={-1}>
+          {children}
+        </main>
       </div>
     </AuroraBackground>
   );
