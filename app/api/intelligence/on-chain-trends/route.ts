@@ -78,14 +78,19 @@ export async function GET(request: Request) {
     const global24h = globalSorted.at(-2)?.tvl ?? globalNow;
     const global7d = globalSorted.at(-8)?.tvl ?? globalNow;
     const globalChange24h = pctChange(globalNow, global24h);
-    cards.push({
-      id: 'global-tvl', chain: 'All Chains', metric: 'TVL',
-      value: fmtBig(globalNow), rawValue: globalNow,
-      change24h: globalChange24h, change7d: pctChange(globalNow, global7d),
-      sparkline: buildSparkline(globalHistory),
-      direction: globalChange24h > 0.5 ? 'up' : globalChange24h < -0.5 ? 'down' : 'flat',
-      hot: Math.abs(globalChange24h) > 3,
-    });
+    // Only render the TVL card when DeFiLlama actually returned data. On a
+    // DeFiLlama outage the history is [] → globalNow=0, and a "$0 TVL" card
+    // reads as fabricated. Omit it instead (honest empty).
+    if (globalNow > 0) {
+      cards.push({
+        id: 'global-tvl', chain: 'All Chains', metric: 'TVL',
+        value: fmtBig(globalNow), rawValue: globalNow,
+        change24h: globalChange24h, change7d: pctChange(globalNow, global7d),
+        sparkline: buildSparkline(globalHistory),
+        direction: globalChange24h > 0.5 ? 'up' : globalChange24h < -0.5 ? 'down' : 'flat',
+        hot: Math.abs(globalChange24h) > 3,
+      });
+    }
 
     // Per-chain TVL cards (top 5)
     const chainHistories = await Promise.allSettled(
@@ -103,6 +108,7 @@ export async function GET(request: Request) {
       const ch24h = pctChange(now, prev24h);
       const ch7d = pctChange(now, prev7d);
       const isHot = Math.abs(ch24h) > 5;
+      if (now <= 0) continue; // skip chains with no TVL data (honest empty)
       cards.push({
         id: `tvl-${chain.name.toLowerCase()}`,
         chain: chain.name, metric: 'TVL',
