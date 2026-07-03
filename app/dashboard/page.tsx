@@ -454,7 +454,11 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen text-white pb-28 sm:pb-24">
-      <FirstRunTour />
+      {/* Only run the lightweight tour AFTER the full onboarding flow is done
+          (onboardedAt is a real date). Previously both the 10-card
+          OnboardingGate and this 3-step tour mounted at z-[200] for a
+          brand-new user, stacking two overlays on the same screen. */}
+      {!!onboardedAt && <FirstRunTour />}
       {/* iOS safe-area — naka-safe-top adds env(safe-area-inset-top) so
           the header clears the iPhone 14+ dynamic island / notch instead
           of being overlapped by it. No-op on Android / web. */}

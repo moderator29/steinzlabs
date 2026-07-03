@@ -369,6 +369,16 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
       out.failed++;
       out.blocked++;
     } else {
+      // Generic failure (no route, relayer/insert error). Previously this
+      // only bumped a counter and Sentry, leaving the claimed row 'pending'
+      // forever — pending-trades-cleanup never resolves it. Mark it failed so
+      // the row reflects reality and can be retried/surfaced.
+      if (inserted) {
+        await admin
+          .from("user_copy_trades")
+          .update({ status: "failed", failure_reason: result.failureReason ?? "execution_failed" })
+          .eq("id", (inserted as { id: string }).id);
+      }
       out.failed++;
       Sentry.captureMessage(`copy-trade failed: ${result.failureReason ?? "unknown"}`, {
         tags: { user_id: rule.user_id, whale: event.whale_address },
