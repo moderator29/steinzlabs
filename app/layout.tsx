@@ -11,6 +11,7 @@ import { PostHogProvider } from "@/components/PostHogProvider";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 import AutoTranslate from "@/components/i18n/AutoTranslate";
 import CookieConsent from "@/components/legal/CookieConsent";
+import NavDepthTracker from "@/components/common/NavDepthTracker";
 import { Suspense } from "react";
 import { JurisdictionWarning } from "@/components/legal/JurisdictionWarning";
 import { WebVitalsReporter } from "@/components/providers/WebVitalsReporter";
@@ -196,6 +197,10 @@ export default function RootLayout({
                       <CookieConsent />
                       <JurisdictionWarning />
                       <WebVitalsReporter />
+                      {/* In-app nav depth counter backing smartBack() — see
+                          lib/navigation/smartBack.ts. usePathname needs the
+                          Suspense boundary above. */}
+                      <NavDepthTracker />
                     </PostHogProvider>
                   </Suspense>
                 </ToastProvider>
