@@ -28,8 +28,14 @@ import { normalizeTier, type Tier } from "@/lib/subscriptions/tierCheck";
  * thought the diagnostic was broken. captureMessage with structured
  * tags makes the denial filterable in Sentry by reason.
  */
+// no-user / not-cult-member are the EXPECTED outcome on the public /naka-cult
+// landing (most visitors aren't members), so paging Sentry on every one
+// flooded the dashboard. Only genuinely anomalous denials (auth/profile
+// errors) go to Sentry; the expected ones stay console-only.
+const EXPECTED_DENIALS = new Set(['no-user', 'not-cult-member']);
 function reportDenial(reason: string, context: Record<string, unknown>) {
   console.warn(`[cult/access] DENIED ${reason}`, context);
+  if (EXPECTED_DENIALS.has(reason)) return;
   Sentry.captureMessage(`cult-access-denied: ${reason}`, {
     level: 'warning',
     tags: { area: 'cult-access', reason },
