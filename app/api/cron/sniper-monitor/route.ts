@@ -3,6 +3,8 @@ import { verifyCron, cronResponse, cronHasWork } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getNewEvmPairs } from "@/lib/services/geckoterminal";
 import { normalizeAddress, addressesEqual } from "@/lib/utils/addressNormalize";
+import { getCurrentTokenPriceUsd } from "@/lib/sniper/priceFeed";
+import type { SniperChain } from "@/lib/sniper/chains";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +24,8 @@ interface CriteriaRow {
   block_honeypots: boolean;
   trigger_whale_address: string | null;
   trigger_price_target: number | null;
+  trigger_token_address: string | null;
+  trigger_price_direction: "above" | "below" | null;
   amount_per_snipe_usd: number;
   daily_max_snipes: number;
   daily_max_spend_usd: number;
@@ -331,8 +335,54 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // price_target trigger: token_metadata table must have a current_price_usd column.
-    // Emitting matched events only; actual price checks require a price feed integration.
+    // ── price_target trigger ───────────────────────────────────────────────
+    // Fetch the live USD price of the watched token and fire when it crosses
+    // the target in the configured direction ('below' = buy-the-dip, the UI
+    // default; 'above' = breakout). Previously this branch did nothing, so
+    // the whole feature was UI-only.
+    if (c.trigger_type === "price_target"
+        && c.trigger_token_address
+        && typeof c.trigger_price_target === "number"
+        && c.trigger_price_target > 0) {
+      if (tickCapReached()) continue;
+      const targetChain = (c.chains_allowed[0] ?? "ethereum") as SniperChain;
+      const price = await getCurrentTokenPriceUsd(targetChain, c.trigger_token_address).catch(() => null);
+      if (price == null || price <= 0) continue;
+      const dir = c.trigger_price_direction ?? "below";
+      const hit = dir === "above"
+        ? price >= c.trigger_price_target
+        : price <= c.trigger_price_target;
+      if (!hit) continue;
+
+      const { count } = await admin
+        .from("sniper_match_events")
+        .select("id", { count: "exact", head: true })
+        .eq("criteria_id", c.id)
+        .eq("matched_token_address", c.trigger_token_address)
+        .gte("created_at", new Date(Date.now() - 60 * 60_000).toISOString());
+      if ((count ?? 0) > 0) continue; // one fire per token per hour
+
+      const decision = c.auto_execute ? "sniped_pending" : "matched";
+      events.push({
+        criteria_id: c.id,
+        user_id: c.user_id,
+        matched_token_address: normalizeAddress(c.trigger_token_address) ?? c.trigger_token_address,
+        matched_chain: targetChain,
+        trigger_reason: `Price ${dir === "above" ? "≥" : "≤"} target — $${price} vs $${c.trigger_price_target}`,
+        decision,
+        details: {
+          amount_usd: c.amount_per_snipe_usd,
+          current_price_usd: price,
+          target_price_usd: c.trigger_price_target,
+          direction: dir,
+          auto_execute: c.auto_execute,
+          wallet_source: c.wallet_source,
+        },
+      });
+      firedToday++;
+      runningSpend += perSnipeCost;
+      matched++;
+    }
   }
 
   if (events.length > 0) {
