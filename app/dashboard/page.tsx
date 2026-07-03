@@ -31,7 +31,6 @@ import { FirstRunTour } from '@/components/dashboard/FirstRunTour';
 
 const ContextFeed    = lazy(() => import('@/components/ContextFeed'));
 const MarketDashboard = lazy(() => import('@/components/MarketDashboard'));
-const VtxAiTab       = lazy(() => import('@/components/VtxAiTab'));
 const WalletTab   = lazy(() => import('@/components/WalletTab'));
 const ProfileTab  = lazy(() => import('@/components/ProfileTab'));
 
@@ -300,6 +299,14 @@ export default function Dashboard() {
     return t === 'profile' || t === 'wallet' || t === 'vtxai' ? t : 'home';
   })();
   const [activeNav, setActiveNav] = useState<string>(initialNav);
+
+  // The inline VtxAiTab surface silently dropped the server-built token/swap
+  // cards; the dedicated /dashboard/vtx-ai page renders them (plus proof)
+  // correctly and is the single source of truth. Any ?tab=vtxai entry point
+  // now forwards there instead of mounting the stale tab.
+  useEffect(() => {
+    if (activeNav === 'vtxai') router.replace('/dashboard/vtx-ai');
+  }, [activeNav, router]);
   // ?subtab=overview|context|markets restores the home sub-tab — used by
   // /dashboard/proof's "Back to Feed" button (§6.3) so the user lands on
   // the Context Feed instead of the overview after explaining a signal.
@@ -427,7 +434,7 @@ export default function Dashboard() {
         <RenderWidgets />
       );
     }
-    if (activeNav === 'vtxai') return <VtxAiTab />;
+    if (activeNav === 'vtxai') return null; // redirects to /dashboard/vtx-ai (see effect above)
     if (activeNav === 'wallet') return <WalletTab />;
     if (activeNav === 'profile') return <ProfileTab />;
     return null;

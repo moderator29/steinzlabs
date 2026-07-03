@@ -450,7 +450,6 @@ export async function POST(request: NextRequest) {
       depth?: string;
       riskAppetite?: string;
       responseStyle?: string;
-      skipRateLimit?: boolean;
       context?: { currentPage?: string; currentToken?: string; walletAddress?: string };
       stream?: boolean;
       // §model-picker — VTX Fast/Balanced/Deepest reasoning-depth toggle.
@@ -459,9 +458,18 @@ export async function POST(request: NextRequest) {
 
     const {
       message, history, tier, personality, language, depth,
-      riskAppetite, responseStyle, skipRateLimit, context, stream: wantsStream,
+      riskAppetite, responseStyle, context, stream: wantsStream,
       model: vtxModel,
     } = body;
+
+    // SECURITY (2026-07-03): skipRateLimit was read verbatim from the request
+    // body — any anonymous caller could POST {"skipRateLimit":true} and run
+    // unlimited Sonnet 5 + Opus 4.8 on the owner's Anthropic bill. The bypass
+    // is now server-authorised only: a trusted internal caller must present
+    // the CRON_SECRET bearer. Client-supplied values are ignored entirely.
+    const internalSecret = process.env.CRON_SECRET;
+    const authzHeader = request.headers.get('authorization') || '';
+    const skipRateLimit = !!internalSecret && authzHeader === `Bearer ${internalSecret}`;
 
     // Map the neutral picker label → Anthropic output_config.effort on the
     // executor. Unknown / absent → undefined (model default = high).
@@ -618,7 +626,22 @@ export async function POST(request: NextRequest) {
     // like personality:"...\n\nIGNORE PRIOR INSTRUCTIONS..." would land
     // verbatim in the system prompt and could override tier gating, tool-use
     // rules, or coax the model into leaking the system prompt itself.
-    const PERSONALITIES = ['Neutral', 'Friendly', 'Analytical', 'Direct', 'Casual', 'Professional'] as const;
+    // Both UIs send lowercase values (professional | degen | conservative |
+    // neutral) — the old capitalised allow-list matched none of them, so the
+    // personality setting was silently dead everywhere. Normalise + map to a
+    // real behavioural instruction, and fold the legacy capitalised set in so
+    // older clients keep working.
+    const PERSONALITY_INSTRUCTIONS: Record<string, string> = {
+      neutral: 'Neutral, balanced tone. No hype, no doom.',
+      professional: 'Professional, precise, institutional tone. Data-first, measured language.',
+      analytical: 'Analytical and rigorous. Lead with data, quantify claims, show reasoning.',
+      friendly: 'Warm, approachable, encouraging tone while staying accurate.',
+      casual: 'Casual, conversational tone. Plain language, still precise.',
+      direct: 'Blunt and direct. No filler, no hedging — the takeaway first.',
+      degen: 'High-energy crypto-native "degen" voice — use the culture (aping, bags, based) but NEVER soften real risk; call out rugs and red flags hard.',
+      conservative: 'Risk-averse, cautious tone. Foreground downside and capital preservation in every answer.',
+    };
+    const PERSONALITIES = Object.keys(PERSONALITY_INSTRUCTIONS);
     const LANGUAGES = [
       'English', 'Spanish', 'French', 'German', 'Portuguese', 'Italian',
       'Dutch', 'Japanese', 'Korean', 'Chinese', 'Arabic', 'Hindi', 'Russian',
@@ -627,9 +650,10 @@ export async function POST(request: NextRequest) {
     const RISKS = ['Conservative', 'Balanced', 'Aggressive'] as const;
     const DEPTHS = ['Quick', 'Standard', 'Deep'] as const;
 
-    const personalityCandidate = typeof personality === 'string' ? personality.trim() : '';
-    const resolvedPersonality: string = (PERSONALITIES as readonly string[]).includes(personalityCandidate)
-      ? personalityCandidate : 'Neutral';
+    const personalityCandidate = typeof personality === 'string' ? personality.trim().toLowerCase() : '';
+    const resolvedPersonalityKey: string = PERSONALITIES.includes(personalityCandidate)
+      ? personalityCandidate : 'neutral';
+    const resolvedPersonality = PERSONALITY_INSTRUCTIONS[resolvedPersonalityKey];
 
     const depthCandidate = typeof depth === 'string' ? depth : (typeof responseStyle === 'string' ? responseStyle : '');
     // Legacy alias: 'detailed' from older clients maps to 'Deep'
