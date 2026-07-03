@@ -230,12 +230,40 @@ export async function getSolanaTokenHolders(mintAddress: string): Promise<Solana
         value: Array<{ address: string; uiAmount: number | null }>
       };
       const accounts = result?.value ?? [];
-      const totalAmount = accounts.reduce((sum, a) => sum + (a.uiAmount ?? 0), 0);
-      if (totalAmount === 0) return [];
+      if (accounts.length === 0) return [];
+
+      // Percentage must be relative to CIRCULATING SUPPLY, not the sum of the
+      // top-20 token accounts — the old maths made a token where the top-20
+      // held 3% of supply read as ~100% concentrated. Fall back to sum-of-top
+      // only if the supply lookup fails (still labelled clearly downstream).
+      let supply = 0;
+      try { supply = await getSolanaTokenSupply(mintAddress); } catch { /* fall back below */ }
+      const denom = supply > 0
+        ? supply
+        : accounts.reduce((s, a) => s + (a.uiAmount ?? 0), 0);
+      if (denom === 0) return [];
+
+      // getTokenLargestAccounts returns TOKEN ACCOUNTS, not owner wallets.
+      // Resolve each to its owner (data.parsed.info.owner) so the bubble map
+      // shows real holders, not associated-token-account addresses. One batched
+      // getMultipleAccounts (jsonParsed) instead of N calls.
+      let owners: Record<string, string> = {};
+      try {
+        const info = await solanaRpc('getMultipleAccounts', [
+          accounts.map(a => a.address),
+          { encoding: 'jsonParsed' },
+        ]) as { value: Array<{ data?: { parsed?: { info?: { owner?: string } } } } | null> };
+        (info?.value ?? []).forEach((acc, i) => {
+          const owner = acc?.data?.parsed?.info?.owner;
+          if (owner) owners[accounts[i].address] = owner;
+        });
+      } catch { owners = {}; }
+
       return accounts.map(a => ({
-        address: a.address,
+        // Prefer the resolved owner wallet; fall back to the token account.
+        address: owners[a.address] ?? a.address,
         uiAmount: a.uiAmount ?? 0,
-        percentage: Math.round(((a.uiAmount ?? 0) / totalAmount) * 10_000) / 100,
+        percentage: Math.round(((a.uiAmount ?? 0) / denom) * 10_000) / 100,
       }));
     } catch {
       return [];
