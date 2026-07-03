@@ -85,12 +85,26 @@ export function getUnreadCount(): number {
 }
 
 /**
- * Trigger a welcome notification on first login.
- * Checks localStorage flag to avoid duplicates.
+ * Trigger a welcome notification for genuinely NEW accounts only.
+ * The localStorage flag alone was not a reliable gate: userScopedStorage
+ * wipes `steinz_welcomed` on every sign-out / account switch, so every
+ * login re-fired this — and POST /api/notifications fans out to Telegram,
+ * so users got a Telegram ping for simply logging in. Server truth
+ * (auth.users.created_at) is now the primary gate: no createdAt or an
+ * account older than 10 minutes never fires, regardless of localStorage.
  */
-export function maybeNotifyWelcome(email?: string): void {
+const WELCOME_WINDOW_MS = 10 * 60 * 1000;
+
+export function maybeNotifyWelcome(email?: string, createdAt?: string): void {
   if (typeof window === 'undefined') return;
   if (localStorage.getItem(WELCOMED_KEY)) return;
+  if (!createdAt) return;
+  const ageMs = Date.now() - new Date(createdAt).getTime();
+  if (!Number.isFinite(ageMs) || ageMs > WELCOME_WINDOW_MS) {
+    // Existing account signing back in — mark welcomed so we never re-check.
+    localStorage.setItem(WELCOMED_KEY, 'true');
+    return;
+  }
 
   addLocalNotification({
     type: 'welcome',

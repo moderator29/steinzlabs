@@ -340,7 +340,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (user) {
-      maybeNotifyWelcome(user.email);
+      maybeNotifyWelcome(user.email, user.created_at);
     }
   }, [user]);
 
