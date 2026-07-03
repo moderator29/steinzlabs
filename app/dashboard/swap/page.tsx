@@ -577,7 +577,9 @@ function SettingsPanel({ slippage, setSlippage, mevProtect, setMevProtect, mevAu
           </button>
         </div>
         <p className="text-[10px] text-gray-500 leading-relaxed">
-          Routes via private mempool (Flashbots / Jito) to block sandwich bots.
+          Naka Wallet Ethereum swaps broadcast through Flashbots Protect (private
+          mempool) to block sandwich bots. External wallets route through their
+          own RPC, so protection depends on that wallet's settings.
           {mevAutoForLarge && ' Auto-enabled for trades ≥ $1,000.'}
         </p>
       </div>
@@ -1289,7 +1291,13 @@ export default function SwapPage() {
           avalanche: 'https://api.avax.network/ext/bc/C/rpc',
           optimism: 'https://mainnet.optimism.io',
         };
-        const rpcUrl = chainRpcs[chain] || 'https://eth.llamarpc.com';
+        // When MEV protection is on for a built-in Ethereum swap, broadcast
+        // through Flashbots Protect (public, keyless) so the tx skips the
+        // public mempool and can't be sandwiched — making the toggle's claim
+        // real for the path we actually control (the user's own key).
+        const rpcUrl = (mevProtect && chain === 'ethereum')
+          ? 'https://rpc.flashbots.net/fast'
+          : (chainRpcs[chain] || 'https://eth.llamarpc.com');
         const provider = new ethers.JsonRpcProvider(rpcUrl);
         const signer = new ethers.Wallet(pk, provider);
         const tx = await signer.sendTransaction(swapData.transaction);
@@ -1408,14 +1416,19 @@ export default function SwapPage() {
     if (!hasQuote || !toToken) { setSandwichRisk(null); return; }
     const ctrl = new AbortController();
     const usd = fromAmountUsd && fromAmountUsd > 0 ? fromAmountUsd : 1000;
-    fetch(`/api/mev-protection?token=${encodeURIComponent(toToken)}&chain=${chain}&amount=${usd}`, { signal: ctrl.signal })
+    // The MEV endpoint keys on a CONTRACT ADDRESS — passing the bare symbol
+    // ('USDC') meant the risk score was computed against a junk key. Resolve
+    // the real buy-token address; skip the probe for native/symbol-only.
+    const buyAddr = getTokenAddresses(fromToken, toToken, chain).buyToken;
+    if (!buyAddr || buyAddr === toToken || /^[a-z]{2,6}$/i.test(buyAddr)) { setSandwichRisk(null); return; }
+    fetch(`/api/mev-protection?token=${encodeURIComponent(buyAddr)}&chain=${chain}&amount=${usd}`, { signal: ctrl.signal })
       .then((r) => r.ok ? r.json() : null)
       .then((d: { sandwichRisk?: number } | null) => {
         if (d && typeof d.sandwichRisk === 'number') setSandwichRisk(d.sandwichRisk);
       })
       .catch(() => { /* non-fatal */ });
     return () => ctrl.abort();
-  }, [hasQuote, toToken, chain, fromAmountUsd]);
+  }, [hasQuote, fromToken, toToken, chain, fromAmountUsd]);
 
   return (
     <div className="min-h-screen bg-transparent text-white">
