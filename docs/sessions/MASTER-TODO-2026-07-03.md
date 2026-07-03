@@ -256,3 +256,49 @@ Prioritised backlog. **31 P0 / 114 P1** across 40 features. ✅ = shipped this s
 - ☐ Watch-star toggles on LiveTradersGrid, copy-trade, and directory never check res.ok and have no tier gate: for a mini-tier user the POST 403s (watchlist is pro-gated) but fetch resolves, so the optimistic star stays lit 
 - ☐ Default 'Traders' view ranks by volume_7d_usd/active_days_7d, columns populated ONLY by the Bitquery-gated bitquery-traders cron; without the key the flagship default view sorts nulls and every card shows n/a volume, and
 - ☐ Legacy /api/whale-tracker route (Birdeye + raw Alchemy scan) is still live and polled every ~5 min by the dashboard-wide PlatformEventMonitor for every user; it uses a hardcoded $2500 ETH last-resort price and hardcodes 
+
+---
+
+## P1 SWEEP — fixed 2026-07-03 (this session)
+
+✅ Revenue endpoint admin-gated (was leaking platform revenue to any user)
+✅ Dead CTA links fixed: FirstRunTour settings/whales, security 2FA, onboarding, telegram bot deep-links, portfolio, copy-trade routes
+✅ 7 admin pages now send the bearer header (were 401/blank): revenue, search-logs, onboarding-analytics, cult, social block-analytics, social reports, social users
+✅ smart-money buy/sell colors (case mismatch made every move red)
+✅ research pagination (count:exact) + trending sort wired
+✅ Orders hub + PortfolioHistoryPanel order-history tabs populate ({rows} key)
+✅ Bridge: real ERC20 decimals (was hardcoded 18) + resilient status polling
+✅ Cult-access Sentry noise silenced for expected public denials
+✅ Telegram: real disconnect endpoint (button was fake) + current AI model
+✅ Sniper: "Snipe {token}" prefills the create modal instead of blank
+✅ Copy-trading: opens prefilled rule modal from whale-tracker Copy deep-link + Avalanche USDC mapping
+✅ Broken nl-glass/NN Tailwind idiom removed; a11y skip-link target added
+✅ wallet-clusters detects chain from address (Solana was scanned on ETH)
+
+## P1 — REMAINING (need larger builds or owner decisions)
+
+These are real but each is a meaningful build, an architecture change, or a
+provider decision — not a quick patch:
+
+- **Off-matrix paid APIs still in core paths** (owner API decision): Zerion
+  (EVM intel fallback), Birdeye (Solana price/token-scanner), Bitquery
+  (whale realized PnL, traders directory). Need free replacements
+  (Alchemy/Helius/GoPlus/GeckoTerminal/Dune) or the owner accepts the key.
+- **market-data Binance geo-block (HTTP 451 on Vercel US)**: coin-chart,
+  coin-ohlc, universalSearch use api.binance.com. Swap to GeckoTerminal
+  OHLCV + DexScreener search.
+- **Context-feed SSE**: per-connection self-polling holds a lambda open per
+  client; needs a shared pub/sub or polling model. Also error-frame
+  self-destruct + DexScreener stampede.
+- **push-email**: two divergent service workers at same scope, VAPID rotation
+  half-wired, applicationServerKey passed as raw base64 (needs Uint8Array).
+- **messages-social E2E**: key wrapped with hash of the full rotating JWT →
+  breaks on token refresh; needs a stable KDF salt.
+- **2FA user-facing**: only an admin TOTP backend exists; no user enrollment.
+- **market-maker execution**: activation succeeds with no funded kernel;
+  Solana strategies activatable but engine skips them.
+- **smart-money win-rate / dna-analyzer metrics**: hardcoded 0 / missing keys;
+  need real per-wallet historical computation.
+- **whale-tracker**: two competing whale_score writers; watch-star tier gate;
+  legacy /api/whale-tracker route still polled.
+- **game-scores in-memory Map** → needs a DB table for serverless.
