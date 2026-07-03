@@ -45,7 +45,7 @@ export default function PortfolioHistoryPanel({ scopeSymbol, scopeAddress }: Pro
       .then(async (r) => {
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
-        const arr = (data.positions ?? data.history ?? data.orders ?? data.data ?? (Array.isArray(data) ? data : [])) as Record<string, unknown>[];
+        const arr = (data.positions ?? data.history ?? data.orders ?? data.rows ?? data.data ?? (Array.isArray(data) ? data : [])) as Record<string, unknown>[]; // order-history returns {rows}
         setRows(arr);
       })
       .catch(() => setRows([]))

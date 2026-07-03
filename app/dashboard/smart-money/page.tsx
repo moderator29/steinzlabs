@@ -575,7 +575,7 @@ export default function SmartMoneyPage() {
             ) : (
               <div className="nl-glass rounded-2xl divide-y divide-white/[0.04]">
                 {recentMoves.map((move, i) => {
-                  const isUp = move.action === 'buy';
+                  const isUp = /^b/i.test(move.action || ''); // API emits 'Bought'/'Sold' (capitalized) — lowercase check made every move read red
                   const color = isUp ? '#10B981' : '#EF4444';
                   return (
                     <div key={i} className="flex items-center gap-3 px-4 py-3">

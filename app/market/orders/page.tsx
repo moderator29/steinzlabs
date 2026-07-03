@@ -43,7 +43,7 @@ export default function MarketOrdersPage() {
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
         // Each backend returns under a different key — normalize to an array.
-        const arr = data.orders ?? data.positions ?? data.history ?? data.rules ?? data.bots ?? data.data ?? (Array.isArray(data) ? data : []);
+        const arr = data.orders ?? data.positions ?? data.history ?? data.rules ?? data.bots ?? data.rows ?? data.data ?? (Array.isArray(data) ? data : []); // order-history returns {rows}
         setRows(arr);
       })
       .catch((e) => setError(e.message))
