@@ -62,7 +62,9 @@ export default function AdminRevenuePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/analytics/admin')
+    fetch('/api/analytics/admin', {
+      headers: { Authorization: `Bearer ${typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('admin_token') ?? '' : ''}` },
+    })
       .then(r => r.json())
       .then(d => { if (!d.error) setData(d); })
       .catch(() => {})
