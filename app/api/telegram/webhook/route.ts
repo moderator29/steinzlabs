@@ -93,7 +93,7 @@ async function isTelegramPaused(): Promise<boolean> {
 
 const PRICING_URL = `${APP_URL}/dashboard/pricing`;
 const OPEN_APP_BTN = { text: "🌐 Open Naka Labs", url: APP_URL };
-const SETTINGS_BTN = { text: "⚙️ Notification Settings", url: `${APP_URL}/settings/notifications` };
+const SETTINGS_BTN = { text: "⚙️ Notification Settings", url: `${APP_URL}/settings` };
 const UPGRADE_BTN = { text: "⭐ Upgrade Plan", url: PRICING_URL };
 
 interface LinkedUser {
@@ -275,7 +275,7 @@ export async function POST(request: NextRequest) {
         {
           reply_markup: {
             inline_keyboard: [
-              [{ text: "🌐 Open Naka Labs", url: `${APP_URL}/settings/notifications` }],
+              [{ text: "🌐 Open Naka Labs", url: `${APP_URL}/settings` }],
               [{ text: "❓ All commands", callback_data: "help" }],
             ],
           },
@@ -294,7 +294,7 @@ export async function POST(request: NextRequest) {
     const code = cmd.args[0]?.trim();
     if (!code || !/^\d{6}$/.test(code)) {
       await sendTelegramMessage(chatId, "Send `/link` followed by your 6-digit code, e.g. `/link 123456`.\n\nGet your code at:", {
-        reply_markup: { inline_keyboard: [[{ text: "🔑 Generate Code", url: `${APP_URL}/settings/notifications` }]] },
+        reply_markup: { inline_keyboard: [[{ text: "🔑 Generate Code", url: `${APP_URL}/settings` }]] },
       });
       return NextResponse.json({ ok: true });
     }
@@ -306,13 +306,13 @@ export async function POST(request: NextRequest) {
 
     if (!pending) {
       await sendTelegramMessage(chatId, "Invalid or expired code. Generate a new one in Settings.", {
-        reply_markup: { inline_keyboard: [[{ text: "🔑 Generate New Code", url: `${APP_URL}/settings/notifications` }]] },
+        reply_markup: { inline_keyboard: [[{ text: "🔑 Generate New Code", url: `${APP_URL}/settings` }]] },
       });
       return NextResponse.json({ ok: true });
     }
     if (pending.link_code_expires_at && new Date(pending.link_code_expires_at) < new Date()) {
       await sendTelegramMessage(chatId, "This code has expired. Generate a new one.", {
-        reply_markup: { inline_keyboard: [[{ text: "🔑 Generate New Code", url: `${APP_URL}/settings/notifications` }]] },
+        reply_markup: { inline_keyboard: [[{ text: "🔑 Generate New Code", url: `${APP_URL}/settings` }]] },
       });
       return NextResponse.json({ ok: true });
     }
@@ -433,7 +433,7 @@ export async function POST(request: NextRequest) {
         : "🔁 Copy Trade dashboard:",
       {
         reply_markup: {
-          inline_keyboard: [[{ text: "🌐 Open Copy Trade", url: target ? `${APP_URL}/dashboard/copy-trade/setup?whale=${target}` : `${APP_URL}/dashboard/copy-trade` }]],
+          inline_keyboard: [[{ text: "🌐 Open Copy Trade", url: target ? `${APP_URL}/dashboard/copy-trading?whale=${target}` : `${APP_URL}/dashboard/copy-trading` }]],
         },
       },
     );

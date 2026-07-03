@@ -604,7 +604,7 @@ function HoldingsTable({
           body="Connect a wallet or make your first trade to start tracking balances, allocation, and realized PnL."
           primaryHref="/dashboard/swap"
           primaryLabel="Make first trade"
-          secondaryHref="/dashboard/settings"
+          secondaryHref="/settings"
           secondaryLabel="Connect a wallet"
         />
       </div>

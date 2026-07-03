@@ -22,7 +22,7 @@ const STEPS: Array<{
     icon: Wallet,
     title: 'Connect a wallet',
     body: 'Naka Labs is non-custodial. Connect MetaMask, Phantom, or any AppKit wallet to start tracking holdings and trading from one place.',
-    ctaHref: '/dashboard/settings',
+    ctaHref: '/settings',
     ctaLabel: 'Open settings',
   },
   {
@@ -36,7 +36,7 @@ const STEPS: Array<{
     icon: Fish,
     title: 'Follow a whale',
     body: 'The whale tracker has 15k+ verified wallets across 8 chains. Follow the ones that matter and copy their moves when you want to.',
-    ctaHref: '/dashboard/whales',
+    ctaHref: '/dashboard/whale-tracker',
     ctaLabel: 'Browse whales',
   },
 ];
