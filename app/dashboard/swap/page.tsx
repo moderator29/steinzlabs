@@ -1089,34 +1089,14 @@ export default function SwapPage() {
     try {
       if (!connectedAddress) throw new Error('Please connect a wallet to execute swaps.');
 
-      // §swap-1: Honor the route the user picked in RouteComparison.
-      // When they selected a non-0x aggregator (1inch / KyberSwap /
-      // OpenOcean), submit through /api/market/trade/execute which
-      // already knows how to settle the provider-specific quoteData.
-      // 0x stays on the original /api/swap/quote → wallet-sign path.
-      if (selectedProvider && selectedProvider !== '0x' && selectedRoute) {
-        const executeRes = await fetch('/api/market/trade/execute', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            selectedProvider,
-            routeQuoteData: selectedRoute,
-            taker: connectedAddress,
-            chain,
-            fromToken,
-            toToken,
-            mevProtect, // §swap-2 — server uses this to route to private mempool when set
-          }),
-        });
-        const out = await executeRes.json();
-        if (!executeRes.ok) throw new Error(out.error || `${selectedProvider} swap failed`);
-        if (out.txHash) {
-          setTxHash(out.txHash);
-          setTxStatus('confirmed');
-          setSwapSuccess(true);
-        }
-        return;
-      }
+      // RouteComparison is a PRICE-DISCOVERY surface: it shows live quotes
+      // across 0x / KyberSwap / OpenOcean so the user sees the best available
+      // rate. Execution always settles through the proven 0x (EVM) / Jupiter
+      // (Solana) sign+broadcast path below — the alternate aggregators only
+      // return quote data (no executable calldata), so routing execution
+      // through them 400'd every time. When they return real route/build
+      // calldata this branch can be reintroduced; until then we never ship a
+      // signing path we can't settle.
 
       // Step 1: Get firm swap quote from 0x API
       const tokenAddresses = getTokenAddresses(fromToken, toToken, chain);
