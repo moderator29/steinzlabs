@@ -6,7 +6,8 @@ import {
   Code, Search, AlertTriangle, CheckCircle, XCircle,
   Loader2, Info, ChevronDown, ChevronUp, Brain, ThumbsUp, ThumbsDown,
   TrendingUp, TrendingDown, ExternalLink, Clock, Rocket, Twitter, Send, Globe,
-  ShieldCheck, ShieldAlert, FlaskConical, ScanLine, HelpCircle, GitCompareArrows
+  ShieldCheck, ShieldAlert, FlaskConical, ScanLine, HelpCircle, GitCompareArrows,
+  Copy, Check, RefreshCw
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { isEvmAddress, isSolanaAddress } from '@/lib/utils/addressNormalize';
@@ -264,13 +265,40 @@ function ContractAnalyzerInner() {
   const [error, setError] = useState<string | null>(null);
   const [showChecks, setShowChecks] = useState(false);
   const [aiFeedback, setAiFeedback] = useState<'up' | 'down' | null>(null);
+  const [copied, setCopied] = useState(false);
   const autoRanRef = useRef(false);
+
+  const trimmedInput = input.trim();
+  const inputIsValid = isValidForChain(trimmedInput, chain);
+  // Only warn once the string is long enough to plausibly be a full address.
+  const showFormatHint = trimmedInput.length >= 12 && !inputIsValid;
+
+  /** Auto-detect the network from a pasted address so users never have to
+   *  guess: base58 → Solana, 0x… → keep the current EVM chain (or Ethereum). */
+  const handleInputChange = (value: string) => {
+    setInput(value);
+    const a = value.trim();
+    if (isSolanaAddress(a) && chain !== 'solana') setChain('solana');
+    else if (isEvmAddress(a) && chain === 'solana') setChain('ethereum');
+  };
+
+  const copyAddress = async (addr: string) => {
+    try {
+      await navigator.clipboard.writeText(addr);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // Clipboard unavailable (permissions / insecure context) — ignore.
+    }
+  };
 
   const runAnalysis = useCallback(async (addr: string, ch: string) => {
     if (!addr.trim()) return;
     setAnalyzing(true);
     setError(null);
     setResult(null);
+    setShowChecks(false);
+    setAiFeedback(null);
 
     try {
       const res = await fetch('/api/security/contract-analyzer', {
@@ -288,7 +316,10 @@ function ContractAnalyzerInner() {
     }
   }, []);
 
-  const handleAnalyze = () => runAnalysis(input, chain);
+  const handleAnalyze = () => {
+    if (!isValidForChain(input.trim(), chain)) return;
+    void runAnalysis(input, chain);
+  };
 
   // Auto-populate + auto-run from ?address=&chain= (e.g. the sniper "DNA" button).
   useEffect(() => {
@@ -316,50 +347,69 @@ function ContractAnalyzerInner() {
   return (
     <div className="min-h-screen text-white pb-20">
       <div className="sticky top-0 z-40 nl-glass backdrop-blur-2xl border-b border-white/10">
-        <div className="flex items-center gap-3 px-4 h-14">
+        <div className="flex items-center gap-3 px-4 h-14 max-w-2xl mx-auto">
           <BackButton />
-          <div className="w-8 h-8 bg-gradient-to-br from-[#1E90FF] to-[#0066FF] rounded-xl flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-[#1E90FF] to-[#0066FF] rounded-xl flex items-center justify-center flex-shrink-0">
             <Code className="w-4 h-4" />
           </div>
-          <div>
-            <h1 className="text-sm font-heading font-bold">Contract Analyzer</h1>
-            <p className="text-[10px] text-gray-500">Deep contract security analysis and rug detection</p>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-sm font-heading font-bold truncate">Contract Analyzer</h1>
+            <p className="text-[10px] text-gray-500 truncate">Deep contract security analysis and rug detection</p>
           </div>
           <HowItWorksButton content={contractAnalyzerHowItWorks} className="ms-auto shrink-0" />
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
-        <div className="nl-glass bg-gradient-to-br from-[#0066FF]/5 to-transparent rounded-2xl p-3 flex items-start gap-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
-          <Info className="w-4 h-4 text-[#0066FF] mt-0.5 flex-shrink-0" />
-          <p className="text-[11px] text-gray-400 leading-relaxed">
-            Analyze any smart contract or token address for honeypot risk, dangerous permissions, high taxes, and malicious patterns. EVM tokens get a second opinion from a live buy plus sell simulation.
-          </p>
-        </div>
+      <div className="max-w-2xl mx-auto p-4 space-y-4">
+        {/* Scan panel — network, address input, and action in one glass card */}
+        <div className="nl-glass rounded-2xl p-4 space-y-3.5" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.35), 0 0 16px rgba(0,102,255,.15)' }}>
+          <div className="flex items-start gap-2.5">
+            <Info className="w-4 h-4 text-[#0066FF] mt-0.5 flex-shrink-0" />
+            <p className="text-[11px] text-gray-400 leading-relaxed">
+              Analyze any smart contract or token address for honeypot risk, dangerous permissions, high taxes, and malicious patterns. EVM tokens get a second opinion from a live buy plus sell simulation.
+            </p>
+          </div>
 
-        <div className="flex gap-2 flex-wrap">
-          {CHAINS.map((c) => (
-            <button key={c.id} onClick={() => setChain(c.id)}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${chain === c.id ? 'bg-[#0066FF]/10 border-[#0066FF]/30 text-blue-300' : 'nl-button--ghost text-gray-500 hover:text-gray-300'}`}>
-              {c.label}
-            </button>
-          ))}
-        </div>
+          <div>
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5 font-semibold">Network</p>
+            <div className="flex gap-1.5 flex-wrap">
+              {CHAINS.map((c) => (
+                <button key={c.id} onClick={() => setChain(c.id)}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all ${chain === c.id ? 'bg-[#0066FF]/10 border-[#0066FF]/30 text-blue-300' : 'nl-button--ghost text-gray-500 hover:text-gray-300'}`}>
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
-            placeholder="Contract or token address (0x... or Solana)"
-            className="flex-1 nl-glass rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40"
-          />
-          <button onClick={handleAnalyze} disabled={analyzing || !input.trim()}
-            className="nl-btn-neon px-4 py-2.5 rounded-lg text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5">
-            {analyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-            Analyze
-          </button>
+          <div>
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1.5 font-semibold">Contract address</p>
+            <div className="flex items-stretch gap-2">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => handleInputChange(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
+                placeholder={chain === 'solana' ? 'Solana token address' : 'Contract or token address (0x...)'}
+                spellCheck={false}
+                autoComplete="off"
+                className="flex-1 min-w-0 bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/50 transition-colors"
+              />
+              <button onClick={handleAnalyze} disabled={analyzing || !inputIsValid}
+                className="nl-btn-neon px-4 py-2.5 rounded-xl text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5 flex-shrink-0">
+                {analyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                Analyze
+              </button>
+            </div>
+            {showFormatHint && (
+              <p className="text-[10px] text-amber-400/90 mt-1.5 flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                {chain === 'solana'
+                  ? 'This does not look like a valid Solana (base58) address.'
+                  : `This does not look like a valid 0x address for ${CHAINS.find((c) => c.id === chain)?.label ?? chain}.`}
+              </p>
+            )}
+          </div>
         </div>
 
         {analyzing && (
@@ -375,9 +425,18 @@ function ContractAnalyzerInner() {
         )}
 
         {error && !analyzing && (
-          <div className="nl-glass nl-glass--crimson rounded-2xl p-4 text-center">
+          <div className="nl-glass nl-glass--crimson rounded-2xl p-5 text-center">
             <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-2" />
             <p className="text-sm text-red-400 font-semibold">{error}</p>
+            <p className="text-[11px] text-gray-500 mt-1.5 max-w-[300px] mx-auto">
+              The analysis did not complete, so no results are shown. Check the address and network, then try again.
+            </p>
+            {inputIsValid && (
+              <button onClick={() => void runAnalysis(input, chain)}
+                className="mt-3.5 nl-btn-neon px-4 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5">
+                <RefreshCw className="w-3.5 h-3.5" /> Retry scan
+              </button>
+            )}
           </div>
         )}
 
@@ -570,10 +629,20 @@ function ContractAnalyzerInner() {
                     <span className="text-lg font-bold" style={{ color: result.verdictColor }}>{result.overallScore}</span>
                   </div>
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="text-lg font-bold mb-0.5" style={{ color: result.verdictColor }}>{result.verdict}</div>
-                  <p className="text-[11px] text-gray-400 font-mono">{result.address.slice(0, 8)}...{result.address.slice(-6)}</p>
-                  <p className="text-[10px] text-gray-600 mt-1 capitalize">{result.chain} Network</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-[11px] text-gray-400 font-mono">{result.address.slice(0, 8)}...{result.address.slice(-6)}</p>
+                    <button onClick={() => void copyAddress(result.address)} aria-label="Copy contract address"
+                      className="p-1 rounded-md text-gray-600 hover:text-gray-300 hover:bg-white/5 transition-colors">
+                      {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-gray-600 mt-0.5">
+                    <span className="capitalize">{result.chain}</span> network
+                    <span className="mx-1.5 text-gray-700">|</span>
+                    Scanned {new Date(result.analyzedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
                   {/* Color-coded score bar */}
                   <div className="mt-2">
                     <div className="w-full h-2 rounded-full bg-[#1a2235] overflow-hidden">
@@ -590,6 +659,25 @@ function ContractAnalyzerInner() {
                       <span>0</span><span>50</span><span>100</span>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Honest data-coverage strip: which real sources actually responded */}
+              <div className="mt-3 pt-3 border-t border-white/5">
+                <p className="text-[9px] text-gray-600 uppercase tracking-wider mb-1.5">Data sources</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { label: 'Static analysis', ok: !!result.tokenSecurity },
+                    { label: 'Live simulation', ok: !!result.honeypotVerdict?.sources.simulation.available },
+                    { label: 'Market data', ok: !!result.dexData },
+                    { label: 'Address intel', ok: !!result.addressIntel },
+                  ].map((src) => (
+                    <span key={src.label}
+                      className={`text-[9px] px-2 py-0.5 rounded-full border flex items-center gap-1 ${src.ok ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-white/[0.03] text-gray-600 border-white/10'}`}>
+                      {src.ok ? <Check className="w-2.5 h-2.5" /> : <XCircle className="w-2.5 h-2.5" />}
+                      {src.label}{!src.ok && ': no data'}
+                    </span>
+                  ))}
                 </div>
               </div>
             </div>

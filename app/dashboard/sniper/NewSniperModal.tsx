@@ -49,9 +49,9 @@ type Trigger = 'new_token_launch' | 'whale_buy' | 'price_target';
 // EVM-only: Solana/TON can't do capped, revocable session-key automation.
 const EVM_SNIPER_CHAINS = SNIPER_CHAINS.filter((c) => c !== 'solana' && c !== 'ton');
 
-// Snipe-protection launchpads shown MEVX-style. These are display/preview only:
-// sniper_criteria has no launchpad-allowlist column and the criteria API route
-// whitelists fields, so a selection here is NOT persisted (see report).
+// Snipe-protection launchpads shown MEVX-style. Persisted to
+// sniper_criteria.launchpads_allowed (null = all pads allowed) and enforced by
+// the matcher against the detected token's launchpad.
 const SNIPE_PROTECTION_LAUNCHPADS = LAUNCHPADS.filter((l) => l.id !== 'dex');
 
 export function NewSniperModal({ onClose, onSaved, userId }: Props) {
@@ -90,7 +90,7 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
   // 'external' = a connected MetaMask/Phantom wallet (session-key authorized).
   const [walletMode, setWalletMode] = useState<'builtin' | 'external'>('builtin');
 
-  // Display-only launchpad snipe-protection picker (not persisted — no column).
+  // Launchpad allowlist — persisted as sniper_criteria.launchpads_allowed.
   const [protectedLaunchpads, setProtectedLaunchpads] = useState<string[]>([]);
 
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -384,13 +384,12 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
                 )}
               </Panel>
 
-              {/* Snipe Protection — per-launchpad enable list (MEVX reference).
-                  NOTE: display/preview only. sniper_criteria has no launchpad
-                  allowlist column, so this selection is NOT persisted. */}
+              {/* Snipe Protection — per-launchpad allowlist (MEVX reference),
+                  persisted to sniper_criteria.launchpads_allowed. */}
               <Panel>
                 <Field
                   label="Snipe Protection"
-                  hint="Launchpad Migrations Only — restrict which launchpads this rule will snipe. Preview: not yet persisted (no backend column)."
+                  hint="Restrict which launchpads this rule will snipe. Empty = all launchpads allowed."
                 >
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {SNIPE_PROTECTION_LAUNCHPADS.map(lp => {

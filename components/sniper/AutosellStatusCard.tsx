@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Activity, Target, TrendingDown, TrendingUp, ExternalLink } from "lucide-react";
+import { CHAIN_CONFIGS, type SniperChain } from "@/lib/sniper/chains";
 
 interface MonitoredPosition {
   id: string;
@@ -44,6 +45,18 @@ function short(addr: string): string {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }
 
+/** Real per-chain tx explorer URL — never assume Ethereum. */
+function txUrl(chain: string | null, hash: string): string | null {
+  if (!chain) return null;
+  const cfg = CHAIN_CONFIGS[chain as SniperChain];
+  return cfg ? `${cfg.explorerTxBase}${hash}` : null;
+}
+
+/**
+ * TP/SL/trailing autosell monitor — real state from /api/sniper/autosell-status
+ * (sniper_executions rows the cron engine is watching, plus recently triggered
+ * stops with realized PnL). Honest empty state when nothing is monitored.
+ */
 export function AutosellStatusCard() {
   const [data, setData] = useState<StatusPayload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,8 +89,8 @@ export function AutosellStatusCard() {
 
   if (loading && !data) {
     return (
-      <div className="rounded-xl border border-slate-800/60 bg-slate-950/40 p-4">
-        <div className="text-xs text-slate-400">Loading autosell status…</div>
+      <div className="nl-glass rounded-xl p-4">
+        <div className="text-xs text-white/50">Loading autosell status…</div>
       </div>
     );
   }
@@ -85,7 +98,7 @@ export function AutosellStatusCard() {
   if (err && !data) {
     return (
       <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4">
-        <div className="text-xs text-red-300">Couldn’t load autosell status — {err}</div>
+        <div className="text-xs text-red-300">Couldn&apos;t load autosell status — {err}</div>
       </div>
     );
   }
@@ -96,11 +109,11 @@ export function AutosellStatusCard() {
   const triggered = data.stops_triggered;
 
   return (
-    <div className="rounded-xl border border-slate-800/60 bg-slate-950/40 p-4">
+    <div className="nl-glass rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Activity className="w-4 h-4 text-emerald-400" />
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-200">
+          <Activity className="w-4 h-4 text-emerald-300" />
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-white/70">
             Autosell monitor
           </span>
           {monitoring > 0 && (
@@ -110,18 +123,18 @@ export function AutosellStatusCard() {
             </span>
           )}
         </div>
-        <span className="text-[10px] text-slate-500">Auto-refresh 30s</span>
+        <span className="text-[10px] text-white/40">Auto-refresh 30s</span>
       </div>
 
       {monitoring === 0 && triggered.length === 0 && (
-        <div className="text-xs text-slate-400">
+        <div className="text-xs text-white/50">
           No positions being monitored. Open a position with a TP/SL set and the executor will watch it here.
         </div>
       )}
 
       {monitoring > 0 && (
         <div className="mb-3">
-          <div className="text-[10px] uppercase tracking-wide text-slate-400 mb-1.5">
+          <div className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-1.5">
             Monitoring ({Math.min(monitoring, 5)} of {monitoring})
           </div>
           <div className="space-y-1">
@@ -133,23 +146,23 @@ export function AutosellStatusCard() {
               return (
                 <div
                   key={p.id}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-slate-800/40 bg-slate-900/30 px-2.5 py-1.5"
+                  className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5"
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <Target className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span className="text-xs font-semibold text-slate-200 truncate">
+                    <Target className="w-3.5 h-3.5 text-white/45 shrink-0" />
+                    <span className="text-xs font-semibold text-white/90 truncate">
                       {p.token_symbol ?? short(p.token_address)}
                     </span>
-                    <span className="text-[10px] text-slate-500">{p.chain ?? "—"}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-white/40">{p.chain ?? "—"}</span>
                   </div>
                   <div className="flex items-center gap-3 text-[10px] tabular-nums">
                     {peakOverEntry !== null && (
-                      <span className={peakOverEntry >= 0 ? "text-emerald-400" : "text-red-400"}>
+                      <span className={peakOverEntry >= 0 ? "text-emerald-300" : "text-red-300"}>
                         peak {peakOverEntry >= 0 ? "+" : ""}
                         {peakOverEntry.toFixed(1)}%
                       </span>
                     )}
-                    <span className="text-slate-500">{relTime(p.executed_at)}</span>
+                    <span className="text-white/40">{relTime(p.executed_at)}</span>
                   </div>
                 </div>
               );
@@ -160,38 +173,39 @@ export function AutosellStatusCard() {
 
       {triggered.length > 0 && (
         <div>
-          <div className="text-[10px] uppercase tracking-wide text-slate-400 mb-1.5">
+          <div className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-1.5">
             Stops triggered (last {triggered.length})
           </div>
           <div className="space-y-1">
             {triggered.map((t) => {
               const win = (t.pnl_usd ?? 0) >= 0;
               const Icon = win ? TrendingUp : TrendingDown;
+              const explorer = t.sell_tx_hash ? txUrl(t.chain, t.sell_tx_hash) : null;
               return (
                 <div
                   key={t.id}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-slate-800/40 bg-slate-900/30 px-2.5 py-1.5"
+                  className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5"
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <Icon className={`w-3.5 h-3.5 shrink-0 ${win ? "text-emerald-400" : "text-red-400"}`} />
-                    <span className="text-xs font-semibold text-slate-200 truncate">
+                    <Icon className={`w-3.5 h-3.5 shrink-0 ${win ? "text-emerald-300" : "text-red-300"}`} />
+                    <span className="text-xs font-semibold text-white/90 truncate">
                       {t.token_symbol ?? short(t.token_address)}
                     </span>
-                    <span className="text-[10px] text-slate-500">{t.chain ?? "—"}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-white/40">{t.chain ?? "—"}</span>
                   </div>
                   <div className="flex items-center gap-3 text-[10px] tabular-nums">
                     {t.pnl_usd !== null && (
-                      <span className={win ? "text-emerald-400" : "text-red-400"}>
+                      <span className={win ? "text-emerald-300" : "text-red-300"}>
                         {win ? "+" : ""}${t.pnl_usd.toFixed(2)}
                       </span>
                     )}
-                    <span className="text-slate-500">{relTime(t.sell_dispatched_at)}</span>
-                    {t.sell_tx_hash && (
+                    <span className="text-white/40">{relTime(t.sell_dispatched_at)}</span>
+                    {explorer && (
                       <a
-                        href={`https://etherscan.io/tx/${t.sell_tx_hash}`}
+                        href={explorer}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-slate-400 hover:text-slate-200"
+                        className="text-white/45 hover:text-white"
                         aria-label="View sell transaction"
                       >
                         <ExternalLink className="w-3 h-3" />

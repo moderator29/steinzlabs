@@ -129,8 +129,8 @@ For pricing details see [pricing.md](./pricing.md). For slash-commands see [slas
 - **What it does:** Sub-2-second multi-chain execution on token launches, with anti-MEV protection and a 5-step safety flow.
 - **How to access:** `/dashboard/sniper`. Telegram via `/snipe`.
 - **Tier:** Pro+.
-- **How it works:** Cron polls new pairs from DexScreener; rules in `sniper_criteria` match against incoming events; matches insert into `sniper_executions` queue. Per-snipe budget cap $500. Server-enforced kill switch via `platform_settings.sniper_enabled`.
-- **Limitations:** Coverage limited to chains with adequate webhook + RPC SLA: Ethereum, Base, BNB, Polygon, Solana.
+- **How it works:** Webhook matcher (`lib/sniper/matcher.ts`) plus the `sniper-monitor` cron match rules in `sniper_criteria` against detected tokens/whale buys; decisions land in `sniper_match_events` (shown in the Snipers tab activity trail), auto-execute rows become `sniper_executions`. The Discover feed serves ingested `sniper_feed_tokens` (GeckoTerminal + GoPlus enrichment); open positions mark to the same feed's `price_usd` for unrealized PnL. `launchpads_allowed` (Snipe Protection) is enforced fail-closed by both matcher paths. TP/SL/trailing is watched by the `sniper-autosell` cron and surfaced in the Positions tab autosell monitor. Server-enforced kill switch pauses all of a user's criteria; platform-wide state lives in `platform_sniper_state`.
+- **Limitations:** Coverage limited to chains with adequate webhook + RPC SLA: Ethereum, Base, BNB, Polygon, Solana. Unrealized PnL is only available while the token remains in the ingest window (otherwise shown as "no live mark").
 
 ### 16. Copy Trading
 

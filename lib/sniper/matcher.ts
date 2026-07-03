@@ -66,6 +66,8 @@ interface CriteriaRow {
   min_security_score: number | null;
   block_honeypots: boolean | null;
   trigger_whale_address: string | null;
+  /** Snipe Protection — launchpad allowlist; null/empty = all pads allowed. */
+  launchpads_allowed: string[] | null;
 }
 
 const DEDUP_WINDOW_MS = 10 * 60_000;
@@ -102,7 +104,8 @@ export async function matchSniperEvent(input: MatchInput): Promise<MatchOutcome>
       "id,user_id,trigger_type,chains_allowed,auto_execute,enabled,paused," +
         "daily_max_snipes,daily_max_spend_usd,amount_per_snipe_usd,wallet_source," +
         "min_liquidity_usd,max_buy_tax_bps,max_sell_tax_bps,min_holder_count," +
-        "max_age_hours,min_security_score,block_honeypots,trigger_whale_address",
+        "max_age_hours,min_security_score,block_honeypots,trigger_whale_address," +
+        "launchpads_allowed",
     )
     .eq("enabled", true)
     .eq("paused", false)
@@ -124,6 +127,23 @@ export async function matchSniperEvent(input: MatchInput): Promise<MatchOutcome>
   // valid-looking but non-existent address. normalizeAddress() picks
   // the right form per chain (EVM lowercased, Solana/TON preserved).
   const tokenKey = normalizeAddress(input.tokenAddress, input.chain);
+
+  // Snipe Protection: resolve the token's real launchpad from the ingested
+  // feed once, but only when at least one candidate rule restricts pads.
+  // null = the token isn't in the feed (or carries no launchpad tag).
+  let tokenLaunchpad: string | null = null;
+  const anyPadRestricted = (criteria as unknown as CriteriaRow[]).some(
+    (c) => (c.launchpads_allowed?.length ?? 0) > 0,
+  );
+  if (anyPadRestricted) {
+    const { data: feedRow } = await admin
+      .from("sniper_feed_tokens")
+      .select("launchpad")
+      .eq("chain", input.chain)
+      .eq("token_address", tokenKey)
+      .maybeSingle<{ launchpad: string | null }>();
+    tokenLaunchpad = feedRow?.launchpad ?? null;
+  }
 
   for (const raw of criteria as unknown as CriteriaRow[]) {
     const c = raw;
@@ -162,6 +182,18 @@ export async function matchSniperEvent(input: MatchInput): Promise<MatchOutcome>
     if (input.trigger === "new_token_launch" && !passesNewTokenFilters(c, input.tokenMetrics)) {
       out.skipped++;
       continue;
+    }
+
+    // Launchpad allowlist (Snipe Protection). Fail closed: if the rule
+    // restricts pads and the token's launchpad is unknown or not on the
+    // list, never fire — a pad-restricted rule must not buy off an
+    // unverified source.
+    if ((c.launchpads_allowed?.length ?? 0) > 0) {
+      if (!tokenLaunchpad || !c.launchpads_allowed!.includes(tokenLaunchpad)) {
+        out.skipped++;
+        out.reasons.push(`criteria ${c.id}: launchpad ${tokenLaunchpad ?? "unknown"} not allowlisted`);
+        continue;
+      }
     }
 
     // Daily caps.

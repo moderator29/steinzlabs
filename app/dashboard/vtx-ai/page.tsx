@@ -144,6 +144,44 @@ function fmtNum(n: unknown): string {
   return `$${v.toFixed(2)}`;
 }
 
+// Normalise the server's rich `tokenCard` payload (from /api/vtx-ai, both the
+// JSON and streaming `done` responses) into the client card shape. Shared by
+// both response branches so streamed replies keep card parity — previously the
+// streaming path silently dropped the server card and the message rendered
+// text-only.
+function normalizeServerTokenCard(raw: unknown): TokenCardData | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const card = raw as Record<string, unknown>;
+  if (!card.symbol) return null;
+  return {
+    symbol: String(card.symbol),
+    name: String(card.name ?? card.symbol),
+    address: typeof card.address === 'string' ? card.address : undefined,
+    chain: typeof card.chain === 'string' ? card.chain : '',
+    price: typeof card.price === 'number'
+      ? `$${card.price < 1 ? card.price.toFixed(6) : card.price.toFixed(2)}`
+      : String(card.price || ''),
+    change24h: Number(card.change24h) || 0,
+    volume: fmtNum(card.volume24h),
+    marketCap: fmtNum(card.marketCap),
+    liquidity: fmtNum(card.liquidity),
+    logo: typeof card.logo === 'string' && card.logo ? card.logo : undefined,
+    pairAddress: typeof card.pairAddress === 'string' ? card.pairAddress : undefined,
+    dexUrl: typeof card.dexUrl === 'string' ? card.dexUrl : undefined,
+  };
+}
+
+// Minimal runtime check that the server's swapCard payload has the fields the
+// SwapCard component needs before we trust the cast.
+function normalizeServerSwapCard(raw: unknown): Message['swapCard'] | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const card = raw as Record<string, unknown>;
+  if (typeof card.fromToken !== 'string' || typeof card.toToken !== 'string' || typeof card.fromAmount !== 'string') {
+    return undefined;
+  }
+  return raw as Message['swapCard'];
+}
+
 function parseTokenCards(content: string): TokenCardData[] {
   const cards: TokenCardData[] = [];
   const lines = content.split('\n');
@@ -702,7 +740,7 @@ function VtxAiPageInner() {
             const dataLine = event.split('\n').find(l => l.startsWith('data:'));
             if (!dataLine) continue;
             try {
-              const json = JSON.parse(dataLine.slice(5).trim()) as { delta?: string; done?: boolean; reply?: string; error?: string; suggestions?: unknown; tokenCards?: unknown; swapCard?: unknown };
+              const json = JSON.parse(dataLine.slice(5).trim()) as { delta?: string; done?: boolean; reply?: string; error?: string; suggestions?: unknown; tokenCard?: unknown; swapCard?: unknown };
               if (json.error) throw new Error(json.error);
               if (typeof json.delta === 'string' && json.delta.length > 0) {
                 streamedText += json.delta;
@@ -719,11 +757,22 @@ function VtxAiPageInner() {
                 const streamedSuggestions: string[] | undefined = Array.isArray(json.suggestions)
                   ? (json.suggestions as unknown[]).filter((s): s is string => typeof s === 'string').slice(0, 4)
                   : generateSuggestions(finalReply);
+                // The streaming `done` event carries the SAME server-built
+                // tokenCard/swapCard as the JSON response — attach them so a
+                // card-worthy message that streamed doesn't lose its card.
+                const streamedTokenCard = normalizeServerTokenCard(json.tokenCard);
+                const streamedSwapCard = normalizeServerSwapCard(json.swapCard);
                 setMessages(prev => {
                   const next = [...prev];
                   const last = next[next.length - 1];
                   if (last && last.role === 'assistant') {
-                    next[next.length - 1] = { ...last, content: finalReply, suggestions: streamedSuggestions };
+                    next[next.length - 1] = {
+                      ...last,
+                      content: finalReply,
+                      suggestions: streamedSuggestions,
+                      tokenCards: streamedTokenCard ? [streamedTokenCard] : undefined,
+                      swapCard: streamedSwapCard,
+                    };
                   }
                   return next;
                 });
@@ -752,32 +801,15 @@ function VtxAiPageInner() {
       } else {
         // FIX 5A.1 / Phase 5: server returns `tokenCard` (singular, rich) but client was only
         // reading `tokenCards` (plural). Normalise both — server's rich card wins when present.
-        const serverCard = data.tokenCard
-          ? [{
-              symbol: data.tokenCard.symbol,
-              name: data.tokenCard.name,
-              address: data.tokenCard.address,
-              chain: data.tokenCard.chain,
-              price: typeof data.tokenCard.price === 'number'
-                ? `$${data.tokenCard.price < 1 ? data.tokenCard.price.toFixed(6) : data.tokenCard.price.toFixed(2)}`
-                : String(data.tokenCard.price || ''),
-              change24h: Number(data.tokenCard.change24h) || 0,
-              volume: fmtNum(data.tokenCard.volume24h),
-              marketCap: fmtNum(data.tokenCard.marketCap),
-              liquidity: fmtNum(data.tokenCard.liquidity),
-              logo: data.tokenCard.logo || undefined,
-              pairAddress: data.tokenCard.pairAddress,
-              dexUrl: data.tokenCard.dexUrl,
-            } as TokenCardData]
-          : null;
-        const tokenCards = serverCard || data.tokenCards || parseTokenCards(data.reply);
+        const serverCard = normalizeServerTokenCard(data.tokenCard);
+        const tokenCards: TokenCardData[] = serverCard ? [serverCard] : (data.tokenCards || parseTokenCards(data.reply));
         const suggestions = generateSuggestions(data.reply);
         setMessages(prev => [...prev, {
           role: 'assistant',
           content: data.reply,
           timestamp: Date.now(),
           tokenCards: tokenCards.length > 0 ? tokenCards : undefined,
-          swapCard: data.swapCard || undefined,
+          swapCard: normalizeServerSwapCard(data.swapCard),
           suggestions,
         }]);
         if (settings.messageSound) playPageChime();
