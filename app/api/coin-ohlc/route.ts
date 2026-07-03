@@ -115,31 +115,20 @@ export async function GET(request: NextRequest) {
 
   let candles: OHLCCandle[] = [];
 
-  // 1. Try Binance klines (symbol = BTC, ETH, SOL, etc.)
-  if (symbol) {
-    try {
-      candles = await fetchBinanceKlines(symbol, interval, limit);
-    } catch {
-      // fall through to CoinGecko
-    }
+  // CoinGecko FIRST — api.binance.com returns HTTP 451 to US-hosted IPs
+  // (Vercel), so Binance always failed server-side and just cost a round-trip
+  // before the CoinGecko fallback. CoinGecko is geo-unblocked.
+  // 1. CoinGecko OHLC by id (bitcoin, ethereum, …).
+  if (id) {
+    try { candles = await fetchCoinGeckoOHLC(id, cgDays); } catch { /* fall through */ }
   }
-
-  // 2. CoinGecko OHLC (id = bitcoin, ethereum, etc.)
-  if (candles.length === 0 && id) {
-    try {
-      candles = await fetchCoinGeckoOHLC(id, cgDays);
-    } catch {
-      // fall through
-    }
+  // 2. CoinGecko OHLC guessing id from a lowercase symbol.
+  if (candles.length === 0 && symbol) {
+    try { candles = await fetchCoinGeckoOHLC(symbol.toLowerCase(), cgDays); } catch { /* fall through */ }
   }
-
-  // 3. If we had symbol but no id, try guessing CoinGecko id from lowercase symbol
-  if (candles.length === 0 && symbol && !id) {
-    try {
-      candles = await fetchCoinGeckoOHLC(symbol.toLowerCase(), cgDays);
-    } catch {
-      // nothing
-    }
+  // 3. Binance last (only reachable from non-US hosts / local dev).
+  if (candles.length === 0 && symbol) {
+    try { candles = await fetchBinanceKlines(symbol, interval, limit); } catch { /* nothing */ }
   }
 
   const result = { candles, timeframe: tf, symbol: symbol || id };
