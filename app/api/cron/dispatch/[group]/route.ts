@@ -34,6 +34,9 @@ const GROUPS: Record<string, string[]> = {
     'whale-activity-poll', 'whale-activity-price', 'bitquery-activity-poll', 'dca-executor', 'pending-trades-cleanup',
     'receipt-reconciliation', 'notification-retry', 'telegram-retry-failures',
     'pumpfun-velocity-poll', 'cult-resolve-proposals', 'cult-ape-resolve', 'health-watch',
+    // Crypto tier payments — watches the treasury for incoming USDC and
+    // grants the tier on match. Exits instantly when no payments are pending.
+    'payment-verify',
   ],
   // Hourly.
   hourly: [
