@@ -559,7 +559,8 @@ export function vtxStreamRaw(options: VTXQueryOptions): ReturnType<typeof client
  */
 export async function vtxAnalyze(prompt: string, maxTokens = 1500): Promise<string> {
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    // Align to the current executor model (was the stale 'claude-sonnet-4-6').
+    model: VTX_EXECUTOR_MODEL,
     max_tokens: maxTokens,
     system: VTX_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: prompt }],
