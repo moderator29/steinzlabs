@@ -53,7 +53,12 @@ export default function AdminAuditLogPage() {
       if (since) params.set('since', new Date(since).toISOString());
       if (until) params.set('until', new Date(until).toISOString());
       params.set('limit', '200');
-      const res = await fetch(`/api/admin/audit-log?${params.toString()}`);
+      // The audit-log API authenticates via the admin bearer (same as every
+      // other admin page) — without this header the request was always 401.
+      const token = sessionStorage.getItem('admin_token') ?? '';
+      const res = await fetch(`/api/admin/audit-log?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) throw new Error(`status ${res.status}`);
       const json = (await res.json()) as { entries: AuditEntry[] };
       setEntries(json.entries ?? []);
