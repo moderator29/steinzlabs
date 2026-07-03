@@ -27,6 +27,8 @@ interface CriteriaRow {
   daily_max_spend_usd: number;
   auto_execute: boolean;
   wallet_source: string;
+  /** Snipe Protection — launchpad allowlist; null/empty = all pads allowed. */
+  launchpads_allowed: string[] | null;
 }
 
 interface WhaleActivityRow {
@@ -152,6 +154,35 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Snipe Protection: resolve real launchpads for this tick's candidates from
+  // the ingested feed, but only when some criteria actually restricts pads.
+  // Tokens absent from the feed have no launchpad → pad-restricted rules
+  // fail closed on them.
+  const padRestricted = criteria.some((c) => (c.launchpads_allowed?.length ?? 0) > 0);
+  const launchpadByToken = new Map<string, string>();
+  const candidateAddrs = [
+    ...newTokens.map((t) => normalizeAddress(t.token_address) ?? t.token_address),
+    ...activity
+      .filter((a) => a.token_address)
+      .map((a) => normalizeAddress(a.token_address!) ?? a.token_address!),
+  ];
+  if (padRestricted && candidateAddrs.length > 0) {
+    const addrs = Array.from(new Set(candidateAddrs));
+    const { data: feedRows } = await admin
+      .from("sniper_feed_tokens")
+      .select("chain, token_address, launchpad")
+      .in("token_address", addrs);
+    for (const r of (feedRows ?? []) as Array<{ chain: string; token_address: string; launchpad: string | null }>) {
+      if (r.launchpad) launchpadByToken.set(`${r.chain}:${r.token_address}`, r.launchpad);
+    }
+  }
+  const passesLaunchpadAllowlist = (c: CriteriaRow, chain: string, tokenAddress: string): boolean => {
+    if ((c.launchpads_allowed?.length ?? 0) === 0) return true;
+    const key = `${chain}:${normalizeAddress(tokenAddress) ?? tokenAddress}`;
+    const lp = launchpadByToken.get(key);
+    return !!lp && c.launchpads_allowed!.includes(lp);
+  };
+
   let matched = 0;
   const events: Array<Record<string, unknown>> = [];
 
@@ -195,7 +226,8 @@ export async function GET(request: NextRequest) {
           c.chains_allowed.includes(a.chain) &&
           (!c.trigger_whale_address ||
             addressesEqual(a.whale_address, c.trigger_whale_address)) &&
-          (a.value_usd ?? 0) > 0,
+          (a.value_usd ?? 0) > 0 &&
+          (!a.token_address || passesLaunchpadAllowlist(c, a.chain, a.token_address)),
       );
 
       for (const a of candidates) {
@@ -261,7 +293,8 @@ export async function GET(request: NextRequest) {
           // execute-time GoPlus gate is the real safety wall; this is a
           // pre-filter only.
           (t.security_score == null || t.security_score >= c.min_security_score) &&
-          (!c.block_honeypots || t.is_honeypot !== true),
+          (!c.block_honeypots || t.is_honeypot !== true) &&
+          passesLaunchpadAllowlist(c, t.chain, t.token_address),
       );
 
       for (const t of candidates) {

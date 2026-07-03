@@ -2,6 +2,7 @@ import 'server-only';
 import type Anthropic from '@anthropic-ai/sdk';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { addressesEqual } from '@/lib/utils/addressNormalize';
+import { searchTokens } from '@/lib/services/coingecko';
 
 /**
  * §3 P2-B — VTX tool depth expansion. Adds 10 new tools that pull from
@@ -269,19 +270,53 @@ async function realizedPnl30d(input: { address: string; chain?: string }): Promi
   });
 }
 
+// Resolve a user-facing token entry (ticker symbol like "BTC" OR an actual
+// CoinGecko slug like "bitcoin") to a real CoinGecko coin id. The markets
+// endpoint is keyed by slug — passing a lowercased ticker ("btc") silently
+// matched nothing, so every symbol-based comparison returned an empty list.
+async function resolveCgId(entry: string): Promise<string | null> {
+  const trimmed = entry.trim();
+  if (!trimmed) return null;
+  try {
+    const { coins } = await searchTokens(trimmed);
+    const lower = trimmed.toLowerCase();
+    // Already a valid slug (e.g. "bitcoin") — keep it.
+    if (coins.some((c) => c.id === lower)) return lower;
+    // Exact ticker match, best market-cap rank first (so "SOL" → solana,
+    // not a same-ticker clone).
+    const upper = trimmed.toUpperCase();
+    const exact = coins
+      .filter((c) => c.symbol?.toUpperCase() === upper)
+      .sort((a, b) => (a.market_cap_rank ?? Number.MAX_SAFE_INTEGER) - (b.market_cap_rank ?? Number.MAX_SAFE_INTEGER));
+    return exact[0]?.id ?? coins[0]?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function crossTokenComparison(input: { symbols: string[] }): Promise<string> {
   if (!Array.isArray(input.symbols) || input.symbols.length < 2 || input.symbols.length > 5) {
     return JSON.stringify({ error: 'symbols must be an array of 2-5 entries' });
   }
   // Reuse CoinGecko markets endpoint — same source the existing
   // coingecko_market_data tool uses, but presented in compare-friendly shape.
-  const ids = input.symbols.map((s) => s.toLowerCase()).join(',');
+  const resolved = await Promise.all(input.symbols.map((s) => resolveCgId(s)));
+  const unresolved = input.symbols.filter((_, i) => resolved[i] === null);
+  const idList = Array.from(new Set(resolved.filter((id): id is string => id !== null)));
+  if (idList.length < 2) {
+    return JSON.stringify({
+      error: 'could not resolve at least 2 tokens on CoinGecko',
+      unresolved,
+    });
+  }
+  const ids = idList.join(',');
   const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${encodeURIComponent(ids)}&order=market_cap_desc&price_change_percentage=24h,7d`;
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(6_000) });
     if (!res.ok) return JSON.stringify({ error: `coingecko ${res.status}` });
     const list = (await res.json()) as Array<Record<string, unknown>>;
     return JSON.stringify({
+      ...(unresolved.length > 0 ? { unresolved } : {}),
       tokens: list.map((c) => ({
         id: c.id,
         symbol: c.symbol,
