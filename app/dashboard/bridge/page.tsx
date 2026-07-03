@@ -53,6 +53,8 @@ interface LifiQuote {
     toAmount?: string;
     toAmountMin?: string;
     executionDuration?: number;
+    /** LiFi spender that must be approved before bridging an ERC20. */
+    approvalAddress?: string;
   };
   transactionRequest?: {
     to?: string;
@@ -152,6 +154,31 @@ export default function BridgePage() {
       const provider = new BrowserProvider(eth as unknown as Eip1193Provider);
       const signer = await provider.getSigner();
       const fromAddress = await signer.getAddress();
+
+      // ERC20 approval — LiFi needs approve(spender=estimate.approvalAddress)
+      // before it can pull a non-native token. Without this every ERC20 bridge
+      // (incl. USDC) reverted. Native token (NATIVE_ADDR) needs no approval.
+      if (
+        fromToken.toLowerCase() !== NATIVE_ADDR.toLowerCase() &&
+        quote.estimate?.approvalAddress
+      ) {
+        const { Contract } = await import('ethers');
+        const erc20 = new Contract(
+          fromToken,
+          [
+            'function allowance(address owner, address spender) view returns (uint256)',
+            'function approve(address spender, uint256 amount) returns (bool)',
+          ],
+          signer,
+        );
+        const needed = BigInt(quote.estimate.fromAmount ?? '0');
+        const current: bigint = await erc20.allowance(fromAddress, quote.estimate.approvalAddress);
+        if (current < needed) {
+          setStatus({ status: 'PENDING', substatusMessage: 'Approving token…' });
+          const approveTx = await erc20.approve(quote.estimate.approvalAddress, needed);
+          await approveTx.wait();
+        }
+      }
 
       const txResponse = await signer.sendTransaction({
         to: quote.transactionRequest.to,

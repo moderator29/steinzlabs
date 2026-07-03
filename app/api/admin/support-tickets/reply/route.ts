@@ -23,38 +23,38 @@ export async function POST(request: Request) {
 
     const supabase = getSupabaseAdmin();
 
-    // Fetch existing replies
-    const { data: ticket, error: fetchError } = await supabase
-      .from('support_conversations')
-      .select('replies')
-      .eq('id', ticketId)
+    // Canonical support storage is support_tickets + ticket_replies (what the
+    // admin list route and the user's support page read). This route used to
+    // write to the legacy support_conversations table, so admin replies never
+    // reached the user. Write to ticket_replies + bump ticket status.
+    const { data: reply, error: replyErr } = await supabase
+      .from('ticket_replies')
+      .insert({
+        ticket_id: ticketId,
+        sender_type: 'admin',
+        message: replyBody.trim(),
+        internal: false,
+      })
+      .select('*')
       .single();
 
-    if (fetchError) {
-      console.error('[admin/support-tickets/reply POST] Fetch error:', fetchError);
-      return NextResponse.json({ error: fetchError.message }, { status: 500 });
+    if (replyErr) {
+      console.error('[admin/support-tickets/reply POST] insert error:', replyErr);
+      return NextResponse.json({ error: replyErr.message }, { status: 500 });
     }
 
-    const existingReplies = Array.isArray(ticket?.replies) ? ticket.replies : [];
-    const newReply = { from: 'admin', body: replyBody.trim(), ts: Date.now() };
-    const updatedReplies = [...existingReplies, newReply];
-
-    const { error: updateError } = await supabase
-      .from('support_conversations')
-      .update({ replies: updatedReplies, status: 'in_progress' })
-      .eq('id', ticketId);
-
-    if (updateError) {
-      console.error('[admin/support-tickets/reply POST] Update error:', updateError);
-      return NextResponse.json({ error: updateError.message }, { status: 500 });
-    }
+    await supabase
+      .from('support_tickets')
+      .update({ status: 'in_progress' })
+      .eq('id', ticketId)
+      .eq('status', 'open');
 
     void logAdminAction({
       adminId,
       action: 'support_reply',
-      details: { ticketId, conversation: true, replyCount: updatedReplies.length },
+      details: { ticketId },
     });
-    return NextResponse.json({ success: true, reply: newReply });
+    return NextResponse.json({ success: true, reply });
   } catch (err) {
     console.error('[admin/support-tickets/reply POST] Failed:', err);
     return NextResponse.json({ error: 'Failed to send reply' }, { status: 500 });

@@ -10,12 +10,52 @@ import {
   EntityPerformance,
 } from '../arkham/types';
 import { cacheKey, TTL, withCache } from '../api/cache-manager';
+import { getTokenSecurity, getAddressSecurity } from './goplus';
 
 /**
  * Arkham Intelligence Service
  * Wraps the existing ArkhamAPI with the standardized cache layer.
  * Entity labels cached 24h — they rarely change.
+ *
+ * FREE FALLBACK (2026-07-03): Arkham is a PAID API outside the owner's
+ * free-tier matrix, so without ARKHAM_API_KEY every call threw and callers
+ * got empty data (ShadowGuardian blocked all trades, bubble-map showed no
+ * holders, whale entity labels were blank). The token-holder and
+ * address-intel paths now fall back to GoPlus (free, multichain) so the
+ * intelligence surfaces work with no paid key. Arkham still wins when a key
+ * is present.
  */
+
+const ARKHAM_ENABLED = !!process.env.ARKHAM_API_KEY;
+
+/** Map GoPlus holder rows → ArkhamHolder shape (free multichain top holders). */
+async function goplusTokenHolders(
+  tokenAddress: string,
+  limit: number,
+  chain?: string,
+): Promise<ArkhamHolder[]> {
+  try {
+    const sec = await getTokenSecurity(tokenAddress, chain || 'ethereum');
+    const raw = (sec as { raw?: { _holders?: Array<Record<string, unknown>> } }).raw;
+    const holders = Array.isArray(raw?._holders) ? raw!._holders! : [];
+    return holders.slice(0, limit).map((h) => {
+      const tag = typeof h.tag === 'string' ? h.tag.toLowerCase() : '';
+      const labels: string[] = [];
+      if (h.is_contract === 1 || h.is_contract === '1') labels.push('contract');
+      if (tag) labels.push(tag);
+      if (/scam|phish|rug|blacklist|malicious/.test(tag)) labels.push('scammer');
+      return {
+        address: String(h.address ?? ''),
+        balance: String(h.balance ?? '0'),
+        balanceUSD: '0',
+        percentage: parseFloat(String(h.percent ?? '0')) * 100 || 0,
+        labels: labels.length ? labels : undefined,
+      } as ArkhamHolder;
+    }).filter((h) => h.address);
+  } catch {
+    return [];
+  }
+}
 
 export type {
   ArkhamEntity,
@@ -72,8 +112,25 @@ export async function getAddressIntel(
 ): Promise<ArkhamAddress | null> {
   const key = cacheKey('arkham', 'address_intel', { address: address.toLowerCase(), chain: chain ?? 'all' });
   return withCache(key, TTL.ENTITY_LABEL, async () => {
+    if (ARKHAM_ENABLED) {
+      try {
+        return await arkhamAPI.getAddressIntel(address, chain);
+      } catch { /* fall through to free source */ }
+    }
+    // Free fallback: GoPlus address security surfaces malicious/scam flags
+    // so ShadowGuardian can still flag known-bad holders without Arkham.
     try {
-      return await arkhamAPI.getAddressIntel(address, chain);
+      const sec = await getAddressSecurity(address, chain || 'ethereum');
+      const flags = sec as unknown as Record<string, unknown>;
+      const isMalicious = Object.entries(flags).some(([k, v]) =>
+        /scam|phish|honeypot|blacklist|malicious|fake|stealing|cybercrime/i.test(k) &&
+        (v === '1' || v === 1 || v === true));
+      if (!isMalicious) return null;
+      return {
+        address,
+        arkhamEntity: { name: 'Flagged address (GoPlus)', type: 'scammer', verified: false },
+        scamHistory: { totalRugs: 0, totalStolen: '$0' },
+      } as unknown as ArkhamAddress;
     } catch {
       return null;
     }
@@ -127,11 +184,14 @@ export async function getTokenHolders(
 ): Promise<ArkhamHolder[]> {
   const key = cacheKey('arkham', 'holders', { tokenAddress: tokenAddress.toLowerCase(), limit, chain: chain ?? 'all' });
   return withCache(key, TTL.HOLDER_DATA, async () => {
-    try {
-      return await arkhamAPI.getTokenHolders(tokenAddress, limit, chain);
-    } catch {
-      return [];
+    if (ARKHAM_ENABLED) {
+      try {
+        const arkhamHolders = await arkhamAPI.getTokenHolders(tokenAddress, limit, chain);
+        if (arkhamHolders.length) return arkhamHolders;
+      } catch { /* fall through to free source */ }
     }
+    // Free multichain fallback — real top holders from GoPlus.
+    return goplusTokenHolders(tokenAddress, limit, chain);
   });
 }
 

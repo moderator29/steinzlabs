@@ -1,7 +1,7 @@
 import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
-import { verifyCron, logCronExecution, cronHasWork } from "../_shared";
+import { verifyCron, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getTokenSecurity } from "@/lib/services/goplus";
 
@@ -33,27 +33,40 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response!;
   const startedAt = Date.now();
   let processed = 0;
-  // Demand gate: no watchlisted tokens -> no GoPlus calls.
-  if (!(await cronHasWork("watchlist"))) {
-    await logCronExecution(NAME, "success", Date.now() - startedAt, undefined, 0);
-    return NextResponse.json({ ok: true, skipped: "empty-watchlist", processed: 0 });
-  }
   try {
     const supabase = getSupabaseAdmin();
+    // Source of real, scannable tokens: user_custom_tokens holds the CONTRACT
+    // addresses (chain + contract) users imported into their wallet — unlike
+    // `watchlist`, whose token_id is a CoinGecko id ("bitcoin") that GoPlus
+    // cannot scan. That mismatch is why this cron produced nothing. We pull
+    // user_id so we can write the PER-USER security-center feeds
+    // (user_token_security_flags + security_alerts) that previously had no
+    // producer and left the threat feed / honeypot score permanently empty.
     const { data: rows } = await supabase
-      .from("watchlist")
-      .select("token_id, chain")
-      .limit(500);
-    const uniq = new Map<string, { token_id: string; chain: string }>();
-    (rows ?? []).forEach((r: { token_id: string; chain: string }) => {
-      uniq.set(`${r.chain}:${r.token_id}`, r);
+      .from("user_custom_tokens")
+      .select("contract, chain, user_id")
+      .limit(1000);
+    if (!rows || rows.length === 0) {
+      await logCronExecution(NAME, "success", Date.now() - startedAt, undefined, 0);
+      return NextResponse.json({ ok: true, skipped: "no-custom-tokens", processed: 0 });
+    }
+    // Scan each distinct token once; remember which users hold it.
+    const tokens = new Map<string, { token_id: string; chain: string; userIds: Set<string> }>();
+    (rows as Array<{ contract: string; chain: string; user_id: string | null }>).forEach((r) => {
+      if (!r.contract || !r.chain) return;
+      const key = `${r.chain}:${r.contract.toLowerCase()}`;
+      const entry = tokens.get(key) ?? { token_id: r.contract, chain: r.chain, userIds: new Set<string>() };
+      if (r.user_id) entry.userIds.add(r.user_id);
+      tokens.set(key, entry);
     });
 
-    for (const { token_id, chain } of uniq.values()) {
+    for (const { token_id, chain, userIds } of tokens.values()) {
       try {
         const res = await getTokenSecurity(token_id, chain);
         if (!res) continue;
-        const { score, level, reasons } = scoreFromResult(res as unknown as Record<string, never>);
+        const scored = scoreFromResult(res as unknown as Record<string, never>);
+        const { score, level, reasons } = scored;
+        const isHoneypot = !!(res as { isHoneypot?: boolean }).isHoneypot;
         await supabase
           .from("token_risk_scores")
           .upsert(
@@ -68,6 +81,51 @@ export async function GET(request: NextRequest) {
             },
             { onConflict: "token_address,chain" },
           );
+
+        // Per-user flags for every watcher; alerts only when genuinely risky.
+        const dangerous = level === "high" || level === "critical" || isHoneypot;
+        for (const userId of userIds) {
+          await supabase
+            .from("user_token_security_flags")
+            .upsert(
+              {
+                user_id: userId,
+                token_address: token_id,
+                chain,
+                is_honeypot: isHoneypot,
+                risk_level: level,
+                risk_score: score,
+                risk_reasons: reasons,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "user_id,token_address,chain" },
+            );
+
+          if (dangerous) {
+            // Dedup: skip if an unacknowledged alert for this token already
+            // exists in the last 7 days.
+            const { count } = await supabase
+              .from("security_alerts")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", userId)
+              .eq("target", token_id)
+              .eq("acknowledged", false)
+              .gt("created_at", new Date(Date.now() - 7 * 24 * 3600_000).toISOString());
+            if ((count ?? 0) === 0) {
+              await supabase.from("security_alerts").insert({
+                user_id: userId,
+                severity: isHoneypot || level === "critical" ? "critical" : "warn",
+                title: isHoneypot ? "Honeypot token in your watchlist" : `High-risk token (${level})`,
+                description: `${token_id.slice(0, 10)}… on ${chain} scored ${score}/100${reasons.length ? ` — ${reasons.join(", ")}` : ""}.`,
+                source: "goplus",
+                category: "token_risk",
+                target: token_id,
+                acknowledged: false,
+                metadata: { chain, risk_level: level, risk_score: score, reasons },
+              });
+            }
+          }
+        }
         processed++;
       } catch (err) {
         logger.error({ err, chain, token_id }, `[${NAME}] token failed`);

@@ -261,3 +261,120 @@ export async function getTokenInfo(chain: string, address: string): Promise<GtTo
     }
   });
 }
+
+// ─── Universal CA resolution + search (swap token selector) ─────────────────
+// GeckoTerminal indexes 100+ DEX networks keylessly, making it the widest
+// free fallback behind DexScreener for resolving arbitrary pasted contract
+// addresses and free-text token search.
+
+export interface GtTokenMeta {
+  symbol: string;
+  name: string;
+  decimals: number | null;
+  logo: string | null;
+  priceUsd: number | null;
+  chain: string;
+}
+
+interface GtTokenMetaResponse {
+  data?: {
+    attributes?: {
+      symbol?: string;
+      name?: string;
+      decimals?: number;
+      image_url?: string | null;
+      price_usd?: string | null;
+    };
+  };
+}
+
+/** Symbol/name/decimals/logo/price for a contract on one network. */
+export async function getTokenMeta(chain: string, address: string): Promise<GtTokenMeta | null> {
+  const network = GT_NETWORK[chain];
+  if (!network || !address) return null;
+  const key = cacheKey('geckoterminal', 'token_meta', { chain, address });
+  return withCache(key, TTL.ENTITY_LABEL, async () => {
+    try {
+      const res = await fetch(`${BASE}/networks/${network}/tokens/${encodeURIComponent(address)}`, {
+        headers: { Accept: 'application/json;version=20230302' },
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      if (!res.ok) return null;
+      const body = (await res.json()) as GtTokenMetaResponse;
+      const a = body.data?.attributes;
+      if (!a?.symbol) return null;
+      return {
+        symbol: a.symbol.toUpperCase(),
+        name: a.name || a.symbol,
+        decimals: typeof a.decimals === 'number' ? a.decimals : null,
+        logo: realImage(a.image_url) ?? null,
+        priceUsd: a.price_usd ? Number(a.price_usd) : null,
+        chain,
+      };
+    } catch {
+      return null;
+    }
+  });
+}
+
+const GT_NETWORK_TO_CHAIN: Record<string, string> = Object.fromEntries(
+  Object.entries(GT_NETWORK).map(([chain, net]) => [net, chain]),
+);
+
+export interface GtSearchHit {
+  chain: string;
+  address: string;
+  symbol: string;
+  name: string;
+  liquidityUsd: number;
+}
+
+interface GtSearchResponse {
+  data?: Array<{
+    attributes?: { name?: string; reserve_in_usd?: string | null };
+    relationships?: { base_token?: { data?: { id?: string } } };
+  }>;
+}
+
+/**
+ * Free-text pool search → base tokens. Base-token network+address parse out
+ * of the relationship id ("eth_0xabc…"); symbol comes from the "SYM / SYM"
+ * pool name. Merged with DexScreener search by the token-search route.
+ */
+export async function searchTokens(query: string, chainFilter?: string): Promise<GtSearchHit[]> {
+  const key = cacheKey('geckoterminal', 'search', { query, chainFilter: chainFilter ?? '' });
+  const cached = await withCache(key, TTL.TOKEN_PRICE, async () => {
+    try {
+      const res = await fetch(`${BASE}/search/pools?query=${encodeURIComponent(query)}&page=1`, {
+        headers: { Accept: 'application/json;version=20230302' },
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      if (!res.ok) return [];
+      const body = (await res.json()) as GtSearchResponse;
+      const out: GtSearchHit[] = [];
+      for (const pool of body.data ?? []) {
+        const tokenId = pool.relationships?.base_token?.data?.id;
+        if (!tokenId) continue;
+        const sep = tokenId.indexOf('_');
+        if (sep <= 0) continue;
+        const chain = GT_NETWORK_TO_CHAIN[tokenId.slice(0, sep)];
+        const address = tokenId.slice(sep + 1);
+        if (!chain || !address) continue;
+        if (chainFilter && chain !== chainFilter.toLowerCase()) continue;
+        const symbol = (pool.attributes?.name || '').split('/')[0]?.trim();
+        if (!symbol) continue;
+        out.push({
+          chain,
+          address,
+          symbol: symbol.toUpperCase(),
+          name: symbol,
+          liquidityUsd: pool.attributes?.reserve_in_usd ? Number(pool.attributes.reserve_in_usd) : 0,
+        });
+      }
+      return out;
+    } catch {
+      return [];
+    }
+  });
+  return cached ?? [];
+}

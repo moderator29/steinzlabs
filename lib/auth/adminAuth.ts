@@ -146,15 +146,20 @@ export async function logAdminAction(
     user_agent?: string | null;
   },
 ): Promise<void> {
-  if (ctx.staticBearer) return;       // no user_id to attribute against
+  // Static-bearer is the UI admin login and has no auth.users id to attribute
+  // against — but its actions MUST still be audited. admin_id is now nullable
+  // (system/bearer actor), and we tag the actor in details so the record is
+  // still meaningful. Previously this returned early and logged NOTHING for
+  // every UI-driven admin action.
   try {
     const supabase = getSupabaseAdmin();
     await supabase.from('admin_audit_log').insert({
-      admin_id: ctx.userId,
+      admin_id: ctx.staticBearer ? null : ctx.userId,
       action: input.action,
       target_type: input.target_type ?? null,
       target_user_id: input.target_type === 'user' ? input.target_id : null,
       details: {
+        actor: ctx.staticBearer ? 'static_bearer' : 'admin_user',
         target_id: input.target_id ?? null,
         before: input.before_state ?? null,
         after: input.after_state ?? null,

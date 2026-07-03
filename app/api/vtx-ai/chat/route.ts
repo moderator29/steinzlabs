@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { runVTXAgent, streamVTXAgent } from '@/lib/ai/vtxAgent';
 import { VTX_SYSTEM_PROMPT } from '@/lib/services/anthropic';
+import { guardRoute } from '@/lib/api/guardRoute';
 
 const schema = z.object({
   messages: z.array(z.object({ role: z.enum(['user', 'assistant']), content: z.string() })).min(1),
@@ -18,6 +19,13 @@ const schema = z.object({
  * without the full slash-command / rate-limit / live-data overhead of /api/vtx-ai.
  */
 export async function POST(req: NextRequest) {
+  // SECURITY (2026-07-03): this ran the full Sonnet-5 tool loop with ZERO
+  // auth and ZERO rate limit — an open, unlimited, tool-enabled Claude
+  // endpoint billed to the owner. It must require an authenticated session
+  // and is rate-limited; anonymous callers are rejected.
+  const guard = await guardRoute(req, { rate: 'med', allowAnon: false });
+  if (!guard.ok) return guard.response;
+
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: 'AI service not configured' }, { status: 503 });
   }

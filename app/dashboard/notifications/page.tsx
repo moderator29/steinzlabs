@@ -87,6 +87,25 @@ export default function NotificationsPage() {
               return { id: n.id, type: n.type, title: n.title, message: n.message, ts, time: n.time || timeAgo(ts), read: reads.has(n.id) };
             });
           merged = [...local, ...api];
+          // Content-level dedup: every client notification is stored locally
+          // AND persisted server-side by addLocalNotification, but the two
+          // copies never share an id (local `notif-…` vs server `sb-…`), so
+          // the id filter above let both through and the page showed each
+          // event twice. Collapse same (type,title,message) within 48h,
+          // preferring the durable server copy; read if either copy is read.
+          const byContent = new Map<string, NotifItem>();
+          const DEDUP_WINDOW_MS = 48 * 3_600_000;
+          for (const n of merged) {
+            const key = `${n.type}|${n.title}|${n.message}`;
+            const seen = byContent.get(key);
+            if (!seen || Math.abs(seen.ts - n.ts) > DEDUP_WINDOW_MS) {
+              byContent.set(key, n);
+            } else {
+              const preferred = seen.id.startsWith('sb-') ? seen : n.id.startsWith('sb-') ? n : seen;
+              byContent.set(key, { ...preferred, read: seen.read || n.read });
+            }
+          }
+          merged = Array.from(byContent.values());
         }
       }
     } catch { /* offline — local stands */ }

@@ -1,40 +1,19 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { verifyAdminContext } from '@/lib/auth/adminAuth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-async function getUserId(): Promise<string | null> {
-  const cookieStore = await cookies();
-  const sb = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) { return cookieStore.get(name)?.value; },
-        set() {},
-        remove() {},
-      },
-    },
-  );
-  const { data } = await sb.auth.getUser();
-  return data.user?.id ?? null;
-}
-
-async function isAdmin(userId: string): Promise<boolean> {
-  const admin = getSupabaseAdmin();
-  const { data } = await admin.from('profiles').select('role').eq('id', userId).maybeSingle();
-  return (data as { role?: string } | null)?.role === 'admin';
-}
-
 export async function GET(req: NextRequest) {
-  const userId = await getUserId();
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!(await isAdmin(userId))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  // Was cookie-session-only, but the admin UI logs in via the static
+  // ADMIN_BEARER_TOKEN (no Supabase cookie), so the viewer was ALWAYS 401.
+  // Use the shared verifyAdminContext which accepts both the bearer and a
+  // role='admin' cookie session — matching every other admin route.
+  const ctx = await verifyAdminContext(req);
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const url = new URL(req.url);
   const actor = url.searchParams.get('actor');

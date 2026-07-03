@@ -186,7 +186,13 @@ async function fetchTransfers(address: string, chain: string): Promise<TransferL
   // 500 transfers covers most 30d windows; heavy traders may need more but
   // FIFO still works on a partial window (just with reduced accuracy on
   // outgoing uncovered lots).
-  const raw = await arkhamAPI.getAddressTransfers(address, 500, chain).catch(() => []);
+  //
+  // Do NOT swallow errors to [] here: a failed/absent Arkham call is NOT the
+  // same as "whale had no transfers". The old `.catch(() => [])` made the
+  // caller write pnl_30d_usd=0 / win_rate=null over real data on every API
+  // failure. Let it throw so computeMetrics propagates and the caller skips
+  // the update, preserving the existing values.
+  const raw = await arkhamAPI.getAddressTransfers(address, 500, chain);
 
   return raw
     .filter((t: any) => t.timestamp && t.valueUSD)

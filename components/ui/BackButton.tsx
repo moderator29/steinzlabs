@@ -3,9 +3,19 @@
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { smartBack } from "@/lib/navigation/smartBack";
 
 interface BackButtonProps {
+  /**
+   * FALLBACK route used only when there is no in-app history to go back to
+   * (cold deep-link / new tab / share page). Real in-app history always
+   * wins — matching PageHeader's `backTo` — so Back returns to the page the
+   * user actually came from instead of the hardcoded href. Pass
+   * `forceHref` if you truly need to jump to a fixed destination.
+   */
   href?: string;
+  /** Force navigation to `href` regardless of history (rare). */
+  forceHref?: boolean;
   label?: string;
   className?: string;
   /**
@@ -15,34 +25,19 @@ interface BackButtonProps {
   compact?: boolean;
 }
 
-export function BackButton({ href, label, className = "", compact = false }: BackButtonProps) {
+export function BackButton({ href, forceHref = false, label, className = "", compact = false }: BackButtonProps) {
   const router = useRouter();
   const handleClick = () => {
-    if (href) {
+    if (href && forceHref) {
       router.push(href);
       return;
     }
-    if (typeof window !== "undefined") {
-      const referrer = document.referrer;
-      let internalReferrer = false;
-      if (referrer) {
-        try {
-          const url = new URL(referrer);
-          internalReferrer =
-            url.hostname === window.location.hostname &&
-            !url.pathname.startsWith("/login") &&
-            !url.pathname.startsWith("/signup") &&
-            !url.pathname.startsWith("/auth");
-        } catch {
-          internalReferrer = false;
-        }
-      }
-      if (internalReferrer && window.history.length > 1) {
-        router.back();
-        return;
-      }
-    }
-    router.push("/dashboard");
+    // Was decided by document.referrer, which Next.js client navigations
+    // (router.push/Link) never update — so it always fell through to the
+    // fallback, the exact "back dumps me on the dashboard" bug. smartBack
+    // walks the real in-app nav-depth counter and only uses `href` (default
+    // /dashboard) on a cold entry with no history.
+    smartBack(router, href ?? "/dashboard");
   };
 
   if (compact) {

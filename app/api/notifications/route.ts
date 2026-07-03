@@ -317,24 +317,29 @@ export async function POST(req: NextRequest) {
 
       // Outbound Telegram push — runs fire-and-forget so notification
       // creation latency isn't tied to Telegram's response.
-      try {
-        const { queueTelegramNotification } = await import('@/lib/telegram/notify');
-        const kindMap: Record<string, 'price' | 'whale' | 'security' | 'alert' | 'sniper' | 'copy' | 'general'> = {
-          whale: 'whale', whale_alert: 'whale', wallet_activity: 'whale',
-          price: 'price', price_target: 'price', trending: 'price',
-          security: 'security',
-          new_launch: 'sniper',
-          swap: 'alert', send: 'alert', wallet_created: 'general', wallet_imported: 'general',
-          welcome: 'general', system: 'general', prediction: 'general',
-        };
-        queueTelegramNotification({
-          userId: targetUserId,
-          kind: kindMap[type] ?? 'general',
-          title,
-          body: message,
-        });
-      } catch (err) {
-        Sentry.captureException(err, { tags: { route: 'notifications', stage: 'telegram-fanout' } });
+      // Session-lifecycle noise (welcome-on-login) must never page the user
+      // on Telegram — only real signal types fan out.
+      const TELEGRAM_MUTED_TYPES = ['welcome', 'system'];
+      if (!TELEGRAM_MUTED_TYPES.includes(type)) {
+        try {
+          const { queueTelegramNotification } = await import('@/lib/telegram/notify');
+          const kindMap: Record<string, 'price' | 'whale' | 'security' | 'alert' | 'sniper' | 'copy' | 'general'> = {
+            whale: 'whale', whale_alert: 'whale', wallet_activity: 'whale',
+            price: 'price', price_target: 'price', trending: 'price',
+            security: 'security',
+            new_launch: 'sniper',
+            swap: 'alert', send: 'alert', wallet_created: 'general', wallet_imported: 'general',
+            prediction: 'general',
+          };
+          queueTelegramNotification({
+            userId: targetUserId,
+            kind: kindMap[type] ?? 'general',
+            title,
+            body: message,
+          });
+        } catch (err) {
+          Sentry.captureException(err, { tags: { route: 'notifications', stage: 'telegram-fanout' } });
+        }
       }
     }
 

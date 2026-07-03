@@ -1,6 +1,7 @@
 'use client';
 
 // Naka Labs brand icons — Check via CheckCircle, Star (gold).
+import { useState } from 'react';
 import { CheckCircle as Check, Star } from '@/components/icons/brand';
 import { Zap } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
@@ -9,6 +10,7 @@ import { useAuth, effectiveTier } from '@/lib/hooks/useAuth';
 import { TierBadge } from '@/components/ui/TierBadge';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { pricingHowItWorks } from '@/lib/howItWorks/content/pricing';
+import { CryptoPaymentModal } from '@/components/pricing/CryptoPaymentModal';
 
 // Platform tiers only (free/mini/pro/max). NakaCult is NOT a tier — it's a
 // separate on-chain entitlement shown in the NFT section below.
@@ -92,12 +94,17 @@ const TIERS = [
 ] as const;
 
 export default function PricingPage() {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const currentPlan = effectiveTier(user);
+  const [payTier, setPayTier] = useState<'mini' | 'pro' | 'max' | null>(null);
 
   const handleSubscribe = (tierId: string) => {
     if (tierId === 'free') return;
-    toast.info('Crypto payment integration coming soon. Join our waitlist at support@nakalabs.xyz');
+    if (!user) {
+      toast.error('Sign in to upgrade your plan.');
+      return;
+    }
+    setPayTier(tierId as 'mini' | 'pro' | 'max');
   };
 
   return (
@@ -255,6 +262,18 @@ export default function PricingPage() {
           </div>
         </div>
       </div>
+
+      {payTier && (
+        <CryptoPaymentModal
+          tier={payTier}
+          onClose={() => setPayTier(null)}
+          onActivated={() => {
+            setPayTier(null);
+            toast.success('Plan activated — welcome aboard!');
+            void refreshProfile();
+          }}
+        />
+      )}
     </div>
   );
 }

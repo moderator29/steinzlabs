@@ -2,6 +2,7 @@ import { getOneInchQuote } from "./oneinch";
 import { getKyberswapQuote } from "./kyberswap";
 import { getOpenOceanQuote } from "./openocean";
 import { cacheWithFallback } from "@/lib/cache/redis";
+import { resolveSwapToken, toBaseUnits } from "@/lib/market/swapTokenMeta";
 
 // Quotes go stale fast; 12s collapses the common N-follower fan-out within a
 // single cron tick (and across consecutive ticks when cron interval ≤ TTL)
@@ -101,14 +102,33 @@ export async function getAllRoutes(params: AggregatorParams): Promise<RouteQuote
   // Solana → Jupiter is authoritative; handled in existing /api/swap/quote.
   if (isSolana) return [];
 
+  // The individual aggregator services need CONTRACT ADDRESSES + BASE UNITS,
+  // but callers pass symbols ('ETH') + a human amount ('0.5') — so every
+  // route request returned nothing or wrong-magnitude numbers. Resolve once
+  // here (same helpers the working /api/swap/price route uses) before fanning
+  // out. Unknown tokens → no routes rather than a junk quote.
+  const sell = resolveSwapToken(params.fromToken, params.chain);
+  const buy = resolveSwapToken(params.toToken, params.chain);
+  if (!sell || !buy) return [];
+  const baseAmount = /^\d+$/.test(params.amountIn)
+    ? params.amountIn
+    : toBaseUnits(params.amountIn, sell.decimals);
+  if (baseAmount === "0") return [];
+  const resolved: AggregatorParams = {
+    ...params,
+    fromToken: sell.address,
+    toToken: buy.address,
+    amountIn: baseAmount,
+  };
+
   const chainKey = params.chain.toLowerCase();
-  const fromKey = params.fromToken.toLowerCase();
-  const toKey = params.toToken.toLowerCase();
+  const fromKey = sell.address.toLowerCase();
+  const toKey = buy.address.toLowerCase();
   const slipKey = params.slippageBps ?? 0;
-  const cacheKey = `swap:routes:${chainKey}:${fromKey}:${toKey}:${params.amountIn}:${slipKey}`;
+  const cacheKey = `swap:routes:${chainKey}:${fromKey}:${toKey}:${baseAmount}:${slipKey}`;
 
   return cacheWithFallback<RouteQuote[]>(cacheKey, QUOTE_CACHE_TTL_SECONDS, async () => {
-    const calls = [oneinchToRoute(params), kyberToRoute(params), openoceanToRoute(params)];
+    const calls = [oneinchToRoute(resolved), kyberToRoute(resolved), openoceanToRoute(resolved)];
     const routes: RouteQuote[] = [];
     const remaining = new Set<number>([0, 1, 2]);
 

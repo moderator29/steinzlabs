@@ -1,8 +1,5 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
-
-const shareStore = new Map<string, Record<string, string>>();
 
 function encodeSharePayload(data: Record<string, string>): string {
   const json = JSON.stringify(data);
@@ -34,8 +31,11 @@ export async function POST(request: Request) {
       p: platform || '',
     };
 
-    const shortId = crypto.randomBytes(4).toString('hex');
-    shareStore.set(shortId, payload);
+    // Stateless id: the id IS the base64url-encoded payload, so any lambda
+    // can resolve it without shared state. The old in-memory Map lost every
+    // link because the POST (mint) and GET (resolve) ran on different Vercel
+    // instances — shares 404'd in production.
+    const shortId = encodeSharePayload(payload);
 
     const host = request.headers.get('host') || 'nakalabs.xyz';
     const protocol = host.includes('localhost') ? 'http' : 'https';
@@ -58,7 +58,9 @@ export async function GET(request: Request) {
 
   const shortId = searchParams.get('id');
   if (shortId) {
-    const data = shareStore.get(shortId);
+    // The id is a self-describing base64url payload (see POST). Decode it
+    // directly — no server-side store, works across serverless instances.
+    const data = decodeSharePayload(shortId);
     if (!data) {
       return NextResponse.json({ error: 'Share not found' }, { status: 404 });
     }

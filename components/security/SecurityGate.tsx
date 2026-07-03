@@ -219,13 +219,25 @@ export function SecurityGate({ chain, token, action, children, className = '' }:
   return (
     <div className={`space-y-2 ${className}`}>
       {isCaution && (
-        <div role="alert" className="flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs">
-          <AlertTriangle className="w-3.5 h-3.5 text-amber-300 flex-shrink-0 mt-0.5" aria-hidden="true" />
-          <div className="flex-1">
-            <span className="text-amber-200 font-semibold">Caution: </span>
-            <span className="text-amber-100/90">Trust Score {score.score}/100. Review the risk before you {ACTION_VERBS[action]}.</span>
-            <button onClick={() => setShowRiskModal(true)} className="ms-2 underline hover:text-white">View details</button>
+        <div
+          role="alert"
+          className="nl-glass flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs"
+          style={{ boxShadow: '0 0 0 1px rgba(245,158,11,.35), 0 0 14px rgba(245,158,11,.12)' }}
+        >
+          <div className="flex items-center gap-1.5 shrink-0 px-2 py-1 rounded-lg bg-amber-500/15 border border-amber-500/25">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-300" aria-hidden="true" />
+            <span className="text-amber-200 font-bold tabular-nums">{score.score}<span className="text-amber-200/60 font-medium">/100</span></span>
           </div>
+          <div className="flex-1 min-w-0">
+            <span className="text-amber-100 font-semibold">Caution — trust score below 60. </span>
+            <span className="text-amber-100/80">Review the risk before you {ACTION_VERBS[action]}.</span>
+          </div>
+          <button
+            onClick={() => setShowRiskModal(true)}
+            className="shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-amber-200 border border-amber-500/30 hover:bg-amber-500/15 hover:text-white transition-colors"
+          >
+            View details
+          </button>
         </div>
       )}
 

@@ -31,7 +31,6 @@ import { FirstRunTour } from '@/components/dashboard/FirstRunTour';
 
 const ContextFeed    = lazy(() => import('@/components/ContextFeed'));
 const MarketDashboard = lazy(() => import('@/components/MarketDashboard'));
-const VtxAiTab       = lazy(() => import('@/components/VtxAiTab'));
 const WalletTab   = lazy(() => import('@/components/WalletTab'));
 const ProfileTab  = lazy(() => import('@/components/ProfileTab'));
 
@@ -300,6 +299,14 @@ export default function Dashboard() {
     return t === 'profile' || t === 'wallet' || t === 'vtxai' ? t : 'home';
   })();
   const [activeNav, setActiveNav] = useState<string>(initialNav);
+
+  // The inline VtxAiTab surface silently dropped the server-built token/swap
+  // cards; the dedicated /dashboard/vtx-ai page renders them (plus proof)
+  // correctly and is the single source of truth. Any ?tab=vtxai entry point
+  // now forwards there instead of mounting the stale tab.
+  useEffect(() => {
+    if (activeNav === 'vtxai') router.replace('/dashboard/vtx-ai');
+  }, [activeNav, router]);
   // ?subtab=overview|context|markets restores the home sub-tab — used by
   // /dashboard/proof's "Back to Feed" button (§6.3) so the user lands on
   // the Context Feed instead of the overview after explaining a signal.
@@ -340,7 +347,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (user) {
-      maybeNotifyWelcome(user.email);
+      maybeNotifyWelcome(user.email, user.created_at);
     }
   }, [user]);
 
@@ -427,7 +434,7 @@ export default function Dashboard() {
         <RenderWidgets />
       );
     }
-    if (activeNav === 'vtxai') return <VtxAiTab />;
+    if (activeNav === 'vtxai') return null; // redirects to /dashboard/vtx-ai (see effect above)
     if (activeNav === 'wallet') return <WalletTab />;
     if (activeNav === 'profile') return <ProfileTab />;
     return null;
@@ -447,7 +454,11 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen text-white pb-28 sm:pb-24">
-      <FirstRunTour />
+      {/* Only run the lightweight tour AFTER the full onboarding flow is done
+          (onboardedAt is a real date). Previously both the 10-card
+          OnboardingGate and this 3-step tour mounted at z-[200] for a
+          brand-new user, stacking two overlays on the same screen. */}
+      {!!onboardedAt && <FirstRunTour />}
       {/* iOS safe-area — naka-safe-top adds env(safe-area-inset-top) so
           the header clears the iPhone 14+ dynamic island / notch instead
           of being overlapped by it. No-op on Android / web. */}

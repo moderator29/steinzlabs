@@ -23,7 +23,6 @@ import { SecurityGate } from '@/components/security/SecurityGate';
 import SwapRoutePreview from '@/components/swap/SwapRoutePreview';
 import { RouteComparison } from '@/components/swap/RouteComparison';
 import SwapDuneStrip from '@/components/trading/SwapDuneStrip';
-import { OrderForm } from '@/components/trading/OrderForm';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { swapHowItWorks } from '@/lib/howItWorks/content/swap';
 
@@ -120,8 +119,44 @@ const TOKEN_LIST: TokenInfo[] = [
 interface ImportedToken extends TokenInfo { address: string; chain: string; }
 const IMPORTED_TOKENS: Record<string, ImportedToken> = {};
 
+const IMPORTED_TOKENS_KEY = 'steinz_swap_imported_tokens';
+
+// Imported tokens used to live only in this in-memory map — gone on refresh
+// and invisible to the Naka wallet (owner bug 2026-07-03). They now persist
+// locally, hydrate on page load, and register in the wallet's custom-token
+// store (steinz_custom_tokens + /api/wallet/custom-tokens) so the same import
+// shows up in wallet holdings and swap alike.
+function loadImportedTokens(): void {
+  const stored = safeLocalParse<ImportedToken[]>(IMPORTED_TOKENS_KEY, []);
+  for (const t of stored) {
+    if (t?.symbol && t?.address && t?.chain) IMPORTED_TOKENS[t.symbol.toUpperCase()] = t;
+  }
+}
+
 function registerImportedToken(t: ImportedToken): void {
   IMPORTED_TOKENS[t.symbol.toUpperCase()] = t;
+  try {
+    const stored = safeLocalParse<ImportedToken[]>(IMPORTED_TOKENS_KEY, []);
+    const next = [t, ...stored.filter((s) => !(s.chain === t.chain && s.address.toLowerCase() === t.address.toLowerCase()))].slice(0, 100);
+    safeLocalSet(IMPORTED_TOKENS_KEY, JSON.stringify(next));
+    // Mirror into the wallet's custom-token store so the coin appears in
+    // Naka wallet holdings, synced cross-device by the wallet page.
+    const key = `${t.chain}:${t.address}`;
+    const walletTokens = safeLocalParse<string[]>('steinz_custom_tokens', []);
+    if (!walletTokens.includes(key)) {
+      safeLocalSet('steinz_custom_tokens', JSON.stringify([...walletTokens, key]));
+    }
+    void fetch('/api/wallet/custom-tokens', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ key }),
+    }).catch(() => {});
+  } catch { /* storage unavailable — in-memory registration still works */ }
+}
+
+function getImportedTokensForChain(chain: string): ImportedToken[] {
+  return Object.values(IMPORTED_TOKENS).filter((t) => t.chain === chain);
 }
 
 function getTokenInfo(symbol: string): TokenInfo {
@@ -192,6 +227,11 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
   const [importing, setImporting] = useState(false);
   const [imported, setImported] = useState<ImportedToken | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  // Remote name search (DexScreener via /api/swap/token-search) so ANY token
+  // is findable by name/symbol, not just the 26-entry curated list.
+  const [remoteResults, setRemoteResults] = useState<Array<{ chain: string; address: string; symbol: string; name: string; logo: string | null; liquidityUsd: number }>>([]);
+  const [remoteSearching, setRemoteSearching] = useState(false);
+  const [resolvingRemote, setResolvingRemote] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -200,6 +240,7 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
       setSearch('');
       setImported(null);
       setImportError(null);
+      setRemoteResults([]);
     }
   }, [isOpen]);
 
@@ -234,12 +275,39 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
     return () => { cancelled = true; };
   }, [search, chain, looksLikeAddress]);
 
+  // Debounced remote name search — runs for 2+ char non-address queries.
+  useEffect(() => {
+    const q = search.trim();
+    if (looksLikeAddress || q.length < 2) { setRemoteResults([]); setRemoteSearching(false); return; }
+    let cancelled = false;
+    setRemoteSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/swap/token-search?q=${encodeURIComponent(q)}&chain=${encodeURIComponent(chain)}`);
+        const data = res.ok ? await res.json() : { tokens: [] };
+        if (!cancelled) setRemoteResults(Array.isArray(data.tokens) ? data.tokens : []);
+      } catch {
+        if (!cancelled) setRemoteResults([]);
+      } finally {
+        if (!cancelled) setRemoteSearching(false);
+      }
+    }, 300);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [search, chain, looksLikeAddress]);
+
   if (!isOpen) return null;
 
   const filtered = TOKEN_LIST.filter(t =>
     t.symbol !== exclude &&
     (t.symbol.toLowerCase().includes(search.toLowerCase()) || t.name.toLowerCase().includes(search.toLowerCase()))
   );
+  const importedForChain = getImportedTokensForChain(chain).filter(t =>
+    t.symbol !== exclude &&
+    (t.symbol.toLowerCase().includes(search.toLowerCase()) || t.name.toLowerCase().includes(search.toLowerCase()))
+  );
+  // Remote rows that duplicate a local/imported symbol are dropped.
+  const localSymbols = new Set([...filtered, ...importedForChain].map(t => t.symbol.toUpperCase()));
+  const remoteFiltered = remoteResults.filter(t => !localSymbols.has(t.symbol.toUpperCase()) && t.symbol.toUpperCase() !== exclude.toUpperCase());
 
   const popular = filtered.filter(t => t.popular);
 
@@ -248,6 +316,36 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
     registerImportedToken(imported);
     onSelect(imported.symbol);
     onClose();
+  };
+
+  // Selecting a remote search hit: resolve real decimals on-chain via
+  // token-meta (DexScreener search doesn't return decimals, and quoting with
+  // guessed decimals would be wrong by orders of magnitude), then register.
+  const chooseRemote = async (t: { chain: string; address: string; symbol: string; name: string; logo: string | null }) => {
+    setResolvingRemote(t.address);
+    try {
+      const res = await fetch(`/api/swap/token-meta?chain=${encodeURIComponent(t.chain)}&address=${encodeURIComponent(t.address)}`);
+      const data = await res.json();
+      if (res.ok && typeof data.decimals === 'number') {
+        registerImportedToken({
+          symbol: data.symbol || t.symbol,
+          name: data.name || t.name,
+          decimals: data.decimals,
+          logo: data.logo ?? t.logo ?? undefined,
+          color: '#6B7280',
+          address: data.address || t.address,
+          chain: t.chain,
+        });
+        onSelect((data.symbol || t.symbol).toUpperCase());
+        onClose();
+      } else {
+        setImportError('Could not resolve this token on-chain');
+      }
+    } catch {
+      setImportError('Could not resolve this token on-chain');
+    } finally {
+      setResolvingRemote(null);
+    }
   };
 
   return (
@@ -314,8 +412,26 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
               )}
             </div>
           )}
-          {filtered.length === 0 && !looksLikeAddress ? (
-            <p className="text-center text-sm text-gray-500 py-10">No tokens found</p>
+          {importedForChain.length > 0 && (
+            <>
+              <p className="px-4 pt-2 pb-1 text-[10px] font-bold tracking-wider text-gray-500 uppercase">Imported</p>
+              {importedForChain.map(t => (
+                <button
+                  key={`imp-${t.chain}-${t.address}`}
+                  onClick={() => { onSelect(t.symbol); onClose(); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors"
+                >
+                  <TokenBadge symbol={t.symbol} size={36} />
+                  <div className="text-start flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-white">{t.symbol}</div>
+                    <div className="text-xs text-gray-500 truncate">{t.name}</div>
+                  </div>
+                </button>
+              ))}
+            </>
+          )}
+          {filtered.length === 0 && importedForChain.length === 0 && remoteFiltered.length === 0 && !looksLikeAddress && !remoteSearching ? (
+            <p className="text-center text-sm text-gray-500 py-10">No tokens found — try pasting the contract address</p>
           ) : (
             filtered.map(t => (
               <button
@@ -330,6 +446,38 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
                 </div>
               </button>
             ))
+          )}
+          {!looksLikeAddress && search.trim().length >= 2 && (
+            <>
+              {remoteSearching && (
+                <p className="px-4 py-3 text-xs text-gray-500 flex items-center gap-2"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Searching all tokens…</p>
+              )}
+              {remoteFiltered.length > 0 && (
+                <>
+                  <p className="px-4 pt-2 pb-1 text-[10px] font-bold tracking-wider text-gray-500 uppercase">All tokens</p>
+                  {remoteFiltered.map(t => (
+                    <button
+                      key={`rem-${t.chain}-${t.address}`}
+                      onClick={() => chooseRemote(t)}
+                      disabled={resolvingRemote === t.address}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors disabled:opacity-60"
+                    >
+                      {t.logo
+                        // eslint-disable-next-line @next/next/no-img-element
+                        ? <img src={t.logo} alt="" className="w-9 h-9 rounded-full object-cover" />
+                        : <div className="w-9 h-9 rounded-full bg-[#0066FF]/20 flex items-center justify-center text-xs font-bold text-white">{t.symbol.slice(0, 2)}</div>}
+                      <div className="text-start flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-white">{t.symbol}</div>
+                        <div className="text-xs text-gray-500 truncate">{t.name} · {t.address.slice(0, 6)}…{t.address.slice(-4)}</div>
+                      </div>
+                      {resolvingRemote === t.address
+                        ? <Loader2 className="w-4 h-4 animate-spin text-[#0066FF]" />
+                        : <span className="text-[11px] font-semibold text-[#0066FF]">Import</span>}
+                    </button>
+                  ))}
+                </>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -429,7 +577,9 @@ function SettingsPanel({ slippage, setSlippage, mevProtect, setMevProtect, mevAu
           </button>
         </div>
         <p className="text-[10px] text-gray-500 leading-relaxed">
-          Routes via private mempool (Flashbots / Jito) to block sandwich bots.
+          Naka Wallet Ethereum swaps broadcast through Flashbots Protect (private
+          mempool) to block sandwich bots. External wallets route through their
+          own RPC, so protection depends on that wallet's settings.
           {mevAutoForLarge && ' Auto-enabled for trades ≥ $1,000.'}
         </p>
       </div>
@@ -465,10 +615,6 @@ export default function SwapPage() {
   // toggle manually via SettingsPanel.
   const [mevProtect, setMevProtect] = useState<boolean>(false);
   const [sandwichRisk, setSandwichRisk] = useState<number | null>(null);
-  // §advanced-orders — Limit / DCA / Stop-loss orderform is purpose-built
-  // at components/trading/OrderForm.tsx (4 tabs). Collapsed by default
-  // so the market-swap UX stays the lead surface.
-  const [showAdvancedOrders, setShowAdvancedOrders] = useState(false);
   const [swapping, setSwapping] = useState(false);
   const [showReview, setShowReview] = useState(false);
   // Industry-standard pre-confirm security gating — when the review
@@ -494,6 +640,9 @@ export default function SwapPage() {
   const [unlockState, setUnlockState] = useState<null | { encryptedKey: string; addressShort?: string }>(null);
   const pendingPostUnlock = useRef<(() => void) | null>(null);
   const [fetchingQuote, setFetchingQuote] = useState(false);
+  // Surfaced quote failures (unsupported pair, aggregator down) — the old
+  // silent-console path left the user staring at a 0 with no explanation.
+  const [quoteError, setQuoteError] = useState('');
   const [showDetails, setShowDetails] = useState(false);
   const [swapRotate, setSwapRotate] = useState(0);
   const [swapSuccess, setSwapSuccess] = useState(false);
@@ -519,6 +668,10 @@ export default function SwapPage() {
   const [metamaskAddress, setMetamaskAddress] = useState('');
   const [phantomAddress, setPhantomAddress] = useState('');
   const quoteTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  // Rehydrate previously imported tokens (persisted by registerImportedToken)
+  // so they survive refresh and stay selectable/quotable.
+  useEffect(() => { loadImportedTokens(); }, []);
 
   const nakaAddress = walletAddress || safeLocalGet('steinz_active_wallet_address');
   const connectedAddress = walletMode === 'metamask' ? metamaskAddress : walletMode === 'phantom' ? phantomAddress : nakaAddress;
@@ -764,6 +917,7 @@ export default function SwapPage() {
     if (!amount || parseFloat(amount) <= 0) {
       setToAmount('');
       setQuoteData(null);
+      setQuoteError('');
       return;
     }
     setFetchingQuote(true);
@@ -783,28 +937,48 @@ export default function SwapPage() {
           fromDecimals: String(getTokenInfo(f).decimals),
           toDecimals: String(getTokenInfo(t).decimals),
         });
+        params.set('slippageBps', String(Math.round((parseFloat(slippage) || 0.5) * 100)));
         if (connectedAddress) params.set('taker', connectedAddress);
         const res = await fetch(`/api/swap/price?${params}`);
         const data = await res.json();
-        if (res.ok && data.buyAmount) {
-          const buyDecimals = getTokenInfo(t).decimals;
-          const toAmt = Number(BigInt(data.buyAmount)) / (10 ** buyDecimals);
+        // /api/swap/price returns the normalised shape { toAmount (human),
+        // rate, priceImpactPct, minReceived, slippageBps, provider, … }.
+        // The old client read the raw-0x keys (buyAmount/estimatedPriceImpact)
+        // which no longer exist, so the receive field never populated and the
+        // whole details panel stayed dead. Consume the real schema, and never
+        // fabricate impact/gas numbers the server didn't send.
+        if (res.ok && typeof data.toAmount === 'number' && data.toAmount > 0) {
+          const toAmt: number = data.toAmount;
           setToAmount(toAmt.toFixed(6));
+          setQuoteError('');
           setQuoteData({
             ...data,
             toAmount: toAmt,
             fromAmountUsd: null,
             toAmountUsd: null,
-            priceImpact: data.estimatedPriceImpact || '0.01',
-            gasEstimateUsd: data.gas ? Number(data.gas) * 30 / 1e9 : 2.4,
-            minReceived: (toAmt * (1 - parseFloat(slippage) / 100)).toFixed(6),
+            priceImpact: data.priceImpactPct != null && data.priceImpactPct !== '' ? String(data.priceImpactPct) : null,
+            gasEstimateUsd: typeof data.gasEstimateUsd === 'number' ? data.gasEstimateUsd : null,
+            minReceived: typeof data.minReceived === 'number'
+              ? data.minReceived.toFixed(6)
+              : (toAmt * (1 - parseFloat(slippage) / 100)).toFixed(6),
           });
           // Mark this quote as fresh so the countdown UI + auto-refresh
           // loop below have a definitive anchor timestamp.
           setQuoteFetchedAt(Date.now());
+        } else {
+          setToAmount('');
+          setQuoteData(null);
+          setQuoteError(
+            data?.code === 'UNRESOLVED_TOKEN'
+              ? `This pair isn't tradeable on ${c} — try the token's contract address.`
+              : data?.error || 'No route found for this pair. Try a different amount or network.'
+          );
         }
       } catch (err) {
         console.error('[Swap] Price fetch failed:', err);
+        setToAmount('');
+        setQuoteData(null);
+        setQuoteError('Quote service unreachable — check your connection and retry.');
       }
       setFetchingQuote(false);
     }, 400);
@@ -882,10 +1056,13 @@ export default function SwapPage() {
   const handleSwapTokens = () => {
     setSwapRotate(prev => prev + 180);
     const tmpToken = fromToken;
-    const tmpAmount = fromAmount;
     setFromToken(toToken);
     setToToken(tmpToken);
     setFromAmount(toAmount);
+    // Clear the stale receive amount so the reversed direction never shows
+    // the old quote's output as if it were the fresh counterpart.
+    setToAmount('');
+    setQuoteData(null);
     simulateQuote(toAmount, toToken, tmpToken);
   };
 
@@ -912,34 +1089,14 @@ export default function SwapPage() {
     try {
       if (!connectedAddress) throw new Error('Please connect a wallet to execute swaps.');
 
-      // §swap-1: Honor the route the user picked in RouteComparison.
-      // When they selected a non-0x aggregator (1inch / KyberSwap /
-      // OpenOcean), submit through /api/market/trade/execute which
-      // already knows how to settle the provider-specific quoteData.
-      // 0x stays on the original /api/swap/quote → wallet-sign path.
-      if (selectedProvider && selectedProvider !== '0x' && selectedRoute) {
-        const executeRes = await fetch('/api/market/trade/execute', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            selectedProvider,
-            routeQuoteData: selectedRoute,
-            taker: connectedAddress,
-            chain,
-            fromToken,
-            toToken,
-            mevProtect, // §swap-2 — server uses this to route to private mempool when set
-          }),
-        });
-        const out = await executeRes.json();
-        if (!executeRes.ok) throw new Error(out.error || `${selectedProvider} swap failed`);
-        if (out.txHash) {
-          setTxHash(out.txHash);
-          setTxStatus('confirmed');
-          setSwapSuccess(true);
-        }
-        return;
-      }
+      // RouteComparison is a PRICE-DISCOVERY surface: it shows live quotes
+      // across 0x / KyberSwap / OpenOcean so the user sees the best available
+      // rate. Execution always settles through the proven 0x (EVM) / Jupiter
+      // (Solana) sign+broadcast path below — the alternate aggregators only
+      // return quote data (no executable calldata), so routing execution
+      // through them 400'd every time. When they return real route/build
+      // calldata this branch can be reintroduced; until then we never ship a
+      // signing path we can't settle.
 
       // Step 1: Get firm swap quote from 0x API
       const tokenAddresses = getTokenAddresses(fromToken, toToken, chain);
@@ -1023,9 +1180,10 @@ export default function SwapPage() {
       } else if (win?.solana && detectedWallet === 'solana') {
         // Solana wallet (Phantom etc)
         if (swapData.swapTransaction) {
-          const { Transaction } = await import('@solana/web3.js');
-          const txBytes = Buffer.from(swapData.swapTransaction, 'base64');
-          const tx = Transaction.from(txBytes);
+          // Jupiter returns a VersionedTransaction — legacy Transaction.from
+          // threw here on every Solana swap attempt.
+          const { deserializeSolanaTx } = await import('@/lib/wallet/solanaTx');
+          const tx = await deserializeSolanaTx(swapData.swapTransaction);
           const signed = await win.solana.signAndSendTransaction(tx);
           hash = signed.signature;
         } else {
@@ -1113,7 +1271,13 @@ export default function SwapPage() {
           avalanche: 'https://api.avax.network/ext/bc/C/rpc',
           optimism: 'https://mainnet.optimism.io',
         };
-        const rpcUrl = chainRpcs[chain] || 'https://eth.llamarpc.com';
+        // When MEV protection is on for a built-in Ethereum swap, broadcast
+        // through Flashbots Protect (public, keyless) so the tx skips the
+        // public mempool and can't be sandwiched — making the toggle's claim
+        // real for the path we actually control (the user's own key).
+        const rpcUrl = (mevProtect && chain === 'ethereum')
+          ? 'https://rpc.flashbots.net/fast'
+          : (chainRpcs[chain] || 'https://eth.llamarpc.com');
         const provider = new ethers.JsonRpcProvider(rpcUrl);
         const signer = new ethers.Wallet(pk, provider);
         const tx = await signer.sendTransaction(swapData.transaction);
@@ -1193,10 +1357,16 @@ export default function SwapPage() {
     setSwapping(false);
   };
 
-  const estimatedGas = quoteData ? `$${quoteData.gasEstimateUsd.toFixed(2)}` : chain === 'solana' ? '$0.001' : chain === 'base' ? '$0.02' : '$2.40';
-  const priceImpact = quoteData ? quoteData.priceImpact : '0.01';
+  // Never fabricate numbers: gas and impact render only when the quote
+  // pipeline actually supplied them (the old '$2.40' / '0.01%' constants
+  // were invented and violated the no-mock-data rule).
+  const estimatedGas = typeof quoteData?.gasEstimateUsd === 'number' ? `$${quoteData.gasEstimateUsd.toFixed(quoteData.gasEstimateUsd < 0.01 ? 4 : 2)}` : '—';
+  const priceImpact = quoteData?.priceImpact ?? null;
   const hasQuote = fromAmount && toAmount && parseFloat(fromAmount) > 0;
   const rate = hasQuote ? (parseFloat(toAmount) / parseFloat(fromAmount)) : 0;
+  // Honest route attribution — the venue is whatever aggregator actually
+  // quoted (0x on EVM, Jupiter on Solana), not a hardcoded per-chain DEX name.
+  const routeLabel = quoteData?.provider === 'jupiter' ? 'Jupiter' : quoteData?.provider === '0x' ? '0x' : chain === 'solana' ? 'Jupiter' : '0x';
 
   // §MEV — auto-on Solana (Jito is friction-free) and auto-on for any
   // trade ≥ $1,000 USD on any chain. User can still flip via the
@@ -1226,14 +1396,19 @@ export default function SwapPage() {
     if (!hasQuote || !toToken) { setSandwichRisk(null); return; }
     const ctrl = new AbortController();
     const usd = fromAmountUsd && fromAmountUsd > 0 ? fromAmountUsd : 1000;
-    fetch(`/api/mev-protection?token=${encodeURIComponent(toToken)}&chain=${chain}&amount=${usd}`, { signal: ctrl.signal })
+    // The MEV endpoint keys on a CONTRACT ADDRESS — passing the bare symbol
+    // ('USDC') meant the risk score was computed against a junk key. Resolve
+    // the real buy-token address; skip the probe for native/symbol-only.
+    const buyAddr = getTokenAddresses(fromToken, toToken, chain).buyToken;
+    if (!buyAddr || buyAddr === toToken || /^[a-z]{2,6}$/i.test(buyAddr)) { setSandwichRisk(null); return; }
+    fetch(`/api/mev-protection?token=${encodeURIComponent(buyAddr)}&chain=${chain}&amount=${usd}`, { signal: ctrl.signal })
       .then((r) => r.ok ? r.json() : null)
       .then((d: { sandwichRisk?: number } | null) => {
         if (d && typeof d.sandwichRisk === 'number') setSandwichRisk(d.sandwichRisk);
       })
       .catch(() => { /* non-fatal */ });
     return () => ctrl.abort();
-  }, [hasQuote, toToken, chain, fromAmountUsd]);
+  }, [hasQuote, fromToken, toToken, chain, fromAmountUsd]);
 
   return (
     <div className="min-h-screen bg-transparent text-white">
@@ -1395,21 +1570,31 @@ export default function SwapPage() {
                   <ChevronDown className="w-3.5 h-3.5 text-gray-500 group-hover:text-gray-300 transition-colors" />
                 </button>
               </div>
-              {fromAmount && quoteData && (
+              {fromAmount && quoteData && typeof quoteData.fromAmountUsd === 'number' && (
                 <div className="text-xs text-gray-500 mt-2">
-                  ~${quoteData.fromAmountUsd?.toLocaleString(undefined, { maximumFractionDigits: 2 }) || '0.00'}
+                  ~${quoteData.fromAmountUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                 </div>
               )}
             </div>
 
-            <div className="relative h-0 z-10">
+            {/* Direction switch — brand glass chip floated fully ABOVE both
+                cards (owner screenshot 2026-07-03 showed it half-buried
+                behind the receive card in off-brand flat hexes). z-20 +
+                glass ring keeps it the visual pivot of the swap card. */}
+            <div className="relative h-0 z-20">
               <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2">
                 <button
                   onClick={handleSwapTokens}
-                  className="w-10 h-10 bg-[#1a2332] border-[3px] border-[#0A0E1A] rounded-xl flex items-center justify-center hover:bg-[#0066FF] transition-all duration-300 group shadow-lg"
-                  style={{ transform: `rotate(${swapRotate}deg)`, transition: 'transform 0.3s ease, background-color 0.2s ease' }}
+                  aria-label="Switch pay and receive tokens"
+                  className="w-11 h-11 nl-glass rounded-2xl flex items-center justify-center hover:bg-[#0066FF]/25 active:scale-95 group"
+                  style={{
+                    transform: `rotate(${swapRotate}deg)`,
+                    transition: 'transform 0.3s ease, background-color 0.2s ease',
+                    boxShadow: '0 0 0 1px rgba(0,102,255,.45), 0 0 18px rgba(0,102,255,.25), 0 6px 18px rgba(0,0,0,.5)',
+                    backdropFilter: 'blur(12px)',
+                  }}
                 >
-                  <ArrowDownUp className="w-4 h-4 text-gray-400 group-hover:text-white transition-colors" />
+                  <ArrowDownUp className="w-[18px] h-[18px] text-blue-300 group-hover:text-white transition-colors" />
                 </button>
               </div>
             </div>
@@ -1443,9 +1628,9 @@ export default function SwapPage() {
                   <ChevronDown className="w-3.5 h-3.5 text-gray-500 group-hover:text-gray-300 transition-colors" />
                 </button>
               </div>
-              {toAmount && quoteData && (
+              {toAmount && quoteData && typeof quoteData.toAmountUsd === 'number' && (
                 <div className="text-xs text-gray-500 mt-2">
-                  ~${quoteData.toAmountUsd?.toLocaleString(undefined, { maximumFractionDigits: 2 }) || '0.00'}
+                  ~${quoteData.toAmountUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                 </div>
               )}
             </div>
@@ -1467,15 +1652,19 @@ export default function SwapPage() {
                   <div className="px-4 sm:px-5 pb-4 space-y-2.5">
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-500">Price Impact</span>
-                      <span className={`font-medium ${(() => {
-                        const pi = parseFloat(priceImpact);
-                        if (pi < 1) return 'text-green-400';
-                        if (pi < 5) return 'text-yellow-400';
-                        if (pi < 15) return 'text-orange-400';
-                        return 'text-red-400';
-                      })()}`}>
-                        {priceImpact}%
-                      </span>
+                      {priceImpact != null ? (
+                        <span className={`font-medium ${(() => {
+                          const pi = parseFloat(priceImpact);
+                          if (pi < 1) return 'text-green-400';
+                          if (pi < 5) return 'text-yellow-400';
+                          if (pi < 15) return 'text-orange-400';
+                          return 'text-red-400';
+                        })()}`}>
+                          {priceImpact}%
+                        </span>
+                      ) : (
+                        <span className="text-gray-500">—</span>
+                      )}
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-500">Slippage</span>
@@ -1495,7 +1684,7 @@ export default function SwapPage() {
                       <span className="text-gray-500">Route</span>
                       <div className="flex items-center gap-1.5">
                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: activeChain.color }} />
-                        <span className="font-medium" style={{ color: activeChain.color }}>{activeChain.dex}</span>
+                        <span className="font-medium" style={{ color: activeChain.color }}>{routeLabel}</span>
                       </div>
                     </div>
                   </div>
@@ -1503,6 +1692,15 @@ export default function SwapPage() {
               </div>
             )}
           </div>
+
+          {/* Quote failure banner — an unsupported pair or aggregator outage
+              must say so instead of leaving a mute 0 in the receive field. */}
+          {quoteError && !fetchingQuote && (
+            <div className="mt-3 flex items-center gap-2 bg-amber-500/10 border border-amber-500/25 rounded-xl px-3 py-2.5">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span className="text-xs text-amber-300">{quoteError}</span>
+            </div>
+          )}
 
           {/* Gasless Toggle */}
           {chain !== 'solana' && (
@@ -1675,39 +1873,11 @@ export default function SwapPage() {
               </div>
             )}
 
-            {/* §advanced-orders — Limit / DCA / Stop+TP order types are
-                implemented as full API + cron monitor stacks (/api/trading/
-                limit-orders, dca-bots, stop-loss). The UI module
-                (components/trading/OrderForm) was already built with 4
-                tabs but had no entry point. Surface it here as a
-                collapsible block so the user can place advanced orders
-                without leaving the swap page. */}
-            <div className="mt-3 nl-glass rounded-2xl overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setShowAdvancedOrders((v) => !v)}
-                className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
-                aria-expanded={showAdvancedOrders}
-              >
-                <div className="flex items-center gap-2">
-                  <Zap className="w-3.5 h-3.5 text-[#0066FF]" />
-                  <span className="text-xs text-gray-300 font-semibold">Advanced orders</span>
-                  <span className="text-[10px] text-gray-500">Limit · DCA · Stop · Take-profit</span>
-                </div>
-                <ChevronDown
-                  className={`w-3.5 h-3.5 text-gray-500 transition-transform ${showAdvancedOrders ? 'rotate-180' : ''}`}
-                />
-              </button>
-              {showAdvancedOrders && (
-                <div className="border-t border-white/[0.04] max-h-[600px] overflow-y-auto">
-                  <OrderForm
-                    chain={chain}
-                    tokenAddress={getTokenAddresses(fromToken, toToken, chain).buyToken}
-                    tokenSymbol={toToken}
-                  />
-                </div>
-              )}
-            </div>
+            {/* Advanced orders (Limit / DCA / Stop) removed from the swap
+                page per owner direction 2026-07-03 — the backend stacks
+                (/api/trading/limit-orders, dca-bots, stop-loss) stay live
+                for the trading suite; the swap surface stays a clean
+                market-swap flow. */}
           </div>
 
           {hasQuote && (
@@ -1728,7 +1898,7 @@ export default function SwapPage() {
                 <div className="flex-1 mx-4 flex items-center">
                   <div className="flex-1 border-t border-dashed border-[#1a1f2e]" />
                   <div className="mx-2 px-2.5 py-1 rounded-lg text-[10px] font-bold border border-white/[0.06]" style={{ backgroundColor: activeChain.color + '15', color: activeChain.color }}>
-                    {activeChain.dex}
+                    {routeLabel}
                   </div>
                   <div className="flex-1 border-t border-dashed border-[#1a1f2e]" />
                 </div>
@@ -1746,7 +1916,7 @@ export default function SwapPage() {
 
           <div className="mt-6 flex items-center justify-center gap-1.5 text-gray-600">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: activeChain.color }} />
-            <span className="text-[11px]">Powered by {activeChain.dex}</span>
+            <span className="text-[11px]">Routed via {routeLabel} aggregation</span>
           </div>
         </div>
       </div>

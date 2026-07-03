@@ -28,9 +28,14 @@ const ALCHEMY_HOSTS: Record<string, string> = {
 // transfer_in/out + sell legs), so the per-tick count is modest. A wall-clock
 // budget caps the run well under the dispatcher's 60s abort — the timeouts that
 // were paging Sentry came from this loop occasionally overrunning.
-const WHALES_PER_TICK = 14;
-const POOL = 5;
-const TIME_BUDGET_MS = 45_000;
+// Freshness: at 14/tick in the half-hourly group a 500+ whale directory took
+// ~18h to fully re-poll. Raised the per-tick ceiling + concurrency + budget so
+// the cycle is roughly ~3× faster while the wall-clock budget still caps the
+// run under the dispatcher's 60s abort. (A further win — moving this handler
+// to a faster dispatch cadence — is the owner's call; noted in the audit TODO.)
+const WHALES_PER_TICK = 40;
+const POOL = 8;
+const TIME_BUDGET_MS = 52_000;
 
 interface AlchemyAssetTransfer {
   hash: string;

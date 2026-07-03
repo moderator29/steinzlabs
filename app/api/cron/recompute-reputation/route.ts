@@ -19,8 +19,12 @@ import { logCronExecution } from '../_shared';
 export const maxDuration = 300;
 
 export async function GET(req: NextRequest) {
-  const secret = req.headers.get('x-cron-secret') ?? req.nextUrl.searchParams.get('secret');
-  if (secret !== process.env.CRON_SECRET) {
+  // The daily dispatcher authenticates with `Authorization: Bearer <secret>`;
+  // this route previously only accepted x-cron-secret/?secret, so it never
+  // actually ran on schedule. Accept all three forms.
+  const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+  const secret = bearer || req.headers.get('x-cron-secret') || req.nextUrl.searchParams.get('secret');
+  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
   const startedAt = Date.now();

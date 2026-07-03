@@ -191,6 +191,12 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
         launchpads_allowed: protectedLaunchpads.length ? protectedLaunchpads : null,
         trigger_whale_address: trigger === 'whale_buy' ? (normalizeAddress(whaleAddress.trim()) ?? whaleAddress.trim()) : null,
         trigger_price_target: trigger === 'price_target' ? Number(priceTarget) : null,
+        // The target token + direction were never persisted, so the cron had
+        // nothing to evaluate. "Buy When ≤" ⇒ direction 'below'.
+        trigger_token_address: trigger === 'price_target'
+          ? (normalizeAddress(tokenAddress.trim()) ?? tokenAddress.trim())
+          : null,
+        trigger_price_direction: trigger === 'price_target' ? 'below' : null,
         amount_per_snipe_usd: amountUsd,
         max_slippage_bps: Math.round(slippagePct * 100),
         priority_fee_native: priorityFee,

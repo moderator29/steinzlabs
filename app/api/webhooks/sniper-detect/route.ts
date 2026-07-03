@@ -60,6 +60,26 @@ function verifyHelius(authHeader: string | null): boolean {
   return authHeader === secret;
 }
 
+// Alchemy sends network slugs like ETH_MAINNET / BASE_MAINNET / MATIC_MAINNET.
+// Lower-casing alone yields 'eth_mainnet', which never matches the sniper's
+// canonical 'ethereum'/'bsc'/'base' slugs — so the entire low-latency webhook
+// matching path was structurally dead. Map to canonical ids.
+const ALCHEMY_NETWORK_TO_CHAIN: Record<string, string> = {
+  eth_mainnet: 'ethereum',
+  base_mainnet: 'base',
+  matic_mainnet: 'polygon',
+  arb_mainnet: 'arbitrum',
+  opt_mainnet: 'optimism',
+  avax_mainnet: 'avalanche',
+  bnb_mainnet: 'bsc',
+};
+
+function canonicalAlchemyChain(network: unknown): string {
+  if (typeof network !== 'string') return 'ethereum';
+  const lower = network.toLowerCase();
+  return ALCHEMY_NETWORK_TO_CHAIN[lower] ?? lower;
+}
+
 function normaliseAlchemy(body: unknown): NormalisedEvent | null {
   if (!body || typeof body !== 'object') return null;
   const b = body as Record<string, unknown>;
@@ -70,7 +90,7 @@ function normaliseAlchemy(body: unknown): NormalisedEvent | null {
   const a = activity as Record<string, unknown>;
   return {
     provider: 'alchemy',
-    chain: typeof ev.network === 'string' ? String(ev.network).toLowerCase() : 'ethereum',
+    chain: canonicalAlchemyChain(ev.network),
     tokenAddress: typeof a.rawContract === 'object' && a.rawContract && 'address' in (a.rawContract as object)
       ? String((a.rawContract as { address: string }).address).toLowerCase()
       : null,
