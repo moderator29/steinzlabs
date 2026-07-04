@@ -134,6 +134,16 @@ export interface DeployerHistoryResult {
   history: DeployerRugHistory;
 }
 
+// Cheap deployer resolution for EVM chains (single getcontractcreation call),
+// so the route can check the per-deployer cache BEFORE running the expensive
+// full-history scan. Returns null for chains where resolution isn't cheaply
+// separable (e.g. Solana, where resolving already fetches history).
+export async function resolveDeployer(chain: string, token: string): Promise<string | null> {
+  const lower = chain.toLowerCase();
+  if (lower in ETHERSCAN_CHAINID) return fetchEvmDeployer(lower as EvmChain, token);
+  return null;
+}
+
 export async function fetchAndScoreDeployerHistory(chain: string, token: string): Promise<DeployerHistoryResult | null> {
   const lower = chain.toLowerCase();
   if (lower === 'solana') {
