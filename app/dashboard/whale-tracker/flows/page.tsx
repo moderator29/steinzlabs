@@ -7,6 +7,7 @@
 // per-token buy/sell split and honest data.
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Loader2, TrendingUp, TrendingDown, Users, RefreshCw, Waves } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { ChainLogo } from '@/components/common/ChainLogo';
@@ -109,7 +110,7 @@ export default function SmartMoneyFlowsPage() {
           const acc = f.direction === 'accumulating';
           const barPct = Math.max(4, Math.round((Math.abs(f.net) / maxNet) * 100));
           return (
-            <div key={`${f.symbol}-${f.chain}`} className="nl-card rounded-xl p-3">
+            <Link key={`${f.symbol}-${f.chain}`} href={`/dashboard/whale-tracker/token?q=${encodeURIComponent(f.tokenAddress || f.symbol)}`} className="block nl-card rounded-xl p-3 hover:border-[#0066FF]/40 transition-colors">
               <div className="flex items-center gap-3">
                 <ChainLogo chain={f.chain} className="w-5 h-5 shrink-0" />
                 <div className="min-w-0 flex-1">
@@ -138,7 +139,7 @@ export default function SmartMoneyFlowsPage() {
               <div className="mt-2 h-0.5 rounded-full bg-white/[0.04]">
                 <div className={`h-full rounded-full ${acc ? 'bg-[#10B981]/60' : 'bg-[#FF1744]/60'}`} style={{ width: `${barPct}%` }} />
               </div>
-            </div>
+            </Link>
           );
         })}
       </div>
