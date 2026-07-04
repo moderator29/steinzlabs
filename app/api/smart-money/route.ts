@@ -2,6 +2,7 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { searchPairs } from '@/lib/services/dexscreener';
 import type { DexPair } from '@/lib/services/dexscreener';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY;
 
@@ -20,7 +21,10 @@ export interface SmartWallet {
   lastActive: string;
   rank: number;
   tags: string[];
-  winRate: number;
+  // null = win rate genuinely unknown for this wallet (e.g. derived from raw
+  // transfer/pair data with no trade-outcome history). The UI renders "—",
+  // never a misleading "0%".
+  winRate: number | null;
   pnl: string;
   pnlChange: number;
   trades: number;
@@ -29,6 +33,10 @@ export interface SmartWallet {
   archetype: WalletArchetype;
   weeklyPnlChange: number; // % change vs prior week
   isRiser: boolean;        // top mover this week
+  // Dune-sourced smart-money score (0-100), when the wallet is in the
+  // dune_smart_money_score surface. Independent, on-chain-derived signal shown
+  // alongside our own whale_score.
+  duneScore?: number | null;
 }
 
 export interface ConvergenceSignal {
@@ -53,6 +61,7 @@ export interface SmartTrade {
   amount: string;
   time: string;
   chain: string;
+  wallet?: string;
 }
 
 function shortenAddress(addr: string): string {
@@ -170,7 +179,7 @@ async function getWalletsFromAlchemy(): Promise<SmartWallet[]> {
           : 'recent',
         rank: i + 1,
         tags: label.includes('Binance') || label.includes('Coinbase') ? ['CEX', 'Exchange'] : ['Whale', 'DeFi'],
-        winRate: 0,   // P&L win rate requires trade outcome data unavailable from transfer history
+        winRate: null,   // unknown: raw transfer history carries no trade outcomes
         pnl: 'N/A',
         pnlChange: 0,
         trades: w.trades.length,
@@ -255,7 +264,7 @@ async function getWalletsFromDexScreener(): Promise<SmartWallet[]> {
         lastActive: '< 1h ago',
         rank: i + 1,
         tags,
-        winRate: 0,   // requires trade outcome history
+        winRate: null,   // unknown: pair data carries no per-wallet trade outcomes
         pnl: priceChange !== 0 ? `${priceChange >= 0 ? '+' : ''}${formatVolume(volume24h * Math.abs(priceChange) / 100)}` : 'N/A',
         pnlChange: parseFloat(priceChange.toFixed(1)),
         trades: txns24h,
@@ -293,57 +302,224 @@ async function getRecentMovesFromDexScreener(): Promise<SmartTrade[]> {
   } catch { return []; }
 }
 
+// ─── Primary source: the real curated `whales` dataset ─────────────────────
+//
+// The Alchemy/DexScreener derivations below have NO trade-outcome history, so
+// they can't produce a real win rate or P&L (they hardcoded 0, which surfaced
+// as a misleading "0% Win" on every card). The `whales` table is the platform's
+// curated smart-money dataset — 550+ wallets with real win_rate, whale_score,
+// realized P&L, archetype and hold time, refreshed by the metrics cron. Prefer
+// it; the raw-derivation path only runs if the table is somehow empty.
+
+const CHAIN_LABEL: Record<string, string> = {
+  ethereum: 'ETH', solana: 'SOL', bsc: 'BSC', base: 'BASE',
+  arbitrum: 'ARB', optimism: 'OP', polygon: 'MATIC', avalanche: 'AVAX', ton: 'TON',
+};
+
+// Map the whales table's free-text archetype to the UI enum. Unknown text
+// falls through to the heuristic detector so the badge is always populated.
+function normalizeArchetype(text: string | null, winRate: number, trades: number, pnlChange: number, avgHold: string): WalletArchetype {
+  const t = (text ?? '').toLowerCase();
+  if (t.includes('diamond')) return 'DIAMOND_HANDS';
+  if (t.includes('scalp')) return 'SCALPER';
+  if (t.includes('degen')) return 'DEGEN';
+  if (t.includes('follow')) return 'WHALE_FOLLOWER';
+  if (t.includes('hold') || t.includes('treasury') || t.includes('institution') || t.includes('fund')) return 'HOLDER';
+  if (t.includes('inactive')) return 'INACTIVE';
+  if (t.includes('new')) return 'NEW_WALLET';
+  return detectArchetype(winRate, trades, pnlChange, avgHold);
+}
+
+function formatHold(hours: number | null): string {
+  if (hours == null || !isFinite(hours) || hours <= 0) return 'Unknown';
+  if (hours >= 24) return `${Math.round(hours / 24)}d`;
+  return `${Math.round(hours)}h`;
+}
+
+function signedUsd(v: number): string {
+  const sign = v >= 0 ? '+' : '-';
+  return `${sign}${formatVolume(Math.abs(v))}`;
+}
+
+interface WhaleRow {
+  address: string; chain: string; label: string | null; entity_type: string | null;
+  win_rate: number | null; whale_score: number | null;
+  pnl_7d_usd: number | null; pnl_30d_usd: number | null;
+  portfolio_value_usd: number | null; volume_7d_usd: number | null;
+  trade_count_30d: number | null; avg_hold_hours: number | null;
+  archetype: string | null; verified: boolean | null; last_active_at: string | null;
+}
+
+function activityAction(raw: string | null): string {
+  const a = (raw ?? '').toLowerCase();
+  if (a.includes('buy') || a === 'transfer_in') return 'Bought';
+  if (a.includes('sell') || a === 'transfer_out') return 'Sold';
+  if (a.includes('swap')) return 'Swap';
+  return 'Transfer';
+}
+
+async function getWalletsFromWhales(): Promise<{ wallets: SmartWallet[]; recentMoves: SmartTrade[] }> {
+  const admin = getSupabaseAdmin();
+  const { data: rows, error } = await admin
+    .from('whales')
+    .select('address, chain, label, entity_type, win_rate, whale_score, pnl_7d_usd, pnl_30d_usd, portfolio_value_usd, volume_7d_usd, trade_count_30d, avg_hold_hours, archetype, verified, last_active_at')
+    .eq('is_active', true)
+    .order('whale_score', { ascending: false, nullsFirst: false })
+    .limit(40);
+  if (error || !rows || rows.length === 0) return { wallets: [], recentMoves: [] };
+
+  const whales = rows as WhaleRow[];
+  const addresses = whales.map((w) => w.address);
+
+  // Independent Dune smart-money scores for these wallets (0-100), plus Dune's
+  // own win-rate — used to fill our win_rate gaps and shown as a second signal.
+  const duneMap = new Map<string, { score: number | null; win_rate_pct: number | null }>();
+  try {
+    const { data: duneRows } = await getSupabaseAdmin()
+      .from('dune_smart_money_score')
+      .select('wallet_address, chain, score, win_rate_pct')
+      .in('wallet_address', addresses);
+    for (const d of (duneRows ?? []) as Array<{ wallet_address: string; chain: string; score: number | null; win_rate_pct: number | null }>) {
+      const row = { score: d.score != null ? Number(d.score) : null, win_rate_pct: d.win_rate_pct != null ? Number(d.win_rate_pct) : null };
+      duneMap.set(`${d.wallet_address}:${d.chain}`, row);
+      duneMap.set(`${d.wallet_address.toLowerCase()}:${d.chain}`, row); // EVM case-insensitive lookup
+    }
+  } catch { /* Dune surface optional — leaderboard still renders */ }
+
+  // One query for recent activity across all listed whales; grouped per wallet.
+  const { data: acts } = await admin
+    .from('whale_activity')
+    .select('whale_address, chain, action, token_symbol, value_usd, timestamp')
+    .in('whale_address', addresses)
+    .order('timestamp', { ascending: false })
+    .limit(600);
+
+  const byWallet = new Map<string, SmartTrade[]>();
+  const recentMoves: SmartTrade[] = [];
+  for (const a of (acts ?? []) as Array<{ whale_address: string; chain: string; action: string | null; token_symbol: string | null; value_usd: number | null; timestamp: string }>) {
+    const trade: SmartTrade = {
+      action: activityAction(a.action),
+      token: a.token_symbol || 'TOKEN',
+      amount: formatVolume(Number(a.value_usd ?? 0)),
+      time: a.timestamp ? timeAgo(a.timestamp) : 'recent',
+      chain: CHAIN_LABEL[a.chain] ?? a.chain?.toUpperCase().slice(0, 4) ?? 'ETH',
+    };
+    const list = byWallet.get(a.whale_address) ?? [];
+    if (list.length < 3) { list.push(trade); byWallet.set(a.whale_address, list); }
+    if (recentMoves.length < 12) recentMoves.push({ ...trade, wallet: shortenAddress(a.whale_address) });
+  }
+
+  const wallets: SmartWallet[] = whales.map((w, i) => {
+    const dune = duneMap.get(`${w.address}:${w.chain}`) ?? duneMap.get(`${w.address.toLowerCase()}:${w.chain}`) ?? null;
+    // Prefer our curated win_rate; fall back to Dune's when we don't have one.
+    const winRateRaw = w.win_rate ?? dune?.win_rate_pct ?? null;
+    const winRate = winRateRaw != null ? Math.round(Number(winRateRaw)) : null;
+    const trades = w.trade_count_30d ?? 0;
+    const portfolio = Number(w.portfolio_value_usd ?? 0);
+    const pnl7 = Number(w.pnl_7d_usd ?? 0);
+    const pnl30 = Number(w.pnl_30d_usd ?? 0);
+    // PnL% = 7d realized P&L as a share of portfolio value (a real, bounded
+    // number), not a fabricated price-change proxy.
+    const pnlChange = portfolio > 0 ? Number(((pnl7 / portfolio) * 100).toFixed(1)) : 0;
+    const totalVolume = Number(w.volume_7d_usd ?? 0) || portfolio;
+    const avgHold = formatHold(w.avg_hold_hours != null ? Number(w.avg_hold_hours) : null);
+    const label = w.label || `Whale ${i + 1}`;
+    const chainLabel = CHAIN_LABEL[w.chain] ?? w.chain?.toUpperCase().slice(0, 4) ?? 'ETH';
+    const tags: string[] = [chainLabel];
+    if (w.entity_type) tags.push(w.entity_type.charAt(0).toUpperCase() + w.entity_type.slice(1));
+    if (w.verified) tags.push('Verified');
+    if ((w.whale_score ?? 0) >= 90) tags.push('Elite');
+
+    return {
+      id: w.address,
+      address: w.address,
+      shortAddress: shortenAddress(w.address),
+      name: label,
+      totalVolume,
+      totalVolumeStr: formatVolume(totalVolume),
+      recentTrades: byWallet.get(w.address) ?? [],
+      chain: w.chain,
+      chains: [chainLabel],
+      lastActive: w.last_active_at ? timeAgo(w.last_active_at) : 'recent',
+      rank: i + 1,
+      tags,
+      winRate,
+      pnl: pnl30 !== 0 ? signedUsd(pnl30) : 'N/A',
+      pnlChange,
+      trades,
+      avgHold,
+      bestTrade: pnl30 > 0 ? formatVolume(pnl30) : 'N/A',
+      archetype: normalizeArchetype(w.archetype, winRate ?? 0, trades, pnlChange, avgHold),
+      weeklyPnlChange: pnlChange,
+      isRiser: i < 3 && pnl7 > 0,
+      duneScore: dune?.score ?? null,
+    };
+  });
+
+  return { wallets, recentMoves };
+}
+
+// Real convergence straight from the curated smart_money_convergence table —
+// the same signal the Convergence Radar uses. Replaces the old naive grouping
+// that counted shared token SYMBOLS across derived recentTrades (which was
+// empty for the transfer-only Alchemy wallets).
+async function getConvergenceFromTable(): Promise<ConvergenceSignal[]> {
+  try {
+    const admin = getSupabaseAdmin();
+    const { data } = await admin
+      .from('smart_money_convergence')
+      .select('token_symbol, token_address, chain, wallet_count, total_value_usd')
+      .eq('is_active', true)
+      .gte('wallet_count', 2)
+      .order('wallet_count', { ascending: false })
+      .limit(5);
+    return (data ?? []).map((c: { token_symbol: string | null; token_address: string; chain: string; wallet_count: number | null; total_value_usd: number | null }) => ({
+      token: c.token_address,
+      symbol: c.token_symbol || `${c.token_address.slice(0, 6)}…`,
+      walletCount: c.wallet_count ?? 0,
+      totalVolume: formatVolume(Number(c.total_value_usd ?? 0)),
+      timeWindow: '24h',
+    }));
+  } catch { return []; }
+}
+
 export async function GET() {
   try {
-    const [alchemyWallets, dexWallets, recentMoves] = await Promise.all([
-      getWalletsFromAlchemy(),
-      getWalletsFromDexScreener(),
-      getRecentMovesFromDexScreener(),
+    // Primary: curated whales dataset (real win rate / P&L / archetype).
+    const [{ wallets: whaleWallets, recentMoves: whaleMoves }, convergence] = await Promise.all([
+      getWalletsFromWhales(),
+      getConvergenceFromTable(),
     ]);
 
-    // Prefer Alchemy wallets if available, supplement with DexScreener
-    const wallets = alchemyWallets.length > 0
-      ? [...alchemyWallets, ...dexWallets.slice(0, 5)]
-      : dexWallets;
+    let wallets = whaleWallets;
+    let recentMoves = whaleMoves;
+    let source = 'whales';
 
-    // Re-rank after merge
-    wallets.forEach((w, i) => { w.rank = i + 1; });
-
-    // Detect convergence: multiple wallets recently bought same token
-    const tokenCounts: Record<string, { count: number; vol: number; symbol: string }> = {};
-    for (const w of wallets) {
-      for (const t of w.recentTrades) {
-        if (t.action === 'Bought' || t.action === 'Buy') {
-          if (!tokenCounts[t.token]) tokenCounts[t.token] = { count: 0, vol: 0, symbol: t.token };
-          tokenCounts[t.token].count++;
-          tokenCounts[t.token].vol += w.totalVolume * 0.1;
-        }
-      }
+    // Fallback: only if the curated table is empty, derive from raw
+    // Alchemy/DexScreener data (win rate unknown → null, shown as "—").
+    if (wallets.length === 0) {
+      const [alchemyWallets, dexWallets, dexMoves] = await Promise.all([
+        getWalletsFromAlchemy(),
+        getWalletsFromDexScreener(),
+        getRecentMovesFromDexScreener(),
+      ]);
+      wallets = alchemyWallets.length > 0 ? [...alchemyWallets, ...dexWallets.slice(0, 5)] : dexWallets;
+      wallets.forEach((w, i) => { w.rank = i + 1; });
+      recentMoves = dexMoves;
+      source = alchemyWallets.length > 0 ? 'alchemy+dex' : 'dexscreener';
     }
-    const convergence: ConvergenceSignal[] = Object.entries(tokenCounts)
-      .filter(([, v]) => v.count >= 2)
-      .sort((a, b) => b[1].count - a[1].count)
-      .slice(0, 3)
-      .map(([token, v]) => ({
-        token,
-        symbol: v.symbol,
-        walletCount: v.count,
-        totalVolume: formatVolume(v.vol),
-        timeWindow: '24h',
-      }));
 
-    // Weekly risers
+    // Weekly risers — top positive movers.
     const weeklyRisers = [...wallets]
-      .filter(w => w.isRiser)
-      .sort((a, b) => b.weeklyPnlChange - a.weeklyPnlChange)
+      .filter((w) => w.isRiser)
+      .sort((a, b) => (b.weeklyPnlChange ?? 0) - (a.weeklyPnlChange ?? 0))
       .slice(0, 3);
 
     return NextResponse.json(
-      { wallets, recentMoves, convergence, weeklyRisers, timestamp: Date.now(), source: alchemyWallets.length > 0 ? 'alchemy+dex' : 'dexscreener' },
+      { wallets, recentMoves, convergence, weeklyRisers, timestamp: Date.now(), source },
       { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30' } }
     );
-  } catch (error) {
-
+  } catch {
     return NextResponse.json({ wallets: [], recentMoves: [], timestamp: Date.now(), error: 'Failed to fetch smart money data' }, { status: 500 });
   }
 }
