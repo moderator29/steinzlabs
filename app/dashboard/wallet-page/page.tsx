@@ -29,6 +29,7 @@ import { BiometricUnlockRow } from '@/components/wallet/BiometricUnlockRow';
 import { encryptPrivateKey, decryptPrivateKey, verifyWalletPassword } from '@/lib/wallet/encryption';
 import { normalizeAddress, isEvmChain, isSolanaAddress, addressesEqual } from '@/lib/utils/addressNormalize';
 import { getOnrampUrl } from '@/lib/wallet/onramp';
+import { setActiveBuiltinWallet } from '@/lib/wallet/builtinWallet';
 import { DappConnect } from '@/components/wallet/DappConnect';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { walletHowItWorks } from '@/lib/howItWorks/content/wallet-page';
@@ -312,6 +313,13 @@ export default function WalletPage() {
   const [hydrated, setHydrated] = useState(false);
   const [activeWallet, setActiveWallet] = useState<StoredWallet | null>(null);
   const [walletData, setWalletData] = useState<WalletData | null>(null);
+  // Keep the canonical active-wallet key in sync so every trading surface
+  // (swap / sniper / whale / market-maker / view-proof) auto-detects this
+  // built-in wallet and pendingSigner signs with the same one. Fixes the
+  // "No Naka Wallet found — create a wallet" re-prompt (batch 3, IMG_1933).
+  useEffect(() => {
+    if (activeWallet?.address) setActiveBuiltinWallet(activeWallet.address);
+  }, [activeWallet?.address]);
   const [loading, setLoading] = useState(false);
   const [customTokens, setCustomTokens] = useState<string[]>([]);
   // Enabled chains — persisted per-device. Default is the 4 native
