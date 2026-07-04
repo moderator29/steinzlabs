@@ -5,7 +5,7 @@
 // query (never raw SQL); the server runs it over allowlisted public tables;
 // Claude narrates the actual rows. The signature "data hub you can talk to".
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Sparkles, ArrowUp, Loader2 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { AiInsightCard } from '@/components/ai/AiInsightCard';
@@ -42,6 +42,16 @@ export default function AskChainPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AskResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Auto-run a question arriving from the landing hero prompt (?q=…). Read from
+  // window to avoid the useSearchParams Suspense requirement.
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search).get('q');
+      if (q && q.trim()) { setQuestion(q); ask(q); }
+    } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const ask = async (q: string) => {
     const query = q.trim();

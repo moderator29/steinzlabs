@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, BookOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import SteinzLogo from '@/components/ui/SteinzLogo';
+import { AskChainHero } from '@/components/landing/AskChainHero';
 
 function easeOutExpo(t: number) { return t === 1 ? 1 : 1 - Math.pow(2, -10 * t); }
 
@@ -120,6 +121,10 @@ export function HeroLeft() {
           <BookOpen className="w-[15px] h-[15px]" /> Read Docs
         </Link>
       </div>
+
+      {/* Live "Ask the Chain" hero prompt — the signature AI surface, right
+          on the homepage so visitors feel the product before they sign up. */}
+      <AskChainHero />
 
       {/* Stats bar */}
       <StatBar />
