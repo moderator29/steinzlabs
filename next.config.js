@@ -54,6 +54,20 @@ const nextConfig = {
     minimumCacheTTL: 3600,
   },
   redirects: async () => [
+    // Canonicalize to the bare apex domain. WalletConnect's Verify API (via
+    // Reown/AppKit) checks the served origin against the Reown-dashboard domain
+    // allowlist, which only lists https://nakalabs.xyz (no www). Without this
+    // redirect, a request landing on www.nakalabs.xyz would serve the app there,
+    // metadata.url would resolve to the www origin, and WalletConnect Verify
+    // would flag an origin mismatch — silently disabling "Open" for every wallet
+    // (the modal opens but the deep-link button stays dead). A permanent
+    // redirect closes this off at the edge, before any client JS runs.
+    {
+      source: '/:path*',
+      has: [{ type: 'host', value: 'www.nakalabs.xyz' }],
+      destination: 'https://nakalabs.xyz/:path*',
+      permanent: true,
+    },
     { source: '/whitepaper', destination: '/docs', permanent: false },
     // Several surfaces (portfolio connect, onboarding, tour, email, command
     // palette) link to /dashboard/settings, which has no page and fell through
