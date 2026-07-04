@@ -71,6 +71,7 @@ const NAV_CATEGORIES: NavCategory[] = [
       { icon: Trophy, label: 'Smart Money', path: '/dashboard/smart-money' },
       { icon: Shield, label: 'Wash Trade Radar', path: '/dashboard/wash-radar', badge: 'NEW' },
       { icon: Target, label: 'MEV Radar', path: '/dashboard/mev-radar', badge: 'NEW' },
+      { icon: Search, label: 'Fresh Money Detector', path: '/dashboard/fresh-money', badge: 'NEW' },
       { icon: Radio, label: 'Network Metrics', path: '/dashboard/network-metrics' },
       { icon: Fish, label: 'Whale Tracker', path: '/dashboard/whale-tracker' },
       { icon: Circle, label: 'Bubble Map', path: '/dashboard/bubble-map', badge: 'NEW' },
