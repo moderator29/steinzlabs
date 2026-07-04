@@ -25,9 +25,15 @@ const ENDPOINTS = [
 ];
 
 export async function GET(req: NextRequest) {
-  const ok = req.headers.get('x-migration-secret') === process.env.ADMIN_MIGRATION_SECRET
-    || req.headers.get('authorization') === `Bearer ${process.env.CRON_SECRET}`;
-  if (!ok) return NextResponse.json({ error: 'unauthorized' }, { status: 403 });
+  // Accept the secret via header OR ?secret= query param so it can be run
+  // straight from a phone browser (one-time admin validation). Matches either
+  // ADMIN_MIGRATION_SECRET or CRON_SECRET — whichever you have set in Vercel.
+  const provided = req.headers.get('x-migration-secret')
+    || req.nextUrl.searchParams.get('secret')
+    || (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+  const ok = (!!process.env.ADMIN_MIGRATION_SECRET && provided === process.env.ADMIN_MIGRATION_SECRET)
+    || (!!process.env.CRON_SECRET && provided === process.env.CRON_SECRET);
+  if (!ok) return NextResponse.json({ error: 'unauthorized — append ?secret=<your ADMIN_MIGRATION_SECRET or CRON_SECRET>' }, { status: 403 });
 
   if (!twGatewayConfigured()) {
     return NextResponse.json({
