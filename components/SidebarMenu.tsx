@@ -46,6 +46,7 @@ const NAV_CATEGORIES: NavCategory[] = [
       { icon: ScanSearch, label: 'Token X-Ray', path: '/dashboard/token-xray', badge: 'NEW' },
       { icon: PieChart, label: 'Portfolio', path: '/dashboard/portfolio', badge: 'NEW' },
       { icon: Bell, label: 'Notifications', path: '/dashboard/notifications' },
+      { icon: Bell, label: 'Alerts Center', path: '/dashboard/alerts-center', badge: 'NEW' },
     ],
   },
   {
