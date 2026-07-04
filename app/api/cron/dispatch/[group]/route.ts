@@ -34,6 +34,9 @@ const GROUPS: Record<string, string[]> = {
     'whale-activity-poll', 'whale-activity-price', 'bitquery-activity-poll', 'dca-executor', 'pending-trades-cleanup',
     'receipt-reconciliation', 'notification-retry', 'telegram-retry-failures',
     'pumpfun-velocity-poll', 'cult-resolve-proposals', 'cult-ape-resolve', 'health-watch',
+    // Free MEV fallback (ZeroMEV, Ethereum) — scans recent blocks into a rolling
+    // 30d per-victim aggregate for MEV Radar when Dune's MEV surface is empty.
+    'mev-backfill-zeromev',
     // Crypto tier payments — watches the treasury for incoming USDC and
     // grants the tier on match. Exits instantly when no payments are pending.
     'payment-verify',

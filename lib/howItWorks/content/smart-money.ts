@@ -10,6 +10,7 @@ export const smartMoneyHowItWorks: HowItWorksContent = {
     'A convergence signal fires when two or more tracked wallets buy the same token in the window, surfacing in a banner with the symbol, the number of wallets, and the combined volume, and the Weekly Risers panel highlights the strongest recent movers by weekly change.',
     'The Top Performers cards spotlight the leading wallets by win rate, the Recent Moves rail streams the latest buys, sells, and swaps with token, size, and chain, and known exchange addresses such as Binance and Coinbase deposits are labeled so routine custodial flow is easy to recognize.',
     'The leaderboard refreshes itself about once a minute with a live timestamp, and every new convergence signal raises an in-app notification so you do not need to keep the page open to catch a fresh cluster.',
+'The leaderboard is now ranked by an independent Dune smart-money score (0 to 100), computed on-chain across Ethereum, BSC, Polygon, Arbitrum, Optimism, Base, and Avalanche, and each wallet is then enriched with our own profile for it, its name, archetype, verified badge, and recent moves, wherever we track it. The score, its win rate, and its profit-and-loss use a transparent ninety-day cash-flow basis: dollars received when a wallet sells a token minus dollars paid when it buys, with win rate being the share of token positions that came out net positive. This is a clear, auditable measure rather than exchange-style lot-by-lot accounting, so treat it as a directional edge signal, not a tax statement. When the Dune surface has not refreshed yet, the board falls back to our curated whale directory so it is never empty.',
   ],
   howToUse: [
     'Open the Leaderboard tab to see ranked wallets along with the headline stats for total wallets tracked, combined volume across them, and average win rate.',
@@ -27,6 +28,11 @@ export const smartMoneyHowItWorks: HowItWorksContent = {
     'Paper trading lets you pressure-test a copy strategy and build confidence on a wallet before committing any capital of your own.',
   ],
   whatsNew: [
+    {
+      date: 'July 2026',
+      tag: 'NEW',
+      text: 'The Dune smart-money score now spans seven chains, not just Ethereum, and its win rate and profit-and-loss are stated on a transparent ninety-day cash-flow basis so you know exactly what the number means.',
+    },
     {
       date: 'June 2026',
       tag: 'NEW',

@@ -34,7 +34,29 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const rows = (data ?? []) as AggRow[];
-  if (rows.length === 0) return NextResponse.json({ chain: chain ?? 'all', clusters: [] });
+
+  // FREE FALLBACK — when Dune has no cluster rows for this view, derive real
+  // convergence clusters from our own multi-chain whale_activity (a "cluster" =
+  // a token 3+ tracked whales are trading together in 24h). Multi-chain, no
+  // Dune needed. Same output shape.
+  if (rows.length === 0) {
+    const { data: conv } = await admin.rpc('whale_convergence_clusters', { p_chain: chain, p_hours: 24 });
+    const cRows = (conv ?? []) as Array<{ chain: string; token_address: string; token_symbol: string | null; member_count: number; total_volume_usd_24h: number; net_flow_usd_24h: number }>;
+    const clusters = cRows.map((r) => ({
+      seed: r.token_address,
+      chain: r.chain,
+      memberCount: r.member_count ?? 0,
+      volume24hUsd: Number(r.total_volume_usd_24h ?? 0),
+      netFlow24hUsd: Number(r.net_flow_usd_24h ?? 0),
+      label: r.token_symbol ? `$${r.token_symbol} convergence` : null,
+      archetype: 'token_convergence',
+      verified: false,
+    }));
+    return NextResponse.json({
+      chain: chain ?? 'all', clusters, source: 'whale_activity',
+      generatedAt: new Date().toISOString(),
+    }, { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } });
+  }
 
   // Label the seed address when it's a tracked whale.
   const seeds = rows.map((r) => r.cluster_id);

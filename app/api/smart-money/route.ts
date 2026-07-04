@@ -358,6 +358,77 @@ function activityAction(raw: string | null): string {
   return 'Transfer';
 }
 
+// ─── PRIMARY source: Dune's independent smart-money score ──────────────────
+// Nansen-style ranking: the leaderboard order comes from Dune's on-chain-derived
+// smart-money score (0-100, 90d cash-flow win-rate + realized P&L), and we
+// ENRICH each wallet with our own whale profile (name / archetype / verified /
+// recent moves) wherever we track it. Falls back to getWalletsFromWhales() only
+// when the Dune surface is empty (free-plan gap / not yet refreshed).
+async function getWalletsFromDune(): Promise<{ wallets: SmartWallet[]; recentMoves: SmartTrade[] } | null> {
+  const admin = getSupabaseAdmin();
+  const { data: duneRows, error } = await admin
+    .from('dune_smart_money_score')
+    .select('wallet_address, chain, score, win_rate_pct, realized_pnl_usd_90d, trade_count_90d, basis')
+    .order('score', { ascending: false, nullsFirst: false })
+    .limit(40);
+  if (error || !duneRows || duneRows.length === 0) return null;
+
+  const rows = duneRows as Array<{ wallet_address: string; chain: string; score: number | null; win_rate_pct: number | null; realized_pnl_usd_90d: number | null; trade_count_90d: number | null; basis: Record<string, unknown> | null }>;
+  const addresses = rows.map((r) => r.wallet_address);
+
+  // Enrich with our curated whale profiles + recent activity (both optional).
+  const [{ data: wl }, { data: acts }] = await Promise.all([
+    admin.from('whales').select('address, label, entity_type, archetype, verified, avg_hold_hours, portfolio_value_usd, last_active_at').in('address', addresses),
+    admin.from('whale_activity').select('whale_address, chain, action, token_symbol, value_usd, timestamp').in('whale_address', addresses).order('timestamp', { ascending: false }).limit(600),
+  ]);
+  const profile = new Map<string, { label: string | null; entity_type: string | null; archetype: string | null; verified: boolean | null; avg_hold_hours: number | null; portfolio_value_usd: number | null; last_active_at: string | null }>();
+  for (const w of (wl ?? []) as Array<{ address: string; label: string | null; entity_type: string | null; archetype: string | null; verified: boolean | null; avg_hold_hours: number | null; portfolio_value_usd: number | null; last_active_at: string | null }>) {
+    profile.set(w.address.toLowerCase(), w);
+  }
+
+  const byWallet = new Map<string, SmartTrade[]>();
+  const recentMoves: SmartTrade[] = [];
+  for (const a of (acts ?? []) as Array<{ whale_address: string; chain: string; action: string | null; token_symbol: string | null; value_usd: number | null; timestamp: string }>) {
+    const trade: SmartTrade = {
+      action: activityAction(a.action), token: a.token_symbol || 'TOKEN', amount: formatVolume(Number(a.value_usd ?? 0)),
+      time: a.timestamp ? timeAgo(a.timestamp) : 'recent', chain: CHAIN_LABEL[a.chain] ?? a.chain?.toUpperCase().slice(0, 4) ?? 'ETH',
+    };
+    const key = a.whale_address.toLowerCase();
+    const list = byWallet.get(key) ?? [];
+    if (list.length < 3) { list.push(trade); byWallet.set(key, list); }
+    if (recentMoves.length < 12) recentMoves.push({ ...trade, wallet: shortenAddress(a.whale_address) });
+  }
+
+  const wallets: SmartWallet[] = rows.map((r, i) => {
+    const p = profile.get(r.wallet_address.toLowerCase());
+    const winRate = r.win_rate_pct != null ? Math.round(Number(r.win_rate_pct)) : null;
+    const trades = r.trade_count_90d ?? 0;
+    const pnl90 = Number(r.realized_pnl_usd_90d ?? 0);
+    const vol90 = Number((r.basis?.volume_usd_90d as number) ?? 0) || Number(p?.portfolio_value_usd ?? 0);
+    const portfolio = Number(p?.portfolio_value_usd ?? 0);
+    const pnlChange = portfolio > 0 ? Number(((pnl90 / portfolio) * 100).toFixed(1)) : 0;
+    const chainLabel = CHAIN_LABEL[r.chain] ?? r.chain?.toUpperCase().slice(0, 4) ?? 'ETH';
+    const avgHold = formatHold(p?.avg_hold_hours != null ? Number(p.avg_hold_hours) : null);
+    const label = p?.label || shortenAddress(r.wallet_address);
+    const tags: string[] = [chainLabel];
+    if (p?.entity_type) tags.push(p.entity_type.charAt(0).toUpperCase() + p.entity_type.slice(1));
+    if (p?.verified) tags.push('Verified');
+    if ((r.score ?? 0) >= 85) tags.push('Elite');
+    return {
+      id: r.wallet_address, address: r.wallet_address, shortAddress: shortenAddress(r.wallet_address),
+      name: label, totalVolume: vol90, totalVolumeStr: formatVolume(vol90),
+      recentTrades: byWallet.get(r.wallet_address.toLowerCase()) ?? [],
+      chain: r.chain, chains: [chainLabel], lastActive: p?.last_active_at ? timeAgo(p.last_active_at) : 'recent',
+      rank: i + 1, tags, winRate,
+      pnl: pnl90 !== 0 ? signedUsd(pnl90) : 'N/A', pnlChange, trades, avgHold,
+      bestTrade: pnl90 > 0 ? formatVolume(pnl90) : 'N/A',
+      archetype: normalizeArchetype(p?.archetype ?? null, winRate ?? 0, trades, pnlChange, avgHold),
+      weeklyPnlChange: pnlChange, isRiser: i < 3 && pnl90 > 0, duneScore: r.score ?? null,
+    };
+  });
+  return { wallets, recentMoves };
+}
+
 async function getWalletsFromWhales(): Promise<{ wallets: SmartWallet[]; recentMoves: SmartTrade[] }> {
   const admin = getSupabaseAdmin();
   const { data: rows, error } = await admin
@@ -485,18 +556,26 @@ async function getConvergenceFromTable(): Promise<ConvergenceSignal[]> {
 
 export async function GET() {
   try {
-    // Primary: curated whales dataset (real win rate / P&L / archetype).
-    const [{ wallets: whaleWallets, recentMoves: whaleMoves }, convergence] = await Promise.all([
+    // PRIMARY: Dune's independent smart-money score (Nansen-style ranking),
+    // enriched with our profiles. Falls back to the curated whales dataset, then
+    // to raw Alchemy/DexScreener — so the board is always populated + honest.
+    const [dune, whaleFallback, convergence] = await Promise.all([
+      getWalletsFromDune(),
       getWalletsFromWhales(),
       getConvergenceFromTable(),
     ]);
 
-    let wallets = whaleWallets;
-    let recentMoves = whaleMoves;
-    let source = 'whales';
+    let wallets: SmartWallet[];
+    let recentMoves: SmartTrade[];
+    let source: string;
+    if (dune && dune.wallets.length > 0) {
+      wallets = dune.wallets; recentMoves = dune.recentMoves; source = 'dune';
+    } else {
+      wallets = whaleFallback.wallets; recentMoves = whaleFallback.recentMoves; source = 'whales';
+    }
 
-    // Fallback: only if the curated table is empty, derive from raw
-    // Alchemy/DexScreener data (win rate unknown → null, shown as "—").
+    // Fallback: only if both the Dune surface and curated table are empty,
+    // derive from raw Alchemy/DexScreener data (win rate unknown → null).
     if (wallets.length === 0) {
       const [alchemyWallets, dexWallets, dexMoves] = await Promise.all([
         getWalletsFromAlchemy(),

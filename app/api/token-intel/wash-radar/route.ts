@@ -1,6 +1,7 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { washTradeFallback } from '@/lib/services/washFallback';
 
 /**
  * Wash Trade Radar — fuses Dune's independent smart-money token flow with its
@@ -46,7 +47,25 @@ export async function GET(req: NextRequest) {
   const { data: flowData, error: flowErr } = await flowQ.limit(400);
   if (flowErr) return NextResponse.json({ error: flowErr.message }, { status: 500 });
   const flows = (flowData ?? []) as FlowRow[];
-  if (flows.length === 0) return NextResponse.json({ chain: chain ?? 'all', sort, tokens: [] });
+
+  // FREE FALLBACK — when Dune has no rows for this view (free Dune plan, or a
+  // chain Dune doesn't cover), compute a real wash signal from GeckoTerminal's
+  // public API (no key, all chains) so the radar is never empty. Identical
+  // output shape as the Dune path.
+  if (flows.length === 0) {
+    let fb = await washTradeFallback(chain);
+    if (!includeNoise) fb = fb.filter((t) => !t.symbol || !NOISE.has(t.symbol.toUpperCase()));
+    fb.sort((a, b) => {
+      if (sort === 'risk') return a.washScore - b.washScore || Math.abs(b.netInflowUsd) - Math.abs(a.netInflowUsd);
+      return Math.abs(b.netInflowUsd) - Math.abs(a.netInflowUsd);
+    });
+    return NextResponse.json({
+      chain: chain ?? 'all', sort, includeNoise,
+      source: 'geckoterminal',
+      tokens: fb.slice(0, 60),
+      generatedAt: new Date().toISOString(),
+    }, { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } });
+  }
 
   const addresses = Array.from(new Set(flows.map((f) => f.token_address)));
 

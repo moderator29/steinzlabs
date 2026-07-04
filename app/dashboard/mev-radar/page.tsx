@@ -74,6 +74,7 @@ export default function MevRadarPage() {
       <div className="text-center mb-4">
         <h1 className="text-2xl font-bold">The invisible tax on your trades</h1>
         <p className="text-slate-400 text-sm mt-1">How much wallets are bleeding to sandwich attacks and frontrunning — over 30 days.</p>
+        <p className="text-slate-600 text-[11px] mt-1.5">Measured from real on-chain sandwich &amp; frontrun attribution (Dune). Every figure traces to detected attacks — nothing is estimated.</p>
       </div>
 
       <form onSubmit={(e) => { e.preventDefault(); doLookup(input); }} className="nl-glass rounded-2xl p-2 flex items-center gap-2 mb-4">
@@ -104,8 +105,21 @@ export default function MevRadarPage() {
         </div>
       )}
 
+      {/* Board — honest empty state. MEV loss is populated from a Dune sandwich
+          dataset; sandwich attribution needs same-block attacker↔victim ordering,
+          so if that dataset isn't in the plan / hasn't indexed a chain yet the
+          board is legitimately empty rather than broken. */}
+      {!loading && board && !lookup && board.victims.length === 0 && (
+        <div className="nl-glass rounded-2xl p-6 text-center text-slate-400 text-sm">
+          <Sandwich className="w-8 h-8 mx-auto mb-3 text-slate-600" />
+          No measurable MEV loss recorded yet. MEV Radar reads on-chain sandwich
+          &amp; frontrun attribution from Dune — as that dataset indexes each chain,
+          victims appear here. Check a specific wallet above any time.
+        </div>
+      )}
+
       {/* Board */}
-      {!loading && board && !lookup && (
+      {!loading && board && !lookup && board.victims.length > 0 && (
         <>
           <div className="nl-glass rounded-xl p-3 mb-3 flex items-center justify-between">
             <span className="text-xs text-slate-400">Total tracked MEV loss (top 50)</span>
