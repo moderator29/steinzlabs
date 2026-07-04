@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 // Naka Labs brand icons — TrendingUp/Down swapped. ArrowRight + ShieldAlert stay on lucide.
 import { TrendingUp, TrendingDown } from "@/components/icons/brand";
 import { ArrowRight, ShieldAlert } from "lucide-react";
@@ -423,6 +424,12 @@ export default function PortfolioPage() {
               {label}
             </button>
           ))}
+          <Link
+            href="/dashboard/portfolio/smart-money"
+            className="ms-auto me-2 self-center inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-[#00C8FF] bg-[#0066FF]/10 border border-[#0066FF]/30 hover:border-[#0066FF]/50 transition-colors"
+          >
+            <TrendingUp className="w-3.5 h-3.5" /> Smart Money Overlap
+          </Link>
         </div>
 
         {tab === "holdings" && (
