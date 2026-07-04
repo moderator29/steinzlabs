@@ -69,6 +69,7 @@ const NAV_CATEGORIES: NavCategory[] = [
       { icon: Dna, label: 'DNA Analyzer', path: '/dashboard/dna-analyzer', badge: 'AI' },
       { icon: Search, label: 'Wallet Intelligence', path: '/dashboard/wallet-intelligence' },
       { icon: Link2, label: 'Wallet Clusters', path: '/dashboard/wallet-clusters' },
+      { icon: Network, label: 'Cluster Radar', path: '/dashboard/cluster-radar', badge: 'NEW' },
       { icon: TrendingUp, label: 'On-Chain Trends', path: '/dashboard/trends' },
       { icon: Trophy, label: 'Smart Money', path: '/dashboard/smart-money' },
       { icon: Shield, label: 'Wash Trade Radar', path: '/dashboard/wash-radar', badge: 'NEW' },
