@@ -73,7 +73,17 @@ export async function GET(
     }
   }
 
-  const resolved = await resolveWhaleLogo(address, chain);
+  // Pull the curated X handle (if any) so the resolver can use the whale's real
+  // X/Twitter avatar — the most recognizable image for a named figure.
+  let xHandle: string | null = null;
+  {
+    let hQuery = admin.from("whales").select("x_handle").eq("chain", chain);
+    hQuery = useIlike ? hQuery.ilike("address", addrKey) : hQuery.eq("address", addrKey);
+    const { data: hRow } = await hQuery.maybeSingle<{ x_handle: string | null }>();
+    xHandle = hRow?.x_handle ?? null;
+  }
+
+  const resolved = await resolveWhaleLogo(address, chain, xHandle);
 
   let updateQuery = admin
     .from("whales")
