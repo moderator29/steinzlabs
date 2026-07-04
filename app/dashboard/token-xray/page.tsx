@@ -106,6 +106,13 @@ export default function TokenXrayPage() {
         <button type="submit" disabled={loading || !input.trim()} className="px-4 py-2 rounded-xl nl-btn-neon text-sm font-semibold disabled:opacity-40">X-Ray</button>
       </form>
 
+      {/* Token-intelligence tools — the standalone boards this hub reads from. */}
+      <div className="flex flex-wrap gap-2 justify-center mb-5">
+        <Link href="/dashboard/wash-radar" className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white hover:border-[#0066FF]/40 transition-colors"><ShieldCheck className="w-3.5 h-3.5 text-[#00C8FF]" /> Wash Trade Radar</Link>
+        <Link href="/dashboard/fresh-money" className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white hover:border-[#0066FF]/40 transition-colors"><Sprout className="w-3.5 h-3.5 text-[#00C8FF]" /> Fresh Money</Link>
+        <Link href="/dashboard/mev-radar" className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white hover:border-[#0066FF]/40 transition-colors"><Radar className="w-3.5 h-3.5 text-[#00C8FF]" /> MEV Radar</Link>
+      </div>
+
       {error && <div className="nl-glass rounded-2xl p-4 text-center text-amber-300 text-sm mb-4">{error}</div>}
       {loading && <div className="flex items-center justify-center py-12 text-slate-400"><Loader2 className="w-6 h-6 animate-spin" /></div>}
 
