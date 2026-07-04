@@ -38,6 +38,10 @@ function buildScore(det: DetectorResult): { overallScore: number; riskFlags: str
     if (token.canTakeBackOwnership) { riskFlags.push('Owner can reclaim contract control'); overallScore -= 15; }
     if (token.ownerCanChangeBalance) { riskFlags.push('Owner can modify token balances'); overallScore -= 15; }
     if (token.selfDestruct) { riskFlags.push('Self-destruct function present'); overallScore -= 10; }
+    // Solana SPL authorities — labelled accurately (a freeze authority can block
+    // your transfers; it does NOT let anyone edit your balance).
+    if (token.freezable) { riskFlags.push('Freeze authority active: token accounts can be frozen'); overallScore -= 12; }
+    if (token.closable) { riskFlags.push('Token account can be closed by an authority'); overallScore -= 6; }
     if (token.externalCall) { riskFlags.push('External calls detected'); overallScore -= 5; }
     if (token.cannotBuy) { riskFlags.push('Tokens cannot be purchased'); overallScore -= 20; }
     if (token.cannotSellAll) { riskFlags.push('Cannot sell all tokens'); overallScore -= 15; }
@@ -297,6 +301,8 @@ export async function POST(req: NextRequest) {
       canTakeBackOwnership: token.canTakeBackOwnership,
       ownerCanChangeBalance: token.ownerCanChangeBalance,
       selfDestruct: token.selfDestruct,
+      freezable: token.freezable ?? false,
+      closable: token.closable ?? false,
       externalCall: token.externalCall,
       cannotBuy: token.cannotBuy,
       cannotSellAll: token.cannotSellAll,

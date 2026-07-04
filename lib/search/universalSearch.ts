@@ -28,43 +28,42 @@ const COINGECKO_LOGOS: Record<string, string> = {
   BONK: 'https://assets.coingecko.com/coins/images/28600/small/bonk.jpg',
 };
 
-// Search Binance for major coin matches
+// Search major coins via CoinGecko's free /search (geo-unblocked). Was Binance
+// /ticker/24hr — a huge payload that returns HTTP 451 to US-hosted IPs
+// (Vercel), so it fetched megabytes and returned [] on every query.
 async function searchBinance(query: string): Promise<SearchResult[]> {
-  const q = query.toUpperCase().trim();
+  const q = query.trim();
+  if (!q) return [];
   try {
-    // Fetch all Binance USDT tickers once, filter by query match
-    const res = await fetch('https://api.binance.com/api/v3/ticker/24hr', { cache: 'no-store' });
+    const headers: Record<string, string> = process.env.COINGECKO_API_KEY
+      ? { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY }
+      : {};
+    const res = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(q)}`, {
+      headers,
+      next: { revalidate: 120 },
+    });
     if (!res.ok) return [];
-    const tickers: any[] = await res.json();
-    const matches = tickers
-      .filter((t: any) => {
-        if (!t.symbol.endsWith('USDT')) return false;
-        const sym = t.symbol.replace('USDT', '');
-        const name = (BINANCE_NAMES[sym] || '').toUpperCase();
-        return sym.includes(q) || name.includes(q);
-      })
-      .sort((a: any, b: any) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
-      .slice(0, 5);
-
-    return matches.map((t: any) => {
-      const sym = t.symbol.replace('USDT', '');
+    const data = await res.json() as { coins?: Array<{ id: string; symbol: string; name: string; thumb?: string; large?: string }> };
+    const coins = Array.isArray(data.coins) ? data.coins.slice(0, 6) : [];
+    return coins.map((c) => {
+      const sym = (c.symbol || '').toUpperCase();
       return {
         symbol: sym,
-        name: BINANCE_NAMES[sym] || sym,
-        address: sym.toLowerCase(),
+        name: c.name || sym,
+        address: c.id, // CoinGecko id — chart/price routes resolve by id
         chain: 'multi',
-        price: parseFloat(t.lastPrice) || 0,
-        priceUSD: parseFloat(t.lastPrice) || 0,
-        volume24h: parseFloat(t.quoteVolume) || 0,
-        volumeUSD: parseFloat(t.quoteVolume) || 0,
+        price: 0,
+        priceUSD: 0,
+        volume24h: 0,
+        volumeUSD: 0,
         liquidity: 0,
         liquidityUSD: 0,
-        priceChange24h: parseFloat(t.priceChangePercent) || 0,
-        logo: COINGECKO_LOGOS[sym],
+        priceChange24h: 0,
+        logo: c.large || c.thumb || COINGECKO_LOGOS[sym],
         arkhamVerified: false,
-        safetyScore: 8, // major listed coins are higher trust by default
+        safetyScore: 8, // major indexed coins are higher trust by default
         scammerPresent: false,
-        source: 'binance',
+        source: 'coingecko',
       };
     });
   } catch {

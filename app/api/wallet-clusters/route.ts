@@ -36,42 +36,47 @@ async function fetchTransferData(addresses: string[]): Promise<{ transfers: Tran
       });
       if (!res.ok) return;
       const data = await res.json() as { result?: Array<{ signature: string; blockTime: number | null; slot: number }> };
-      const sigs = data.result ?? [];
-      for (const sig of sigs) {
-        const txRes = await fetch(rpc, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTransaction', params: [sig.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }] }),
-          signal: AbortSignal.timeout(12000),
-        });
-        if (!txRes.ok) continue;
-        const txData = await txRes.json() as { result?: Record<string, unknown> };
-        const tx = txData.result;
-        if (!tx) continue;
-        const meta = tx.meta as Record<string, unknown> | undefined;
-        const preBalances = (meta?.preBalances as number[]) ?? [];
-        const postBalances = (meta?.postBalances as number[]) ?? [];
-        const accountKeys = ((tx.transaction as Record<string, unknown>)?.message as Record<string, unknown>)?.accountKeys as Array<{ pubkey: string }> ?? [];
-        for (let i = 0; i < accountKeys.length; i++) {
-          const diff = ((postBalances[i] ?? 0) - (preBalances[i] ?? 0)) / 1e9;
-          if (Math.abs(diff) > 0.001 && accountKeys[i]?.pubkey !== addr) {
-            if (diff > 0) {
-              transfers.push({ from: addr, to: accountKeys[i].pubkey, valueUsd: Math.abs(diff), timestamp: (sig.blockTime ?? 0) * 1000, txHash: sig.signature });
-            } else {
-              transfers.push({ from: accountKeys[i].pubkey, to: addr, valueUsd: Math.abs(diff), timestamp: (sig.blockTime ?? 0) * 1000, txHash: sig.signature });
+      // Cap + parallelize the per-signature getTransaction calls. Previously
+      // these ran sequentially (up to 40 per address → ~600 serial RPC calls in
+      // the request path, an N+1 that timed out or hit rate limits under load).
+      const sigs = (data.result ?? []).slice(0, 15);
+      await Promise.all(sigs.map(async (sig) => {
+        try {
+          const txRes = await fetch(rpc, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTransaction', params: [sig.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }] }),
+            signal: AbortSignal.timeout(12000),
+          });
+          if (!txRes.ok) return;
+          const txData = await txRes.json() as { result?: Record<string, unknown> };
+          const tx = txData.result;
+          if (!tx) return;
+          const meta = tx.meta as Record<string, unknown> | undefined;
+          const preBalances = (meta?.preBalances as number[]) ?? [];
+          const postBalances = (meta?.postBalances as number[]) ?? [];
+          const accountKeys = ((tx.transaction as Record<string, unknown>)?.message as Record<string, unknown>)?.accountKeys as Array<{ pubkey: string }> ?? [];
+          for (let i = 0; i < accountKeys.length; i++) {
+            const diff = ((postBalances[i] ?? 0) - (preBalances[i] ?? 0)) / 1e9;
+            if (Math.abs(diff) > 0.001 && accountKeys[i]?.pubkey !== addr) {
+              if (diff > 0) {
+                transfers.push({ from: addr, to: accountKeys[i].pubkey, valueUsd: Math.abs(diff), timestamp: (sig.blockTime ?? 0) * 1000, txHash: sig.signature });
+              } else {
+                transfers.push({ from: accountKeys[i].pubkey, to: addr, valueUsd: Math.abs(diff), timestamp: (sig.blockTime ?? 0) * 1000, txHash: sig.signature });
+              }
             }
           }
-        }
-        const preTokens = (meta?.preTokenBalances as Array<{ accountIndex: number; uiTokenAmount: { uiAmount: number }; mint: string }>) ?? [];
-        const postTokens = (meta?.postTokenBalances as Array<{ accountIndex: number; uiTokenAmount: { uiAmount: number }; mint: string }>) ?? [];
-        for (const pt of postTokens) {
-          const pre = preTokens.find(p => p.accountIndex === pt.accountIndex && p.mint === pt.mint);
-          const diff = (pt.uiTokenAmount?.uiAmount ?? 0) - (pre?.uiTokenAmount?.uiAmount ?? 0);
-          if (Math.abs(diff) > 0) {
-            trades.push({ address: addr, tokenAddress: pt.mint, side: diff > 0 ? 'buy' : 'sell', valueUsd: Math.abs(diff), timestamp: (sig.blockTime ?? 0) * 1000, blockNumber: sig.slot, txHash: sig.signature });
+          const preTokens = (meta?.preTokenBalances as Array<{ accountIndex: number; uiTokenAmount: { uiAmount: number }; mint: string }>) ?? [];
+          const postTokens = (meta?.postTokenBalances as Array<{ accountIndex: number; uiTokenAmount: { uiAmount: number }; mint: string }>) ?? [];
+          for (const pt of postTokens) {
+            const pre = preTokens.find(p => p.accountIndex === pt.accountIndex && p.mint === pt.mint);
+            const diff = (pt.uiTokenAmount?.uiAmount ?? 0) - (pre?.uiTokenAmount?.uiAmount ?? 0);
+            if (Math.abs(diff) > 0) {
+              trades.push({ address: addr, tokenAddress: pt.mint, side: diff > 0 ? 'buy' : 'sell', valueUsd: Math.abs(diff), timestamp: (sig.blockTime ?? 0) * 1000, blockNumber: sig.slot, txHash: sig.signature });
+            }
           }
-        }
-      }
+        } catch { /* skip signature */ }
+      }));
     } catch { /* skip */ }
   }));
 

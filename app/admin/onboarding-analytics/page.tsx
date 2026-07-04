@@ -13,7 +13,7 @@ export default function OnboardingAnalyticsPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/admin/onboarding/analytics');
+        const res = await fetch('/api/admin/onboarding/analytics', { headers: { Authorization: `Bearer ${sessionStorage.getItem('admin_token') ?? ''}` } });
         const json = await res.json();
         if (!res.ok) setError(json.error ?? 'Failed');
         else setData(json);

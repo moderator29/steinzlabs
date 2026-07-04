@@ -4,6 +4,7 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { isEvmAddress, isSolanaAddress } from '@/lib/utils/addressNormalize';
+import { aaChainFor } from '@/lib/wallet/sessionKeyAA';
 
 /**
  * #68 Market-Maker strategy CRUD.
@@ -71,6 +72,16 @@ export async function POST(req: NextRequest) {
 
   const chain = (b.chain || '').toLowerCase();
   if (!CHAINS.includes(chain)) return NextResponse.json({ error: 'unsupported chain' }, { status: 400 });
+  // Execution is the AA session-key path, which is EVM-only. A Solana strategy
+  // would persist and go 'active' but the engine skips it every tick — a
+  // silently dead strategy. Reject it at creation with an honest message rather
+  // than letting the user believe it's running.
+  if (!aaChainFor(chain)) {
+    return NextResponse.json(
+      { error: 'Market-making on this chain is coming soon — automated execution is currently EVM-only.' },
+      { status: 400 },
+    );
+  }
   if (!b.token_address || !validAddressForChain(chain, b.token_address)) {
     return NextResponse.json({ error: 'invalid token_address for chain' }, { status: 400 });
   }

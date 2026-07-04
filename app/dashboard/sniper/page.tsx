@@ -94,9 +94,12 @@ interface MatchEventRow {
 
 type Tab = 'discover' | 'positions' | 'limit' | 'alerts' | 'snipers' | 'history';
 
-// EVM-only: Solana/TON return an empty GeckoTerminal feed, so they must not
-// appear as selectable chains (they were dead filter options).
-const EVM_CHAINS = SNIPER_CHAINS.filter((c) => c !== 'solana' && c !== 'ton');
+// This top-level selector filters the user's OWN sniper criteria + execution
+// history — NOT the discover feed (which has its own chain picker). Criteria
+// are creatable on every SNIPER_CHAINS chain (Solana/TON included), so all of
+// them must be filterable here; restricting it to EVM hid a user's Solana/TON
+// snipers behind a filter that could never select them.
+const CRITERIA_FILTER_CHAINS = SNIPER_CHAINS;
 
 // Discover feed page size; "Load more" pages by this offset.
 const FEED_PAGE = 60;
@@ -151,6 +154,10 @@ export default function SniperPage() {
   const [showNewModal, setShowNewModal] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [drawerToken, setDrawerToken] = useState<DetectedToken | null>(null);
+  // Prefill the create-sniper modal with the token the user clicked 'Snipe'/
+  // 'Create Sniper for {symbol}' on (was discarded — every quick-buy opened a
+  // blank modal).
+  const [prefillToken, setPrefillToken] = useState<DetectedToken | null>(null);
   const [walletRefresh, setWalletRefresh] = useState(0);
   const [loading, setLoading] = useState(true);
   const [liveConnected, setLiveConnected] = useState(false);
@@ -478,8 +485,8 @@ export default function SniperPage() {
             <SelectMenu
               value={chainFilter}
               options={[
-                { id: 'all', label: 'All EVM chains' } as SelectOption,
-                ...EVM_CHAINS.map((c): SelectOption => ({ id: c, label: CHAIN_CONFIGS[c].name, chain: c })),
+                { id: 'all', label: 'All chains' } as SelectOption,
+                ...CRITERIA_FILTER_CHAINS.map((c): SelectOption => ({ id: c, label: CHAIN_CONFIGS[c].name, chain: c })),
               ]}
               onChange={(id) => setChainFilter(id as SniperChain | 'all')}
             />
@@ -491,7 +498,7 @@ export default function SniperPage() {
             <DiscoverTab
               tokens={feedTokens} total={feedTotal} loading={feedLoading} loadingMore={feedLoadingMore}
               onRefresh={loadFeed} onLoadMore={loadMoreFeed}
-              onSnipe={() => setShowNewModal(true)} onOpen={setDrawerToken}
+              onSnipe={(t) => { setPrefillToken(t); setShowNewModal(true); }} onOpen={setDrawerToken}
               minLiq={minLiq} setMinLiq={setMinLiq}
               feedChain={feedChain} setFeedChain={setFeedChain}
               sort={feedSort} setSort={setFeedSort}
@@ -515,7 +522,7 @@ export default function SniperPage() {
       </div>
 
       {showNewModal && (
-        <NewSniperModal onClose={() => setShowNewModal(false)} onSaved={() => { setShowNewModal(false); loadSnipers(); }} userId={user.id} />
+        <NewSniperModal onClose={() => { setShowNewModal(false); setPrefillToken(null); }} onSaved={() => { setShowNewModal(false); setPrefillToken(null); loadSnipers(); }} userId={user.id} prefillToken={prefillToken} />
       )}
       {showWalletModal && (
         <SniperWalletModal userId={user.id} onClose={() => setShowWalletModal(false)} onConnected={() => setWalletRefresh((n) => n + 1)} />
@@ -524,7 +531,7 @@ export default function SniperPage() {
         <SniperTokenDrawer
           token={drawerToken}
           onClose={() => setDrawerToken(null)}
-          onSnipe={(t) => { setDrawerToken(null); void t; setShowNewModal(true); }}
+          onSnipe={(t) => { setDrawerToken(null); setPrefillToken(t); setShowNewModal(true); }}
         />
       )}
     </div>

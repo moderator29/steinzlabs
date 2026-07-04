@@ -28,9 +28,10 @@ interface SmartWallet {
   id: string; address: string; shortAddress: string; name: string;
   totalVolume: number; totalVolumeStr: string; recentTrades: SmartTrade[];
   chain: string; chains: string[]; lastActive: string; rank: number;
-  tags: string[]; winRate: number; pnl: string; pnlChange: number;
+  tags: string[]; winRate: number | null; pnl: string; pnlChange: number;
   trades: number; avgHold: string; bestTrade: string;
   archetype?: WalletArchetype; weeklyPnlChange?: number; isRiser?: boolean;
+  duneScore?: number | null;
 }
 
 interface ConvergenceSignal { token: string; symbol: string; walletCount: number; totalVolume: string; timeWindow: string }
@@ -51,6 +52,29 @@ const ARCHETYPE_LABELS: Record<WalletArchetype, string> = {
 
 type SortKey = 'rank' | 'winRate' | 'pnlChange' | 'totalVolume' | 'trades';
 type SmartTab = 'leaderboard' | 'history' | 'settings';
+
+// Real, accessible on/off toggle for the Settings tab (the previous markup was
+// a static always-on pill that ignored clicks).
+function PrefToggle({ label, desc, on, onToggle }: { label: string; desc: string; on: boolean; onToggle: () => void }) {
+  return (
+    <div className="flex items-center justify-between nl-glass rounded-xl p-4">
+      <div>
+        <div className="text-xs font-semibold text-white">{label}</div>
+        <div className="text-[10px] text-gray-500 mt-0.5">{desc}</div>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label={label}
+        onClick={onToggle}
+        className={`w-10 h-5 rounded-full relative flex-shrink-0 ms-4 transition-colors ${on ? 'bg-[#0066FF]' : 'bg-white/[0.12]'}`}
+      >
+        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${on ? 'left-5' : 'left-0.5'}`} />
+      </button>
+    </div>
+  );
+}
 
 function ArchetypeBadge({ archetype }: { archetype: WalletArchetype }) {
   const color = ARCHETYPE_COLORS[archetype];
@@ -81,6 +105,13 @@ export default function SmartMoneyPage() {
   const [paperTrade, setPaperTrade] = useState<SmartWallet | null>(null);
   const [activeTab, setActiveTab] = useState<SmartTab>('leaderboard');
   const [, setShowSettings] = useState(false);
+  // Real, persisted preferences (previously the Settings tab rendered static
+  // always-on toggles that did nothing). Display prefs actually gate what the
+  // leaderboard shows; notification prefs are stored user intent.
+  const [prefs, setPrefs] = useState<Record<string, boolean>>({
+    notif_entry: true, notif_exit: true, notif_convergence: true, notif_weekly: false,
+    show_archetypes: true, show_convergence: true, show_risers: true,
+  });
 
   // PDF S3 — preserve tab + filter + search + sort across smart-money
   // → wallet detail → back.
@@ -104,6 +135,27 @@ export default function SmartMoneyPage() {
       // Malformed JSON — return default
     }
   }, []);
+
+  // Load persisted settings prefs (merged over defaults so new keys keep theirs).
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('smart-money-prefs');
+      if (stored) setPrefs((p) => ({ ...p, ...JSON.parse(stored) }));
+    } catch { /* malformed — keep defaults */ }
+  }, []);
+
+  const togglePref = (key: string) => {
+    setPrefs((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      try { localStorage.setItem('smart-money-prefs', JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
+
+  // Mirror prefs into a ref so the fetch callback (stable, [] deps) can read
+  // the current notification prefs without re-subscribing on every toggle.
+  const prefsRef = useRef(prefs);
+  useEffect(() => { prefsRef.current = prefs; }, [prefs]);
 
   const toggleWatch = (id: string) => {
     setWatching(prev => {
@@ -135,8 +187,9 @@ export default function SmartMoneyPage() {
       setWeeklyRisers(data.weeklyRisers ?? []);
       setLastUpdated(new Date());
 
-      // Fire in-page notifications for new convergence signals
-      for (const signal of (data.convergence ?? [])) {
+      // Fire in-page notifications for new convergence signals — only when the
+      // user has the convergence notification pref enabled.
+      for (const signal of (prefsRef.current.notif_convergence ? (data.convergence ?? []) : [])) {
         const key = `${signal.token}-${signal.walletCount}`;
         if (!notifiedConvergenceRef.current.has(key)) {
           notifiedConvergenceRef.current.add(key);
@@ -170,7 +223,8 @@ export default function SmartMoneyPage() {
       return true;
     })
     .sort((a, b) => {
-      if (sortKey === 'winRate') return b.winRate - a.winRate;
+      // Unknown win rate (null) sorts last, never as if it were 0%.
+      if (sortKey === 'winRate') return (b.winRate ?? -1) - (a.winRate ?? -1);
       if (sortKey === 'pnlChange') return b.pnlChange - a.pnlChange;
       if (sortKey === 'totalVolume') return b.totalVolume - a.totalVolume;
       if (sortKey === 'trades') return b.trades - a.trades;
@@ -179,15 +233,17 @@ export default function SmartMoneyPage() {
 
   const totalWatching = watching.length;
   const watchedWallets = wallets.filter(w => watching.includes(w.id));
-  const avgWinRate = watchedWallets.length
-    ? Math.round(watchedWallets.reduce((s, w) => s + w.winRate, 0) / watchedWallets.length)
-    : 0;
+  // Average over wallets whose win rate is actually known — null (unknown)
+  // must not be counted as 0 and drag the average down.
+  const avgKnown = (list: SmartWallet[]): number => {
+    const known = list.filter(w => w.winRate != null) as (SmartWallet & { winRate: number })[];
+    return known.length ? Math.round(known.reduce((s, w) => s + w.winRate, 0) / known.length) : 0;
+  };
+  const avgWinRate = avgKnown(watchedWallets);
   const totalVolumeAll = wallets.reduce((s, w) => s + w.totalVolume, 0);
   const formatVol = (v: number) =>
     v >= 1e9 ? `$${(v / 1e9).toFixed(1)}B` : v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${(v / 1e3).toFixed(0)}K`;
-  const avgWin = wallets.length
-    ? Math.round(wallets.reduce((s, w) => s + w.winRate, 0) / wallets.length)
-    : 0;
+  const avgWin = avgKnown(wallets);
 
   return (
     <div className="min-h-screen bg-[#060A12] text-white pb-24">
@@ -272,7 +328,7 @@ export default function SmartMoneyPage() {
         </div>
 
         {/* Convergence Banner */}
-        {convergence.length > 0 && (
+        {prefs.show_convergence && convergence.length > 0 && (
           <div className="bg-[#F59E0B]/10 border border-[#F59E0B]/30 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />
@@ -311,9 +367,9 @@ export default function SmartMoneyPage() {
                       <RankIcon className="w-4 h-4" style={{ color: colors[i] }} />
                     </div>
                     <div className="text-[10px] font-bold text-white truncate">{w.name}</div>
-                    <div className="text-xs font-bold mt-1" style={{ color: colors[i] }}>{w.winRate}%</div>
+                    <div className="text-xs font-bold mt-1" style={{ color: colors[i] }}>{w.winRate == null ? '—' : `${w.winRate}%`}</div>
                     <div className="text-[9px] text-gray-600">win rate</div>
-                    {w.archetype && <div className="mt-1"><ArchetypeBadge archetype={w.archetype} /></div>}
+                    {prefs.show_archetypes && w.archetype && <div className="mt-1"><ArchetypeBadge archetype={w.archetype} /></div>}
                     <button onClick={() => setPaperTrade(w)}
                       className="mt-2 w-full text-[9px] py-1 rounded-lg font-bold transition-colors"
                       style={{ background: colors[i] + '20', color: colors[i] }}>
@@ -327,7 +383,7 @@ export default function SmartMoneyPage() {
         )}
 
         {/* Weekly Risers */}
-        {weeklyRisers.length > 0 && (
+        {prefs.show_risers && weeklyRisers.length > 0 && (
           <div className="nl-glass rounded-2xl overflow-hidden">
             <div className="px-4 py-3 border-b border-white/[0.04] flex items-center gap-2">
               <Flame className="w-3.5 h-3.5 text-[#EF4444]" />
@@ -340,7 +396,7 @@ export default function SmartMoneyPage() {
                     <div className="w-7 h-7 bg-[#EF4444]/10 rounded-lg flex items-center justify-center text-[10px] font-bold text-[#EF4444]">#{w.rank}</div>
                     <div>
                       <div className="text-[11px] font-semibold">{w.name}</div>
-                      {w.archetype && <ArchetypeBadge archetype={w.archetype} />}
+                      {prefs.show_archetypes && w.archetype && <ArchetypeBadge archetype={w.archetype} />}
                     </div>
                   </div>
                   <div className="text-end">
@@ -468,7 +524,7 @@ export default function SmartMoneyPage() {
                   <div className="flex items-center gap-3 flex-wrap">
                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#10B981]/[0.06]">
                       <Target className="w-3 h-3 text-[#10B981]" />
-                      <span className="text-[10px] font-semibold text-[#10B981]">{wallet.winRate}% Win</span>
+                      <span className="text-[10px] font-semibold text-[#10B981]">{wallet.winRate == null ? '— Win' : `${wallet.winRate}% Win`}</span>
                     </div>
                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#0066FF]/[0.06]">
                       <DollarSign className="w-3 h-3 text-[#0066FF]" />
@@ -478,13 +534,19 @@ export default function SmartMoneyPage() {
                       </span>
                     </div>
                     <span className="text-[10px] text-gray-600">{wallet.trades.toLocaleString()} trades</span>
+                    {wallet.duneScore != null && (
+                      <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#8B5CF6]/[0.08] border border-[#8B5CF6]/20" title="Dune smart-money score (independent on-chain signal)">
+                        <span className="text-[8px] uppercase tracking-wide text-[#A78BFA]/80 font-semibold">Dune</span>
+                        <span className="text-[10px] font-bold text-[#A78BFA]">{wallet.duneScore}</span>
+                      </div>
+                    )}
                     <span className="text-[10px] text-gray-600 ms-auto flex items-center gap-1">
                       <Clock className="w-3 h-3" />{wallet.lastActive}
                     </span>
                   </div>
 
                   <div className="flex gap-1.5 mt-2 flex-wrap items-center">
-                    {wallet.archetype && <ArchetypeBadge archetype={wallet.archetype} />}
+                    {prefs.show_archetypes && wallet.archetype && <ArchetypeBadge archetype={wallet.archetype} />}
                     {wallet.chains.map(c => (
                       <span key={c} className="text-[8px] px-1.5 py-0.5 bg-white/[0.04] rounded font-mono text-gray-500">{c}</span>
                     ))}
@@ -526,7 +588,7 @@ export default function SmartMoneyPage() {
                       </div>
                       <div className="bg-[#060A12] rounded-lg p-2.5 text-center">
                         <div className="text-[8px] text-gray-600 uppercase mb-0.5">Win Rate</div>
-                        <div className="text-[11px] font-semibold">{wallet.winRate}%</div>
+                        <div className="text-[11px] font-semibold">{wallet.winRate == null ? '—' : `${wallet.winRate}%`}</div>
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -575,7 +637,7 @@ export default function SmartMoneyPage() {
             ) : (
               <div className="nl-glass rounded-2xl divide-y divide-white/[0.04]">
                 {recentMoves.map((move, i) => {
-                  const isUp = move.action === 'buy';
+                  const isUp = /^b/i.test(move.action || ''); // API emits 'Bought'/'Sold' (capitalized) — lowercase check made every move read red
                   const color = isUp ? '#10B981' : '#EF4444';
                   return (
                     <div key={i} className="flex items-center gap-3 px-4 py-3">
@@ -602,36 +664,20 @@ export default function SmartMoneyPage() {
           <div className="space-y-4">
             <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Notification Settings</div>
             {[
-              { label: 'New whale entry alerts', desc: 'Notify when a tracked wallet makes a new entry', key: 'entry' },
-              { label: 'Large exit alerts', desc: 'Notify when a tracked wallet exits a large position', key: 'exit' },
-              { label: 'Smart money convergence', desc: 'Multiple wallets buying same token', key: 'convergence' },
-              { label: 'Weekly performance report', desc: 'Summary of tracked wallet performance', key: 'weekly' },
+              { label: 'New whale entry alerts', desc: 'Notify when a tracked wallet makes a new entry', key: 'notif_entry' },
+              { label: 'Large exit alerts', desc: 'Notify when a tracked wallet exits a large position', key: 'notif_exit' },
+              { label: 'Smart money convergence', desc: 'Multiple wallets buying same token', key: 'notif_convergence' },
+              { label: 'Weekly performance report', desc: 'Summary of tracked wallet performance', key: 'notif_weekly' },
             ].map(({ label, desc, key }) => (
-              <div key={key} className="flex items-center justify-between nl-glass rounded-xl p-4">
-                <div>
-                  <div className="text-xs font-semibold text-white">{label}</div>
-                  <div className="text-[10px] text-gray-500 mt-0.5">{desc}</div>
-                </div>
-                <div className="w-10 h-5 rounded-full bg-[#0066FF] relative flex-shrink-0 ms-4 cursor-pointer">
-                  <span className="absolute top-0.5 left-5 w-4 h-4 bg-white rounded-full" />
-                </div>
-              </div>
+              <PrefToggle key={key} label={label} desc={desc} on={!!prefs[key]} onToggle={() => togglePref(key)} />
             ))}
             <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-4">Display Settings</div>
             {[
-              { label: 'Show archetype badges', desc: 'Display wallet behavior classification' },
-              { label: 'Show convergence signals', desc: 'Alert when multiple smart wallets target same token' },
-              { label: 'Show weekly risers', desc: 'Highlight wallets with improving recent performance' },
-            ].map(({ label, desc }) => (
-              <div key={label} className="flex items-center justify-between nl-glass rounded-xl p-4">
-                <div>
-                  <div className="text-xs font-semibold text-white">{label}</div>
-                  <div className="text-[10px] text-gray-500 mt-0.5">{desc}</div>
-                </div>
-                <div className="w-10 h-5 rounded-full bg-[#0066FF] relative flex-shrink-0 ms-4 cursor-pointer">
-                  <span className="absolute top-0.5 left-5 w-4 h-4 bg-white rounded-full" />
-                </div>
-              </div>
+              { label: 'Show archetype badges', desc: 'Display wallet behavior classification', key: 'show_archetypes' },
+              { label: 'Show convergence signals', desc: 'Show the smart-money convergence panel', key: 'show_convergence' },
+              { label: 'Show weekly risers', desc: 'Highlight wallets with improving recent performance', key: 'show_risers' },
+            ].map(({ label, desc, key }) => (
+              <PrefToggle key={key} label={label} desc={desc} on={!!prefs[key]} onToggle={() => togglePref(key)} />
             ))}
           </div>
         )}
@@ -652,7 +698,7 @@ export default function SmartMoneyPage() {
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2 text-center">
                 <div className="bg-[#060A12] rounded-xl p-3">
-                  <div className="text-xs font-bold text-[#10B981]">{paperTrade.winRate}%</div>
+                  <div className="text-xs font-bold text-[#10B981]">{paperTrade.winRate == null ? '—' : `${paperTrade.winRate}%`}</div>
                   <div className="text-[9px] text-gray-600">Win Rate</div>
                 </div>
                 <div className="bg-[#060A12] rounded-xl p-3">
@@ -672,7 +718,7 @@ export default function SmartMoneyPage() {
                   <button key={amt} className="w-full flex items-center justify-between px-3 py-2 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] rounded-xl text-xs transition-colors">
                     <span className="text-gray-300">{amt} simulated capital</span>
                     <span className="text-[#10B981] font-semibold">
-                      +{(parseFloat(amt.replace(/[^0-9]/g, '')) * (paperTrade.winRate / 100) * 0.05).toFixed(2)} est.
+                      +{(parseFloat(amt.replace(/[^0-9]/g, '')) * ((paperTrade.winRate ?? 50) / 100) * 0.05).toFixed(2)} est.
                     </span>
                   </button>
                 ))}

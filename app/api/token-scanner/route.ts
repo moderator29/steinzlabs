@@ -298,6 +298,51 @@ function buildEvmResponse(
   };
 }
 
+const SCAN_CACHE_HEADERS = { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' };
+
+// Single source of truth for a scan, shared by GET and POST so both return the
+// EXACT same response. Previously POST ran the EOA-wallet guard + AI analysis
+// while GET skipped both, so the same contract scanned via GET came back
+// without the wallet guard and without the AI summary — a silent divergence.
+async function runTokenScan(contract: string, chain: string): Promise<{ status: number; body: unknown }> {
+  const chainId = CHAIN_MAP[chain.toLowerCase()] || '1';
+  const address = contract.trim();
+  const isSolana = chainId === 'solana' || isSolanaAddress(address);
+
+  if (isSolana) {
+    return { status: 200, body: await handleSolanaToken(address) };
+  }
+
+  const contractAddress = address.toLowerCase();
+
+  // EOA wallet guard — reject externally-owned accounts on both verbs.
+  if (/^0x[a-fA-F0-9]{40}$/i.test(contractAddress)) {
+    const isWallet = await isEOAWallet(contractAddress, chainId).catch(() => false);
+    if (isWallet) {
+      return {
+        status: 400,
+        body: {
+          error: 'This is a Wallet Address, Not a Contract',
+          isWalletAddress: true,
+          message: 'The address you entered belongs to an externally owned account (wallet), not a smart contract. Token Scanner only analyzes contract addresses.',
+          suggestion: 'Use the DNA Analyzer to analyze wallet addresses.',
+          redirectUrl: '/dashboard/dna-analyzer',
+        },
+      };
+    }
+  }
+
+  const [sec, dexData] = await Promise.all([
+    getTokenSecurity(contractAddress, chain),
+    fetchDexData(contractAddress),
+  ]);
+
+  const response = buildEvmResponse(contractAddress, chainId, sec, dexData);
+  const aiText = await buildAiAnalysis(response);
+  if (aiText) (response as any).aiAnalysis = aiText;
+  return { status: 200, body: response };
+}
+
 // ─── POST Handler ─────────────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
@@ -311,49 +356,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Contract address required' }, { status: 400 });
     }
 
-    const chainId = CHAIN_MAP[chain.toLowerCase()] || '1';
-    const address = contract.trim();
-    const isSolana = chainId === 'solana' || isSolanaAddress(address);
-
-    // ── Solana path ────────────────────���────────────────────────────────────
-    if (isSolana) {
-      const response = await handleSolanaToken(address);
-      return NextResponse.json(response, {
-        headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' },
-      });
-    }
-
-    const contractAddress = address.toLowerCase();
-
-    // ── EOA wallet guard ───────────────────────────────────���────────────────
-    if (/^0x[a-fA-F0-9]{40}$/i.test(contractAddress)) {
-      const isWallet = await isEOAWallet(contractAddress, chainId).catch(() => false);
-      if (isWallet) {
-        return NextResponse.json({
-          error: 'This is a Wallet Address, Not a Contract',
-          isWalletAddress: true,
-          message: 'The address you entered belongs to an externally owned account (wallet), not a smart contract. Token Scanner only analyzes contract addresses.',
-          suggestion: 'Use the DNA Analyzer to analyze wallet addresses.',
-          redirectUrl: '/dashboard/dna-analyzer',
-        }, { status: 400 });
-      }
-    }
-
-    // ── Security scan + DEX data in parallel ────────────────────────────────
-    const [sec, dexData] = await Promise.all([
-      getTokenSecurity(contractAddress, chain),
-      fetchDexData(contractAddress),
-    ]);
-
-    const response = buildEvmResponse(contractAddress, chainId, sec, dexData);
-
-    // ── AI analysis (non-blocking) ──────────────────────────────────────────
-    const aiText = await buildAiAnalysis(response);
-    if (aiText) (response as any).aiAnalysis = aiText;
-
-    return NextResponse.json(response, {
-      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' },
-    });
+    const { status, body } = await runTokenScan(contract, chain);
+    return NextResponse.json(body, { status, headers: SCAN_CACHE_HEADERS });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Failed to scan token';
     return NextResponse.json({ error: msg }, { status: 500 });
@@ -367,32 +371,11 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const contract = searchParams.get('contract');
     const chain = searchParams.get('chain') || 'ethereum';
-
     if (!contract) {
       return NextResponse.json({ error: 'Contract address required (use ?contract=0x...)' }, { status: 400 });
     }
-
-    const chainId = CHAIN_MAP[chain.toLowerCase()] || '1';
-    const address = contract.trim();
-    const isSolana = chainId === 'solana' || isSolanaAddress(address);
-
-    if (isSolana) {
-      const response = await handleSolanaToken(address);
-      return NextResponse.json(response, {
-        headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' },
-      });
-    }
-
-    const contractAddress = address.toLowerCase();
-    const [sec, dexData] = await Promise.all([
-      getTokenSecurity(contractAddress, chain),
-      fetchDexData(contractAddress),
-    ]);
-
-    const response = buildEvmResponse(contractAddress, chainId, sec, dexData);
-    return NextResponse.json(response, {
-      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' },
-    });
+    const { status, body } = await runTokenScan(contract, chain);
+    return NextResponse.json(body, { status, headers: SCAN_CACHE_HEADERS });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Failed to scan token';
     return NextResponse.json({ error: msg }, { status: 500 });

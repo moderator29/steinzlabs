@@ -78,14 +78,19 @@ export async function GET(request: Request) {
     const global24h = globalSorted.at(-2)?.tvl ?? globalNow;
     const global7d = globalSorted.at(-8)?.tvl ?? globalNow;
     const globalChange24h = pctChange(globalNow, global24h);
-    cards.push({
-      id: 'global-tvl', chain: 'All Chains', metric: 'TVL',
-      value: fmtBig(globalNow), rawValue: globalNow,
-      change24h: globalChange24h, change7d: pctChange(globalNow, global7d),
-      sparkline: buildSparkline(globalHistory),
-      direction: globalChange24h > 0.5 ? 'up' : globalChange24h < -0.5 ? 'down' : 'flat',
-      hot: Math.abs(globalChange24h) > 3,
-    });
+    // Only render the TVL card when DeFiLlama actually returned data. On a
+    // DeFiLlama outage the history is [] → globalNow=0, and a "$0 TVL" card
+    // reads as fabricated. Omit it instead (honest empty).
+    if (globalNow > 0) {
+      cards.push({
+        id: 'global-tvl', chain: 'All Chains', metric: 'TVL',
+        value: fmtBig(globalNow), rawValue: globalNow,
+        change24h: globalChange24h, change7d: pctChange(globalNow, global7d),
+        sparkline: buildSparkline(globalHistory),
+        direction: globalChange24h > 0.5 ? 'up' : globalChange24h < -0.5 ? 'down' : 'flat',
+        hot: Math.abs(globalChange24h) > 3,
+      });
+    }
 
     // Per-chain TVL cards (top 5)
     const chainHistories = await Promise.allSettled(
@@ -103,6 +108,7 @@ export async function GET(request: Request) {
       const ch24h = pctChange(now, prev24h);
       const ch7d = pctChange(now, prev7d);
       const isHot = Math.abs(ch24h) > 5;
+      if (now <= 0) continue; // skip chains with no TVL data (honest empty)
       cards.push({
         id: `tvl-${chain.name.toLowerCase()}`,
         chain: chain.name, metric: 'TVL',
@@ -172,13 +178,17 @@ export async function GET(request: Request) {
     const result: TrendsResponse = { cards, alerts, updatedAt: new Date().toISOString(), chains: uniqueChains };
     cache = { data: result, ts: Date.now() };
 
+    // Cache-poisoning fix: the chain filter used to mutate result.cards AFTER
+    // it was stored in the module cache by reference, so a filtered request
+    // permanently shrank the cached full set for every later caller. Build a
+    // fresh response object and never touch the cached one.
     const { searchParams } = new URL(request.url);
     const chainFilter = searchParams.get('chain');
-    if (chainFilter && chainFilter !== 'all') {
-      result.cards = result.cards.filter(c => c.chain.toLowerCase() === chainFilter.toLowerCase());
-    }
+    const responseBody: TrendsResponse = (chainFilter && chainFilter !== 'all')
+      ? { ...result, cards: result.cards.filter(c => c.chain.toLowerCase() === chainFilter.toLowerCase()) }
+      : result;
 
-    return NextResponse.json(result, { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } });
+    return NextResponse.json(responseBody, { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Failed to fetch on-chain trends';
     return NextResponse.json({ error: msg }, { status: 500 });

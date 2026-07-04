@@ -34,27 +34,34 @@ export async function GET(req: NextRequest) {
 
   const admin = getSupabaseAdmin();
 
-  // BFS frontier expansion. At each hop, pull edges where from_address is
-  // in the current frontier; add new neighbors; track parent pointers so
-  // we can reconstruct the path on goal hit.
+  // BFS frontier expansion. Connectivity is UNDIRECTED: at each hop we pull
+  // edges that touch the frontier from EITHER side (from_address OR to_address)
+  // and expand to the opposite endpoint. The old traversal only followed
+  // from_address, so a real connection stored solely as B->A returned "no path".
   const parent = new Map<string, { prev: string; edge: EdgeRow }>();
   const visited = new Set<string>([fromKey]);
   let frontier: string[] = [fromKey];
 
   for (let hop = 0; hop < maxHops && frontier.length > 0; hop++) {
-    const { data, error } = await admin
-      .from('wallet_edges')
-      .select('from_address, to_address, total_value_usd, tx_count')
-      .in('from_address', frontier)
-      .limit(5000)
-      .returns<EdgeRow[]>();
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    const [outRes, inRes] = await Promise.all([
+      admin.from('wallet_edges').select('from_address, to_address, total_value_usd, tx_count').in('from_address', frontier).limit(5000).returns<EdgeRow[]>(),
+      admin.from('wallet_edges').select('from_address, to_address, total_value_usd, tx_count').in('to_address', frontier).limit(5000).returns<EdgeRow[]>(),
+    ]);
+    if (outRes.error) return NextResponse.json({ error: outRes.error.message }, { status: 500 });
+    if (inRes.error) return NextResponse.json({ error: inRes.error.message }, { status: 500 });
+    const frontierSet = new Set(frontier);
     const nextFrontier: string[] = [];
-    for (const e of data ?? []) {
-      const target = normalizeAddress(e.to_address);
+    for (const e of [...(outRes.data ?? []), ...(inRes.data ?? [])]) {
+      const a = normalizeAddress(e.from_address);
+      const b = normalizeAddress(e.to_address);
+      // The frontier side is the endpoint we came from; the other is the neighbor.
+      let src: string, target: string;
+      if (frontierSet.has(a)) { src = a; target = b; }
+      else if (frontierSet.has(b)) { src = b; target = a; }
+      else continue;
       if (visited.has(target)) continue;
       visited.add(target);
-      parent.set(target, { prev: normalizeAddress(e.from_address), edge: e });
+      parent.set(target, { prev: src, edge: e });
       if (target === toKey) {
         // Reconstruct path
         const pathAddrs: string[] = [target];

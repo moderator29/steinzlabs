@@ -1367,7 +1367,7 @@ function VtxAiPageInner() {
         )}
 
         <div className="flex gap-2 items-start">
-          <div className="flex-1 flex items-start nl-glass/50 rounded-xl px-3 py-2 focus-within:border-[#0066FF]/40 focus-within:shadow-[0_0_0_3px_rgba(0,102,255,0.08)] transition-all">
+          <div className="flex-1 flex items-start nl-glass rounded-xl px-3 py-2 focus-within:border-[#0066FF]/40 focus-within:shadow-[0_0_0_3px_rgba(0,102,255,0.08)] transition-all">
             {settings.webSearch && (
               <div className="flex items-center gap-1 px-1.5 py-0.5 bg-[#0066FF]/10 rounded text-[9px] text-[#0066FF] font-semibold me-2 mt-1.5 flex-shrink-0">
                 <Globe className="w-2.5 h-2.5" /> WEB

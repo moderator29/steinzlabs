@@ -4,6 +4,27 @@ import { shadowGuardian } from '../security/shadowGuardian';
 import { savePosition, getUserByWallet } from '../database/supabase';
 import { calculateFee, recordRevenue } from '../revenue/feeSystem';
 import { PLATFORM_FEE_DECIMAL } from './swapLogging';
+import { getTokenMetadata } from '../services/alchemy';
+import { getTokenPairs } from '../services/dexscreener';
+
+// Best-effort token symbol for the position/revenue records. Never blocks or
+// fails the trade (this runs after execution succeeds); resolves the real
+// symbol from Alchemy (EVM) then DexScreener (cross-chain incl. Solana), and
+// falls back to a shortened address — an informative label, unlike the old
+// hardcoded literal 'UNKNOWN'.
+async function resolveTokenSymbol(address: string, chain: string): Promise<string> {
+  try {
+    const meta = await getTokenMetadata(address, chain).catch(() => null);
+    if (meta?.symbol) return meta.symbol;
+  } catch { /* fall through */ }
+  try {
+    const pairs = await getTokenPairs(address).catch(() => []);
+    const sym = pairs.find((p) => p.baseToken?.address?.toLowerCase() === address.toLowerCase())?.baseToken?.symbol
+      ?? pairs[0]?.baseToken?.symbol;
+    if (sym) return sym;
+  } catch { /* fall through */ }
+  return address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address;
+}
 
 // 0x Protocol replaces 1inch for all EVM swaps
 async function getZeroXQuote(
@@ -183,11 +204,12 @@ export async function executeTrade(params: {
       if (user) {
         const tradeType = followingEntity ? 'COPY_TRADE' as const : 'SWAP' as const;
         const fee = calculateFee(parseFloat(quote.fromAmount), tradeType, chain);
+        const toSymbol = await resolveTokenSymbol(quote.toToken, chain);
 
         await savePosition({
           userId: user.id,
           tokenAddress: quote.toToken,
-          tokenSymbol: 'UNKNOWN',
+          tokenSymbol: toSymbol,
           chain,
           entryPrice: parseFloat(quote.fromAmount) / parseFloat(quote.toAmount),
           amount: parseFloat(quote.toAmount),
@@ -200,7 +222,7 @@ export async function executeTrade(params: {
           userId: user.id,
           tradeType,
           tokenAddress: quote.toToken,
-          tokenSymbol: 'UNKNOWN',
+          tokenSymbol: toSymbol,
           chain,
           tradeAmount: quote.fromAmount,
           feeAmount: fee.feeAmount,

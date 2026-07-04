@@ -256,7 +256,7 @@ export default function NotificationSettingsPanel({ userId }: Props) {
       {/* Events */}
       <section>
         <h3 className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-400 mb-1.5">Events</h3>
-        <div className="space-y-1 rounded-xl nl-glass/60 p-1.5">
+        <div className="space-y-1 rounded-xl nl-glass p-1.5">
           <EventRow
             icon={<Bell size={14} />}
             label="Whale alerts"

@@ -1,13 +1,16 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getTotalRevenue } from '@/lib/revenue/feeSystem';
-import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
+import { verifyAdminContext } from '@/lib/auth/adminAuth';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(request);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Platform-wide revenue is admin-only data. This previously accepted ANY
+    // authenticated user, leaking totalRevenue/revenueByType/totalTrades to
+    // every logged-in account.
+    const ctx = await verifyAdminContext(request);
+    if (!ctx) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const startDate = request.nextUrl.searchParams.get('startDate');

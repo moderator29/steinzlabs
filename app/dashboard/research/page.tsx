@@ -402,6 +402,10 @@ export default function ResearchPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
+  // Distinct categories reported by the API from real published posts. The
+  // hardcoded CATEGORIES list drifted out of sync with what's actually stored
+  // (live data is "Daily Brief", which the list never included → dead filter).
+  const [serverCategories, setServerCategories] = useState<string[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [nowTick, setNowTick] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -423,6 +427,11 @@ export default function ResearchPage() {
         const data = await res.json();
         setPosts(data.posts || []);
         setTotal(data.total || 0);
+        // Refresh pill set only from the unfiltered ("All") response so a
+        // narrowed request never shrinks the available filters.
+        if (category === 'All' && Array.isArray(data.categories) && data.categories.length) {
+          setServerCategories(data.categories);
+        }
         setLastUpdated(new Date());
       } catch (err) {
         // Best-effort Sentry; module-imported dynamically so the page doesn't
@@ -480,6 +489,12 @@ export default function ResearchPage() {
   // search, no category narrowing) where it reads as the lead story.
   const showLead = !search && category === 'All';
   const brief = showLead ? posts.find(isBriefPost) ?? null : null;
+
+  // Pills = All + whatever the API reports actually exists. Fall back to the
+  // static list only before the first fetch resolves.
+  const categoryOptions = serverCategories.length
+    ? ['All', ...serverCategories]
+    : CATEGORIES;
   const articles = brief ? filtered.filter((p) => p.id !== brief.id) : filtered;
   const featured = !search ? articles[0] : null;
   const rest = !search ? articles.slice(1) : articles;
@@ -582,7 +597,7 @@ export default function ResearchPage() {
             <div>
               <p className="text-[10px] text-gray-500 mb-2 uppercase tracking-wider">Category</p>
               <div className="flex flex-wrap gap-1.5">
-                {CATEGORIES.map((label) => (
+                {categoryOptions.map((label) => (
                   <button
                     key={label}
                     onClick={() => { setCategory(label); setPage(1); }}
@@ -628,7 +643,7 @@ export default function ResearchPage() {
 
         {/* ── Category Tabs — glass square cards ── */}
         <div className="flex gap-2 overflow-x-auto pb-2 mb-5 scrollbar-hide">
-          {CATEGORIES.map((label) => (
+          {categoryOptions.map((label) => (
             <button
               key={label}
               onClick={() => { setCategory(label); setPage(1); }}

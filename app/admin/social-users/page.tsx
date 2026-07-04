@@ -21,7 +21,7 @@ function Inner() {
     setData(null); setError(null);
     if (!uid) return;
     try {
-      const res = await fetch(`/api/admin/social/users/${uid}`);
+      const res = await fetch(`/api/admin/social/users/${uid}`, { headers: { Authorization: `Bearer ${sessionStorage.getItem('admin_token') ?? ''}` } });
       const json = await res.json();
       if (!res.ok) setError(json.error ?? 'Failed');
       else setData(json);
@@ -35,7 +35,7 @@ function Inner() {
     try {
       const body: Record<string, unknown> = { action, user_id: id };
       if (durationHours) body.duration_hours = durationHours;
-      await fetch('/api/admin/social/moderate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      await fetch('/api/admin/social/moderate', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionStorage.getItem('admin_token') ?? ''}` }, body: JSON.stringify(body) });
       await load(id);
     } finally { setBusy(false); }
   };

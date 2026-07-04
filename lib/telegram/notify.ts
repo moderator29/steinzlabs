@@ -124,7 +124,9 @@ export async function sendTelegramNotification(input: PushInput): Promise<boolea
       body: input.body ?? null,
       url: input.url ?? null,
       error_message: result.error,
-      attempts: result.attempts,
+      // Seed attempts=1 so the retry cron's backoff (attempts 2,3,…) actually
+      // fires — seeding MAX_ATTEMPTS made every failure look already-exhausted.
+      attempts: 1,
       last_attempt_at: new Date().toISOString(),
     });
   } catch (err) {

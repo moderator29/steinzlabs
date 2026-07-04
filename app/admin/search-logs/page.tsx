@@ -37,6 +37,7 @@ export default function SearchLogsPage() {
         const res = await fetch('/api/admin/search-logs', {
           signal: AbortSignal.timeout(10_000),
           cache: 'no-store',
+          headers: { Authorization: `Bearer ${sessionStorage.getItem('admin_token') ?? ''}` },
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = (await res.json()) as Partial<LogsPayload>;

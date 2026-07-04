@@ -32,7 +32,7 @@ export default function AdminCultPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/admin/cult-stats')
+    fetch('/api/admin/cult-stats', { headers: { Authorization: `Bearer ${sessionStorage.getItem('admin_token') ?? ''}` } })
       .then((r) => (r.ok ? r.json() : null))
       .then((d: CultStats | null) => {
         if (cancelled) return;

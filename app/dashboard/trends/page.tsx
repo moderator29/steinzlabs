@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { TrendingUp, TrendingDown, Zap, AlertTriangle, RefreshCw, Bell, Activity, BarChart3, X, ChevronRight, ExternalLink } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { AiInsightCard } from '@/components/ai/AiInsightCard';
 import { trendsHowItWorks } from '@/lib/howItWorks/content/trends';
 import { useNavState } from '@/lib/nav/useNavState';
 import type { TrendCard, TrendAlertItem, TrendsResponse, TrendSparkpoint } from '@/app/api/intelligence/on-chain-trends/route';
@@ -48,8 +49,13 @@ function InsightCard({ card, onSelect }: { card: TrendCard; onSelect: (c: TrendC
   const sparkColor = card.hot ? (up ? '#10B981' : '#EF4444') : '#3B82F6';
 
   return (
-    <div className={`nl-glass rounded-2xl p-4 transition-all hover:border-white/[0.16] cursor-pointer active:scale-[0.99] ${card.hot ? 'border-[' + color + ']/30' : ''}`}
-      style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
+    // Hot cards get a colored ring. The old `'border-[' + color + ']/30'`
+    // string concat produced a class Tailwind never generates (no-op) — use an
+    // inline boxShadow ring in the move color instead so hot cards actually glow.
+    <div className="nl-glass rounded-2xl p-4 transition-all hover:border-white/[0.16] cursor-pointer active:scale-[0.99]"
+      style={{ boxShadow: card.hot
+        ? `0 0 0 1px ${color}55, 0 0 18px ${color}33`
+        : '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
       onClick={() => onSelect(card)}>
       <div className="flex items-start justify-between mb-3">
         <div>
@@ -109,6 +115,28 @@ function TrendDrawer({ card, onClose }: { card: TrendCard; onClose: () => void }
   const color = up ? '#10B981' : down ? '#EF4444' : '#6B7280';
   const sparkColor = card.hot ? (up ? '#10B981' : '#EF4444') : '#3B82F6';
 
+  // "Why is it moving" — the VTX Analysis panel used to render only a static
+  // card.insight the API never populated (dead). Now it fetches a live,
+  // data-grounded explanation on open.
+  const [why, setWhy] = useState<{ narrative: string; confidence?: number } | null>(null);
+  const [whyLoading, setWhyLoading] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    setWhyLoading(true);
+    setWhy(null);
+    fetch('/api/why-moving', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ chain: card.chain, metric: card.metric, label: card.metric, changePct: card.change24h }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelled && d?.narrative) setWhy({ narrative: d.narrative, confidence: d.confidence }); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setWhyLoading(false); });
+    return () => { cancelled = true; };
+  }, [card.chain, card.metric, card.change24h]);
+
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={onClose} />
@@ -158,16 +186,17 @@ function TrendDrawer({ card, onClose }: { card: TrendCard; onClose: () => void }
             </div>
           )}
 
-          {/* Insight text */}
-          {card.insight && (
-            <div className="bg-[#0066FF]/[0.06] border border-[#0066FF]/20 rounded-xl p-4 mb-4">
-              <div className="flex items-center gap-1.5 mb-2">
-                <Zap className="w-3.5 h-3.5 text-[#0066FF]" />
-                <span className="text-[10px] font-bold text-[#0066FF] uppercase tracking-wider">VTX Analysis</span>
-              </div>
-              <p className="text-xs text-gray-300 leading-relaxed">{card.insight}</p>
-            </div>
-          )}
+          {/* Why is it moving — live VTX explanation grounded in real
+              convergence + whale-move signals for this chain. */}
+          <div className="mb-4">
+            <AiInsightCard
+              title="Why is this moving — VTX"
+              text={why?.narrative ?? (card.insight ?? '')}
+              streaming={!!why?.narrative}
+              loading={whyLoading}
+              confidence={why?.confidence}
+            />
+          </div>
 
           <button onClick={onClose}
             className="w-full py-3 nl-glass rounded-xl text-sm font-semibold text-gray-300 hover:bg-white/[0.08] transition-colors">

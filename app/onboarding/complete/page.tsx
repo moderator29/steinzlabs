@@ -26,7 +26,7 @@ export default function OnboardingCompletePage() {
             icon={Wallet}
             title="Connect a wallet"
             body="Track holdings, get PnL, and trade in one tap. Non-custodial — we never see your keys."
-            ctaHref="/dashboard/settings"
+            ctaHref="/settings"
             ctaLabel="Connect"
           />
           <FunnelStep

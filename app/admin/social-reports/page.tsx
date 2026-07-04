@@ -41,7 +41,7 @@ export default function SocialReportsAdminPage() {
     params.set('status', status);
     if (category !== 'all') params.set('category', category);
     try {
-      const res = await fetch(`/api/admin/social/reports?${params}`);
+      const res = await fetch(`/api/admin/social/reports?${params}`, { headers: { Authorization: `Bearer ${sessionStorage.getItem('admin_token') ?? ''}` } });
       const json = await res.json();
       if (!res.ok) { setError(json.error ?? 'Failed'); return; }
       setRows(json.reports ?? []);
@@ -57,7 +57,7 @@ export default function SocialReportsAdminPage() {
     try {
       const res = await fetch('/api/admin/social/reports', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionStorage.getItem('admin_token') ?? ''}` },
         body: JSON.stringify({ id, status: action }),
       });
       if (res.ok) load();

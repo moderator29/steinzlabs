@@ -1475,7 +1475,7 @@ export default function WalletPage() {
             </div>
 
             {/* ── TAB SWITCHER: Holdings / NFTs / Activity ─────────── */}
-            <div className="flex items-center gap-1 mb-3 rounded-xl nl-glass/50 p-1" role="tablist" aria-label="Wallet content">
+            <div className="flex items-center gap-1 mb-3 rounded-xl nl-glass p-1" role="tablist" aria-label="Wallet content">
               {([
                 { id: 'crypto' as const, label: 'Holdings' },
                 { id: 'watchlist' as const, label: 'Watchlist' },
@@ -1510,7 +1510,7 @@ export default function WalletPage() {
                 role="tabpanel"
                 id="wallet-panel-nfts"
                 aria-labelledby="wallet-tab-nfts"
-                className="mb-6 rounded-xl nl-glass/40 overflow-hidden"
+                className="mb-6 rounded-xl nl-glass overflow-hidden"
               >
                 <NftTab evmAddress={activeWallet.address} solanaAddress={activeWallet.solanaAddress} />
               </div>
@@ -1521,7 +1521,7 @@ export default function WalletPage() {
                 role="tabpanel"
                 id="wallet-panel-activity"
                 aria-labelledby="wallet-tab-activity"
-                className="mb-6 rounded-xl nl-glass/40 p-3"
+                className="mb-6 rounded-xl nl-glass p-3"
               >
                 <ActivityTab address={activeWallet.address} chain={activeChain} enabledChains={enabledChains} />
               </div>
@@ -1622,7 +1622,7 @@ export default function WalletPage() {
                 dedicated Transactions page (/dashboard/transactions). */}
 
             {/* ── SECURITY SECTION ─────────────────────────── */}
-            <div className="mb-5 nl-glass/30 rounded-xl overflow-hidden">
+            <div className="mb-5 nl-glass rounded-xl overflow-hidden">
               <button
                 onClick={() => setShowSecuritySection(!showSecuritySection)}
                 className="w-full flex items-center justify-between p-4 hover:bg-slate-800/20 transition-colors"
@@ -1790,7 +1790,7 @@ export default function WalletPage() {
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => setShowDeleteConfirm(false)} />
-          <div className="relative w-full max-w-[320px] mx-4 nl-glass/50 rounded-2xl p-5 shadow-2xl">
+          <div className="relative w-full max-w-[320px] mx-4 nl-glass rounded-2xl p-5 shadow-2xl">
             <h3 className="text-sm font-bold mb-2 text-white">Delete Wallet?</h3>
             <p className="text-xs text-slate-400 mb-4">
               This removes the wallet from this device. Make sure your seed phrase is backed up first.
@@ -2909,7 +2909,7 @@ function ApprovalsView({ onBack, wallet, chain }: { onBack: () => void; wallet: 
       {pwModal && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => setPwModal(null)} />
-          <div className="relative w-full max-w-[340px] mx-4 nl-glass/50 rounded-2xl p-5 shadow-2xl" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.3)' }}>
+          <div className="relative w-full max-w-[340px] mx-4 nl-glass rounded-2xl p-5 shadow-2xl" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.3)' }}>
             <h3 className="text-sm font-bold mb-1 text-white">Revoke {pwModal.symbol} approval</h3>
             <p className="text-xs text-slate-400 mb-4">Sends an on-chain transaction (network fee applies). Enter your wallet password to sign.</p>
             <input
@@ -3922,7 +3922,7 @@ function WalletSettingsView({
         </button>
 
         {/* Header */}
-        <div className="flex items-center gap-4 mb-6 p-4 nl-glass/50 rounded-2xl">
+        <div className="flex items-center gap-4 mb-6 p-4 nl-glass rounded-2xl">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600/20 to-violet-600/20 border border-blue-500/20 flex items-center justify-center shrink-0">
             <SteinzLogo size={32} />
           </div>
@@ -3936,7 +3936,7 @@ function WalletSettingsView({
         {/* Section Accordion */}
         <div className="space-y-2">
           {SECTIONS.map(s => (
-            <div key={s.id} className="nl-glass/50 rounded-2xl overflow-hidden">
+            <div key={s.id} className="nl-glass rounded-2xl overflow-hidden">
               <button
                 onClick={() => setActiveSection(activeSection === s.id ? null : s.id)}
                 className="w-full flex items-center gap-3 p-4 hover:bg-slate-800/30 transition-colors"
@@ -4308,7 +4308,7 @@ function ActivityTab({ address, chain, enabledChains }: { address: string; chain
   // Current-chain vs all-networks toggle — only shown when more than one
   // decodable chain is enabled, so single-chain users see a clean list.
   const scopeToggle = canGoGlobal ? (
-    <div className="flex items-center gap-1 mb-3 rounded-lg nl-glass/50 p-1">
+    <div className="flex items-center gap-1 mb-3 rounded-lg nl-glass p-1">
       {([
         { id: 'current' as const, label: chain.name },
         { id: 'all' as const, label: 'All networks' },

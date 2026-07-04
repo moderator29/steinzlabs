@@ -25,12 +25,11 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       return NextResponse.json({ error: 'Post not found' }, { status: 404 });
     }
 
-    // Best-effort view increment (never blocks the read).
-    admin
-      .from('research_posts')
-      .update({ view_count: (data.view_count ?? 0) + 1 })
-      .eq('id', id)
-      .then(() => {}, () => {});
+    // Best-effort ATOMIC view increment (never blocks the read). Uses an RPC
+    // that does `set view_count = coalesce(view_count,0) + 1` in a single
+    // UPDATE so concurrent reads don't clobber each other's increments (the
+    // old read-modify-write lost counts under load).
+    admin.rpc('increment_research_view', { post_id: id }).then(() => {}, () => {});
 
     const post = {
       id: data.id,

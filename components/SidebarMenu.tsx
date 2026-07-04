@@ -15,6 +15,8 @@ import {
   Archive, Circle, FileCode, FlaskConical, BookOpen, FileSearch, CheckSquare,
   Crosshair, Network, Globe, History, MessageCircle, Compass, Gem,
   LineChart,
+  Sparkles,
+  ScanSearch,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { GlobalWhatsNewButton } from '@/components/common/GlobalWhatsNew';
@@ -40,6 +42,8 @@ const NAV_CATEGORIES: NavCategory[] = [
     title: 'Overview',
     items: [
       { icon: BarChart3, label: 'Dashboard', path: '/dashboard' },
+      { icon: Sparkles, label: 'Ask the Chain', path: '/dashboard/ask-chain', badge: 'AI' },
+      { icon: ScanSearch, label: 'Token X-Ray', path: '/dashboard/token-xray', badge: 'NEW' },
       { icon: PieChart, label: 'Portfolio', path: '/dashboard/portfolio', badge: 'NEW' },
       { icon: Bell, label: 'Notifications', path: '/dashboard/notifications' },
     ],
@@ -65,8 +69,12 @@ const NAV_CATEGORIES: NavCategory[] = [
       { icon: Dna, label: 'DNA Analyzer', path: '/dashboard/dna-analyzer', badge: 'AI' },
       { icon: Search, label: 'Wallet Intelligence', path: '/dashboard/wallet-intelligence' },
       { icon: Link2, label: 'Wallet Clusters', path: '/dashboard/wallet-clusters' },
+      { icon: Network, label: 'Cluster Radar', path: '/dashboard/cluster-radar', badge: 'NEW' },
       { icon: TrendingUp, label: 'On-Chain Trends', path: '/dashboard/trends' },
       { icon: Trophy, label: 'Smart Money', path: '/dashboard/smart-money' },
+      { icon: Shield, label: 'Wash Trade Radar', path: '/dashboard/wash-radar', badge: 'NEW' },
+      { icon: Target, label: 'MEV Radar', path: '/dashboard/mev-radar', badge: 'NEW' },
+      { icon: Search, label: 'Fresh Money Detector', path: '/dashboard/fresh-money', badge: 'NEW' },
       { icon: Radio, label: 'Network Metrics', path: '/dashboard/network-metrics' },
       { icon: Fish, label: 'Whale Tracker', path: '/dashboard/whale-tracker' },
       { icon: Circle, label: 'Bubble Map', path: '/dashboard/bubble-map', badge: 'NEW' },
@@ -89,6 +97,7 @@ const NAV_CATEGORIES: NavCategory[] = [
       { icon: Wallet, label: 'Wallet', path: '/dashboard/wallet-page', badge: 'NEW' },
       { icon: Bot, label: 'VTX Agent', path: '/dashboard/vtx-ai' },
       { icon: Crosshair, label: 'Sniper Bot', path: '/dashboard/sniper' },
+      { icon: Gem, label: 'Launch Radar', path: '/dashboard/launch-radar', badge: 'NEW' },
       { icon: LineChart, label: 'Market Maker', path: '/dashboard/market-maker', badge: 'NEW' },
       { icon: Network, label: 'Network Graph', path: '/dashboard/network-graph', badge: 'NEW' },
       { icon: Bell, label: 'Alerts', path: '/dashboard/alerts' },

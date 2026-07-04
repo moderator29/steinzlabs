@@ -21,86 +21,87 @@ function getSupabase(): SupabaseClient {
 const SOLANA_RPC = process.env.NEXT_PUBLIC_ALCHEMY_SOLANA_RPC
   || `https://solana-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY || ''}`;
 
+async function rpcGetTransaction(signature: string): Promise<Record<string, unknown> | null> {
+  try {
+    const txRes = await fetch(SOLANA_RPC, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTransaction', params: [signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }] }),
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!txRes.ok) return null;
+    const txData = await txRes.json() as { result?: Record<string, unknown> };
+    return txData.result ?? null;
+  } catch { return null; }
+}
+
+async function rpcGetSignatures(addr: string, limit: number): Promise<Array<{ signature: string; blockTime: number | null; slot: number }>> {
+  try {
+    const sigRes = await fetch(SOLANA_RPC, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getSignaturesForAddress', params: [addr, { limit }] }),
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!sigRes.ok) return [];
+    const sigData = await sigRes.json() as { result?: Array<{ signature: string; blockTime: number | null; slot: number }> };
+    return sigData.result ?? [];
+  } catch { return []; }
+}
+
 async function getRecentTransfers(addresses: string[]): Promise<TransferEdge[]> {
   if (!SOLANA_RPC) return [];
-  const edges: TransferEdge[] = [];
   const batch = addresses.slice(0, 20);
-  for (const addr of batch) {
-    try {
-      const sigRes = await fetch(SOLANA_RPC, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getSignaturesForAddress', params: [addr, { limit: 50 }] }),
-        signal: AbortSignal.timeout(12000),
-      });
-      if (!sigRes.ok) continue;
-      const sigData = await sigRes.json() as { result?: Array<{ signature: string; blockTime: number | null }> };
-      for (const sig of (sigData.result ?? []).slice(0, 10)) {
-        const txRes = await fetch(SOLANA_RPC, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTransaction', params: [sig.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }] }),
-          signal: AbortSignal.timeout(12000),
-        });
-        if (!txRes.ok) continue;
-        const txData = await txRes.json() as { result?: Record<string, unknown> };
-        const tx = txData.result;
-        if (!tx) continue;
-        const meta = tx.meta as Record<string, unknown> | undefined;
-        const preBalances = (meta?.preBalances as number[]) ?? [];
-        const postBalances = (meta?.postBalances as number[]) ?? [];
-        const accountKeys = ((tx.transaction as Record<string, unknown>)?.message as Record<string, unknown>)?.accountKeys as Array<{ pubkey: string }> ?? [];
-        for (let i = 0; i < accountKeys.length; i++) {
-          const diff = ((postBalances[i] ?? 0) - (preBalances[i] ?? 0)) / 1e9;
-          if (Math.abs(diff) > 0.001 && accountKeys[i]?.pubkey !== addr && addresses.includes(accountKeys[i]?.pubkey)) {
-            edges.push({ from: diff < 0 ? accountKeys[i].pubkey : addr, to: diff > 0 ? accountKeys[i].pubkey : addr, valueUsd: Math.abs(diff), timestamp: (sig.blockTime ?? 0) * 1000, txHash: sig.signature });
-          }
+  // Parallelize per-address AND per-signature. The old sequential nested loop
+  // fired up to ~200 RPC calls one-at-a-time with 12s timeouts each, so a slow
+  // wallet blocked the entire cron; failures are isolated per call (skipped).
+  const perAddress = await Promise.all(batch.map(async (addr) => {
+    const edges: TransferEdge[] = [];
+    const sigs = (await rpcGetSignatures(addr, 50)).slice(0, 10);
+    const txs = await Promise.all(sigs.map(async (sig) => ({ sig, tx: await rpcGetTransaction(sig.signature) })));
+    for (const { sig, tx } of txs) {
+      if (!tx) continue;
+      const meta = tx.meta as Record<string, unknown> | undefined;
+      const preBalances = (meta?.preBalances as number[]) ?? [];
+      const postBalances = (meta?.postBalances as number[]) ?? [];
+      const accountKeys = ((tx.transaction as Record<string, unknown>)?.message as Record<string, unknown>)?.accountKeys as Array<{ pubkey: string }> ?? [];
+      for (let i = 0; i < accountKeys.length; i++) {
+        const diff = ((postBalances[i] ?? 0) - (preBalances[i] ?? 0)) / 1e9;
+        if (Math.abs(diff) > 0.001 && accountKeys[i]?.pubkey !== addr && addresses.includes(accountKeys[i]?.pubkey)) {
+          edges.push({ from: diff < 0 ? accountKeys[i].pubkey : addr, to: diff > 0 ? accountKeys[i].pubkey : addr, valueUsd: Math.abs(diff), timestamp: (sig.blockTime ?? 0) * 1000, txHash: sig.signature });
         }
       }
-    } catch { /* skip wallet */ }
-  }
-  return edges;
+    }
+    return edges;
+  }));
+  return perAddress.flat();
 }
 
 async function getRecentTrades(addresses: string[]): Promise<TokenTradeEvent[]> {
   if (!SOLANA_RPC) return [];
-  const events: TokenTradeEvent[] = [];
   const batch = addresses.slice(0, 20);
-  for (const addr of batch) {
-    try {
-      const sigRes = await fetch(SOLANA_RPC, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getSignaturesForAddress', params: [addr, { limit: 30 }] }),
-        signal: AbortSignal.timeout(12000),
-      });
-      if (!sigRes.ok) continue;
-      const sigData = await sigRes.json() as { result?: Array<{ signature: string; blockTime: number | null; slot: number }> };
-      for (const sig of (sigData.result ?? []).slice(0, 10)) {
-        const txRes = await fetch(SOLANA_RPC, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTransaction', params: [sig.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }] }),
-          signal: AbortSignal.timeout(12000),
-        });
-        if (!txRes.ok) continue;
-        const txData = await txRes.json() as { result?: Record<string, unknown> };
-        const tx = txData.result;
-        if (!tx) continue;
-        const meta = tx.meta as Record<string, unknown> | undefined;
-        const preTokens = (meta?.preTokenBalances as any[]) ?? [];
-        const postTokens = (meta?.postTokenBalances as any[]) ?? [];
-        for (const pt of postTokens) {
-          const pre = preTokens.find((p: any) => p.accountIndex === pt.accountIndex && p.mint === pt.mint);
-          const diff = (pt.uiTokenAmount?.uiAmount ?? 0) - (pre?.uiTokenAmount?.uiAmount ?? 0);
-          if (Math.abs(diff) > 0) {
-            events.push({ address: addr, tokenAddress: pt.mint, side: diff > 0 ? 'buy' : 'sell', valueUsd: Math.abs(diff), timestamp: (sig.blockTime ?? 0) * 1000, blockNumber: sig.slot, txHash: sig.signature });
-          }
+  // Same parallelization as getRecentTransfers — addresses and signatures run
+  // concurrently instead of one blocking RPC call at a time.
+  const perAddress = await Promise.all(batch.map(async (addr) => {
+    const events: TokenTradeEvent[] = [];
+    const sigs = (await rpcGetSignatures(addr, 30)).slice(0, 10);
+    const txs = await Promise.all(sigs.map(async (sig) => ({ sig, tx: await rpcGetTransaction(sig.signature) })));
+    for (const { sig, tx } of txs) {
+      if (!tx) continue;
+      const meta = tx.meta as Record<string, unknown> | undefined;
+      const preTokens = (meta?.preTokenBalances as any[]) ?? [];
+      const postTokens = (meta?.postTokenBalances as any[]) ?? [];
+      for (const pt of postTokens) {
+        const pre = preTokens.find((p: any) => p.accountIndex === pt.accountIndex && p.mint === pt.mint);
+        const diff = (pt.uiTokenAmount?.uiAmount ?? 0) - (pre?.uiTokenAmount?.uiAmount ?? 0);
+        if (Math.abs(diff) > 0) {
+          events.push({ address: addr, tokenAddress: pt.mint, side: diff > 0 ? 'buy' : 'sell', valueUsd: Math.abs(diff), timestamp: (sig.blockTime ?? 0) * 1000, blockNumber: sig.slot, txHash: sig.signature });
         }
       }
-    } catch { /* skip wallet */ }
-  }
-  return events;
+    }
+    return events;
+  }));
+  return perAddress.flat();
 }
 
 // ─── Main job ─────────────────────────────────────────────────────────────────

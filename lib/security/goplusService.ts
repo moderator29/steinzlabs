@@ -67,6 +67,13 @@ export interface TokenSecurityResult {
   cannotBuy: boolean;
   cannotSellAll: boolean;
   tradingCooldown: boolean;
+  /** Solana SPL only: an active freeze authority can freeze token accounts
+   *  (block transfers) — a real but distinct risk from EVM balance-modification.
+   *  Kept separate so we never mislabel a freezable SPL (e.g. USDC) as
+   *  "owner can change your balance". */
+  freezable?: boolean;
+  /** Solana SPL only: the token account can be closed by an authority. */
+  closable?: boolean;
   creatorAddress: string;
   ownerAddress: string;
   /** True when the creator wallet sits in the top-N holders with a
@@ -169,8 +176,15 @@ function parseSolanaTokenSecurity(t: Record<string, unknown>): TokenSecurityResu
     isProxy: false,
     hasHiddenOwner: false,
     canTakeBackOwnership: false,
-    ownerCanChangeBalance: isFreezable,
-    selfDestruct: isClosable,
+    // SPL freeze authority is NOT arbitrary balance modification (that's an EVM
+    // concept). Surface it via the dedicated `freezable` field + the checks
+    // list, not by mislabeling it 'owner can change balance' — which wrongly
+    // flagged legitimate freezable tokens (USDC, etc.) as balance-rug risks.
+    ownerCanChangeBalance: false,
+    // Account-closable ≠ contract self-destruct; keep it in `closable`.
+    selfDestruct: false,
+    freezable: isFreezable,
+    closable: isClosable,
     externalCall: false,
     cannotBuy: false,
     cannotSellAll: nonTransferable,

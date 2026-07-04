@@ -105,8 +105,18 @@ export default function BridgePage() {
     try {
       const accounts = (await eth.request({ method: 'eth_requestAccounts' })) as string[];
       const fromAddress = accounts[0];
-      const { parseUnits } = await import('ethers');
-      const fromAmountBaseUnits = parseUnits(amount, 18).toString();
+      const { parseUnits, Contract, BrowserProvider } = await import('ethers');
+      // Resolve REAL token decimals — hardcoding 18 sent 100 USDC (6dp) as
+      // 100e18 base units (100 trillion), which LiFi rejected/mispriced.
+      let fromDecimals = 18;
+      if (fromToken.toLowerCase() !== NATIVE_ADDR.toLowerCase()) {
+        try {
+          const p = new BrowserProvider(eth as unknown as Eip1193Provider);
+          const erc20 = new Contract(fromToken, ['function decimals() view returns (uint8)'], p);
+          fromDecimals = Number(await erc20.decimals());
+        } catch { fromDecimals = 18; }
+      }
+      const fromAmountBaseUnits = parseUnits(amount, fromDecimals).toString();
 
       const res = await fetch('/api/bridge/quote', {
         method: 'POST',
@@ -223,7 +233,12 @@ export default function BridgePage() {
     const tick = async () => {
       try {
         const res = await fetch(`/api/bridge/status/${hash}?${params}`);
-        if (!res.ok) return;
+        if (!res.ok) {
+          // LiFi /status 502s intermittently while the bridge is in flight —
+          // returning here permanently stalled the status UI. Reschedule.
+          setTimeout(tick, 15_000);
+          return;
+        }
         const json = (await res.json()) as StatusResponse;
         setStatus(json);
         if (json.status !== 'DONE' && json.status !== 'FAILED') {

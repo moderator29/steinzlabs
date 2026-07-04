@@ -3,7 +3,7 @@
 /**
  * TelegramConnectBanner — dashboard prompt that nudges the user to
  * connect Telegram so they receive whale, price and copy-trade alerts in
- * their DMs. Auto-hides once linked. Tap → /settings/notifications which
+ * their DMs. Auto-hides once linked. Tap → /settings which
  * has the full TelegramConnectCard with the 6-digit code flow.
  */
 
@@ -41,7 +41,7 @@ export function TelegramConnectBanner() {
 
   return (
     <Link
-      href="/settings/notifications#telegram"
+      href="/settings#telegram"
       className="group relative flex items-center justify-between gap-3 rounded-xl border border-[#229ED9]/30 bg-gradient-to-r from-[#229ED9]/10 to-[#0066FF]/10 p-4 transition hover:border-[#229ED9]/60"
     >
       <div className="flex items-center gap-3 min-w-0">

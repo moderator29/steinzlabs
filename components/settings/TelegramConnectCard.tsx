@@ -103,12 +103,12 @@ export function TelegramConnectCard() {
     if (!confirm("Disconnect Telegram? You'll stop receiving alerts there.")) return;
     setUnlinking(true);
     try {
-      // Server-side disconnect happens via the bot /unlink command, but we
-      // can also clear from the app side by deleting the link row. Reuse the
-      // POST endpoint with a fresh code to invalidate state, then the user
-      // sends /unlink in the bot. Simplest: just delete via a dedicated API.
-      // For now we surface the bot command to the user.
-      alert("Open Telegram and send /unlink to @" + BOT_USERNAME + " to fully disconnect.");
+      const res = await fetch('/api/telegram/unlink', { method: 'DELETE', credentials: 'include' });
+      if (res.ok) {
+        await fetchStatus();
+      } else {
+        alert("Couldn't disconnect. Open Telegram and send /unlink to @" + BOT_USERNAME + " instead.");
+      }
     } finally {
       setUnlinking(false);
     }

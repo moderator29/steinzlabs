@@ -1,4 +1,8 @@
 import 'server-only';
+import { cacheKey, TTL, withCache } from '../api/cache-manager';
+import { getSolanaTransactions, getSolanaTransactionDetail } from './alchemy-solana';
+import { getTokenPrice as getJupiterPrice } from './jupiter';
+import { getDexPriceForChain } from './dexscreener';
 
 /**
  * Bitquery — cross-chain discovery of ACTIVE, day-to-day whale TRADERS (the free
@@ -157,10 +161,242 @@ const EVM_WALLET_BUYS_QUERY = `
     }
   }`;
 
+// ─── FREE fallback plumbing ────────────────────────────────────────────────
+// WHY: Bitquery is a PAID off-matrix API — bitqueryPost() returns null the moment
+// BITQUERY_API_KEY is unset, and the EAP DEXTrades dataset can also error / come
+// back empty on a plan that lacks it. That silently starves copy-trade and
+// whale-exit signals. To keep them alive on the owner's FREE (Anthropic+Vercel)
+// budget we reconstruct the SAME WalletBuy[] shape from already-wired free
+// providers:
+//   EVM    -> Alchemy ERC-20 asset-transfer history (incoming = buys, outgoing =
+//             sells), priced by DexScreener at CURRENT price.
+//   Solana -> Alchemy Solana RPC per-tx token-balance deltas, priced by Jupiter.
+// We never fabricate: a record with no resolvable token contract/mint is dropped,
+// and valueUsd is null (not guessed) when the token can't be priced. Historical
+// price at trade time isn't available from the free tier, so USD is a
+// current-price estimate — WalletBuy has no `source` field to label, so callers
+// treat these identically to the paid rows (same shape, honestly nullable USD).
+
+const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY || '';
+
+// EVM chain slug → Alchemy RPC subdomain. Only the chains this module maps for
+// Bitquery. The exported alchemy.getAssetTransfers helper DROPS rawContract, but
+// WalletBuy.tokenMint REQUIRES the token contract, so we read the raw
+// alchemy_getAssetTransfers JSON-RPC here to keep the address.
+const ALCHEMY_EVM_SUBDOMAIN: Record<string, string> = {
+  ethereum: 'eth-mainnet',
+  base: 'base-mainnet',
+  arbitrum: 'arb-mainnet',
+  optimism: 'opt-mainnet',
+  polygon: 'polygon-mainnet',
+  bsc: 'bnb-mainnet',
+};
+
+interface RawEvmTransfer {
+  hash: string;
+  contract: string;
+  symbol: string | null;
+  amount: number;
+  timestamp: string;
+}
+
+/**
+ * ERC-20 transfers for a wallet on `chain`, newest first, within [sinceIso, now].
+ * `direction: 'to'` = tokens arriving (buys), `'from'` = tokens leaving (sells).
+ * Returns the token CONTRACT (needed for tokenMint + pricing) which the shared
+ * alchemy helper discards. Returns [] when the Alchemy key/chain is unavailable.
+ */
+async function getEvmErc20Transfers(
+  chain: string,
+  address: string,
+  direction: 'to' | 'from',
+  sinceIso: string,
+  maxCount: number,
+): Promise<RawEvmTransfer[]> {
+  const subdomain = ALCHEMY_EVM_SUBDOMAIN[chain.toLowerCase()];
+  if (!subdomain || !ALCHEMY_API_KEY) return [];
+  const sinceMs = Date.parse(sinceIso);
+  const url = `https://${subdomain}.g.alchemy.com/v2/${ALCHEMY_API_KEY}`;
+  const params: Record<string, unknown> = {
+    [direction === 'to' ? 'toAddress' : 'fromAddress']: address,
+    category: ['erc20'],
+    withMetadata: true,
+    excludeZeroValue: true,
+    order: 'desc',
+    maxCount: '0x' + Math.min(Math.max(maxCount, 1), 1000).toString(16),
+  };
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: 1, jsonrpc: '2.0', method: 'alchemy_getAssetTransfers', params: [params] }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) return [];
+    const json = (await res.json()) as { result?: { transfers?: Array<Record<string, unknown>> } };
+    const transfers = json.result?.transfers ?? [];
+    const out: RawEvmTransfer[] = [];
+    for (const t of transfers) {
+      const meta = t.metadata as { blockTimestamp?: string } | undefined;
+      const iso = meta?.blockTimestamp ?? '';
+      // Honour the same time window the paid path filters on.
+      if (iso && Number.isFinite(sinceMs) && Date.parse(iso) < sinceMs) continue;
+      const rc = t.rawContract as { address?: string } | undefined;
+      const contract = String(rc?.address ?? '').trim().toLowerCase();
+      const hash = String(t.hash ?? '').trim();
+      if (!hash || !/^0x[a-fA-F0-9]{40}$/.test(contract)) continue;
+      out.push({
+        hash,
+        contract,
+        symbol: (t.asset as string | null) ?? null,
+        amount: num(t.value),
+        timestamp: iso || new Date().toISOString(),
+      });
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+/** Reconstruct EVM wallet buys/sells from free Alchemy + DexScreener data. */
+async function evmWalletTradesFallback(
+  chain: string,
+  address: string,
+  sinceIso: string,
+  limit: number,
+  side: 'buy' | 'sell',
+): Promise<WalletBuy[]> {
+  const key = cacheKey('bitquery-fallback', side === 'buy' ? 'evm_buys' : 'evm_sells', {
+    chain: chain.toLowerCase(), address: address.toLowerCase(), sinceIso, limit,
+  });
+  return withCache(key, TTL.WALLET_BALANCE, async () => {
+    // Over-fetch: base-token legs and unpriceable tokens get filtered out below.
+    const transfers = await getEvmErc20Transfers(
+      chain, address, side === 'buy' ? 'to' : 'from', sinceIso, Math.min(limit, 25) * 4,
+    );
+    const priceCache = new Map<string, number>();
+    const out: WalletBuy[] = [];
+    for (const t of transfers) {
+      if (out.length >= limit) break;
+      // A move of a base/quote token is the OTHER side of the swap, not a token buy.
+      if (t.symbol && EVM_BASE_SYMBOLS.has(t.symbol.toUpperCase())) continue;
+      let price = priceCache.get(t.contract);
+      if (price === undefined) {
+        try { price = await getDexPriceForChain(t.contract, chain); } catch { price = 0; }
+        priceCache.set(t.contract, price);
+      }
+      out.push({
+        txHash: t.hash,
+        tokenMint: t.contract,
+        tokenSymbol: t.symbol,
+        amount: t.amount,
+        valueUsd: price > 0 ? price * t.amount : null,
+        timestamp: t.timestamp,
+      });
+    }
+    return out;
+  });
+}
+
+/**
+ * Per-mint token-balance delta (post − pre) for `owner` in one parsed Solana tx.
+ * Positive = tokens acquired (a buy leg), negative = tokens disposed (a sell leg).
+ */
+function ownerMintDeltas(
+  meta: { preTokenBalances?: Array<Record<string, unknown>>; postTokenBalances?: Array<Record<string, unknown>> },
+  owner: string,
+): Map<string, number> {
+  const fold = (rows: Array<Record<string, unknown>> | undefined, into: Map<string, number>) => {
+    for (const b of rows ?? []) {
+      if (String(b.owner ?? '') !== owner) continue;
+      const mint = String(b.mint ?? '');
+      if (!mint) continue;
+      const uta = b.uiTokenAmount as { uiAmount?: number | null } | undefined;
+      const ui = typeof uta?.uiAmount === 'number' ? uta.uiAmount : 0;
+      into.set(mint, (into.get(mint) ?? 0) + ui);
+    }
+  };
+  const pre = new Map<string, number>();
+  const post = new Map<string, number>();
+  fold(meta.preTokenBalances, pre);
+  fold(meta.postTokenBalances, post);
+  const delta = new Map<string, number>();
+  for (const m of new Set([...pre.keys(), ...post.keys()])) {
+    delta.set(m, (post.get(m) ?? 0) - (pre.get(m) ?? 0));
+  }
+  return delta;
+}
+
+/** Reconstruct Solana wallet buys/sells from free Alchemy RPC + Jupiter pricing. */
+async function solanaWalletTradesFallback(
+  address: string,
+  sinceIso: string,
+  limit: number,
+  side: 'buy' | 'sell',
+): Promise<WalletBuy[]> {
+  const key = cacheKey('bitquery-fallback', side === 'buy' ? 'sol_buys' : 'sol_sells', {
+    address, sinceIso, limit,
+  });
+  return withCache(key, TTL.WALLET_BALANCE, async () => {
+    const sinceMs = Date.parse(sinceIso);
+    const sinceSec = Number.isFinite(sinceMs) ? Math.floor(sinceMs / 1000) : 0;
+    // getSolanaTransactions only lists signatures (desc by time); token flow lives
+    // in the per-tx detail, so we fetch details for a bounded window of recent sigs.
+    const sigs = await getSolanaTransactions(address, 100);
+    const priceCache = new Map<string, number>();
+    const out: WalletBuy[] = [];
+    let scanned = 0;
+    for (const sig of sigs) {
+      if (out.length >= limit) break;
+      if (scanned >= 60) break; // bound the per-tx detail fan-out
+      if (sig.type === 'FAILED') continue;
+      if (sinceSec && sig.timestamp && sig.timestamp < sinceSec) continue;
+      scanned++;
+      const detail = (await getSolanaTransactionDetail(sig.signature)) as {
+        blockTime?: number;
+        meta?: {
+          err?: unknown;
+          preTokenBalances?: Array<Record<string, unknown>>;
+          postTokenBalances?: Array<Record<string, unknown>>;
+        };
+      } | null;
+      if (!detail?.meta || detail.meta.err) continue;
+      const deltas = ownerMintDeltas(detail.meta, address);
+      // The token leg = the non-base mint whose delta matches the side, largest first.
+      let best: { mint: string; amount: number } | null = null;
+      for (const [mint, d] of deltas) {
+        if (SOLANA_BASE_MINTS.has(mint)) continue;
+        if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(mint)) continue;
+        const signed = side === 'buy' ? d : -d;
+        if (signed <= 0) continue;
+        if (!best || signed > best.amount) best = { mint, amount: signed };
+      }
+      if (!best) continue;
+      let price = priceCache.get(best.mint);
+      if (price === undefined) {
+        try { price = await getJupiterPrice(best.mint); } catch { price = 0; }
+        priceCache.set(best.mint, price);
+      }
+      const ts = detail.blockTime ?? sig.timestamp ?? 0;
+      out.push({
+        txHash: sig.signature,
+        tokenMint: best.mint,
+        tokenSymbol: null,
+        amount: best.amount,
+        valueUsd: price > 0 ? price * best.amount : null,
+        timestamp: ts ? new Date(ts * 1000).toISOString() : new Date().toISOString(),
+      });
+    }
+    return out;
+  });
+}
+
 /**
  * Recent token BUYS by an EVM wallet (DEX acquisitions of a non-base token).
  * Mirrors getSolanaWalletBuys; token address comes from Currency.SmartContract,
- * base tokens excluded by symbol. Fails closed ([]). Verify in ide.bitquery.io.
+ * base tokens excluded by symbol. Prefers Bitquery when keyed; otherwise (or when
+ * the paid call errors / returns empty) falls back to free Alchemy+DexScreener.
  */
 export async function getEvmWalletBuys(
   chain: string,
@@ -169,40 +405,43 @@ export async function getEvmWalletBuys(
   limit = 10,
 ): Promise<WalletBuy[]> {
   const network = EVM_NETWORK_BY_CHAIN[chain.toLowerCase()];
-  if (!isBitqueryEnabled() || !network || !address || !sinceIso) return [];
+  if (!network || !address || !sinceIso) return [];
   if (!/^0x[a-fA-F0-9]{40}$/.test(address)) return [];
-  try {
-    const json = (await bitqueryPost(EVM_WALLET_BUYS_QUERY, {
-      network, address, since: sinceIso, limit: Math.min(limit, 25),
-    })) as { data?: { EVM?: { DEXTrades?: unknown[] } } } | null;
-    const rows: unknown[] = json?.data?.EVM?.DEXTrades ?? [];
-    if (!Array.isArray(rows)) return [];
-
-    const out: WalletBuy[] = [];
-    for (const r of rows as Array<Record<string, unknown>>) {
-      const block = r.Block as Record<string, unknown> | undefined;
-      const txn = r.Transaction as Record<string, unknown> | undefined;
-      const trade = r.Trade as Record<string, unknown> | undefined;
-      const buy = trade?.Buy as Record<string, unknown> | undefined;
-      const cur = buy?.Currency as Record<string, unknown> | undefined;
-      const token = String(cur?.SmartContract ?? '').trim().toLowerCase();
-      const symbol = (cur?.Symbol as string | null) ?? null;
-      const hash = String(txn?.Hash ?? '').trim();
-      if (!hash || !/^0x[a-fA-F0-9]{40}$/.test(token)) continue;
-      if (symbol && EVM_BASE_SYMBOLS.has(symbol.toUpperCase())) continue;
-      out.push({
-        txHash: hash,
-        tokenMint: token,
-        tokenSymbol: symbol,
-        amount: num(buy?.Amount),
-        valueUsd: buy?.AmountInUSD != null ? num(buy.AmountInUSD) : null,
-        timestamp: String(block?.Time ?? new Date().toISOString()),
-      });
+  if (isBitqueryEnabled()) {
+    try {
+      const json = (await bitqueryPost(EVM_WALLET_BUYS_QUERY, {
+        network, address, since: sinceIso, limit: Math.min(limit, 25),
+      })) as { data?: { EVM?: { DEXTrades?: unknown[] } } } | null;
+      const rows: unknown[] = json?.data?.EVM?.DEXTrades ?? [];
+      if (Array.isArray(rows)) {
+        const out: WalletBuy[] = [];
+        for (const r of rows as Array<Record<string, unknown>>) {
+          const block = r.Block as Record<string, unknown> | undefined;
+          const txn = r.Transaction as Record<string, unknown> | undefined;
+          const trade = r.Trade as Record<string, unknown> | undefined;
+          const buy = trade?.Buy as Record<string, unknown> | undefined;
+          const cur = buy?.Currency as Record<string, unknown> | undefined;
+          const token = String(cur?.SmartContract ?? '').trim().toLowerCase();
+          const symbol = (cur?.Symbol as string | null) ?? null;
+          const hash = String(txn?.Hash ?? '').trim();
+          if (!hash || !/^0x[a-fA-F0-9]{40}$/.test(token)) continue;
+          if (symbol && EVM_BASE_SYMBOLS.has(symbol.toUpperCase())) continue;
+          out.push({
+            txHash: hash,
+            tokenMint: token,
+            tokenSymbol: symbol,
+            amount: num(buy?.Amount),
+            valueUsd: buy?.AmountInUSD != null ? num(buy.AmountInUSD) : null,
+            timestamp: String(block?.Time ?? new Date().toISOString()),
+          });
+        }
+        if (out.length) return out; // prefer paid data when it actually has rows
+      }
+    } catch {
+      /* paid path failed — fall through to the free fallback below */
     }
-    return out;
-  } catch {
-    return [];
   }
+  return evmWalletTradesFallback(chain, address, sinceIso, limit, 'buy');
 }
 
 /**
@@ -217,39 +456,42 @@ export async function getSolanaWalletBuys(
   sinceIso: string,
   limit = 10,
 ): Promise<WalletBuy[]> {
-  if (!isBitqueryEnabled() || !address || !sinceIso) return [];
-  try {
-    const json = (await bitqueryPost(SOLANA_WALLET_BUYS_QUERY, {
-      address, since: sinceIso, limit: Math.min(limit, 25),
-    })) as { data?: { Solana?: { DEXTrades?: unknown[] } } } | null;
-    const rows: unknown[] = json?.data?.Solana?.DEXTrades ?? [];
-    if (!Array.isArray(rows)) return [];
-
-    const out: WalletBuy[] = [];
-    for (const r of rows as Array<Record<string, unknown>>) {
-      const block = r.Block as Record<string, unknown> | undefined;
-      const txn = r.Transaction as Record<string, unknown> | undefined;
-      const trade = r.Trade as Record<string, unknown> | undefined;
-      const buy = trade?.Buy as Record<string, unknown> | undefined;
-      const cur = buy?.Currency as Record<string, unknown> | undefined;
-      const mint = String(cur?.MintAddress ?? '').trim();
-      const sig = String(txn?.Signature ?? '').trim();
-      // Must be a real token acquisition (not base) with a tx + valid mint.
-      if (!sig || !mint || SOLANA_BASE_MINTS.has(mint)) continue;
-      if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(mint)) continue;
-      out.push({
-        txHash: sig,
-        tokenMint: mint,
-        tokenSymbol: (cur?.Symbol as string | null) ?? null,
-        amount: num(buy?.Amount),
-        valueUsd: buy?.AmountInUSD != null ? num(buy.AmountInUSD) : null,
-        timestamp: String(block?.Time ?? new Date().toISOString()),
-      });
+  if (!address || !sinceIso) return [];
+  if (isBitqueryEnabled()) {
+    try {
+      const json = (await bitqueryPost(SOLANA_WALLET_BUYS_QUERY, {
+        address, since: sinceIso, limit: Math.min(limit, 25),
+      })) as { data?: { Solana?: { DEXTrades?: unknown[] } } } | null;
+      const rows: unknown[] = json?.data?.Solana?.DEXTrades ?? [];
+      if (Array.isArray(rows)) {
+        const out: WalletBuy[] = [];
+        for (const r of rows as Array<Record<string, unknown>>) {
+          const block = r.Block as Record<string, unknown> | undefined;
+          const txn = r.Transaction as Record<string, unknown> | undefined;
+          const trade = r.Trade as Record<string, unknown> | undefined;
+          const buy = trade?.Buy as Record<string, unknown> | undefined;
+          const cur = buy?.Currency as Record<string, unknown> | undefined;
+          const mint = String(cur?.MintAddress ?? '').trim();
+          const sig = String(txn?.Signature ?? '').trim();
+          // Must be a real token acquisition (not base) with a tx + valid mint.
+          if (!sig || !mint || SOLANA_BASE_MINTS.has(mint)) continue;
+          if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(mint)) continue;
+          out.push({
+            txHash: sig,
+            tokenMint: mint,
+            tokenSymbol: (cur?.Symbol as string | null) ?? null,
+            amount: num(buy?.Amount),
+            valueUsd: buy?.AmountInUSD != null ? num(buy.AmountInUSD) : null,
+            timestamp: String(block?.Time ?? new Date().toISOString()),
+          });
+        }
+        if (out.length) return out; // prefer paid data when it actually has rows
+      }
+    } catch {
+      /* paid path failed — fall through to the free fallback below */
     }
-    return out;
-  } catch {
-    return [];
   }
+  return solanaWalletTradesFallback(address, sinceIso, limit, 'buy');
 }
 
 const SOLANA_WALLET_SELLS_QUERY = `
@@ -303,38 +545,41 @@ export async function getSolanaWalletSells(
   sinceIso: string,
   limit = 10,
 ): Promise<WalletBuy[]> {
-  if (!isBitqueryEnabled() || !address || !sinceIso) return [];
-  try {
-    const json = (await bitqueryPost(SOLANA_WALLET_SELLS_QUERY, {
-      address, since: sinceIso, limit: Math.min(limit, 25),
-    })) as { data?: { Solana?: { DEXTrades?: unknown[] } } } | null;
-    const rows: unknown[] = json?.data?.Solana?.DEXTrades ?? [];
-    if (!Array.isArray(rows)) return [];
-
-    const out: WalletBuy[] = [];
-    for (const r of rows as Array<Record<string, unknown>>) {
-      const block = r.Block as Record<string, unknown> | undefined;
-      const txn = r.Transaction as Record<string, unknown> | undefined;
-      const trade = r.Trade as Record<string, unknown> | undefined;
-      const sell = trade?.Sell as Record<string, unknown> | undefined;
-      const cur = sell?.Currency as Record<string, unknown> | undefined;
-      const mint = String(cur?.MintAddress ?? '').trim();
-      const sig = String(txn?.Signature ?? '').trim();
-      if (!sig || !mint || SOLANA_BASE_MINTS.has(mint)) continue;
-      if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(mint)) continue;
-      out.push({
-        txHash: sig,
-        tokenMint: mint,
-        tokenSymbol: (cur?.Symbol as string | null) ?? null,
-        amount: num(sell?.Amount),
-        valueUsd: sell?.AmountInUSD != null ? num(sell.AmountInUSD) : null,
-        timestamp: String(block?.Time ?? new Date().toISOString()),
-      });
+  if (!address || !sinceIso) return [];
+  if (isBitqueryEnabled()) {
+    try {
+      const json = (await bitqueryPost(SOLANA_WALLET_SELLS_QUERY, {
+        address, since: sinceIso, limit: Math.min(limit, 25),
+      })) as { data?: { Solana?: { DEXTrades?: unknown[] } } } | null;
+      const rows: unknown[] = json?.data?.Solana?.DEXTrades ?? [];
+      if (Array.isArray(rows)) {
+        const out: WalletBuy[] = [];
+        for (const r of rows as Array<Record<string, unknown>>) {
+          const block = r.Block as Record<string, unknown> | undefined;
+          const txn = r.Transaction as Record<string, unknown> | undefined;
+          const trade = r.Trade as Record<string, unknown> | undefined;
+          const sell = trade?.Sell as Record<string, unknown> | undefined;
+          const cur = sell?.Currency as Record<string, unknown> | undefined;
+          const mint = String(cur?.MintAddress ?? '').trim();
+          const sig = String(txn?.Signature ?? '').trim();
+          if (!sig || !mint || SOLANA_BASE_MINTS.has(mint)) continue;
+          if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(mint)) continue;
+          out.push({
+            txHash: sig,
+            tokenMint: mint,
+            tokenSymbol: (cur?.Symbol as string | null) ?? null,
+            amount: num(sell?.Amount),
+            valueUsd: sell?.AmountInUSD != null ? num(sell.AmountInUSD) : null,
+            timestamp: String(block?.Time ?? new Date().toISOString()),
+          });
+        }
+        if (out.length) return out; // prefer paid data when it actually has rows
+      }
+    } catch {
+      /* paid path failed — fall through to the free fallback below */
     }
-    return out;
-  } catch {
-    return [];
   }
+  return solanaWalletTradesFallback(address, sinceIso, limit, 'sell');
 }
 
 /**
@@ -348,40 +593,43 @@ export async function getEvmWalletSells(
   limit = 10,
 ): Promise<WalletBuy[]> {
   const network = EVM_NETWORK_BY_CHAIN[chain.toLowerCase()];
-  if (!isBitqueryEnabled() || !network || !address || !sinceIso) return [];
+  if (!network || !address || !sinceIso) return [];
   if (!/^0x[a-fA-F0-9]{40}$/.test(address)) return [];
-  try {
-    const json = (await bitqueryPost(EVM_WALLET_SELLS_QUERY, {
-      network, address, since: sinceIso, limit: Math.min(limit, 25),
-    })) as { data?: { EVM?: { DEXTrades?: unknown[] } } } | null;
-    const rows: unknown[] = json?.data?.EVM?.DEXTrades ?? [];
-    if (!Array.isArray(rows)) return [];
-
-    const out: WalletBuy[] = [];
-    for (const r of rows as Array<Record<string, unknown>>) {
-      const block = r.Block as Record<string, unknown> | undefined;
-      const txn = r.Transaction as Record<string, unknown> | undefined;
-      const trade = r.Trade as Record<string, unknown> | undefined;
-      const sell = trade?.Sell as Record<string, unknown> | undefined;
-      const cur = sell?.Currency as Record<string, unknown> | undefined;
-      const token = String(cur?.SmartContract ?? '').trim().toLowerCase();
-      const symbol = (cur?.Symbol as string | null) ?? null;
-      const hash = String(txn?.Hash ?? '').trim();
-      if (!hash || !/^0x[a-fA-F0-9]{40}$/.test(token)) continue;
-      if (symbol && EVM_BASE_SYMBOLS.has(symbol.toUpperCase())) continue;
-      out.push({
-        txHash: hash,
-        tokenMint: token,
-        tokenSymbol: symbol,
-        amount: num(sell?.Amount),
-        valueUsd: sell?.AmountInUSD != null ? num(sell.AmountInUSD) : null,
-        timestamp: String(block?.Time ?? new Date().toISOString()),
-      });
+  if (isBitqueryEnabled()) {
+    try {
+      const json = (await bitqueryPost(EVM_WALLET_SELLS_QUERY, {
+        network, address, since: sinceIso, limit: Math.min(limit, 25),
+      })) as { data?: { EVM?: { DEXTrades?: unknown[] } } } | null;
+      const rows: unknown[] = json?.data?.EVM?.DEXTrades ?? [];
+      if (Array.isArray(rows)) {
+        const out: WalletBuy[] = [];
+        for (const r of rows as Array<Record<string, unknown>>) {
+          const block = r.Block as Record<string, unknown> | undefined;
+          const txn = r.Transaction as Record<string, unknown> | undefined;
+          const trade = r.Trade as Record<string, unknown> | undefined;
+          const sell = trade?.Sell as Record<string, unknown> | undefined;
+          const cur = sell?.Currency as Record<string, unknown> | undefined;
+          const token = String(cur?.SmartContract ?? '').trim().toLowerCase();
+          const symbol = (cur?.Symbol as string | null) ?? null;
+          const hash = String(txn?.Hash ?? '').trim();
+          if (!hash || !/^0x[a-fA-F0-9]{40}$/.test(token)) continue;
+          if (symbol && EVM_BASE_SYMBOLS.has(symbol.toUpperCase())) continue;
+          out.push({
+            txHash: hash,
+            tokenMint: token,
+            tokenSymbol: symbol,
+            amount: num(sell?.Amount),
+            valueUsd: sell?.AmountInUSD != null ? num(sell.AmountInUSD) : null,
+            timestamp: String(block?.Time ?? new Date().toISOString()),
+          });
+        }
+        if (out.length) return out; // prefer paid data when it actually has rows
+      }
+    } catch {
+      /* paid path failed — fall through to the free fallback below */
     }
-    return out;
-  } catch {
-    return [];
   }
+  return evmWalletTradesFallback(chain, address, sinceIso, limit, 'sell');
 }
 
 /**

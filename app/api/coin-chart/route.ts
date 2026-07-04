@@ -174,22 +174,34 @@ export async function GET(req: NextRequest) {
   let prices: [number, number][] | null = null;
 
   const isContractAddress = coinId.startsWith('0x') || (coinId.length >= 32 && coinId.length <= 44 && /^[1-9A-HJ-NP-Za-km-z]+$/.test(coinId));
-  const isBinanceSymbol = /^[A-Z]{2,10}$/.test(coinId.toUpperCase()) && !coinId.includes('-');
-  const binanceSym = CG_TO_BINANCE[coinId.toLowerCase()] || (isBinanceSymbol ? coinId.toUpperCase() : null);
 
-  // Strategy 1: Binance Klines (best for major coins)
-  if (binanceSym && !isContractAddress) {
-    prices = await fetchBinanceChart(binanceSym, timeframe);
-  }
+  // Binance is Strategy-of-LAST-resort now, not first: api.binance.com returns
+  // HTTP 451 to US-hosted IPs (Vercel), so it always failed on the server and
+  // wasted a 5s timeout before falling back. Map a bare symbol → CoinGecko id
+  // (reverse of CG_TO_BINANCE) so CoinGecko can serve major coins directly.
+  const BINANCE_TO_CG: Record<string, string> = Object.fromEntries(
+    Object.entries(CG_TO_BINANCE).map(([cg, sym]) => [sym, cg]),
+  );
+  const upper = coinId.toUpperCase();
+  const cgId = isContractAddress
+    ? coinId
+    : (BINANCE_TO_CG[upper] || coinId.toLowerCase());
+  const isBinanceSymbol = /^[A-Z]{2,10}$/.test(upper) && !coinId.includes('-');
+  const binanceSym = CG_TO_BINANCE[coinId.toLowerCase()] || (isBinanceSymbol ? upper : null);
 
-  // Strategy 2: DexScreener (for DEX tokens by contract address)
-  if (!prices && isContractAddress) {
+  // Strategy 1: DexScreener for contract addresses.
+  if (isContractAddress) {
     prices = await fetchDexScreenerChart(coinId, timeframe);
   }
 
-  // Strategy 3: CoinGecko fallback (for coins with CoinGecko IDs not on Binance)
-  if (!prices) {
-    prices = await fetchCoinGeckoChart(coinId, timeframe);
+  // Strategy 2: CoinGecko (geo-unblocked, primary for CG-id / major coins).
+  if (!prices && !isContractAddress) {
+    prices = await fetchCoinGeckoChart(cgId, timeframe);
+  }
+
+  // Strategy 3: Binance last (works only from non-US hosts / local dev).
+  if (!prices && binanceSym && !isContractAddress) {
+    prices = await fetchBinanceChart(binanceSym, timeframe);
   }
 
   if (!prices || prices.length === 0) {

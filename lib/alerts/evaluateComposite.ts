@@ -1,5 +1,6 @@
 import 'server-only';
 import { cacheGet } from '@/lib/cache/redis';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 /**
  * Composite alert expression evaluator. The expression is a JSON tree:
@@ -50,6 +51,46 @@ async function priceOf(symbol?: string, tokenId?: string): Promise<number | null
   return null;
 }
 
+// 24h % change from the same cached price rows (null = cold, don't fire).
+async function change24hOf(symbol?: string, tokenId?: string): Promise<number | null> {
+  if (tokenId) {
+    const v = await cacheGet<CachedPrice>(`price:cg:${tokenId}`);
+    if (v?.change24h != null) return v.change24h;
+  }
+  if (symbol) {
+    const v = await cacheGet<CachedPrice>(`price:sym:${symbol.toLowerCase()}`);
+    if (v?.change24h != null) return v.change24h;
+  }
+  return null;
+}
+
+// A recent whale action from the live whale_activity surface. Returns
+// true/false (absence of a matching trade is a real "no", not cold), or null
+// only when the query itself fails.
+async function whaleActionMet(p: PredicateNode, action: 'buy' | 'sell'): Promise<boolean | null> {
+  if (!p.whale_address) return false;
+  const hours = p.hours && p.hours > 0 ? p.hours : 24;
+  const sinceIso = new Date(Date.now() - hours * 3_600_000).toISOString();
+  // whale_activity stores buys as 'buy'/'transfer_in', sells as
+  // 'sell'/'transfer_out'. Match either alias for the requested side.
+  const actions = action === 'buy' ? ['buy', 'transfer_in'] : ['sell', 'transfer_out'];
+  try {
+    let q = getSupabaseAdmin()
+      .from('whale_activity')
+      .select('value_usd')
+      .ilike('whale_address', p.whale_address)
+      .gte('timestamp', sinceIso)
+      .in('action', actions)
+      .limit(1);
+    if (p.min_usd != null) q = q.gte('value_usd', p.min_usd);
+    const { data, error } = await q;
+    if (error) return null;
+    return (data?.length ?? 0) > 0;
+  } catch {
+    return null;
+  }
+}
+
 async function evaluatePredicate(p: PredicateNode): Promise<boolean | null> {
   switch (p.type) {
     case 'price': {
@@ -58,11 +99,21 @@ async function evaluatePredicate(p: PredicateNode): Promise<boolean | null> {
       if (live == null) return null;            // cold cache → don't fire
       return p.direction === 'below' ? live <= p.threshold : live >= p.threshold;
     }
-    // Other predicate types (velocity / whale_buy / market_cap_* /
-    // deployer_band) require data surfaces the alert-monitor cron does
-    // not yet stream in. Returning null (cold) keeps the alert dormant
-    // instead of firing on fabricated truth — when those surfaces wire
-    // in, replace the null with a real read.
+    case 'velocity': {
+      // 24h price momentum. threshold_pct + direction (above/below).
+      const pct = p.threshold_pct ?? p.threshold;
+      if (pct == null) return false;
+      const change = await change24hOf(p.symbol, p.token_id);
+      if (change == null) return null;          // cold change data → don't fire
+      return p.direction === 'below' ? change <= pct : change >= pct;
+    }
+    case 'whale_buy':
+      return whaleActionMet(p, 'buy');
+    case 'whale_action':
+      return whaleActionMet(p, p.action === 'sell' ? 'sell' : 'buy');
+    // market_cap_* and deployer_band still require live surfaces the cron does
+    // not stream. Returning null (cold) keeps the alert dormant rather than
+    // firing on fabricated truth — wire a real read here when they land.
     default:
       return null;
   }

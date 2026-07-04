@@ -1,6 +1,7 @@
 import { getOneInchQuote } from "./oneinch";
 import { getKyberswapQuote } from "./kyberswap";
 import { getOpenOceanQuote } from "./openocean";
+import { getQuote as getJupiterQuote } from "./jupiter";
 import { cacheWithFallback } from "@/lib/cache/redis";
 import { resolveSwapToken, toBaseUnits } from "@/lib/market/swapTokenMeta";
 
@@ -96,11 +97,44 @@ async function openoceanToRoute(p: AggregatorParams): Promise<RouteQuote | null>
   };
 }
 
+async function jupiterToRoute(params: AggregatorParams): Promise<RouteQuote[]> {
+  // Solana routing goes through Jupiter (authoritative aggregator). Resolve the
+  // mints + base units the same way the EVM path does; unknown tokens → no
+  // route rather than a fabricated quote. Surfacing this here means the routes
+  // panel shows a real Solana route instead of an empty list.
+  const sell = resolveSwapToken(params.fromToken, "solana");
+  const buy = resolveSwapToken(params.toToken, "solana");
+  if (!sell || !buy) return [];
+  const baseAmount = /^\d+$/.test(params.amountIn)
+    ? params.amountIn
+    : toBaseUnits(params.amountIn, sell.decimals);
+  if (baseAmount === "0") return [];
+  const q = await getJupiterQuote(sell.address, buy.address, Number(baseAmount), params.slippageBps ?? 50).catch(() => null);
+  if (!q?.outAmount) return [];
+  const outUsd = q.swapUsdValue ? Number(q.swapUsdValue) : null;
+  return [{
+    provider: "jupiter",
+    chain: "solana",
+    fromToken: sell.address,
+    toToken: buy.address,
+    amountIn: baseAmount,
+    amountOut: q.outAmount,
+    amountOutUsd: outUsd,
+    priceImpactBps: q.priceImpactPct ? Math.round(Number(q.priceImpactPct) * 10_000) : null,
+    gasUsd: null, // Solana fees are negligible (~$0.0005); not modeled as gas.
+    netOutputUsd: outUsd,
+    raw: q,
+    fetchedAt: Date.now(),
+  }];
+}
+
 export async function getAllRoutes(params: AggregatorParams): Promise<RouteQuote[]> {
   const isSolana = params.chain.toLowerCase() === "solana";
 
-  // Solana → Jupiter is authoritative; handled in existing /api/swap/quote.
-  if (isSolana) return [];
+  if (isSolana) {
+    const solKey = `swap:routes:solana:${params.fromToken.toLowerCase()}:${params.toToken.toLowerCase()}:${params.amountIn}:${params.slippageBps ?? 0}`;
+    return cacheWithFallback<RouteQuote[]>(solKey, QUOTE_CACHE_TTL_SECONDS, () => jupiterToRoute(params));
+  }
 
   // The individual aggregator services need CONTRACT ADDRESSES + BASE UNITS,
   // but callers pass symbols ('ETH') + a human amount ('0.5') — so every
@@ -168,12 +202,36 @@ export async function getAllRoutes(params: AggregatorParams): Promise<RouteQuote
       await Promise.race([tailPromise, tailTimeout]);
     }
 
-    // Sort by netOutputUsd if present, else by raw amountOut descending.
-    routes.sort((a, b) => {
-      const aScore = a.netOutputUsd ?? Number(a.amountOut ?? 0);
-      const bScore = b.netOutputUsd ?? Number(b.amountOut ?? 0);
-      return bScore - aScore;
-    });
+    // Rank the routes. Only kyberswap returns USD + gas; 1inch/openocean return
+    // just a raw output amount in the SAME toToken. The old sort mixed units —
+    // kyber scored by netOutputUsd (~$500) while the others scored by raw
+    // amountOut (~5e17 base units) — so the base-unit routes always "won" on
+    // magnitude regardless of real value, silently picking a worse route.
+    //
+    // Fix: derive a shared implied price from any USD-bearing route so every
+    // route can be ranked on a gas-aware net-USD basis (using that route's gas,
+    // or the USD route's gas as a same-chain proxy). If no route reports USD,
+    // fall back to gross output in base units — apples-to-apples since every
+    // route is the identical toToken. Never mix the two scales.
+    const usdRef = routes.find((r) => r.amountOutUsd != null && Number(r.amountOut) > 0);
+    if (usdRef && usdRef.amountOutUsd != null) {
+      const usdPerUnit = usdRef.amountOutUsd / Number(usdRef.amountOut);
+      const gasProxy = usdRef.gasUsd ?? 0;
+      for (const r of routes) {
+        if (r.amountOutUsd == null && Number(r.amountOut) > 0) {
+          r.amountOutUsd = Number(r.amountOut) * usdPerUnit;
+        }
+        if (r.netOutputUsd == null && r.amountOutUsd != null) {
+          r.netOutputUsd = r.amountOutUsd - (r.gasUsd ?? gasProxy);
+        }
+      }
+    }
+    const gasAware = routes.length > 0 && routes.every((r) => r.netOutputUsd != null);
+    routes.sort((a, b) =>
+      gasAware
+        ? (b.netOutputUsd as number) - (a.netOutputUsd as number)
+        : Number(b.amountOut ?? 0) - Number(a.amountOut ?? 0),
+    );
 
     return routes;
   });

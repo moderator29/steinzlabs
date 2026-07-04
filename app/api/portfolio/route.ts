@@ -18,9 +18,11 @@ const NATIVE_SYMBOLS: Record<string, string> = {
 };
 
 const NATIVE_FALLBACK_PRICES: Record<string, number> = {
-  // These are last-resort fallbacks only used when ALL price APIs fail.
-  // They should be periodically updated. Prefer live price fetch.
-  ethereum: 2500, matic: 0.5, avalanche: 25, bnb: 500,
+  // Last-resort fallbacks, used only when ALL price APIs fail. Keyed by native
+  // SYMBOL (lowercased) to match the getNativePrice lookup — the old map mixed
+  // chain names ('ethereum','avalanche') with symbols, so AVAX/others missed
+  // and fell back to ETH's price. Prefer the live fetch; these are a floor.
+  eth: 2500, matic: 0.5, avax: 25, bnb: 500, sol: 150, btc: 60000, ftm: 0.5,
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -42,7 +44,7 @@ interface PortfolioToken {
 async function getNativePrice(chain: string): Promise<number> {
   const cgId = NATIVE_COINGECKO_IDS[chain] ?? 'ethereum';
   const sym = NATIVE_SYMBOLS[chain]?.toLowerCase() ?? 'eth';
-  const fallback = NATIVE_FALLBACK_PRICES[sym] ?? NATIVE_FALLBACK_PRICES['ethereum'] ?? 0;
+  const fallback = NATIVE_FALLBACK_PRICES[sym] ?? NATIVE_FALLBACK_PRICES['eth'] ?? 0;
   return getTokenPrice(cgId).catch(() => fallback);
 }
 

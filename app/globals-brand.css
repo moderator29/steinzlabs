@@ -102,6 +102,13 @@
   100% { transform: rotate(360deg) scale(1);   }
 }
 
+/* nl-ai-sheen — the light bar that sweeps the top edge of AI insight surfaces
+   (components/ai/AiInsightCard). Signals "live intelligence". */
+@keyframes nl-ai-sheen {
+  0%, 100% { opacity: 0.25; transform: translateX(-30%); }
+  50%      { opacity: 1;    transform: translateX(30%);  }
+}
+
 /* .nl-card — the legacy card primitive, now unified with the neon glass
    look so every consumer matches the platform glass style. */
 .nl-card {

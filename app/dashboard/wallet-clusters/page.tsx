@@ -104,7 +104,13 @@ export default function WalletClustersPage() {
       const res = await fetch('/api/clusters/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: analyzeAddr.trim(), chain: 'ethereum', persist: true }),
+        body: JSON.stringify({
+          address: analyzeAddr.trim(),
+          // Detect chain from the address shape — hardcoding 'ethereum' made a
+          // pasted Solana wallet get scanned on the wrong network.
+          chain: /^0x[a-fA-F0-9]{40}$/.test(analyzeAddr.trim()) ? 'ethereum' : 'solana',
+          persist: true,
+        }),
       });
       const data = await res.json();
       setAnalyzeResult(data);

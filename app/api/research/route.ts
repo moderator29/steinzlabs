@@ -25,15 +25,22 @@ export async function GET(req: NextRequest) {
   const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
   const limit = Math.min(50, parseInt(searchParams.get('limit') || '20'));
   const category = searchParams.get('category') || null;
+  // 'trending' sorts by view_count; default 'latest' by publish date (the
+  // frontend already sent ?sort= but the handler ignored it).
+  const sort = searchParams.get('sort') === 'trending' ? 'trending' : 'latest';
 
   try {
     const { getSupabaseAdmin } = await import('@/lib/supabaseAdmin');
     const admin = getSupabaseAdmin();
+    // {count:'exact'} so total reflects ALL matching rows — without it
+    // Supabase returned count=null and pagination collapsed to one page.
     let query = admin
       .from('research_posts')
-      .select('id, title, summary, content, category, image_url, tags, published_at, created_at, view_count')
-      .eq('published', true)
-      .order('published_at', { ascending: false });
+      .select('id, title, summary, content, category, image_url, tags, published_at, created_at, view_count', { count: 'exact' })
+      .eq('published', true);
+    query = sort === 'trending'
+      ? query.order('view_count', { ascending: false }).order('published_at', { ascending: false })
+      : query.order('published_at', { ascending: false });
 
     if (category && category !== 'All') {
       query = query.eq('category', category);
@@ -45,9 +52,27 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ posts: [], total: 0, page, limit });
     }
 
+    // Self-healing category taxonomy: return the DISTINCT categories that
+    // actually exist among published posts, so the UI renders pills that
+    // match real data instead of a hardcoded list that drifts (the two
+    // research pages each shipped different hardcoded lists, and neither
+    // included the live "Daily Brief" category — so every filter was dead).
+    let categories: string[] = [];
+    try {
+      const { data: catRows } = await admin
+        .from('research_posts')
+        .select('category')
+        .eq('published', true)
+        .not('category', 'is', null);
+      categories = Array.from(
+        new Set((catRows || []).map((r: { category: string | null }) => r.category).filter(Boolean) as string[])
+      ).sort();
+    } catch { /* categories are best-effort; posts still render */ }
+
     return NextResponse.json({
       posts: data || [],
       total: count || (data || []).length,
+      categories,
       page,
       limit,
       fetchedAt: new Date().toISOString(),

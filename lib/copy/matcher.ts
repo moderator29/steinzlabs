@@ -66,6 +66,7 @@ const USDC_BY_CHAIN: Record<string, string> = {
   arbitrum: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
   optimism: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
   bsc: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
+  avalanche: "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
   solana: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
 };
 

@@ -40,6 +40,10 @@ interface Props {
   onClose: () => void;
   onSaved: () => void;
   userId: string;
+  /** When the user hits "Snipe"/"Create Sniper for {symbol}" on a specific
+   *  token, prefill the form with it (token address + chain) as a
+   *  price-target rule instead of opening a blank modal. */
+  prefillToken?: { token_address?: string; chain?: string | null; token_symbol?: string | null } | null;
 }
 
 // Canonical trigger values — must match the live sniper_criteria.trigger_type
@@ -54,7 +58,7 @@ const EVM_SNIPER_CHAINS = SNIPER_CHAINS.filter((c) => c !== 'solana' && c !== 't
 // the matcher against the detected token's launchpad.
 const SNIPE_PROTECTION_LAUNCHPADS = LAUNCHPADS.filter((l) => l.id !== 'dex');
 
-export function NewSniperModal({ onClose, onSaved, userId }: Props) {
+export function NewSniperModal({ onClose, onSaved, userId, prefillToken }: Props) {
   const [name, setName] = useState('');
   const [trigger, setTrigger] = useState<Trigger>('new_token_launch');
   // EVM-only non-custodial sniping — Solana/TON can't do capped session-key
@@ -63,6 +67,20 @@ export function NewSniperModal({ onClose, onSaved, userId }: Props) {
   const [tokenAddress, setTokenAddress] = useState('');
   const [whaleAddress, setWhaleAddress] = useState('');
   const [priceTarget, setPriceTarget] = useState('');
+  // Hydrate from a clicked token: preselect the price-target trigger, its
+  // address, chain and a sensible rule name so "Snipe {symbol}" opens a
+  // ready-to-fill form instead of a blank one.
+  useEffect(() => {
+    if (!prefillToken?.token_address) return;
+    setTrigger('price_target');
+    setTokenAddress(prefillToken.token_address);
+    if (prefillToken.token_symbol) setName((n) => n || `Snipe ${prefillToken.token_symbol}`);
+    const c = (prefillToken.chain || '').toLowerCase();
+    if (c && (SNIPER_CHAINS as readonly string[]).includes(c)) {
+      setChains([c as SniperChain]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefillToken?.token_address]);
   const [amountUsd, setAmountUsd] = useState(50);
   const [slippagePct, setSlippagePct] = useState(5);
   const [priorityFee, setPriorityFee] = useState<number | null>(null);

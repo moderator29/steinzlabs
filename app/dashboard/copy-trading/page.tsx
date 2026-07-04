@@ -86,6 +86,15 @@ export default function CopyTradingPage() {
       }
     : null;
   const [copying, setCopying] = useState(false);
+  // whale-tracker "Copy" buttons link here with ?whale=&chain=&label= to
+  // CREATE A RULE for that whale (not the full tx execute deep-link above).
+  // Open the new-rule modal prefilled instead of ignoring the param.
+  const prefillWhale = !deepLink ? (sp.get("whale") || "") : "";
+
+  // Auto-open the create-rule modal when arriving via a ?whale= link.
+  useEffect(() => {
+    if (prefillWhale) setShowNewRule(true);
+  }, [prefillWhale]);
 
   async function confirmCopy() {
     if (!deepLink) return;
@@ -390,7 +399,7 @@ export default function CopyTradingPage() {
 
       {showAutoSession && <AutoCopySessionModal onClose={() => setShowAutoSession(false)} />}
       {showNewRule && (
-        <NewCopyRuleModal onClose={() => setShowNewRule(false)} onSaved={load} />
+        <NewCopyRuleModal initialWhaleAddress={prefillWhale} onClose={() => { setShowNewRule(false); if (prefillWhale) router.replace("/dashboard/copy-trading"); }} onSaved={load} />
       )}
     </div>
   );

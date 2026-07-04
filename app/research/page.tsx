@@ -28,20 +28,32 @@ export default function PublicResearchPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState<string>('All');
+  // Category pills are driven by the DISTINCT categories the API reports from
+  // real published posts — not a hardcoded list that silently drifts out of
+  // sync with what's actually stored.
+  const [serverCategories, setServerCategories] = useState<string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     const q = category === 'All' ? '' : `?category=${encodeURIComponent(category)}`;
     fetch(`/api/research${q}`, { cache: 'no-store' })
-      .then(r => r.ok ? r.json() as Promise<{ posts: Post[] }> : { posts: [] as Post[] })
-      .then(d => { if (!cancelled) setPosts(d.posts ?? []); })
+      .then(r => r.ok ? r.json() as Promise<{ posts: Post[]; categories?: string[] }> : { posts: [] as Post[], categories: [] as string[] })
+      .then(d => {
+        if (cancelled) return;
+        setPosts(d.posts ?? []);
+        // Only refresh the pill set from the unfiltered ("All") response, so a
+        // narrowed request never shrinks the available filters.
+        if (category === 'All' && Array.isArray(d.categories) && d.categories.length) {
+          setServerCategories(d.categories);
+        }
+      })
       .catch(() => { if (!cancelled) setPosts([]); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [category]);
 
-  const categories = ['All', 'Market', 'Security', 'DeFi', 'On-Chain', 'Macro', 'Research'];
+  const categories = ['All', ...serverCategories];
 
   return (
     <AuroraBackground fullHeight>

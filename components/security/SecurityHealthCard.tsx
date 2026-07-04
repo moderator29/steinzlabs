@@ -80,7 +80,7 @@ export function SecurityHealthCard({ has2fa = false }: { has2fa?: boolean }) {
 
       {!has2fa && (
         <Link
-          href="/settings/security"
+          href="/settings"
           className="nl-glass nl-glass--interactive mt-4 flex items-center gap-2 rounded-xl p-3 text-sm transition-colors" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
         >
           <KeyRound className="w-4 h-4 text-blue-300" />

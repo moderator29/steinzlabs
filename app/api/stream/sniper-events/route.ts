@@ -46,17 +46,31 @@ export async function GET(req: NextRequest) {
 
   const encoder = new TextEncoder();
 
+  // Hoisted so cancel() can reach them. The cleanup MUST live in cancel(), not
+  // in start()'s return value — the ReadableStream spec ignores whatever start
+  // returns, so the previous `return () => {...}` never ran and both intervals
+  // (plus their DexScreener/GoPlus polling) leaked forever after the client
+  // disconnected.
+  let active = true;
+  let interval: ReturnType<typeof setInterval> | null = null;
+  let heartbeat: ReturnType<typeof setInterval> | null = null;
+  const seenPairs = new Set<string>();
+
+  const stopAll = () => {
+    active = false;
+    if (interval) { clearInterval(interval); interval = null; }
+    if (heartbeat) { clearInterval(heartbeat); heartbeat = null; }
+  };
+
   const stream = new ReadableStream({
     async start(controller) {
-      let active = true;
-      const seenPairs = new Set<string>();
 
       const send = (event: string, data: unknown) => {
         if (!active) return;
         try {
           controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
         } catch {
-          active = false;
+          stopAll();
         }
       };
 
@@ -119,32 +133,25 @@ export async function GET(req: NextRequest) {
       // Initial poll
       await tick();
 
-      const interval = setInterval(async () => {
-        if (!active) {
-          clearInterval(interval);
-          return;
-        }
+      interval = setInterval(async () => {
+        if (!active) { stopAll(); return; }
         await tick();
       }, 15_000);
 
       // Heartbeat every 25s
-      const heartbeat = setInterval(() => {
-        if (!active) {
-          clearInterval(heartbeat);
-          return;
-        }
+      heartbeat = setInterval(() => {
+        if (!active) { stopAll(); return; }
         try {
           controller.enqueue(encoder.encode(`: heartbeat\n\n`));
         } catch {
-          active = false;
+          stopAll();
         }
       }, 25_000);
-
-      return () => {
-        active = false;
-        clearInterval(interval);
-        clearInterval(heartbeat);
-      };
+    },
+    cancel() {
+      // Fired when the client disconnects / the response is aborted. This is
+      // the only reliable teardown hook for a ReadableStream source.
+      stopAll();
     },
   });
 
