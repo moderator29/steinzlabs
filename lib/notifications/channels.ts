@@ -1,6 +1,23 @@
 import 'server-only';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { sendEmail } from '@/lib/email/resend';
+import { queueTelegramNotification } from '@/lib/telegram/notify';
+import { sendPushToUser } from '@/lib/services/webpush';
+
+// Map the free-form fan-out `type` to the Telegram dispatcher's opt-in kinds,
+// so the user's per-kind Telegram preferences are honoured.
+type TelegramKind = 'price' | 'whale' | 'security' | 'alert' | 'sniper' | 'copy' | 'general';
+function toTelegramKind(type: string | undefined): TelegramKind {
+  switch (type) {
+    case 'price_alert': case 'price': return 'price';
+    case 'whale_alert': case 'whale': return 'whale';
+    case 'security': case 'rug': return 'security';
+    case 'sniper': return 'sniper';
+    case 'copy_trade': case 'copy': return 'copy';
+    case 'alert': return 'alert';
+    default: return 'general';
+  }
+}
 
 /**
  * §3 P2-F.6 + P2-F.7 — multi-channel notification fan-out. Looks up a
@@ -102,6 +119,7 @@ export async function fanOutNotification(payload: FanOutPayload): Promise<{
   discord: boolean | null;
   sms: boolean | null;
   email: boolean | null;
+  webPush: boolean | null;
 }> {
   const admin = getSupabaseAdmin();
 
@@ -181,6 +199,35 @@ export async function fanOutNotification(payload: FanOutPayload): Promise<{
     return r.ok;
   })();
 
-  const [discordOk, smsOk, emailOk] = await Promise.all([discordTask, smsTask, emailTask]);
-  return { inApp, discord: discordOk, sms: smsOk, email: emailOk };
+  // Web push — sendPushToUser self-gates (no subscriptions → no-op), prunes
+  // dead endpoints and logs delivery. Best-effort; never blocks the others.
+  const webPushTask = (async (): Promise<boolean | null> => {
+    try {
+      await sendPushToUser(payload.user_id, {
+        title: payload.title,
+        body: payload.message,
+        ...(payload.url ? { url: payload.url } : {}),
+        tag: payload.type ?? 'alert',
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
+  const [discordOk, smsOk, emailOk, webPushOk] = await Promise.all([discordTask, smsTask, emailTask, webPushTask]);
+
+  // Telegram — queueTelegramNotification is fire-and-forget and self-gates on
+  // the user's link + per-kind preferences + quiet hours. Previously alert
+  // fan-out never reached Telegram at all (only the sniper/copy paths queued
+  // directly), so users with Telegram as their primary channel got nothing.
+  queueTelegramNotification({
+    userId: payload.user_id,
+    kind: toTelegramKind(payload.type),
+    title: payload.title,
+    body: payload.message,
+    url: payload.url,
+  });
+
+  return { inApp, discord: discordOk, sms: smsOk, email: emailOk, webPush: webPushOk };
 }
