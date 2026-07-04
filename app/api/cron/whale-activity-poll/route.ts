@@ -19,6 +19,12 @@ const ALCHEMY_HOSTS: Record<string, string> = {
   arbitrum: "arb-mainnet",
   optimism: "opt-mainnet",
   polygon: "polygon-mainnet",
+  // BSC + Avalanche whales were never polled, so those chains had ~0 activity
+  // and every activity-derived feature looked ETH-only. Alchemy's transfers API
+  // reaches both; a chain that doesn't return transfers simply yields no rows
+  // (the call is error-guarded), so adding them can only widen coverage.
+  bsc: "bnb-mainnet",
+  avalanche: "avax-mainnet",
 };
 
 // Per tick we rotate through the stalest active whales so coverage scales

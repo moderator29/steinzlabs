@@ -21,6 +21,24 @@ const SOL_ADDR = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
 interface Resolved { address: string; chain: string; symbol: string | null }
 
+// Resolve the real chain for an on-chain address via DexScreener (returns the
+// deepest-liquidity pair's chainId). Used when the address isn't in our whale
+// activity table so we don't mislabel a non-ETH token as ethereum.
+async function chainFromDexScreener(address: string): Promise<{ chain: string; symbol: string | null } | null> {
+  try {
+    const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(address)}`, { next: { revalidate: 300 } });
+    if (!res.ok) return null;
+    const body = await res.json();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pairs: any[] = Array.isArray(body?.pairs) ? body.pairs : [];
+    if (!pairs.length) return null;
+    const best = pairs.sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
+    return { chain: String(best.chainId || 'ethereum'), symbol: best.baseToken?.symbol ?? null };
+  } catch {
+    return null;
+  }
+}
+
 // Resolve the query to a canonical (address, chain, symbol). If given a symbol,
 // pick the token_address that token has the most whale activity under.
 async function resolveToken(admin: ReturnType<typeof getSupabaseAdmin>, q: string): Promise<Resolved | null> {
@@ -32,7 +50,13 @@ async function resolveToken(admin: ReturnType<typeof getSupabaseAdmin>, q: strin
       .ilike('token_address', q)
       .limit(1);
     const r = (data ?? [])[0] as { token_address: string; token_symbol: string | null; chain: string } | undefined;
-    return { address: q, chain: r?.chain ?? 'ethereum', symbol: r?.token_symbol ?? null };
+    if (r?.chain) return { address: q, chain: r.chain, symbol: r.token_symbol ?? null };
+    // Not in our activity table — resolve the REAL chain instead of assuming
+    // ethereum. A Solana base58 address is unambiguous; for EVM we ask
+    // DexScreener which chain the token actually trades on.
+    if (SOL_ADDR.test(q) && !EVM_ADDR.test(q)) return { address: q, chain: 'solana', symbol: null };
+    const dx = await chainFromDexScreener(q);
+    return { address: q, chain: dx?.chain ?? 'ethereum', symbol: dx?.symbol ?? null };
   }
   // Symbol → most-active address for that symbol.
   const { data } = await admin

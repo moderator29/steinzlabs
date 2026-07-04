@@ -28,6 +28,7 @@ const WINDOWS: Array<{ id: string; label: string }> = [
 const CHAINS: Array<{ id: string; label: string }> = [
   { id: '', label: 'All chains' }, { id: 'ethereum', label: 'Ethereum' },
   { id: 'solana', label: 'Solana' }, { id: 'base', label: 'Base' }, { id: 'bsc', label: 'BSC' },
+  { id: 'arbitrum', label: 'Arbitrum' }, { id: 'optimism', label: 'Optimism' }, { id: 'polygon', label: 'Polygon' }, { id: 'avalanche', label: 'Avalanche' },
 ];
 
 function fmtUsd(n: number): string {
