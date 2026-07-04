@@ -97,6 +97,7 @@ const NAV_CATEGORIES: NavCategory[] = [
       { icon: Wallet, label: 'Wallet', path: '/dashboard/wallet-page', badge: 'NEW' },
       { icon: Bot, label: 'VTX Agent', path: '/dashboard/vtx-ai' },
       { icon: Crosshair, label: 'Sniper Bot', path: '/dashboard/sniper' },
+      { icon: Gem, label: 'Launch Radar', path: '/dashboard/launch-radar', badge: 'NEW' },
       { icon: LineChart, label: 'Market Maker', path: '/dashboard/market-maker', badge: 'NEW' },
       { icon: Network, label: 'Network Graph', path: '/dashboard/network-graph', badge: 'NEW' },
       { icon: Bell, label: 'Alerts', path: '/dashboard/alerts' },
