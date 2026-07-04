@@ -32,6 +32,22 @@ export interface AgentResult {
 const defaultToolCall = (name: string, input: Record<string, unknown>): Promise<string> =>
   executeVTXTool(name, input, null);
 
+// Run a single tool call defensively: a tool that throws (or returns a
+// non-string) becomes a well-formed error tool_result string instead of
+// rejecting Promise.all and killing the whole agent turn.
+async function safeToolCall(
+  onToolCall: (name: string, input: Record<string, unknown>) => Promise<string>,
+  name: string,
+  input: Record<string, unknown>,
+): Promise<string> {
+  try {
+    const out = await onToolCall(name, input);
+    return typeof out === 'string' ? out : JSON.stringify(out ?? { ok: false, error: 'tool returned no content' });
+  } catch (err) {
+    return JSON.stringify({ ok: false, error: err instanceof Error ? err.message : 'tool execution failed' });
+  }
+}
+
 /**
  * Core VTX agent loop — Sonnet executor + Opus advisor.
  * Calls tools up to maxIterations times, then returns final text reply.
@@ -46,16 +62,21 @@ export async function runVTXAgent(options: AgentRunOptions): Promise<AgentResult
   let finalReply = '';
 
   while (iterations <= maxIterations) {
-    const response = await vtxQuery({ messages: loopMessages, system });
+    // At the cap, force a tools-free turn so the model MUST synthesize a text
+    // answer from what it already gathered. Without this, a model that still
+    // wanted a tool on the final turn returned a tool_use block with no text
+    // and the user got "VTX could not generate a response" (off-by-one).
+    const capped = iterations >= maxIterations;
+    const response = await vtxQuery({ messages: loopMessages, system, ...(capped ? { tools: [] } : {}) });
 
-    if (response.stop_reason === 'tool_use' && iterations < maxIterations) {
+    if (!capped && response.stop_reason === 'tool_use') {
       const toolBlocks = response.content.filter(
         (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use'
       );
       const results = await Promise.all(
         toolBlocks.map(async (b) => {
           toolsUsed.push(b.name);
-          const content = await onToolCall(b.name, b.input as Record<string, unknown>);
+          const content = await safeToolCall(onToolCall, b.name, b.input as Record<string, unknown>);
           return { type: 'tool_result' as const, tool_use_id: b.id, content };
         })
       );
@@ -90,14 +111,18 @@ export async function streamVTXAgent(options: AgentStreamOptions): Promise<Reada
       try {
         let iterations = 0;
         while (true) {
-          const stream = vtxStreamRaw({ messages: loopMessages, system });
+          // At the cap, force a tools-free turn so the model synthesizes and
+          // streams a final text answer instead of ending silently on an
+          // unfulfilled tool_use (off-by-one that dropped the last turn).
+          const capped = iterations >= maxIterations;
+          const stream = vtxStreamRaw({ messages: loopMessages, system, ...(capped ? { tools: [] } : {}) });
           for await (const event of stream) {
             if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
               controller.enqueue(event.delta.text);
             }
           }
           const finalMsg: Anthropic.Message = await stream.finalMessage();
-          if (finalMsg.stop_reason === 'tool_use' && iterations < maxIterations) {
+          if (!capped && finalMsg.stop_reason === 'tool_use') {
             const toolBlocks = finalMsg.content.filter(
               (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use'
             );
@@ -105,7 +130,7 @@ export async function streamVTXAgent(options: AgentStreamOptions): Promise<Reada
               toolBlocks.map(async (b) => ({
                 type: 'tool_result' as const,
                 tool_use_id: b.id,
-                content: await onToolCall(b.name, b.input as Record<string, unknown>),
+                content: await safeToolCall(onToolCall, b.name, b.input as Record<string, unknown>),
               }))
             );
             loopMessages.push({ role: 'assistant', content: finalMsg.content });
