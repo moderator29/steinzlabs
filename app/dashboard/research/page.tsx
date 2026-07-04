@@ -15,7 +15,6 @@ import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { TiltCard } from '@/components/brand/TiltCard';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { researchHowItWorks } from '@/lib/howItWorks/content/research';
-import { LiveWire } from '@/components/research/LiveWire';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface ResearchPost {
@@ -556,9 +555,6 @@ export default function ResearchPage() {
           </div>
         </div>
 
-        {/* ── Live Wire — the platform's own real-time on-chain news wire ── */}
-        <LiveWire />
-
         {/* ── Market Brief — full, detailed, inline ── */}
         {brief && <MarketBriefCard post={brief} onOpen={() => setSelected(brief)} />}
 
@@ -671,7 +667,7 @@ export default function ResearchPage() {
             </div>
             <p className="text-sm font-semibold text-gray-300 mb-1">No research found</p>
             <p className="text-xs text-gray-600">
-              {search ? `No results for "${search}"` : 'Try a different category, or check the Live Wire above for real-time activity.'}
+              {search ? `No results for "${search}"` : 'Try a different category, or check the Daily Brief above for the latest on-chain read.'}
             </p>
           </div>
         ) : (

@@ -141,7 +141,7 @@ export function TrustScoreBadge({
     'Naka Trust Score: Our proprietary 0-100 rating combining contract security, liquidity depth, holder distribution, market stability, and social sentiment. Higher is safer.';
 
   return (
-    <span className={`relative inline-flex ${className}`}>
+    <span className={`relative inline-flex ${open ? 'z-[80]' : ''} ${className}`}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -156,7 +156,7 @@ export function TrustScoreBadge({
       </button>
       {open && (
         <div
-          className="absolute z-30 top-full mt-2 left-0 w-72 rounded-xl border border-white/10 bg-[#0F1320] shadow-2xl p-3"
+          className="absolute z-[80] top-full mt-2 left-0 w-72 rounded-xl border border-white/10 bg-[#0F1320] shadow-2xl p-3"
           onMouseLeave={() => setOpen(false)}
         >
           <div className="flex items-center justify-between mb-1">
