@@ -7,14 +7,25 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 /**
  * SC1: composite security health score for the dashboard hero.
  *
- *   walletReputation.score    * 0.50
- *   approvalRisks.dangerCount * 0.20   (inverted: more risk → lower score)
- *   threatCount               * 0.15
- *   honeypotsHeld             * 0.15
+ * Health is driven ENTIRELY by real wallet-security posture — the things that
+ * actually make a wallet safe or unsafe:
  *
- * Persisted to user_security_profile so the value is consistent across
- * the dashboard's various surfaces and we can show trend (compare
- * computed_at → now and flag improvement / regression).
+ *   approvals   * 0.40   (dangerous token approvals — the #1 drain vector)
+ *   threats     * 0.30   (recent WARN/CRITICAL security alerts, 30d)
+ *   honeypots   * 0.25   (honeypot / cannot-sell tokens held)
+ *   reputation  * 0.05   (platform standing — a minor positive nudge only)
+ *
+ * Previously reputation (a platform-engagement / gamification metric) carried
+ * 50% of the weight. That made a perfectly clean wallet with zero reputation
+ * points score exactly 50% "for no reason" — reputation was 0 and the three
+ * real security components summed to 50. A wallet's security has nothing to do
+ * with how many platform points its owner earned, so reputation is demoted to a
+ * tiny nudge and the score now reflects genuine risk. A clean, audited wallet
+ * reads ~95–100; each real issue visibly lowers it (see `counts` in the
+ * response, surfaced in the UI so the number always has a stated reason).
+ *
+ * Persisted to user_security_profile so the value is consistent across the
+ * dashboard's surfaces and we can show trend over time.
  */
 
 export const runtime = 'nodejs';
@@ -105,11 +116,13 @@ export async function GET(_req: NextRequest) {
   const threatScore   = clamp(100 - threatCount   * 15, 0, 100);
   const honeypotScore = clamp(100 - honeypotCount * 25, 0, 100);
 
+  // Security-driven composite. A clean wallet (no dangerous approvals, no recent
+  // threats, no honeypots held) scores ~95–100; reputation only nudges the top.
   const composite = Math.round(
-    reputationScore * 0.50 +
-    approvalScore   * 0.20 +
-    threatScore     * 0.15 +
-    honeypotScore   * 0.15,
+    approvalScore   * 0.40 +
+    threatScore     * 0.30 +
+    honeypotScore   * 0.25 +
+    reputationScore * 0.05,
   );
 
   const breakdown: ComponentBreakdown = {
