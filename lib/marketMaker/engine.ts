@@ -55,6 +55,7 @@ export function computeLadder(
 interface Strategy {
   id: string; user_id: string; chain: string; token_address: string;
   strategy_type: string; reference_price_mode: string; manual_reference_price: number | null;
+  anchor_price: number | null;
   spread_bps: number; num_levels: number; order_size_usd: number; budget_usd: number;
   max_inventory_usd: number | null; max_slippage_bps: number; band_pct: number | null;
   range_lower_pct: number | null; range_upper_pct: number | null;
@@ -62,11 +63,9 @@ interface Strategy {
   gross_deployed_usd: number; inventory_cost_usd: number;
 }
 
-async function referencePrice(s: Strategy): Promise<number | null> {
-  if (s.reference_price_mode === 'manual' && s.manual_reference_price) return s.manual_reference_price;
-  const p = await getDexPriceForChain(s.token_address, s.chain).catch(() => 0);
-  return p > 0 ? p : null;
-}
+// How far the market may drift from a market-mode anchor before we re-center
+// the grid on the current price. Also the manual-reference staleness limit.
+const MAX_REF_DRIFT = 0.5;
 
 export interface TickResult { id: string; action: 'buy' | 'sell' | 'hold' | 'skip'; reason?: string; txHash?: string; }
 
@@ -90,16 +89,38 @@ export async function runStrategyTick(s: Strategy): Promise<TickResult> {
   const usdc = usdcForChain(s.chain);
   if (!usdc) return { id: s.id, action: 'skip', reason: 'no USDC for chain' };
 
-  const ref = await referencePrice(s);
-  if (!ref) return { id: s.id, action: 'skip', reason: 'no reference price' };
   const price = await getDexPriceForChain(s.token_address, s.chain).catch(() => 0);
   if (!(price > 0)) return { id: s.id, action: 'skip', reason: 'no market price' };
 
-  // H3: a manual reference far from the live price would make the grid buy into a
-  // falling knife (or dump everything) every tick. Refuse to trade when the
-  // manual ref drifts > 50% from market — the user must refresh it.
-  if (s.reference_price_mode === 'manual' && Math.abs(price - ref) / ref > 0.5) {
-    return { id: s.id, action: 'skip', reason: 'manual reference price stale vs market' };
+  const sb = getSupabaseAdmin();
+
+  // Resolve the grid REFERENCE.
+  //  • manual mode → the user's fixed price; refuse to trade if it has drifted
+  //    > 50% from market (a falling-knife / dump guard — the user must refresh).
+  //  • market mode → an ANCHORED price, captured on first tick and persisted.
+  //    Recomputing the reference as the live spot every tick (the old behavior)
+  //    made price === ref always, so it sat permanently between the rungs and
+  //    never filled. When the market drifts > 50% from the anchor we re-center
+  //    the grid on the current price (self-healing) instead of chasing a knife.
+  let ref: number;
+  if (s.reference_price_mode === 'manual') {
+    if (!(s.manual_reference_price && s.manual_reference_price > 0)) {
+      return { id: s.id, action: 'skip', reason: 'no reference price' };
+    }
+    ref = s.manual_reference_price;
+    if (Math.abs(price - ref) / ref > MAX_REF_DRIFT) {
+      return { id: s.id, action: 'skip', reason: 'manual reference price stale vs market' };
+    }
+  } else {
+    const anchored = s.anchor_price && s.anchor_price > 0 ? s.anchor_price : null;
+    if (!anchored || Math.abs(price - anchored) / anchored > MAX_REF_DRIFT) {
+      // First tick (no anchor) or a large drift → (re)anchor to the current
+      // price and hold. price === anchor now, so nothing would fill this tick
+      // anyway; the grid arms and fills as the market moves next tick.
+      await sb.from('mm_strategies').update({ anchor_price: price, last_run_at: new Date().toISOString() }).eq('id', s.id);
+      return { id: s.id, action: 'hold', reason: anchored ? 'grid re-anchored to market' : 'grid anchored to market' };
+    }
+    ref = anchored;
   }
 
   const ladder = s.strategy_type === 'range'
@@ -108,7 +129,6 @@ export async function runStrategyTick(s: Strategy): Promise<TickResult> {
         { level: 1, side: 'sell' as const, targetPrice: ref * (1 + (s.range_upper_pct ?? 20) / 100) },
       ]
     : computeLadder(ref, s.spread_bps, s.num_levels, s.band_pct ?? 10);
-  const sb = getSupabaseAdmin();
   const inventoryUsd = (s.inventory_tokens ?? 0) * price;
 
   // H2: re-read status immediately before any execution so pause/stop is a real
@@ -161,8 +181,13 @@ export async function runStrategyTick(s: Strategy): Promise<TickResult> {
         inventory_tokens: Math.max(0, inv - tokensSold),
         inventory_cost_usd: Math.max(0, (s.inventory_cost_usd ?? 0) - costOfSold),
         realized_pnl_usd: (s.realized_pnl_usd ?? 0) + realizedDelta,
-        // C2: do NOT credit the budget back on a sell — gross_deployed_usd is the
-        // monotonic lifetime spend cap; only inventory exposure is freed.
+        // spent_usd tracks NET open exposure (capital currently deployed in
+        // inventory), so a sell releases the cost basis of the tokens sold.
+        // Previously it only ever grew, so it drifted up to equal the monotonic
+        // lifetime spend and misreported deployed capital after any sell.
+        spent_usd: Math.max(0, (s.spent_usd ?? 0) - costOfSold),
+        // C2: do NOT credit the lifetime budget back on a sell — gross_deployed_usd
+        // is the monotonic lifetime spend cap; only open exposure is freed.
         last_run_at: new Date().toISOString(),
       }).eq('id', s.id);
       return { id: s.id, action: 'sell', txHash: res.txHash };
