@@ -104,17 +104,17 @@ export default function ProjectDiscoveryPage() {
       <div className="px-4 pt-6 max-w-6xl mx-auto">
         <div className="mb-4"><BackButton href="/dashboard" label="Back to Dashboard" /></div>
 
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 rounded-lg flex items-center justify-center">
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 shrink-0 bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 rounded-lg flex items-center justify-center">
               <Zap className="w-4 h-4 text-[#0066FF]" />
             </div>
-            <div>
-              <h1 className="text-xl font-heading font-bold">Project Discovery</h1>
-              <p className="text-gray-400 text-[10px]">Real-time coins &gt;500K market cap across all chains</p>
+            <div className="min-w-0">
+              <h1 className="text-xl font-heading font-bold truncate">Project Discovery</h1>
+              <p className="text-gray-400 text-[10px] truncate">Real-time coins &gt;500K market cap across all chains</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <HowItWorksButton content={discoverHowItWorks} className="shrink-0" />
             <button
               onClick={() => setShowListingForm(true)}

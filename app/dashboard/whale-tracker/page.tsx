@@ -386,7 +386,7 @@ export default function WhaleTrackerPage() {
           <BackButton href="/dashboard" compact />
           {/* Tab bar replaces the old "Whale Tracker / Live / PRO" cluster —
               one clean row of section tabs. Live Feed is the current page. */}
-          <nav className="flex items-center gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1">
+          <nav className="flex items-center gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1 min-w-0 flex-1">
             <span className="shrink-0 nl-btn-neon !px-3 !py-1.5 !text-[11px] !border-[#0066FF]/90 cursor-default">Live Feed</span>
             <Link href="/dashboard/whale-tracker/convergence" className="shrink-0 px-3 py-1.5 text-[11px] font-semibold rounded-lg text-[#00C8FF] hover:text-white bg-[#0066FF]/10 border border-[#0066FF]/30 hover:border-[#0066FF]/50 transition-colors inline-flex items-center gap-1">Convergence <span className="text-[8px] px-1 py-0.5 rounded bg-[#0066FF]/30 text-white uppercase font-bold">New</span></Link>
             <Link href="/dashboard/whale-tracker/compare" className="shrink-0 px-3 py-1.5 text-[11px] font-semibold rounded-lg text-[#00C8FF] hover:text-white bg-[#0066FF]/10 border border-[#0066FF]/30 hover:border-[#0066FF]/50 transition-colors inline-flex items-center gap-1">Compare <span className="text-[8px] px-1 py-0.5 rounded bg-[#0066FF]/30 text-white uppercase font-bold">New</span></Link>

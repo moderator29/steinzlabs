@@ -791,10 +791,10 @@ export default function AlertsPage() {
     <AuroraBackground fullHeight className="text-white pb-20">
       {/* Header */}
       <div className="sticky top-0 z-40 nl-glass backdrop-blur-xl border-b border-white/10" data-overlay>
-        <div className="flex items-center gap-3 px-4 h-14">
+        <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 h-14">
           <BackButton />
-          <Bell className="w-5 h-5 text-[#0066FF]" />
-          <h1 className="text-sm font-heading font-bold">Smart Alerts</h1>
+          <Bell className="w-5 h-5 text-[#0066FF] shrink-0" />
+          <h1 className="text-sm font-heading font-bold flex-1 min-w-0 truncate">Smart Alerts</h1>
           <HowItWorksButton content={alertsHowItWorks} className="shrink-0" />
           <button
             onClick={() => { setCreateError(null); setShowCreate(true); }}

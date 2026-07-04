@@ -5,6 +5,7 @@ import { User, Award, BarChart3, Bell, Shield, Settings, HelpCircle, LogOut, Che
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useTier } from '@/lib/hooks/useTier';
 import { useWallet } from '@/lib/hooks/useWallet';
+import { getBuiltinWalletAddress } from '@/lib/wallet/builtinWallet';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getLocalNotifications, getNotificationPrefs, saveNotificationPrefs, type NotificationPrefs } from '@/lib/notifications';
@@ -12,6 +13,7 @@ import { VerifiedGoldBadge } from '@/components/ui/VerifiedGoldBadge';
 import { TierBadge } from '@/components/ui/TierBadge';
 import { TelegramConnectCard } from '@/components/settings/TelegramConnectCard';
 import { VtxWalletAccessCard } from '@/components/profile/VtxWalletAccessCard';
+import { ProfileEmailCard } from '@/components/profile/ProfileEmailCard';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import NotificationSettingsPanel from '@/components/profile/NotificationSettingsPanel';
 import { AppearancePanel } from '@/components/profile/AppearancePanel';
@@ -90,6 +92,21 @@ export default function ProfileTab() {
   // FIX 5A.1: was "Free Tier" hardcoded with always-visible Upgrade button; now reads real tier + badge.
   const tierLabel = isPaid ? `${tier.toUpperCase()} Verified` : 'Free Tier';
   const { address: walletAddress, disconnect: disconnectWallet } = useWallet();
+  // Profile should show the wallet the user CREATED in Naka (their in-app
+  // wallet), not whatever external wallet they logged in / connected with. Fall
+  // back to the connected address only when no built-in Naka wallet exists.
+  const [nakaWallet, setNakaWallet] = useState<string | null>(null);
+  useEffect(() => {
+    const sync = () => setNakaWallet(getBuiltinWalletAddress());
+    sync();
+    window.addEventListener('steinz_wallet_changed', sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener('steinz_wallet_changed', sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, []);
+  const displayWallet = nakaWallet || walletAddress;
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [subPage, setSubPage] = useState<SubPage>(null);
@@ -695,8 +712,9 @@ export default function ProfileTab() {
   };
 
   const copyAddress = () => {
-    if (walletAddress) {
-      navigator.clipboard.writeText(walletAddress);
+    const addr = nakaWallet || walletAddress;
+    if (addr) {
+      navigator.clipboard.writeText(addr);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -712,16 +730,10 @@ export default function ProfileTab() {
         <p className="text-xs text-gray-500 mb-4">Manage your account security settings.</p>
 
         <div className="glass rounded-lg border border-white/10 overflow-hidden mb-3">
-          {/* Email */}
-          <div className="flex items-center justify-between px-3 py-3 border-b border-white/5">
-            <div className="flex items-center gap-3">
-              <Mail className="w-4 h-4 text-[#0066FF]" />
-              <div>
-                <div className="text-sm font-semibold">Email</div>
-                <div className="text-[10px] text-gray-500">{user?.email || 'Not set'}</div>
-              </div>
-            </div>
-            <span className="px-2 py-0.5 bg-[#10B981]/10 text-[#10B981] text-[9px] font-bold rounded">VERIFIED</span>
+          {/* Email — synthetic wallet auth emails are hidden; wallet users get
+              an "Add email" field. Same component as the profile info card. */}
+          <div className="px-3 py-3 border-b border-white/5">
+            <ProfileEmailCard />
           </div>
 
           {/* Password Change */}
@@ -1530,7 +1542,8 @@ export default function ProfileTab() {
                   {tier !== 'max' && (
                     <button
                       onClick={() => router.push('/dashboard/pricing')}
-                      className="px-2 py-0.5 bg-gradient-to-r from-[#FFD700]/15 to-[#FFA500]/15 border border-[#FFD700]/25 rounded-full text-[9px] text-[#FFD700] font-semibold hover:scale-105 transition-transform flex items-center gap-1"
+                      className="px-2.5 py-1 bg-gradient-to-r from-[#FFD700]/15 to-[#FFA500]/15 border border-[#FFD700]/30 rounded-lg text-[9px] text-[#FFD700] font-semibold hover:brightness-125 transition-all flex items-center gap-1"
+                      style={{ boxShadow: '0 0 0 1px rgba(255,215,0,.25), 0 0 12px rgba(255,168,0,.18)' }}
                     >
                       <Crown className="w-2.5 h-2.5" /> Upgrade
                     </button>
@@ -1582,26 +1595,17 @@ export default function ProfileTab() {
         <FollowersTile />
       </div>
 
-      {user?.email && (
-        <div className="glass rounded-lg p-3 mb-3 border border-white/10">
-          <div className="flex items-center gap-2">
-            <Mail className="w-4 h-4 text-[#0066FF]" />
-            <div className="flex-1">
-              <div className="text-[10px] text-gray-500">Email</div>
-              <div className="text-xs text-gray-300">{user.email}</div>
-            </div>
-            <Check className="w-3 h-3 text-[#10B981]" />
-          </div>
-        </div>
-      )}
+      {/* Email — hides the synthetic {address}@wallet.nakalabs.xyz auth email
+          for wallet users and offers an "Add email" field instead. */}
+      <ProfileEmailCard />
 
-      {walletAddress && (
+      {displayWallet && (
         <div className="glass rounded-lg p-3 mb-3 border border-white/10">
           <div className="flex items-center gap-2">
             <Wallet className="w-4 h-4 text-[#7C3AED]" />
             <div className="flex-1">
-              <div className="text-[10px] text-gray-500">Wallet</div>
-              <div className="text-xs text-gray-300 font-mono">{walletAddress.slice(0, 10)}...{walletAddress.slice(-6)}</div>
+              <div className="text-[10px] text-gray-500">{nakaWallet ? 'Naka Wallet' : 'Wallet'}</div>
+              <div className="text-xs text-gray-300 font-mono">{displayWallet.slice(0, 10)}...{displayWallet.slice(-6)}</div>
             </div>
             <button onClick={copyAddress} className="hover:bg-white/10 p-1.5 rounded transition-colors">
               {copied ? <Check className="w-3 h-3 text-[#10B981]" /> : <Copy className="w-3 h-3 text-gray-400" />}
