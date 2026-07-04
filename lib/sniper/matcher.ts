@@ -32,7 +32,14 @@ export interface MatchInput {
   txHash?: string | null;
   /** For whale_buy. */
   whaleAddress?: string | null;
+  /** USD value of the whale's trade, when a price feed resolved one. */
   whaleValueUsd?: number | null;
+  /**
+   * Token amount the whale moved, in the asset's own units. Used for the alert
+   * message when USD is unknown (e.g. the webhook hot path has no price feed),
+   * so we never fabricate a dollar figure from a raw quantity.
+   */
+  whaleAmountToken?: number | null;
   /** For new_token_launch — what the indexer already knows about this token. */
   tokenMetrics?: {
     liquidityUsd?: number | null;
@@ -228,9 +235,18 @@ export async function matchSniperEvent(input: MatchInput): Promise<MatchOutcome>
     }
 
     const decision = c.auto_execute ? "sniped_pending" : "matched";
+    // Only claim a USD figure when we actually have one; otherwise report the
+    // token amount, or just the symbol. Never render "$0"/fabricated dollars
+    // from a raw token quantity.
+    const whaleShort = (input.whaleAddress ?? "").slice(0, 8);
+    const whaleTokenSym = input.tokenSymbol ?? "tokens";
     const reason =
       input.trigger === "whale_buy"
-        ? `Whale ${(input.whaleAddress ?? "").slice(0, 8)}… bought $${Number(input.whaleValueUsd ?? 0).toLocaleString()}`
+        ? input.whaleValueUsd != null
+          ? `Whale ${whaleShort}… bought $${Number(input.whaleValueUsd).toLocaleString()}`
+          : input.whaleAmountToken != null
+            ? `Whale ${whaleShort}… moved ${Number(input.whaleAmountToken).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${whaleTokenSym}`
+            : `Whale ${whaleShort}… traded ${whaleTokenSym}`
         : `New token detected (${input.chain})`;
 
     const { error: insErr } = await admin.from("sniper_match_events").insert({
@@ -248,6 +264,7 @@ export async function matchSniperEvent(input: MatchInput): Promise<MatchOutcome>
         tx_hash: input.txHash ?? null,
         whale_address: input.whaleAddress ?? null,
         whale_value_usd: input.whaleValueUsd ?? null,
+        whale_amount_token: input.whaleAmountToken ?? null,
         token_metrics: input.tokenMetrics ?? null,
       },
     });

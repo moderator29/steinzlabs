@@ -25,6 +25,11 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { usdcForChain, usdToUsdcBaseUnits, usdcBaseUnitsToUsd } from '@/lib/trading/usdc';
 import { tryExecuteSnipeViaSessionKey, type SnipeExecResult } from '@/lib/trading/sessionKeyExecutor';
 import { getEvmTokenDecimalsStrict } from '@/lib/sniper/priceFeed';
+import { isHighRisk } from '@/lib/services/goplus';
+
+// EVM chains GoPlus token-security covers. Solana/TON aren't scanned here, so
+// their snipes rely on the detection-time gate (no fresh recheck available).
+const GOPLUS_EVM_CHAINS = new Set(['ethereum', 'bsc', 'avalanche', 'base', 'polygon', 'arbitrum', 'optimism']);
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -111,7 +116,7 @@ export async function GET(request: NextRequest) {
   const { data: criteriaRows } = await supabase
     .from('sniper_criteria')
     .select(
-      'id, amount_per_snipe_usd, max_slippage_bps, wallet_addresses, wallet_source, enabled, paused, user_id',
+      'id, amount_per_snipe_usd, max_slippage_bps, wallet_addresses, wallet_source, enabled, paused, user_id, block_honeypots, min_security_score',
     )
     .in('id', criteriaIds);
   const criteriaMap = new Map((criteriaRows ?? []).map((c) => [c.id, c]));
@@ -151,6 +156,8 @@ export async function GET(request: NextRequest) {
           enabled: boolean | null;
           paused: boolean | null;
           user_id: string;
+          block_honeypots: boolean | null;
+          min_security_score: number | null;
         }
       | undefined;
     if (!criteria || criteria.enabled === false || criteria.paused === true) {
@@ -173,6 +180,37 @@ export async function GET(request: NextRequest) {
     if (!usdcAddress) {
       processed.push({ matchId: m.id, status: 'skipped', reason: `no USDC address for chain ${m.matched_chain}` });
       continue;
+    }
+
+    // Pre-execution security re-check. A token can turn malicious (honeypot,
+    // blacklist, sell-tax spike) in the minutes between detection and this
+    // real-money buy. When the criteria opted into security filtering, run a
+    // FRESH GoPlus scan and skip the buy if the token now reports affirmative
+    // danger. isHighRisk() fails OPEN (returns false) on scanner outage, so
+    // this can only PREVENT a bad buy — never block a snipe during a GoPlus
+    // outage, and never cause one. EVM only (GoPlus token-security scope).
+    const wantsSecurityGate =
+      criteria.block_honeypots === true || (criteria.min_security_score ?? 0) > 0;
+    if (wantsSecurityGate && GOPLUS_EVM_CHAINS.has((m.matched_chain || '').toLowerCase())) {
+      // min_security_score is "higher = safer"; isHighRisk takes a risk
+      // threshold (higher = more permissive). Map one to the other, defaulting
+      // to 70 (matches the sniper feed's live-stream gate).
+      const riskThreshold = criteria.min_security_score != null
+        ? Math.max(0, 100 - criteria.min_security_score)
+        : 70;
+      const nowRisky = await isHighRisk(m.matched_token_address, m.matched_chain, riskThreshold);
+      if (nowRisky) {
+        // Mark the match resolved ('skipped' is the only terminal skip value
+        // the decision CHECK allows) so we don't re-scan it every tick.
+        if (!dryRun) {
+          await supabase
+            .from('sniper_match_events')
+            .update({ decision: 'skipped' })
+            .eq('id', m.id);
+        }
+        processed.push({ matchId: m.id, status: 'skipped', reason: 'failed pre-execution security recheck' });
+        continue;
+      }
     }
 
     if (dryRun) {

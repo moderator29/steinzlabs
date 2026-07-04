@@ -23,7 +23,13 @@ interface NormalisedEvent {
   tokenAddress: string | null;
   tokenSymbol: string | null;
   fromAddress: string | null;
-  amountUsd: number | null;
+  /**
+   * Token AMOUNT moved, in the asset's own units — NOT a USD value. Alchemy's
+   * `activity[].value` and Helius's `tokenAmount` are raw quantities; the
+   * webhook hot path has no reliable price feed, so we never fabricate a USD
+   * figure from them. Consumers must treat USD as unknown (null) here.
+   */
+  amountToken: number | null;
   txHash: string | null;
   observedAt: string;
   raw: unknown;
@@ -96,7 +102,8 @@ function normaliseAlchemy(body: unknown): NormalisedEvent | null {
       : null,
     tokenSymbol: typeof a.asset === 'string' ? a.asset : null,
     fromAddress: typeof a.fromAddress === 'string' ? a.fromAddress : null,
-    amountUsd: typeof a.value === 'number' ? a.value : null,
+    // activity[].value is the token amount, NOT USD — keep it labelled as such.
+    amountToken: typeof a.value === 'number' ? a.value : null,
     txHash: typeof a.hash === 'string' ? a.hash : null,
     observedAt: new Date().toISOString(),
     raw: body,
@@ -114,7 +121,7 @@ function normaliseHelius(body: unknown): NormalisedEvent | null {
     tokenAddress: first?.mint ? String(first.mint) : null,
     tokenSymbol: null,
     fromAddress: first?.fromUserAccount ? String(first.fromUserAccount) : null,
-    amountUsd: null,
+    amountToken: typeof first?.tokenAmount === 'number' ? first.tokenAmount : null,
     txHash: typeof evt.signature === 'string' ? evt.signature : null,
     observedAt: new Date().toISOString(),
     raw: body,
@@ -153,7 +160,10 @@ export async function POST(req: NextRequest) {
       token_address: event.tokenAddress,
       token_symbol: event.tokenSymbol,
       from_address: event.fromAddress,
-      amount_usd: event.amountUsd,
+      // USD is genuinely unknown at the webhook hot path (no price feed); the
+      // raw token amount is preserved in `raw`. Never write a token quantity
+      // into a USD column.
+      amount_usd: null,
       tx_hash: event.txHash,
       observed_at: event.observedAt,
       raw: event.raw,
@@ -182,7 +192,10 @@ export async function POST(req: NextRequest) {
       tokenSymbol: event.tokenSymbol,
       txHash: event.txHash,
       whaleAddress: event.fromAddress,
-      whaleValueUsd: event.amountUsd,
+      // USD unknown at the webhook hot path — pass the token amount instead so
+      // the alert reads "moved N TOKEN", not a fabricated "$N".
+      whaleValueUsd: null,
+      whaleAmountToken: event.amountToken,
     }),
     matchSniperEvent({
       chain,
