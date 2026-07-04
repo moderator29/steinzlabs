@@ -363,7 +363,7 @@ export default function ApprovalManagerPage() {
           {response && !loading && (
             <>
               {/* Summary row */}
-              <div className="grid grid-cols-4 gap-2 nl-fade-up">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 nl-fade-up">
                 <div className="nl-glass rounded-2xl p-3 text-center">
                   <p className="text-lg font-bold">{response.approvals.length}</p>
                   <p className="text-[10px] text-gray-500 mt-0.5">Active</p>
