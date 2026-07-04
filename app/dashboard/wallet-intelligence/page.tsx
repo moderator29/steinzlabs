@@ -742,31 +742,38 @@ export default function WalletIntelligencePage() {
   return (
     <div className="min-h-screen text-white pb-20">
       <div className="sticky top-0 z-40 nl-glass backdrop-blur-2xl border-b border-[#1a1f2e]">
-        <div className="flex items-center gap-3 px-4 h-14">
+        {/* Mobile-safe header: back + icon + truncating title always fit; the
+            action pills collapse to icon-only on phones so nothing overflows the
+            screen (the previous single non-wrapping row pushed the pills off the
+            right edge and hid the How-It-Works icon). */}
+        <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 h-14">
           <BackButton />
-          <div className="w-8 h-8 bg-gradient-to-br from-[#0066FF] to-[#7C3AED] rounded-xl flex items-center justify-center">
+          <div className="w-8 h-8 shrink-0 bg-gradient-to-br from-[#0066FF] to-[#7C3AED] rounded-xl flex items-center justify-center">
             <Search className="w-4 h-4" />
           </div>
-          <h1 className="text-sm font-heading font-bold">Wallet Intelligence</h1>
-          {/* §9.3 new feature — Compare two wallets side-by-side. Routes
-              to a dedicated comparison page that fetches both addresses
-              in parallel and surfaces the diff. */}
-          <Link
-            href="/dashboard/wallet-intelligence/compare"
-            className="ms-auto whale-pill"
-            title="Compare two wallets side by side"
-          >
-            <GitCompare className="w-3.5 h-3.5" aria-hidden="true" />
-            Compare
-          </Link>
-          <Link
-            href="/dashboard/security/wallet-analysis"
-            className="whale-pill"
-            title="Run a Shadow Guardian scan in the Security Center"
-          >
-            Wallet scan →
-          </Link>
-          <HowItWorksButton content={walletIntelligenceHowItWorks} className="shrink-0" />
+          <h1 className="text-sm font-heading font-bold min-w-0 truncate flex-1">Wallet Intelligence</h1>
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* §9.3 — Compare two wallets side-by-side. */}
+            <Link
+              href="/dashboard/wallet-intelligence/compare"
+              className="whale-pill"
+              title="Compare two wallets side by side"
+              aria-label="Compare two wallets"
+            >
+              <GitCompare className="w-3.5 h-3.5" aria-hidden="true" />
+              <span className="hidden sm:inline">Compare</span>
+            </Link>
+            <Link
+              href="/dashboard/security/wallet-analysis"
+              className="whale-pill"
+              title="Run a Shadow Guardian scan in the Security Center"
+              aria-label="Run a wallet security scan"
+            >
+              <Shield className="w-3.5 h-3.5" aria-hidden="true" />
+              <span className="hidden sm:inline">Wallet scan →</span>
+            </Link>
+            <HowItWorksButton content={walletIntelligenceHowItWorks} className="shrink-0" />
+          </div>
         </div>
       </div>
 

@@ -431,11 +431,11 @@ export default function DNAAnalyzerPage() {
     <div className="min-h-screen text-white pb-12">
       {/* Header */}
       <div className="fixed top-0 w-full z-40 nl-glass backdrop-blur-xl border-b border-white/10">
-        <div className="flex items-center px-4 h-14 gap-3">
+        <div className="flex items-center px-3 sm:px-4 h-14 gap-2 sm:gap-3">
           <BackButton href="/dashboard" />
-          <Dna className="w-5 h-5 text-[#0066FF]" />
-          <h1 className="font-heading font-bold">DNA Analyzer</h1>
-          <span className="ms-auto text-[10px] px-2 py-1 bg-[#7C3AED]/20 text-[#7C3AED] rounded-full font-semibold">AI Powered</span>
+          <Dna className="w-5 h-5 text-[#0066FF] shrink-0" />
+          <h1 className="font-heading font-bold flex-1 min-w-0 truncate">DNA Analyzer</h1>
+          <span className="hidden sm:inline-flex ms-auto text-[10px] px-2 py-1 bg-[#7C3AED]/20 text-[#7C3AED] rounded-full font-semibold shrink-0">AI Powered</span>
           <HowItWorksButton content={dnaAnalyzerHowItWorks} className="shrink-0" />
         </div>
       </div>

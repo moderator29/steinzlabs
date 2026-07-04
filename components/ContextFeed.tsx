@@ -37,6 +37,20 @@ type FeedMode = ChainFilter | 'archive';
 // own deep history; this is the live window only.
 const VIRTUAL_CAP = 80;
 
+// Compact USD formatter with a full B/M/K tier ladder. The previous inline
+// ternaries for Vol/Liquidity omitted the billions tier, so an 11.3B volume
+// rendered as "$11367M" (or "$11366764K" when the value arrived as a string and
+// coerced oddly). Coercing to Number and covering B fixes it uniformly.
+function fmtCompact(raw: number | string | null | undefined): string {
+  const n = typeof raw === 'string' ? parseFloat(raw) : raw;
+  if (n == null || !isFinite(n) || isNaN(n)) return '0';
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
+  if (abs >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+  return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+
 const CHAIN_TABS: { id: FeedMode; label: string; icon: typeof AllChainsIcon; color: string; gradient: string }[] = [
   { id: 'all', label: 'All Chains', icon: AllChainsIcon, color: '#0066FF', gradient: 'from-[#0066FF] to-[#7C3AED]' },
   { id: 'solana', label: 'Solana', icon: SolanaIcon, color: '#9945FF', gradient: 'from-[#9945FF] to-[#14F195]' },
@@ -780,19 +794,19 @@ export default function ContextFeed() {
                   {event.tokenVolume24h && event.tokenVolume24h > 0 && (
                     <div className="bg-white/[0.03] rounded-lg px-2.5 py-1.5">
                       <div className="text-[9px] text-gray-500 uppercase">Vol 24h</div>
-                      <div className="text-[11px] font-semibold text-gray-300 font-mono">${event.tokenVolume24h >= 1000000 ? `${(event.tokenVolume24h / 1000000).toFixed(1)}M` : event.tokenVolume24h >= 1000 ? `${(event.tokenVolume24h / 1000).toFixed(0)}K` : event.tokenVolume24h.toLocaleString()}</div>
+                      <div className="text-[11px] font-semibold text-gray-300 font-mono">${fmtCompact(event.tokenVolume24h)}</div>
                     </div>
                   )}
                   {event.tokenLiquidity && event.tokenLiquidity > 0 && (
                     <div className="bg-white/[0.03] rounded-lg px-2.5 py-1.5">
                       <div className="text-[9px] text-gray-500 uppercase">Liquidity</div>
-                      <div className="text-[11px] font-semibold text-gray-300 font-mono">${event.tokenLiquidity >= 1000000 ? `${(event.tokenLiquidity / 1000000).toFixed(1)}M` : event.tokenLiquidity >= 1000 ? `${(event.tokenLiquidity / 1000).toFixed(0)}K` : event.tokenLiquidity.toLocaleString()}</div>
+                      <div className="text-[11px] font-semibold text-gray-300 font-mono">${fmtCompact(event.tokenLiquidity)}</div>
                     </div>
                   )}
                   {event.tokenMarketCap && event.tokenMarketCap > 0 && (
                     <div className="bg-white/[0.03] rounded-lg px-2.5 py-1.5">
                       <div className="text-[9px] text-gray-500 uppercase">MCap</div>
-                      <div className="text-[11px] font-semibold text-gray-300 font-mono">${event.tokenMarketCap >= 1000000000 ? `${(event.tokenMarketCap / 1000000000).toFixed(1)}B` : event.tokenMarketCap >= 1000000 ? `${(event.tokenMarketCap / 1000000).toFixed(0)}M` : event.tokenMarketCap >= 1000 ? `${(event.tokenMarketCap / 1000).toFixed(0)}K` : event.tokenMarketCap.toLocaleString()}</div>
+                      <div className="text-[11px] font-semibold text-gray-300 font-mono">${fmtCompact(event.tokenMarketCap)}</div>
                     </div>
                   )}
                 </div>

@@ -230,8 +230,8 @@ export default function CopyTradingPage() {
             </div>
           </div>
         )}
-        <div className="flex items-start justify-between gap-3 mb-6">
-          <div>
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
+          <div className="min-w-0">
             <h1 className="text-2xl font-bold">Copy Trading</h1>
             <p className="text-xs text-slate-500 mt-1">
               Three modes: Alerts, One-Click, Auto-Copy. Every trade passes GoPlus + your rules before the relayer touches it.

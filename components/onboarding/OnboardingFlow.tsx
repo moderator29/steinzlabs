@@ -145,7 +145,7 @@ export function OnboardingFlow({ onComplete, onSkip }: Props) {
             key={c.index}
             onClick={() => { setDirection(c.index - 1 > index ? 1 : -1); setIndex(c.index - 1); }}
             aria-label={`Go to card ${c.index}`}
-            className={`h-1.5 rounded-full transition-all ${
+            className={`h-1.5 rounded-[2px] transition-all ${
               c.index === index + 1
                 ? 'w-6 bg-[var(--nl-blue,#0066FF)] shadow-[0_0_12px_rgba(0,102,255,0.6)]'
                 : c.index < index + 1

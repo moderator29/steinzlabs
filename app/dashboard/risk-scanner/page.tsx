@@ -349,7 +349,7 @@ export default function RiskScannerPage() {
                 </TiltCard>
 
                 {/* Summary stats */}
-                <div className="grid grid-cols-4 gap-2 nl-fade-up nl-fade-up-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 nl-fade-up nl-fade-up-2">
                   <SummaryStat label="Scanned" value={summary.scanned} color="#FFFFFF" />
                   <SummaryStat label="Safe" value={summary.safe} color="#10B981" />
                   <SummaryStat label="Warning" value={summary.warning} color="#F59E0B" />

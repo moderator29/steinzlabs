@@ -240,17 +240,36 @@ interface D3GraphProps {
 function D3ForceGraph({ data, onNodeClick, selected, fullscreen, pinnedAddress }: D3GraphProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const simRef = useRef<d3.Simulation<BubbleNode, BubbleLink> | null>(null);
+  // BUBBLE half-render fix: track the live paint-surface size so the SVG
+  // viewBox always matches the container's real aspect ratio. Reading the rect
+  // once at mount (before flex/`h-full` settled, or before a mobile rotation)
+  // produced a viewBox whose ratio differed from the container, so
+  // preserveAspectRatio="meet" letterboxed the graph into a band in the middle
+  // — the "map shows half" symptom (IMG_1928). A ResizeObserver re-syncs.
+  const [dims, setDims] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      const w = Math.round(r.width || el.clientWidth || 0);
+      const h = Math.round(r.height || el.clientHeight || 0);
+      if (w > 0 && h > 0) setDims((prev) => (prev.w === w && prev.h === h ? prev : { w, h }));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [fullscreen]);
 
   useEffect(() => {
     if (!svgRef.current || !data.nodes.length) return;
     const el = svgRef.current;
-    // BUBBLE3: derive width/height from the live container rect (handles
-    // CSS resize, fullscreen toggle, and mobile rotation) instead of
-    // baking in a one-shot read at first render. Keeps the SVG viewBox
-    // proportional to the actual paint surface.
+    // Use the observed paint-surface size; fall back to a live rect read the
+    // first time (before the observer has fired).
     const rect = el.getBoundingClientRect();
-    const W = Math.max(320, rect.width || el.clientWidth || 600);
-    const H = Math.max(320, rect.height || el.clientHeight || 500);
+    const W = Math.max(320, dims.w || rect.width || el.clientWidth || 600);
+    const H = Math.max(320, dims.h || rect.height || el.clientHeight || 500);
 
     // Clone nodes/links so D3 can mutate
     const nodes: BubbleNode[] = data.nodes.map(n => ({ ...n, x: W / 2, y: H / 2 }));
@@ -393,9 +412,9 @@ function D3ForceGraph({ data, onNodeClick, selected, fullscreen, pinnedAddress }
     }
 
     return () => { sim.stop(); svg.selectAll('*').remove(); };
-  }, [data, selected, onNodeClick, fullscreen, pinnedAddress]);
+  }, [data, selected, onNodeClick, fullscreen, pinnedAddress, dims.w, dims.h]);
 
-  return <svg ref={svgRef} className="w-full h-full" />;
+  return <svg ref={svgRef} className="w-full h-full" preserveAspectRatio="xMidYMid meet" />;
 }
 
 // ─── Concentration Read ───────────────────────────────────────────────────────

@@ -23,6 +23,7 @@ interface Result { chain: string; sort: string; tokens: AgeToken[]; generatedAt:
 const CHAINS = [
   { id: '', label: 'All chains' }, { id: 'ethereum', label: 'Ethereum' },
   { id: 'solana', label: 'Solana' }, { id: 'base', label: 'Base' }, { id: 'bsc', label: 'BSC' },
+  { id: 'arbitrum', label: 'Arbitrum' }, { id: 'optimism', label: 'Optimism' }, { id: 'polygon', label: 'Polygon' }, { id: 'avalanche', label: 'Avalanche' },
 ];
 const GRADE_META: Record<Grade, { label: string; color: string; Icon: typeof Sprout }> = {
   fresh: { label: 'Fresh-wallet heavy', color: '#FF1744', Icon: ShieldAlert },

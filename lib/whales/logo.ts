@@ -16,11 +16,39 @@
 
 import { arkhamAPI } from "@/lib/arkham/api";
 
-export type LogoSource = "arkham" | "ens" | "dicebear";
+export type LogoSource = "x" | "website" | "arkham" | "ens" | "dicebear";
 
 export interface ResolvedLogo {
   url: string;
   source: LogoSource;
+}
+
+// A curated X/Twitter handle is the most recognizable image for a named whale
+// (Vitalik, a fund, a public CT figure), so it takes priority over Arkham/ENS.
+// unavatar.io is a free public avatar resolver; ?fallback=false makes it 404
+// when the handle has no avatar, so a bad/stale handle degrades to the next
+// source instead of silently serving unavatar's generic placeholder.
+function fromXHandle(xHandle: string | null | undefined): ResolvedLogo | null {
+  if (!xHandle) return null;
+  const h = xHandle.trim().replace(/^@/, "");
+  if (!/^[A-Za-z0-9_]{1,15}$/.test(h)) return null; // valid X handle shape only
+  return { url: `https://unavatar.io/x/${encodeURIComponent(h)}?fallback=false`, source: "x" };
+}
+
+// For entities that publish an official site (exchanges, funds, protocols) the
+// brand logo is the recognizable image — same approach Nansen/Arkham use to badge
+// labeled entities. unavatar resolves a site's logo/OG image by domain.
+function fromWebsite(website: string | null | undefined): ResolvedLogo | null {
+  if (!website) return null;
+  let domain = website.trim().toLowerCase();
+  try {
+    if (!/^https?:\/\//.test(domain)) domain = `https://${domain}`;
+    const host = new URL(domain).hostname.replace(/^www\./, "");
+    if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(host)) return null;
+    return { url: `https://unavatar.io/${encodeURIComponent(host)}?fallback=false`, source: "website" };
+  } catch {
+    return null;
+  }
 }
 
 const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY ?? process.env.NEXT_PUBLIC_ALCHEMY_API_KEY ?? "";
@@ -84,7 +112,15 @@ async function fromEns(address: string): Promise<ResolvedLogo | null> {
 export async function resolveWhaleLogo(
   address: string,
   chain: string | null = null,
+  xHandle: string | null = null,
+  website: string | null = null,
 ): Promise<ResolvedLogo> {
+  // Curated X avatar first — the most recognizable image for a named whale.
+  const x = fromXHandle(xHandle);
+  if (x) return x;
+  // Then the entity's official site logo (exchanges / funds / protocols).
+  const site = fromWebsite(website);
+  if (site) return site;
   const arkham = await fromArkham(address, chain ?? undefined);
   if (arkham) return arkham;
   if (chain !== "solana") {

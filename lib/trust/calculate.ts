@@ -62,8 +62,15 @@ function clamp(n: number): number {
   return Math.max(0, Math.min(100, Math.round(n)));
 }
 
-function liquidityLayer(pair: DexPair | null): number {
-  if (!pair) return 30; // unknown liquidity → low-ish, not zero
+// Layers return `null` when the underlying data source produced NOTHING — a
+// failed GoPlus call, no DexScreener pair, etc. A null layer is EXCLUDED from
+// the composite (weights re-normalize over the layers we actually have) instead
+// of injecting a pessimistic default. This is what stopped blue-chips like AAVE
+// from scoring "Caution" purely because one upstream source was rate-limited:
+// missing data must not read as risk.
+
+function liquidityLayer(pair: DexPair | null): number | null {
+  if (!pair) return null; // no pair data → exclude, don't guess low
   const liqUsd = pair.liquidity?.usd ?? 0;
   const mcap = pair.fdv ?? pair.marketCap ?? 0;
   let score = 0;
@@ -88,8 +95,12 @@ function liquidityLayer(pair: DexPair | null): number {
   return clamp(score);
 }
 
-function holdersLayer(holderCount: number | null, top10Pct: number | null): number {
-  if (holderCount == null) return 50;
+function holdersLayer(holderCount: number | null, top10Pct: number | null): number | null {
+  if (holderCount == null && top10Pct == null) return null; // no holder data → exclude
+  if (holderCount == null) {
+    // Concentration known but not the count — score from concentration alone.
+    return clamp(Math.round(Math.max(0, 100 * (1 - (top10Pct as number) / 100))));
+  }
   let score = 0;
   if (holderCount >= 10_000) score += 60;
   else if (holderCount >= 2_000) score += 45;
@@ -105,8 +116,8 @@ function holdersLayer(holderCount: number | null, top10Pct: number | null): numb
   return clamp(score);
 }
 
-function marketLayer(pair: DexPair | null): number {
-  if (!pair) return 40;
+function marketLayer(pair: DexPair | null): number | null {
+  if (!pair) return null; // no market data → exclude
   let score = 0;
 
   // Days since launch — older = more proven.
@@ -145,8 +156,8 @@ function marketLayer(pair: DexPair | null): number {
   return clamp(score);
 }
 
-function securityLayer(security: Awaited<ReturnType<typeof getTokenSecurity>> | null): number {
-  if (!security) return 40;
+function securityLayer(security: Awaited<ReturnType<typeof getTokenSecurity>> | null): number | null {
+  if (!security) return null; // GoPlus gave us nothing → exclude, don't assume risk
   // GoPlus already produces a 0–100 trustScore; honor it as the layer score.
   // Honeypots / cannot-sell collapse the layer regardless of other flags.
   if (security.isHoneypot) return 0;
@@ -171,21 +182,43 @@ export async function calculateTrustScore(input: CalculateInput): Promise<TrustR
     getBestPair(tokenAddress).catch(() => null),
   ]);
 
-  const layers: TrustLayers = {
+  // Raw layers — null means "no data for this dimension" and is excluded from
+  // the composite (weights re-normalize over what's present).
+  const raw: Record<keyof TrustLayers, number | null> = {
     security: securityLayer(security),
     liquidity: liquidityLayer(pair),
     holders: holdersLayer(security?.holderCount ?? null, input.top10ConcentrationPct ?? null),
     market: marketLayer(pair),
-    social: input.socialScore != null ? clamp(input.socialScore) : 50,
+    social: input.socialScore != null ? clamp(input.socialScore) : null,
   };
 
-  const composite = clamp(
-    layers.security * TRUST_WEIGHTS.security +
-      layers.liquidity * TRUST_WEIGHTS.liquidity +
-      layers.holders * TRUST_WEIGHTS.holders +
-      layers.market * TRUST_WEIGHTS.market +
-      layers.social * TRUST_WEIGHTS.social,
-  );
+  // Weighted average over ONLY the layers we actually have data for. If a
+  // source failed we don't drag the token down with a pessimistic default —
+  // we score it on the evidence in hand and renormalize the weights.
+  let weightedSum = 0;
+  let weightTotal = 0;
+  (Object.keys(raw) as (keyof TrustLayers)[]).forEach((k) => {
+    const v = raw[k];
+    if (v == null) return;
+    const w = TRUST_WEIGHTS[k];
+    weightedSum += v * w;
+    weightTotal += w;
+  });
+
+  // When nothing at all resolved, present a neutral 50 ("insufficient data")
+  // rather than a scary low score. In practice at least liquidity/market
+  // resolve for any real token.
+  const composite = weightTotal > 0 ? clamp(weightedSum / weightTotal) : 50;
+
+  // Display shape keeps every dimension; a null (no-data) layer shows as 0 in
+  // the breakdown bars but did not participate in the math above.
+  const layers: TrustLayers = {
+    security: raw.security ?? 0,
+    liquidity: raw.liquidity ?? 0,
+    holders: raw.holders ?? 0,
+    market: raw.market ?? 0,
+    social: raw.social ?? 0,
+  };
 
   const band = bandFor(composite);
 

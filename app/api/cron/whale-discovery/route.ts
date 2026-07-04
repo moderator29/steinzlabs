@@ -44,6 +44,9 @@ const ROUTERS: Array<{ chain: string; key: string; router: string }> = [
 const PAIRS_PER_TICK = 2;
 const PER_PAIR = 12;
 const MIN_SWAPS = 3;
+// Minimum native balance (ETH/BNB/MATIC/etc.) a discovered wallet must hold to
+// be admitted — filters dust/throwaway swappers so auto-discovery stays vetted.
+const MIN_NATIVE_BALANCE = 0.05;
 
 async function discoverFromRouter(
   pair: { chain: string; key: string; router: string },
@@ -76,7 +79,10 @@ async function discoverFromRouter(
           const code = await getContractCode(addr, pair.chain);
           if (code && code !== "0x" && code !== "0x0") return null; // contract
           const bal = await getEthBalance(addr, pair.chain).catch(() => "0");
-          if ((parseFloat(bal) || 0) <= 0) return null; // dead/throwaway wallet
+          // Vetting floor — require a non-trivial native balance so we admit
+          // real, funded wallets and skip dust/throwaway swappers. This is the
+          // "good filter" that keeps auto-discovery quality high.
+          if ((parseFloat(bal) || 0) < MIN_NATIVE_BALANCE) return null;
           return { address: addr, swaps };
         } catch {
           return null;
@@ -122,7 +128,10 @@ export async function GET(request: NextRequest) {
         .map(({ e, addr }) => ({
           address: addr,
           chain: pair.chain,
-          label: `Active ${pair.key} trader`,
+          // No auto-generated "Active X trader" label — the tracker shows the
+          // wallet address (Nansen/Arkham style) until a real entity label is
+          // resolved. Avoids the noisy label users disliked.
+          label: null,
           entity_type: "trader",
           archetype: "active_swapper",
           whale_score: 70,

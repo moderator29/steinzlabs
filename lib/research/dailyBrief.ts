@@ -211,7 +211,7 @@ function whaleSection(moves: BriefWhaleMove[]): string {
 /** Decorative on-brand SVG cover (data URI) stamped with the date + vibe. */
 function buildCover(dateLabel: string, vibe: MarketVibe, marketCap: number): string {
   const cap = marketCap > 0 ? fmtUsdCompact(marketCap) : '';
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400">
     <defs>
       <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
         <stop offset="0" stop-color="#05081E"/><stop offset="0.55" stop-color="#0A1238"/><stop offset="1" stop-color="#0066FF"/>
@@ -220,13 +220,13 @@ function buildCover(dateLabel: string, vibe: MarketVibe, marketCap: number): str
         <stop offset="0" stop-color="${vibe.color}" stop-opacity="0.45"/><stop offset="1" stop-color="${vibe.color}" stop-opacity="0"/>
       </radialGradient>
     </defs>
-    <rect width="1200" height="630" fill="url(#g)"/>
-    <rect width="1200" height="630" fill="url(#glow)"/>
-    <text x="64" y="150" fill="#8FA3FF" font-family="Arial,sans-serif" font-size="26" font-weight="700" letter-spacing="3">NAKA LABS RESEARCH</text>
-    <text x="64" y="300" fill="#FFFFFF" font-family="Arial,sans-serif" font-size="92" font-weight="900">Daily Market Brief</text>
-    <text x="64" y="380" fill="#C7D2FE" font-family="Arial,sans-serif" font-size="38" font-weight="600">${esc(dateLabel)}</text>
-    <text x="64" y="560" fill="${vibe.color}" font-family="Arial,sans-serif" font-size="34" font-weight="800">${vibe.emoji} ${esc(vibe.label)}</text>
-    ${cap ? `<text x="1136" y="560" text-anchor="end" fill="#94A3B8" font-family="monospace" font-size="30" font-weight="700">Mkt Cap ${esc(cap)}</text>` : ''}
+    <rect width="1200" height="400" fill="url(#g)"/>
+    <rect width="1200" height="400" fill="url(#glow)"/>
+    <text x="64" y="96" fill="#8FA3FF" font-family="Arial,sans-serif" font-size="24" font-weight="700" letter-spacing="3">NAKA LABS RESEARCH</text>
+    <text x="64" y="200" fill="#FFFFFF" font-family="Arial,sans-serif" font-size="76" font-weight="900">Daily Market Brief</text>
+    <text x="64" y="262" fill="#C7D2FE" font-family="Arial,sans-serif" font-size="34" font-weight="600">${esc(dateLabel)}</text>
+    <text x="64" y="336" fill="${vibe.color}" font-family="Arial,sans-serif" font-size="32" font-weight="800">${vibe.emoji} ${esc(vibe.label)}</text>
+    ${cap ? `<text x="1136" y="336" text-anchor="end" fill="#94A3B8" font-family="monospace" font-size="28" font-weight="700">Mkt Cap ${esc(cap)}</text>` : ''}
   </svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }

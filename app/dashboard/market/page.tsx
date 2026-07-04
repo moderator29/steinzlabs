@@ -19,6 +19,7 @@ import { ErrorState } from "@/components/market/ErrorState";
 import { resolveTokenChain } from "@/lib/market/tokenChainResolver";
 import { useNavState } from "@/lib/nav/useNavState";
 import { HowItWorksButton } from "@/components/common/HowItWorks";
+import BackButton from "@/components/ui/BackButton";
 import { marketHowItWorks } from "@/lib/howItWorks/content/market";
 
 type CategoryId = "all" | "majors" | "defi" | "layer1" | "layer2" | "gaming" | "ai" | "meme" | "depin" | "pumpfun" | "bnb-meme";
@@ -170,12 +171,13 @@ export default function DashboardMarketPage() {
         <span className="text-slate-700">/</span>
         <span className="text-slate-300">Market</span>
       </nav>
-      <div className="flex items-baseline justify-between">
-        <div>
+      <div className="flex items-start gap-2 sm:gap-3">
+        <BackButton className="mt-1 shrink-0" />
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold text-white">Market</h1>
           <p className="text-sm text-slate-400">Live prices across the top assets. Click any row to open its trading terminal.</p>
         </div>
-        <HowItWorksButton content={marketHowItWorks} className="ms-auto shrink-0" />
+        <HowItWorksButton content={marketHowItWorks} className="shrink-0 mt-1" />
       </div>
 
       {/* Search + Filters */}

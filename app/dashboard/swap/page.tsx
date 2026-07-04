@@ -7,6 +7,7 @@ import BackButton from '@/components/ui/BackButton';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
+import { getBuiltinWalletAddress } from '@/lib/wallet/builtinWallet';
 import { notifySwapCompleted } from '@/lib/notifications';
 import { getWalletSessionKey } from '@/lib/wallet/walletSession';
 import { decryptPrivateKey } from '@/lib/wallet/encryption';
@@ -673,7 +674,23 @@ export default function SwapPage() {
   // so they survive refresh and stay selectable/quotable.
   useEffect(() => { loadImportedTokens(); }, []);
 
-  const nakaAddress = walletAddress || safeLocalGet('steinz_active_wallet_address');
+  // Auto-detect an existing built-in Naka wallet from its canonical store
+  // (steinz_wallets / steinz_default_wallet) — not just the legacy
+  // wallet_address key — so a created wallet is never re-prompted (IMG_1933).
+  // Recomputed on the wallet-changed event so a wallet created in another tab
+  // (or the wallet page) lights up here without a refresh.
+  const [builtinAddr, setBuiltinAddr] = useState<string | null>(null);
+  useEffect(() => {
+    const sync = () => setBuiltinAddr(getBuiltinWalletAddress());
+    sync();
+    window.addEventListener('steinz_wallet_changed', sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener('steinz_wallet_changed', sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, []);
+  const nakaAddress = walletAddress || builtinAddr || safeLocalGet('steinz_active_wallet_address');
   const connectedAddress = walletMode === 'metamask' ? metamaskAddress : walletMode === 'phantom' ? phantomAddress : nakaAddress;
 
   // Detect wallet provider and fetch native balance

@@ -18,6 +18,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { connectMetaMask, connectPhantom, clearStoredWallet } from '@/lib/wallet';
+import { getBuiltinWalletAddress } from '@/lib/wallet/builtinWallet';
 
 const WALLET_CHANGE_EVENT = 'steinz_wallet_changed';
 const BALANCE_CHANGE_EVENT = 'steinz:balance-changed';
@@ -84,13 +85,25 @@ export function useWallet() {
   }, []);
 
   const refreshBalance = useCallback(async () => {
-    const addr = address || localStorage.getItem('wallet_address');
+    const addr = address || getBuiltinWalletAddress() || localStorage.getItem('wallet_address');
     if (addr) await fetchBalance(addr);
   }, [address, fetchBalance]);
 
   useEffect(() => {
-    const stored = localStorage.getItem('wallet_address');
-    const storedProvider = localStorage.getItem('wallet_provider');
+    // Fall back to the canonical built-in wallet store so a wallet the user
+    // created (persisted under steinz_wallets / steinz_default_wallet) is
+    // detected even when the legacy wallet_address key was never written —
+    // fixes the "connect a wallet" re-prompt across every surface that reads
+    // this hook (swap / proof / portfolio / etc.).
+    const resolveStoredAddress = (): { addr: string | null; prov: string | null } => {
+      const legacy = localStorage.getItem('wallet_address');
+      if (legacy) return { addr: legacy, prov: localStorage.getItem('wallet_provider') };
+      const builtin = getBuiltinWalletAddress();
+      if (builtin) return { addr: builtin, prov: 'builtin' };
+      return { addr: null, prov: null };
+    };
+
+    const { addr: stored, prov: storedProvider } = resolveStoredAddress();
     if (stored) {
       setAddress(stored);
       setProvider(storedProvider);
@@ -98,15 +111,14 @@ export function useWallet() {
     }
 
     const handleChange = () => {
-      const addr = localStorage.getItem('wallet_address');
-      const prov = localStorage.getItem('wallet_provider');
+      const { addr, prov } = resolveStoredAddress();
       setAddress(addr);
       setProvider(prov);
       if (addr) fetchBalance(addr);
     };
 
     const handleBalanceChange = () => {
-      const addr = localStorage.getItem('wallet_address');
+      const { addr } = resolveStoredAddress();
       if (addr) fetchBalance(addr);
     };
 

@@ -185,6 +185,9 @@ export default function WalletClustersPage() {
           >
             <Download className="w-4 h-4" />
           </button>
+          <Link href="/dashboard/cluster-radar" title="Coordinated Cluster Radar" className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-[#00C8FF] bg-[#0066FF]/10 border border-[#0066FF]/30 hover:border-[#0066FF]/50 transition-colors">
+            <Layers className="w-3.5 h-3.5" /> Cluster Radar
+          </Link>
           <HowItWorksButton content={walletClustersHowItWorks} className="shrink-0" />
         </div>
 

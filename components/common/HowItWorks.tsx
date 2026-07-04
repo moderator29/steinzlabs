@@ -61,12 +61,12 @@ export function HowItWorksButton({
         aria-haspopup="dialog"
         aria-label={`How ${content.title} works`}
         title="How it works"
-        className={`inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full border border-[#0066FF]/50 bg-[#0066FF]/15 text-[#cfe0ff] shadow-[0_0_5px_rgba(0,102,255,0.22)] transition-colors hover:border-[#0066FF] hover:bg-[#0066FF]/25 hover:text-white ${
-          iconOnly ? 'h-4 w-4' : 'px-2.5 py-1'
+        className={`inline-flex shrink-0 items-center justify-center gap-1 sm:gap-1.5 rounded-full border border-[#0066FF]/50 bg-[#0066FF]/15 text-[#cfe0ff] shadow-[0_0_5px_rgba(0,102,255,0.22)] transition-colors hover:border-[#0066FF] hover:bg-[#0066FF]/25 hover:text-white ${
+          iconOnly ? 'h-5 w-5 sm:h-6 sm:w-6' : 'px-1.5 py-0.5 text-[9px] sm:px-2.5 sm:py-1 sm:text-[11px]'
         } ${className}`}
       >
-        <HelpCircle className="h-2.5 w-2.5 flex-shrink-0 text-[#4DA2FF]" />
-        {!iconOnly && <span className="text-[11px] font-semibold leading-none">How it works</span>}
+        <HelpCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0 text-[#4DA2FF]" />
+        {!iconOnly && <span className="text-[9px] sm:text-[11px] font-semibold leading-none">How it works</span>}
       </button>
       {open && <HowItWorksPanel content={content} onClose={() => setOpen(false)} />}
     </>

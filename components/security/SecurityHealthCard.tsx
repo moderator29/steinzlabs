@@ -22,6 +22,17 @@ function ringColor(score: number): string {
   return '#EF4444';
 }
 
+// Plain-language reason for the score so it never reads as an unexplained
+// number. Names the actual issues found, or confirms the wallet is clean.
+function healthReason(counts: { approvalDanger: number; threatCount: number; honeypotCount: number }): string {
+  const issues: string[] = [];
+  if (counts.approvalDanger > 0) issues.push(`${counts.approvalDanger} risky approval${counts.approvalDanger > 1 ? 's' : ''}`);
+  if (counts.threatCount > 0) issues.push(`${counts.threatCount} threat alert${counts.threatCount > 1 ? 's' : ''} (30d)`);
+  if (counts.honeypotCount > 0) issues.push(`${counts.honeypotCount} honeypot token${counts.honeypotCount > 1 ? 's' : ''} held`);
+  if (issues.length === 0) return 'No dangerous approvals, active threats, or honeypots detected — your wallet is clean.';
+  return `Found: ${issues.join(' · ')}. Resolve these to raise your score.`;
+}
+
 export function SecurityHealthCard({ has2fa = false }: { has2fa?: boolean }) {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,15 +76,20 @@ export function SecurityHealthCard({ has2fa = false }: { has2fa?: boolean }) {
             <ShieldCheck className="w-4 h-4 text-emerald-300" /> Security Health
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Composite of wallet reputation (50%), approval risk (20%), threat alerts (15%), and honeypot holdings (15%).
+            Driven by real wallet-security posture: approval risk (40%), threat alerts (30%), honeypot holdings (25%), plus a small platform-standing nudge (5%).
           </p>
           {health && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
-              <Metric label="Reputation" value={health.breakdown.reputation} />
-              <Metric label="Approvals"  value={health.breakdown.approvals} />
-              <Metric label="Threats"    value={health.breakdown.threats} />
-              <Metric label="Honeypots"  value={health.breakdown.honeypots} />
-            </div>
+            <>
+              <p className="text-xs mt-1.5" style={{ color: ringColor(health.score) }}>
+                {healthReason(health.counts)}
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+                <Metric label="Approvals"  value={health.breakdown.approvals} />
+                <Metric label="Threats"    value={health.breakdown.threats} />
+                <Metric label="Honeypots"  value={health.breakdown.honeypots} />
+                <Metric label="Reputation" value={health.breakdown.reputation} />
+              </div>
+            </>
           )}
         </div>
       </div>

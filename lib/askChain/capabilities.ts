@@ -23,6 +23,13 @@ export interface CapabilityResult {
 
 const MAX_ROWS = 25;
 
+// Stablecoins + wrapped/native majors — demoted from flow/rotation answers as
+// housekeeping noise (same policy as the on-brand boards).
+const NOISE_SYMBOLS = new Set([
+  'USDT', 'USDC', 'DAI', 'BUSD', 'TUSD', 'FRAX', 'USDE', 'USDS', 'SUSDS', 'RLUSD', 'USDD', 'GUSD', 'LUSD', 'PYUSD', 'USDP', 'CRVUSD',
+  'WETH', 'ETH', 'WBTC', 'BTC', 'WBNB', 'BNB', 'WSOL', 'SOL', 'STETH', 'WSTETH', 'CBETH', 'RETH', 'PAXG',
+]);
+
 const CHAINS = ['ethereum', 'solana', 'base', 'arbitrum', 'bsc', 'polygon', 'avalanche', 'optimism'];
 function safeChain(c?: string): string | null {
   const v = (c || '').toLowerCase().trim();
@@ -45,8 +52,10 @@ export const CAPABILITY_SCHEMA = {
         'whales_buying_token',
         'recent_whale_moves',
         'token_safety',
+        'smart_money_flows',
+        'smart_money_rotation',
       ],
-      description: 'Which on-chain query best answers the user. Pick exactly one.',
+      description: 'Which on-chain query best answers the user. Pick exactly one. Use smart_money_flows for "what is smart money accumulating/net-buying"; smart_money_rotation for "what is smart money rotating INTO/OUT OF" or momentum shifts.',
     },
     metric: { type: 'string', enum: ['win_rate', 'pnl_30d_usd', 'whale_score'], description: 'For top_whales: ranking metric.' },
     archetype: { type: 'string', enum: ['accumulator', 'sniper', 'swing', 'distributor'], description: 'Optional whale style filter.' },
@@ -199,6 +208,59 @@ export async function runCapability(input: CapabilityInput): Promise<CapabilityR
           risk_reasons: Array.isArray(r.risk_reasons) ? r.risk_reasons.join(', ') : null,
         })),
         summaryHint: `Latest security scan for ${token}.`,
+      };
+    }
+    case 'smart_money_flows': {
+      // Net accumulation/distribution per token over a window (default 7d).
+      const hours = Math.max(1, Math.min(720, Math.floor(Number(input.hours) || 168)));
+      const since = new Date(Date.now() - hours * 3600_000).toISOString();
+      const { data } = await sb.rpc('smart_money_flows', { p_since: since, p_chain: chain, p_limit: MAX_ROWS });
+      type FlowRow = { token_symbol: string; chain: string; inflow: number | null; outflow: number | null; net: number | null; whales: number };
+      const rows = ((data ?? []) as FlowRow[])
+        .filter((r) => !NOISE_SYMBOLS.has((r.token_symbol || '').toUpperCase()))
+        .slice(0, limit)
+        .map((r) => ({
+          token_symbol: r.token_symbol,
+          chain: r.chain,
+          net_usd: Number(r.net ?? 0),
+          inflow_usd: Number(r.inflow ?? 0),
+          outflow_usd: Number(r.outflow ?? 0),
+          whales: r.whales,
+        }));
+      return {
+        capability: 'smart_money_flows',
+        columns: ['token_symbol', 'chain', 'net_usd', 'whales'],
+        rows,
+        summaryHint: `Tokens smart money is net accumulating (positive net) or distributing (negative) over the last ${Math.round(hours / 24) || 1}d${chain ? ` on ${chain}` : ''}, stablecoins excluded.`,
+      };
+    }
+    case 'smart_money_rotation': {
+      // What's rotating in/out — net-flow delta vs the equal prior window.
+      const hours = Math.max(1, Math.min(720, Math.floor(Number(input.hours) || 72)));
+      const now = Date.now();
+      const { data } = await sb.rpc('smart_money_rotation', {
+        p_cur_since: new Date(now - hours * 3600_000).toISOString(),
+        p_prev_since: new Date(now - 2 * hours * 3600_000).toISOString(),
+        p_prev_until: new Date(now - hours * 3600_000).toISOString(),
+        p_chain: chain, p_limit: MAX_ROWS,
+      });
+      type RotRow = { token_symbol: string; chain: string; cur_net: number | null; prev_net: number | null; delta: number | null; whales: number };
+      const rows = ((data ?? []) as RotRow[])
+        .filter((r) => !NOISE_SYMBOLS.has((r.token_symbol || '').toUpperCase()))
+        .slice(0, limit)
+        .map((r) => ({
+          token_symbol: r.token_symbol,
+          chain: r.chain,
+          delta_usd: Number(r.delta ?? 0),
+          current_net_usd: Number(r.cur_net ?? 0),
+          prior_net_usd: Number(r.prev_net ?? 0),
+          whales: r.whales,
+        }));
+      return {
+        capability: 'smart_money_rotation',
+        columns: ['token_symbol', 'chain', 'delta_usd', 'current_net_usd', 'prior_net_usd'],
+        rows,
+        summaryHint: `Tokens smart money is rotating INTO (positive delta) or OUT of (negative), measured as the change in net flow vs the prior ${Math.round(hours / 24) || 1}d window${chain ? ` on ${chain}` : ''}. A sign flip in current vs prior net is the strongest signal.`,
       };
     }
     default:

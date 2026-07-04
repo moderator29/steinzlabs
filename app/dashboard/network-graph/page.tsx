@@ -16,7 +16,15 @@ import {
 import * as d3 from 'd3';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { TiltCard } from '@/components/brand/TiltCard';
+import { getBuiltinWalletAddress } from '@/lib/wallet/builtinWallet';
 import type { NetworkNode, NetworkEdge, NetworkStats, NetworkGraphResponse } from '@/app/api/network-graph/route';
+
+// A real, public, high-activity address used to seed the graph on first load so
+// the page is never blank on refresh (bug IMG_1932). This is genuine on-chain
+// data — a well-known active wallet that reliably moves stablecoins — not a
+// fabricated graph. Overridden the moment the user enters their own address or a
+// connected Naka wallet is detected.
+const EXAMPLE_SEED_WALLET = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'; // vitalik.eth
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -504,13 +512,17 @@ export default function NetworkGraphPage() {
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const [highlightIds, setHighlightIds] = useState<Set<string>>(new Set());
   const [panelOpen, setPanelOpen] = useState(false);
+  // True while showing the seeded example graph (no user input yet) so the UI
+  // can label it honestly as an example rather than the user's own network.
+  const [isExample, setIsExample] = useState(false);
   const graphContainerRef = useRef<HTMLDivElement>(null);
 
-  const fetchData = useCallback(async (wallet?: string) => {
+  const fetchData = useCallback(async (wallet?: string, opts?: { example?: boolean }) => {
     setLoading(true);
     setSelectedNode(null);
     setHighlightIds(new Set());
     setTooltip(null);
+    setIsExample(!!opts?.example);
     try {
       const url = wallet ? `/api/network-graph?wallet=${encodeURIComponent(wallet)}` : '/api/network-graph';
       const res = await fetch(url);
@@ -526,12 +538,23 @@ export default function NetworkGraphPage() {
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  // Seed on mount so the graph is never blank on refresh. Prefer the user's own
+  // connected Naka wallet; otherwise show a labeled example graph from a real
+  // public address.
+  useEffect(() => {
+    const own = getBuiltinWalletAddress();
+    if (own) {
+      setWalletInput(own);
+      fetchData(own);
+    } else {
+      fetchData(EXAMPLE_SEED_WALLET, { example: true });
+    }
+  }, [fetchData]);
 
   const handleAnalyze = useCallback(() => {
     const trimmed = walletInput.trim();
     if (trimmed) fetchData(trimmed);
-    else fetchData();
+    else fetchData(EXAMPLE_SEED_WALLET, { example: true });
   }, [walletInput, fetchData]);
 
   const handleNodeHover = useCallback((
@@ -648,6 +671,16 @@ export default function NetworkGraphPage() {
           </button>
         </div>
       </div>
+
+      {/* ── Example banner ── shown while the seeded demo graph is visible so
+          the user knows this is a real public wallet, not their own network. */}
+      {isExample && !loading && nodes.length > 0 && (
+        <div className="flex-shrink-0 px-3 py-1.5 bg-[#0066FF]/10 border-b border-[#0066FF]/20 text-center">
+          <span className="text-[10px] text-[#8Fb8ff]">
+            Showing an example network (vitalik.eth) · enter any wallet or token above to map yours
+          </span>
+        </div>
+      )}
 
       {/* ── Body ── */}
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden min-h-0">
@@ -813,12 +846,13 @@ export default function NetworkGraphPage() {
           ) : !data || nodes.length === 0 ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
               <Network className="w-10 h-10 text-gray-700" />
-              <p className="text-sm text-gray-500">No network data available</p>
+              <p className="text-sm text-gray-500">No stablecoin flow for this address</p>
+              <p className="text-[11px] text-gray-600 max-w-xs text-center">Try another wallet or token, or load an example network.</p>
               <button
-                onClick={() => fetchData()}
+                onClick={() => { setWalletInput(''); fetchData(EXAMPLE_SEED_WALLET, { example: true }); }}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 border border-white/10 rounded-lg hover:border-white/20 transition-all"
               >
-                <RefreshCw className="w-3 h-3" /> Reload
+                <RefreshCw className="w-3 h-3" /> Load example
               </button>
             </div>
           ) : (

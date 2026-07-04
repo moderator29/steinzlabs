@@ -26,6 +26,7 @@ const SORTS = [{ id: 'volume', label: 'Top volume' }, { id: 'newest', label: 'Ne
 const CHAINS = [
   { id: '', label: 'All chains' }, { id: 'ethereum', label: 'Ethereum' },
   { id: 'solana', label: 'Solana' }, { id: 'base', label: 'Base' }, { id: 'bsc', label: 'BSC' },
+  { id: 'arbitrum', label: 'Arbitrum' }, { id: 'optimism', label: 'Optimism' }, { id: 'polygon', label: 'Polygon' }, { id: 'avalanche', label: 'Avalanche' },
 ];
 
 function short(a: string): string { return a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a; }

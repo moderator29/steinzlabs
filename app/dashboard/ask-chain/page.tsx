@@ -21,10 +21,11 @@ interface AskResult {
 
 const SUGGESTIONS = [
   'Which tokens is smart money converging on right now?',
+  'What is smart money rotating into this week?',
+  'Show me what whales are net accumulating',
   'Show me the top whales by win rate',
   'Biggest whale buys in the last 24 hours',
   'Which whales are buying WETH?',
-  'Top accumulator whales on Solana',
 ];
 
 function fmtCell(v: string | number | boolean | null, col: string): string {

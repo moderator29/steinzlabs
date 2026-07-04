@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import * as Sentry from '@sentry/nextjs';
 import {
   AlertTriangle, Play, Pause, ExternalLink, Plus, TrendingUp, Trash2,
@@ -416,7 +417,10 @@ export default function SniperPage() {
                 </div>
                 <p className="text-[11px] sm:text-xs text-white/50">Sub-2s execution · EVM · MEV-protected · Shadow Guardian gated</p>
               </div>
-              <HowItWorksButton content={sniperHowItWorks} className="ms-auto shrink-0" />
+              <Link href="/dashboard/launch-radar" title="Launch Radar — new launches worth watching" className="ms-auto shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-[#00C8FF] bg-[#0066FF]/10 border border-[#0066FF]/30 hover:border-[#0066FF]/50 transition-colors">
+                <Radar className="w-3.5 h-3.5" /> Launch Radar
+              </Link>
+              <HowItWorksButton content={sniperHowItWorks} className="shrink-0" />
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">

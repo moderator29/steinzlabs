@@ -269,7 +269,10 @@ export async function GET(request: NextRequest) {
 
   const url = request.nextUrl;
   const dryRun = url.searchParams.get('dryRun') === '1';
-  const limit = Math.min(parseInt(url.searchParams.get('limit') || '8', 10) || 8, 25);
+  // Default batch raised 8 → 18 to widen win-rate / P&L coverage per tick
+  // (maxDuration is 300s, so there's ample headroom). Still walks the stalest
+  // whales first, so every whale is refreshed on a shorter rotation.
+  const limit = Math.min(parseInt(url.searchParams.get('limit') || '18', 10) || 18, 40);
 
   const supabase = getSupabaseAdmin();
 
