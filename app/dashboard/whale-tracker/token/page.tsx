@@ -6,7 +6,8 @@
 // whale_activity + whale reputation.
 
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, Search, TrendingUp, TrendingDown, Users, BadgeCheck } from 'lucide-react';
+import Link from 'next/link';
+import { Loader2, Search, TrendingUp, TrendingDown, Users, BadgeCheck, ScanSearch } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { ChainLogo } from '@/components/common/ChainLogo';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
@@ -108,6 +109,11 @@ export default function TokenLensPage() {
 
       {!loading && s && (
         <>
+          <div className="flex justify-center mb-3">
+            <Link href={`/dashboard/token-xray?q=${encodeURIComponent(result!.query)}`} className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full bg-[#0066FF]/10 border border-[#0066FF]/30 text-[#00C8FF] hover:border-[#0066FF]/50 transition-colors">
+              <ScanSearch className="w-3.5 h-3.5" /> Full Token X-Ray
+            </Link>
+          </div>
           {/* Summary */}
           <div className="nl-card rounded-2xl p-4 mb-4 grid grid-cols-3 gap-2 text-center">
             <div>

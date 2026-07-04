@@ -16,6 +16,7 @@ import {
   Crosshair, Network, Globe, History, MessageCircle, Compass, Gem,
   LineChart,
   Sparkles,
+  ScanSearch,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { GlobalWhatsNewButton } from '@/components/common/GlobalWhatsNew';
@@ -42,6 +43,7 @@ const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { icon: BarChart3, label: 'Dashboard', path: '/dashboard' },
       { icon: Sparkles, label: 'Ask the Chain', path: '/dashboard/ask-chain', badge: 'AI' },
+      { icon: ScanSearch, label: 'Token X-Ray', path: '/dashboard/token-xray', badge: 'NEW' },
       { icon: PieChart, label: 'Portfolio', path: '/dashboard/portfolio', badge: 'NEW' },
       { icon: Bell, label: 'Notifications', path: '/dashboard/notifications' },
     ],
