@@ -25,9 +25,13 @@ export async function GET(request: NextRequest) {
   try {
     const nowIso = new Date().toISOString();
     // status='draft' + scheduled_at <= now → flip to published.
+    // Both `status` AND the `published` boolean must be set: every public read
+    // path (/api/research list + /api/research/[id] detail) filters on
+    // `.eq('published', true)`, so flipping status alone left scheduled posts
+    // invisible forever. Set both in the same UPDATE.
     const { data, error } = await supabase
       .from('research_posts')
-      .update({ status: 'published', published_at: nowIso })
+      .update({ status: 'published', published: true, published_at: nowIso })
       .eq('status', 'draft')
       .not('scheduled_at', 'is', null)
       .lte('scheduled_at', nowIso)

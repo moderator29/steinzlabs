@@ -52,9 +52,27 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ posts: [], total: 0, page, limit });
     }
 
+    // Self-healing category taxonomy: return the DISTINCT categories that
+    // actually exist among published posts, so the UI renders pills that
+    // match real data instead of a hardcoded list that drifts (the two
+    // research pages each shipped different hardcoded lists, and neither
+    // included the live "Daily Brief" category — so every filter was dead).
+    let categories: string[] = [];
+    try {
+      const { data: catRows } = await admin
+        .from('research_posts')
+        .select('category')
+        .eq('published', true)
+        .not('category', 'is', null);
+      categories = Array.from(
+        new Set((catRows || []).map((r: { category: string | null }) => r.category).filter(Boolean) as string[])
+      ).sort();
+    } catch { /* categories are best-effort; posts still render */ }
+
     return NextResponse.json({
       posts: data || [],
       total: count || (data || []).length,
+      categories,
       page,
       limit,
       fetchedAt: new Date().toISOString(),
