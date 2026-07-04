@@ -28,6 +28,9 @@ const GROUPS: Record<string, string[]> = {
     'sniper-monitor', 'sniper-auto-execute', 'sniper-autosell', 'sniper-enrich-security',
     'copy-trade-monitor', 'alert-monitor', 'limit-order-monitor', 'stop-loss-monitor',
     'publish-scheduled-research', 'feed-alert-monitor', 'whale-alert-dispatcher',
+    // One-off self-validating Trust Wallet gateway probe — writes the live
+    // result to trustwallet_probe_log then self-stops once a 2xx is seen.
+    'trustwallet-probe',
   ],
   // Every ~30 minutes.
   'half-hourly': [
