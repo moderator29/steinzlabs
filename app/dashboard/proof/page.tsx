@@ -9,6 +9,7 @@ import BackButton from '@/components/ui/BackButton';
 import TradingViewChart, { getTradingViewSymbol, isKnownTradingViewSymbol } from '@/components/TradingViewChart';
 import { SwapCard, type SwapCardData } from '@/components/vtx/SwapCard';
 import { useNakaWallet } from '@/lib/hooks/useNakaWallet';
+import { TokenLogo } from '@/components/common/TokenLogo';
 
 // §11 — lightweight-charts wrapper for the proof modal. Lazy-loaded
 // so the chart bundle ships only when a user opens the proof drawer.
@@ -451,6 +452,12 @@ export default function ViewProofPage() {
               The Context Feed itself restores its own scroll/filter state
               from sessionStorage (Bug §6.2). */}
           <BackButton href="/dashboard?subtab=context" label="Back to Feed" />
+          {/* Real token logo (resolved from the contract via DexScreener, with a
+              letter-avatar fallback) so View Proof shows the actual asset — the
+              AAVE-had-no-logo complaint. Only when we have an address to resolve. */}
+          {event.tokenAddress && (
+            <TokenLogo address={event.tokenAddress} chain={chainId} size={28} className="shrink-0" />
+          )}
           <div className="flex-1 min-w-0">
             <h1 className="text-sm font-bold truncate">View Proof</h1>
             <p className="text-[10px] text-gray-500">{event.tokenSymbol ? `$${event.tokenSymbol}` : 'Intelligence Report'}</p>
