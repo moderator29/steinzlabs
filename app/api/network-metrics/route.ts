@@ -37,7 +37,9 @@ async function fetchEvmBlock(url: string): Promise<EvmBlock | null> {
 function evmChain(chain: string, gas: PromiseSettledResult<unknown>, block: EvmBlock | null, gweiDigits = 3) {
   const gwei = gas.status === 'fulfilled' && gas.value
     ? (parseInt(gas.value as string, 16) / 1e9).toFixed(gweiDigits) : 'N/A';
-  const tps = block ? Math.max(0, Math.round(block.txCount / BLOCK_TIME_SECS[chain])).toLocaleString() : 'N/A';
+  // "~" prefix — this is an estimate (real tx count ÷ nominal block time), not a
+  // measured instantaneous TPS, so it never reads as exact.
+  const tps = block ? `~${Math.max(0, Math.round(block.txCount / BLOCK_TIME_SECS[chain])).toLocaleString()}` : 'N/A';
   const blocks = block ? block.number.toLocaleString() : 'N/A';
   return { gas: `${gwei} Gwei`, tps, blocks };
 }
