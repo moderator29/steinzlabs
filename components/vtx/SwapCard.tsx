@@ -142,11 +142,18 @@ export function SwapCard({ swap, walletAddress, onCancel, source = 'vtx' }: Prop
     let cancelled = false;
     (async () => {
       try {
+        // When the card opens without a user-chosen amount (e.g. the View
+        // Proof "Buy" preview mounts at 0), still fetch a live RATE using a
+        // probe amount of 1 native so the price actually shows — the rate is
+        // per-unit and identical regardless of size. We do NOT pre-fill the
+        // pay/receive amounts from the probe, so there's no accidental-buy risk.
+        const realAmt = parseFloat(swap.fromAmount) || 0;
+        const probeAmount = realAmt > 0 ? swap.fromAmount : '1';
         const params = new URLSearchParams({
           chain: swap.chain,
           from: swap.fromToken,
           to: swap.toToken,
-          amount: swap.fromAmount,
+          amount: probeAmount,
         });
         const res = await fetch(`/api/swap/price?${params.toString()}`).catch(() => null);
         if (!res || !res.ok) {
@@ -164,9 +171,11 @@ export function SwapCard({ swap, walletAddress, onCancel, source = 'vtx' }: Prop
           : (typeof data?.priceImpact === 'number' ? data.priceImpact : swap.priceImpact);
         const next: SwapCardData = {
           ...swap,
-          toAmount: typeof data?.toAmount === 'number' ? String(data.toAmount) : swap.toAmount,
+          // Only reflect a received amount + price-impact when the user actually
+          // entered an input; the probe number would otherwise read as a real quote.
+          toAmount: realAmt > 0 && typeof data?.toAmount === 'number' ? String(data.toAmount) : swap.toAmount,
           rate: typeof data?.rate === 'number' ? data.rate.toLocaleString('en-US', { maximumFractionDigits: 6 }) : swap.rate,
-          priceImpact: priceImpactFromResp,
+          priceImpact: realAmt > 0 ? priceImpactFromResp : 0,
           platformFee: swap.platformFee,
           quoteData: data?.quoteData || swap.quoteData,
         };
