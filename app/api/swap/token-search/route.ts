@@ -1,6 +1,7 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { searchTokens as gtSearchTokens } from '@/lib/services/geckoterminal';
+import { twGatewayConfigured, twSearchAssets } from '@/lib/services/trustwallet';
 
 // Universal token search for the swap token selector. The selector's local
 // list only covers ~26 curated symbols; this endpoint lets users find ANY
@@ -94,8 +95,27 @@ export async function GET(request: NextRequest) {
     const tokens = Array.from(best.values())
       .sort((a, b) => b.liquidityUsd - a.liquidityUsd)
       .slice(0, 20);
+
+    // Trust Wallet identity enrichment (env-gated, one call per search): tag
+    // rows whose contract Trust Wallet's registry verifies, so the UI can show
+    // a real "Verified" mark. Matched by address (scam clones share a symbol,
+    // never a contract), so a namesake can't inherit the badge. Degrades to
+    // unverified rows when TW isn't configured — never blocks the response.
+    let verified: Array<typeof tokens[number] & { verified: boolean }> = tokens.map((t) => ({ ...t, verified: false }));
+    if (twGatewayConfigured() && tokens.length > 0) {
+      try {
+        const twHits = await twSearchAssets(q);
+        const verifiedAddrs = new Set(
+          twHits.filter((h) => h.verified && h.address).map((h) => h.address!.toLowerCase()),
+        );
+        if (verifiedAddrs.size > 0) {
+          verified = tokens.map((t) => ({ ...t, verified: verifiedAddrs.has(t.address.toLowerCase()) }));
+        }
+      } catch { /* TW down/rate-limited — rows stay unverified, non-fatal */ }
+    }
+
     return NextResponse.json(
-      { tokens },
+      { tokens: verified },
       { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' } },
     );
   } catch {
