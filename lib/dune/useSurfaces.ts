@@ -217,6 +217,30 @@ export interface ContextFeedCard {
  * Build the latest Context Feed cards from Dune-materialized data.
  * Returns up to `limit` cards across all 8 types, freshest first.
  */
+// Compact USD with a full T/B/M/K ladder — a $11.4B realized PnL must read
+// "$11.4B", never "$11414317K" (the old hard-/1000 "K" bug).
+function fmtUsdC(n: number): string {
+  const v = Math.abs(Number(n) || 0);
+  const sign = n < 0 ? '-' : '';
+  if (v >= 1e12) return `${sign}$${(v / 1e12).toFixed(2)}T`;
+  if (v >= 1e9) return `${sign}$${(v / 1e9).toFixed(2)}B`;
+  if (v >= 1e6) return `${sign}$${(v / 1e6).toFixed(2)}M`;
+  if (v >= 1e3) return `${sign}$${(v / 1e3).toFixed(1)}K`;
+  return `${sign}$${v.toFixed(0)}`;
+}
+
+// A contract/wallet that is null, empty, or the zero/burn address is junk data —
+// never surface it as a feed card (kills "High MEV risk on 0x000000…").
+const ZERO_ADDR = /^0x0+$/i;
+function isRealAddress(a: string | null | undefined): a is string {
+  if (!a || typeof a !== 'string') return false;
+  const t = a.trim();
+  if (t.length < 8) return false;
+  if (ZERO_ADDR.test(t)) return false;
+  if (/^0x0{4,}/i.test(t)) return false; // 0x0000… prefixes
+  return true;
+}
+
 export async function getContextFeedDuneCards(limit = 20): Promise<ContextFeedCard[]> {
   const admin = getSupabaseAdmin();
   const cards: ContextFeedCard[] = [];
@@ -232,7 +256,7 @@ export async function getContextFeedDuneCards(limit = 20): Promise<ContextFeedCa
     cards.push({
       type: 'bridge_flow',
       title: `${b.from_chain} → ${b.to_chain}`,
-      body: `$${(b.total_usd / 1_000_000).toFixed(2)}M bridged in the last hour.`,
+      body: `${fmtUsdC(b.total_usd)} bridged in the last hour.`,
       metric: b.total_usd,
       fetched_at: b.hour_bucket,
     });
@@ -249,6 +273,7 @@ export async function getContextFeedDuneCards(limit = 20): Promise<ContextFeedCa
     .order('score', { ascending: false })
     .limit(3);
   for (const m of (mev ?? []) as Array<{ token_address: string; chain: string; score: number; fetched_at: string }>) {
+    if (!isRealAddress(m.token_address)) continue; // skip null/zero-address junk
     cards.push({
       type: 'mev_sandwich',
       title: `High MEV risk on ${m.token_address.slice(0, 8)}…`,
@@ -269,10 +294,11 @@ export async function getContextFeedDuneCards(limit = 20): Promise<ContextFeedCa
     .order('realized_pnl_usd_90d', { ascending: false })
     .limit(3);
   for (const r of (rotation ?? []) as Array<{ wallet_address: string; chain: string; score: number; realized_pnl_usd_90d: number; fetched_at: string }>) {
+    if (!isRealAddress(r.wallet_address)) continue; // skip null/zero-address junk
     cards.push({
       type: 'smart_money_rotation',
       title: `Elite trader active: ${r.wallet_address.slice(0, 8)}…`,
-      body: `Score ${r.score}/100 · 90d realized $${(r.realized_pnl_usd_90d / 1000).toFixed(0)}K on ${r.chain}.`,
+      body: `Score ${r.score}/100 · 90d realized ${fmtUsdC(r.realized_pnl_usd_90d)} on ${r.chain}.`,
       metric: r.score,
       href: `/dashboard/wallet/${r.wallet_address}`,
       fetched_at: r.fetched_at,
