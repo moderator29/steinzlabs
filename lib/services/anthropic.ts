@@ -313,6 +313,19 @@ export const VTX_TOOLS: Anthropic.Tool[] = [
       required: ['action'],
     },
   },
+  {
+    name: 'trustwallet_token_check',
+    description: "Trust Wallet Agent-Kit verification for a token. Trust Wallet's registry independently confirms whether a token is VERIFIED (by Trust Wallet and/or CoinMarketCap), plus its trust-verified market cap, sector tags, decimals, and official logo. Use this as a second-opinion identity check ('is $X a real/verified token?') or to cross-check a market cap against an independent source. Accepts a contract address (+ chain) for an exact lookup, or a ticker/name for a search. IMPORTANT: Trust Wallet does NOT provide live price, FDV, security scores, or wallet data — use other tools for those. Absence from Trust Wallet's registry is NOT proof a token is a scam; many legitimate tokens are simply unlisted.",
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        query: { type: 'string', description: 'Ticker or name to search when no address is known (e.g. "PEPE")' },
+        address: { type: 'string', description: 'Token contract address / mint for an exact lookup' },
+        chain: { type: 'string', description: 'Chain for the address lookup (ethereum, bsc, polygon, solana, base, arbitrum, optimism, avalanche)' },
+      },
+      required: [],
+    },
+  },
   // §3 P2-B — 10 new tools (whale_tracker_specific, realized_pnl_30d,
   // cross_token_comparison, portfolio_performance,
   // portfolio_rebalance_suggestion, alert_subscribe, copy_trade_create,

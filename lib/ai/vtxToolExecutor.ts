@@ -26,6 +26,7 @@ import { buildSolanaWalletIntelligence } from '@/lib/services/solana-intelligenc
 import { buildEvmWalletIntelligence } from '@/lib/services/evm-intelligence';
 import { getSocialScore } from '@/lib/services/lunarcrush';
 import { cmcConfigured, cmcQuoteBySymbol } from '@/lib/services/coinmarketcap';
+import { twGatewayConfigured, twAssetInfo, twSearchAssets } from '@/lib/services/trustwallet';
 import { getEntityLabel, getAddressIntel } from '@/lib/services/arkham';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { executeTrade, type TradeIntent } from '@/lib/trading/relayer';
@@ -373,6 +374,52 @@ async function executeContractAnalysis(input: Record<string, unknown>): Promise<
 
 // ─── Session 5B-2 tool executors ──────────────────────────────────────────────
 
+// §7 — Trust Wallet Agent-Kit gateway exposed as a live VTX tool. Returns TW's
+// verified-token identity data (verified flag, trust-verified market cap, sector
+// tags, decimals, logo). Never fabricates: honest "unavailable" when TW isn't
+// configured, and null fields when TW has no entry for the token.
+async function executeTrustWalletCheck(input: Record<string, unknown>): Promise<string> {
+  if (!twGatewayConfigured()) {
+    return JSON.stringify({ unavailable: 'trust_wallet_not_configured', note: 'Trust Wallet Agent Kit key is not set; use coingecko_market_data / token_market_data instead.' });
+  }
+  const address = typeof input.address === 'string' ? input.address.trim() : '';
+  const chain = typeof input.chain === 'string' && input.chain ? input.chain : (address && !address.startsWith('0x') ? 'solana' : 'ethereum');
+  const query = typeof input.query === 'string' ? input.query.trim() : '';
+  try {
+    if (address) {
+      // Detail lookup for verified market cap + metadata, plus a search match by
+      // the same address to recover the verified flag + sector tags (the detail
+      // endpoint doesn't carry them).
+      const [a, hits] = await Promise.all([
+        twAssetInfo(chain, address),
+        twSearchAssets(address).catch(() => []),
+      ]);
+      const match = hits.find((h) => h.address && h.address.toLowerCase() === address.toLowerCase());
+      if (!a && !match) return JSON.stringify({ found: false, address, chain, note: 'Not in Trust Wallet registry — not proof of a scam; many real tokens are unlisted.' });
+      return JSON.stringify({
+        found: true, source: 'trustwallet', address, chain,
+        symbol: a?.symbol ?? match?.symbol ?? null,
+        name: a?.name ?? match?.name ?? null,
+        verified: match?.verified ?? null,
+        market_cap_verified_usd: a?.marketCap ?? match?.marketCap ?? null,
+        decimals: a?.decimals ?? null,
+        note: 'Trust Wallet does not provide live price/FDV/security — use other tools for those.',
+      });
+    }
+    if (query) {
+      const hits = await twSearchAssets(query);
+      return JSON.stringify({
+        source: 'trustwallet', query,
+        matches: hits.slice(0, 6).map((h) => ({ symbol: h.symbol, name: h.name, address: h.address, chain: h.chain, verified: h.verified, market_cap_verified_usd: h.marketCap })),
+        note: hits.length === 0 ? 'No Trust Wallet matches (not proof of a scam).' : 'Trust Wallet verified-identity matches; not a price source.',
+      });
+    }
+    return JSON.stringify({ error: 'provide address (+chain) or query' });
+  } catch (err) {
+    return JSON.stringify({ error: err instanceof Error ? err.message : String(err) });
+  }
+}
+
 async function executeAddressSecurity(input: Record<string, unknown>): Promise<string> {
   const address = String(input.address || '');
   const chain = String(input.chain || 'ethereum');
@@ -642,6 +689,7 @@ export async function executeVTXTool(
     case 'check_phishing_url':   return executeCheckPhishingUrl(toolInput);
     case 'prepare_swap':         return executePrepareSwap(toolInput, userId);
     case 'coingecko_market_data': return executeCoingeckoMarketData(toolInput);
+    case 'trustwallet_token_check': return executeTrustWalletCheck(toolInput);
     default: {
       // §3 P2-B — 10 tools live in lib/ai/vtxToolsP2B and dispatch via
       // a shared helper so this main dispatcher stays readable.
