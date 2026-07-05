@@ -41,7 +41,27 @@ interface OpenLot {
   costBasisPerUnit: number;
 }
 
+/** Remaining un-sold position after FIFO matching — the basis for unrealized PnL. */
+export interface OpenPosition {
+  amount: number;
+  costBasisUsd: number;
+  /** Weighted average cost per unit still held. */
+  avgCostPerUnit: number;
+  /** Timestamp (unix sec) of the earliest still-open lot. */
+  openedAt: number;
+}
+
 export function fifoMatch(events: TradeEvent[]): ClosedLot[] {
+  return fifoMatchWithOpen(events).closed;
+}
+
+/**
+ * Same FIFO matching as fifoMatch, but also returns the still-open position
+ * (buys not yet consumed by a sell) so callers can compute UNREALIZED PnL
+ * against a current price. The open cost basis is real trade-time USD, never
+ * fabricated. Returns null open when nothing is held.
+ */
+export function fifoMatchWithOpen(events: TradeEvent[]): { closed: ClosedLot[]; open: OpenPosition | null } {
   const sorted = [...events].sort((a, b) => a.timestamp - b.timestamp);
   const openLots: OpenLot[] = [];
   const closed: ClosedLot[] = [];
@@ -84,7 +104,20 @@ export function fifoMatch(events: TradeEvent[]): ClosedLot[] {
     // basis lot; the caller can detect via sum mismatch if needed.
   }
 
-  return closed;
+  let open: OpenPosition | null = null;
+  if (openLots.length > 0) {
+    let amount = 0, cost = 0, openedAt = Infinity;
+    for (const lot of openLots) {
+      amount += lot.amountRemaining;
+      cost += lot.amountRemaining * lot.costBasisPerUnit;
+      if (lot.openedAt < openedAt) openedAt = lot.openedAt;
+    }
+    if (amount > 0) {
+      open = { amount, costBasisUsd: cost, avgCostPerUnit: cost / amount, openedAt };
+    }
+  }
+
+  return { closed, open };
 }
 
 export interface RealizedPnlSummary {

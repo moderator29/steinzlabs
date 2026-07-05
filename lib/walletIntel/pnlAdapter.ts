@@ -1,4 +1,4 @@
-import { fifoMatch, summarize, type TradeEvent, type RealizedPnlSummary } from './realizedPnl';
+import { fifoMatchWithOpen, summarize, type TradeEvent, type RealizedPnlSummary, type OpenPosition } from './realizedPnl';
 
 /**
  * Wallet realized-PnL adapter. Turns real DEX trades (Bitquery DEXTrades, where
@@ -23,6 +23,8 @@ export interface TokenPnl extends RealizedPnlSummary {
   token: string;
   tokenSymbol: string | null;
   winRate: number;           // % of closed lots that were profitable
+  /** Still-held position (buys not yet sold) — basis for unrealized PnL. Null when flat. */
+  open: OpenPosition | null;
 }
 
 export interface WalletPnlResult {
@@ -62,15 +64,19 @@ export function computeWalletPnl(trades: WalletTrade[]): WalletPnlResult {
       amount: t.amount,
       priceUsd: t.amount > 0 ? t.valueUsd / t.amount : 0,
     }));
-    const lots = fifoMatch(events);
-    if (lots.length === 0) continue;
+    const { closed: lots, open } = fifoMatchWithOpen(events);
+    // Keep tokens that either closed a lot OR still hold an open position — a
+    // wallet that only bought (no sells yet) still has a real cost basis worth
+    // showing, even though realized PnL is 0.
+    if (lots.length === 0 && !open) continue;
     const summary = summarize(lots);
     const wins = lots.filter(l => l.pnlUsd > 0).length;
     tokenResults.push({
       ...summary,
       token,
       tokenSymbol: ts[0].tokenSymbol ?? null,
-      winRate: Math.round((wins / lots.length) * 100),
+      winRate: lots.length > 0 ? Math.round((wins / lots.length) * 100) : 0,
+      open,
     });
     totalRealized += summary.totalRealizedUsd;
     totalProceeds += summary.totalProceedsUsd;
