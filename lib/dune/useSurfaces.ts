@@ -298,7 +298,7 @@ export async function getContextFeedDuneCards(limit = 20): Promise<ContextFeedCa
     cards.push({
       type: 'smart_money_rotation',
       title: `Elite trader active: ${r.wallet_address.slice(0, 8)}…`,
-      body: `Score ${r.score}/100 · 90d realized ${fmtUsdC(r.realized_pnl_usd_90d)} on ${r.chain}.`,
+      body: `Score ${r.score}/100 · 90d volume ${fmtUsdC(r.realized_pnl_usd_90d)} on ${r.chain}.`,
       metric: r.score,
       href: `/dashboard/wallet/${r.wallet_address}`,
       fetched_at: r.fetched_at,

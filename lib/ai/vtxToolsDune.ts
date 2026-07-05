@@ -57,7 +57,7 @@ export const DUNE_TOOLS: Anthropic.Tool[] = [
   },
   {
     name: 'whale_pnl',
-    description: 'Smart-money + realized PnL profile for a wallet over 90d. Returns score, win_rate, realized_pnl_usd_90d, trade_count.',
+    description: 'Smart-money profile for a wallet over 90d. Returns score, win_rate, gross_volume_usd_90d (90d turnover — NOT profit), and trade_count. Realized P&L is not available from this source; do not present volume as profit.',
     input_schema: {
       type: 'object' as const,
       properties: { wallet_address: { type: 'string' }, chain: { type: 'string' } },
@@ -146,7 +146,7 @@ export const DUNE_TOOLS: Anthropic.Tool[] = [
   },
   {
     name: 'top_traders',
-    description: 'Top N smart-money wallets on a chain by 90d realized PnL.',
+    description: 'Top N smart-money wallets on a chain by Dune smart-money score (ranked by score, not by profit — the underlying volume figure is turnover, not P&L).',
     input_schema: {
       type: 'object' as const,
       properties: { chain: { type: 'string' }, limit: { type: 'number' } },
@@ -226,9 +226,17 @@ async function handleSmartMoneyInflow(input: { token_address: string; chain: str
 async function handleWhalePnl(input: { wallet_address: string; chain?: string }): Promise<string> {
   if (!isDuneConfigured()) return unavailable();
   const chain = input.chain ?? 'ethereum';
-  const row = await readSmartMoneyScore(input.wallet_address, chain);
+  const row = await readSmartMoneyScore(input.wallet_address, chain) as Record<string, unknown> | null;
   if (!row) return JSON.stringify({ unavailable: 'no_score_for_wallet' });
-  return JSON.stringify(row);
+  // The stored `realized_pnl_usd_90d` is actually 90d gross TURNOVER (it scales
+  // with trade count; buy==sell), NOT realized profit. Relabel so the model
+  // never reports an inflated fake P&L. Real P&L lives on the whales table.
+  const { realized_pnl_usd_90d, ...rest } = row;
+  return JSON.stringify({
+    ...rest,
+    gross_volume_usd_90d: realized_pnl_usd_90d ?? null,
+    note: 'gross_volume_usd_90d is 90d turnover, not profit; realized P&L is not available from this source.',
+  });
 }
 
 async function handleTokenAgeBuyers(input: { token_address: string; chain: string }): Promise<string> {
@@ -342,7 +350,12 @@ async function handleClusterOf(input: { address: string; chain?: string }): Prom
 async function handleTopTraders(input: { chain: string; limit?: number }): Promise<string> {
   if (!isDuneConfigured()) return unavailable();
   const rows = await topSmartMoney(input.chain, Math.min(200, input.limit ?? 50));
-  return JSON.stringify({ chain: input.chain, traders: rows });
+  // Relabel turnover-mislabeled-as-PnL and drop obvious bots (5k+ trades in 90d
+  // aren't "smart money") so the model never reports inflated fake profit.
+  const traders = (rows as Array<Record<string, unknown>>)
+    .filter((r) => Number(r.trade_count_90d ?? 0) <= 5000)
+    .map(({ realized_pnl_usd_90d, ...rest }) => ({ ...rest, gross_volume_usd_90d: realized_pnl_usd_90d ?? null }));
+  return JSON.stringify({ chain: input.chain, note: 'ranked by smart-money score; gross_volume_usd_90d is turnover, not profit', traders });
 }
 
 async function handleNewTokenScanner(input: { chain: string; hours?: number }): Promise<string> {
