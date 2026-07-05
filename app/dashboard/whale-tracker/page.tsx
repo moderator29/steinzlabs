@@ -747,6 +747,9 @@ function FeedCard({
             </span>
           </div>
           <div className="mt-1.5 flex items-center gap-2 text-xs flex-wrap">
+            {/* Real whale profile picture inline on the live feed, matching the
+                Top Today list — resolved via /api/whales/[address]/logo. */}
+            <WhaleAvatar address={row.whale_address} chain={row.chain} size={20} />
             <span className="font-mono text-slate-300">{short(row.whale_address)}</span>
             {(() => {
               // Styled entity badge from the resolved WhaleLabel (server bridges
