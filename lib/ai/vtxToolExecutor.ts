@@ -23,6 +23,7 @@ import { searchPairs, getNewPairs, getTokenPairs } from '@/lib/services/dexscree
 import { getTokenMetadata, getTokenHolderCount, getContractCode, getEthBalance } from '@/lib/services/alchemy';
 import { getSolanaTokenMeta, getSolanaTokenSupply, getSolanaSOLBalance } from '@/lib/services/alchemy-solana';
 import { getSocialScore } from '@/lib/services/lunarcrush';
+import { cmcConfigured, cmcQuoteBySymbol } from '@/lib/services/coinmarketcap';
 import { getEntityLabel, getAddressIntel } from '@/lib/services/arkham';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { executeTrade, type TradeIntent } from '@/lib/trading/relayer';
@@ -135,6 +136,26 @@ async function executeTokenMarketData(input: Record<string, unknown>): Promise<s
     lines.push(`  7d change: ${detail.market_data?.price_change_percentage_7d?.toFixed(2)}%`);
     lines.push(`  Circulating supply: ${detail.market_data?.circulating_supply?.toLocaleString()}`);
   } catch { /* CoinGecko doesn't have this token — that's fine */ }
+
+  // CoinMarketCap (env-gated) — authoritative for LISTED tickers and the only
+  // source here that returns real FDV (fully-diluted valuation). Symbol queries
+  // only; CMC free tier is keyed by symbol/id, not contract address.
+  if (!isAddress && cmcConfigured()) {
+    try {
+      const q = await cmcQuoteBySymbol(identifier);
+      if (q && (q.price != null || q.marketCap != null)) {
+        lines.push(`CoinMarketCap data for ${q.name} (${q.symbol})${q.cmcRank ? `, rank #${q.cmcRank}` : ''}:`);
+        if (q.price != null) lines.push(`  Price: $${q.price}`);
+        if (q.marketCap != null) lines.push(`  Market Cap: $${q.marketCap.toLocaleString()}`);
+        if (q.fdv != null) lines.push(`  FDV (fully diluted): $${q.fdv.toLocaleString()}`);
+        if (q.volume24h != null) lines.push(`  Volume 24h: $${q.volume24h.toLocaleString()}`);
+        if (q.change24h != null) lines.push(`  24h change: ${q.change24h.toFixed(2)}%`);
+        if (q.change7d != null) lines.push(`  7d change: ${q.change7d.toFixed(2)}%`);
+        if (q.circulatingSupply != null) lines.push(`  Circulating supply: ${q.circulatingSupply.toLocaleString()}`);
+        if (q.maxSupply != null) lines.push(`  Max supply: ${q.maxSupply.toLocaleString()}`);
+      }
+    } catch { /* CMC unlisted / unconfigured — fine, other sources cover it */ }
+  }
 
   return lines.length > 0 ? lines.join('\n') : `No market data found for "${identifier}".`;
 }

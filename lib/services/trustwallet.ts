@@ -10,14 +10,16 @@ import crypto from 'crypto';
 //     Alchemy/DexScreener/GeckoTerminal images so any CA resolves with a
 //     logo candidate. EVM paths require EIP-55 checksummed addresses.
 //
-//  2. API GATEWAY CLIENT (HMAC, env-gated) — tws.trustwallet.com free tier
-//     (1 req/s) for token info / security second-opinions / trending. Auth:
+//  2. API GATEWAY CLIENT (HMAC, env-gated) — api.trustwallet.com Agent Kit
+//     free tier for token info / security second-opinions / trending. Auth:
 //     HMAC-SHA256 over METHOD+PATH+QUERY+ACCESS_ID+NONCE+DATE, base64 in
-//     Authorization, plus X-TW-Credential / X-TW-Nonce / X-TW-Date headers.
-//     Fully inert until TWAK_ACCESS_ID + TWAK_HMAC_SECRET are set in env.
-//     NOTE: concrete endpoint paths must be confirmed against
-//     developer.trustwallet.com/developer/agent-sdk once the owner's key
-//     exists — twGet() is the transport, callers own the paths.
+//     Authorization, plus X-TW-Credential / X-TW-Nonce / X-TW-Date /
+//     X-TW-Device-Id headers. Fully inert until TWAK_AGENT_ID + TWAK_ACCESS_ID
+//     + TWAK_HMAC_SECRET are set in env. CONFIRMED live endpoint (probe cron):
+//     GET /v1/search/assets?query= → { docs:[{ asset_id 'c{coinType}_t{addr}',
+//     chain_name, symbol, decimals, market_cap, market_cap_verified,
+//     volume_24h, price(usually null), verifiers[], tags[] }], total }.
+//     Its authoritative field is market_cap_verified — NOT price, NOT FDV.
 
 const ASSET_CHAIN_DIRS: Record<string, string> = {
   ethereum: 'ethereum',

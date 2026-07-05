@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getBirdeyeOHLCV, getBirdeyeTokenOverview } from '@/lib/services/birdeye';
 import { getTokenSecurity } from '@/lib/services/goplus';
 import { twGatewayConfigured, twAssetInfo } from '@/lib/services/trustwallet';
+import { cmcConfigured, cmcQuoteBySymbol, cmcMetaBySymbol } from '@/lib/services/coinmarketcap';
 
 // VTX inline token card data — price, real 24h stats, chart series, logo.
 // Priority for ANY token: resolve to a real DexScreener pair (by address, or
@@ -227,6 +228,39 @@ export async function GET(req: NextRequest) {
         if (tw.marketCap && tw.marketCap > 0 && card.price > 0) card.supply = tw.marketCap / card.price;
         card.twVerified = tw.marketCap != null && tw.marketCap > 0;
         out = card;
+      }
+    }
+
+    // CoinMarketCap graceful backstop (listed tickers only, env-gated). CMC is
+    // the one source here that returns real FDV (fully_diluted_market_cap) and
+    // an authoritative "listed" price — Trust Wallet's search API has neither.
+    // We only FILL gaps: FDV when DexScreener didn't have it, market cap /
+    // price / logo when the card is still empty. Never overrides a good live
+    // DexScreener price for an arbitrary on-chain token. Inert without a key.
+    if (cmcConfigured()) {
+      const c = out as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+      const sym = (c?.symbol || symbol) as string | undefined;
+      if (sym) {
+        const q = await cmcQuoteBySymbol(sym).catch(() => null);
+        if (q) {
+          if ((!c.price || c.price <= 0) && q.price != null) { c.price = q.price; c.priceSource = 'coinmarketcap'; }
+          if ((!c.marketCap || c.marketCap <= 0) && q.marketCap != null) { c.marketCap = q.marketCap; c.marketCapSource = 'coinmarketcap'; }
+          // FDV is CMC's unique contribution — prefer a real CMC FDV over the
+          // marketCap==fdv fallback the DexScreener path leaves behind.
+          if (q.fdv != null && (!c.fdv || c.fdv <= 0 || c.fdv === c.marketCap)) { c.fdv = q.fdv; c.fdvSource = 'coinmarketcap'; }
+          if ((c.change24h == null || c.change24h === 0) && q.change24h != null) c.change24h = q.change24h;
+          if ((!c.volume24h || c.volume24h <= 0) && q.volume24h != null) c.volume24h = q.volume24h;
+          if ((c.supply == null || c.supply <= 0) && q.circulatingSupply != null) c.supply = q.circulatingSupply;
+          if (!c.name && q.name) c.name = q.name;
+          c.cmcRank = q.cmcRank ?? c.cmcRank;
+          c.cmcVerified = q.cmcRank != null; // CMC-listed = a real, ranked asset
+        }
+        // Logo backstop: official CMC artwork when nothing else resolved one.
+        if (!c.logo) {
+          const meta = await cmcMetaBySymbol(sym).catch(() => null);
+          if (meta?.logo) c.logo = meta.logo;
+        }
+        out = c;
       }
     }
 

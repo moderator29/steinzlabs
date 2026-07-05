@@ -21,7 +21,7 @@ const NAME = 'trustwallet-probe';
 // dedicated PRICE and SECURITY endpoints (USDT on Ethereum as the sample token,
 // asset_id c60_t0xdAC17F958D2ee523a2206206994597C13D831ec7).
 const USDT = 'c60_t0xdAC17F958D2ee523a2206206994597C13D831ec7';
-const ENDPOINTS = [
+const ENDPOINTS: Array<{ path: string; query?: Record<string, string> }> = [
   { path: '/v1/search/assets', query: { query: 'ethereum' } },
   { path: '/v1/assets/popular' },
   { path: `/v1/assets/${USDT}` },
