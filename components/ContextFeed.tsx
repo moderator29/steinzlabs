@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Eye, Heart, Share2, ExternalLink, Copy, X, Check, Bookmark, Archive, SlidersHorizontal, Zap, TrendingUp, BarChart2, Info, Sparkles } from 'lucide-react';
 import { useContextFeed, useArchivedFeed, ChainFilter } from '@/lib/hooks/useContextFeed';
 import { SolanaIcon, EthereumIcon, BscIcon, PolygonIcon, AvalancheIcon, AllChainsIcon } from './ChainIcons';
-import DuneFeedCards from './context-feed/DuneFeedCards';
 import { MarketPulseCard } from './context-feed/MarketPulseCard';
 import { FeedAlertsButton } from './context-feed/FeedAlertsButton';
 import { SelectMenu, SelectOption } from '@/components/ui/SelectMenu';
@@ -572,14 +571,14 @@ export default function ContextFeed() {
 
   return (
     <div className="space-y-4">
-      {/* §5.6 — Dune-derived Context Feed cards (bridge_flow,
-          smart_money_rotation, mev_sandwich, stablecoin_pulse,
-          cex_drain). Renders above the chain-tab feed. Auto-hides
-          when no Dune materialized data is present. */}
       {/* AI Market Pulse — a live read on what the feed is showing. Only on
           the unfiltered live feed (not archive / specific pills). */}
       {!isArchive && activeFilter === 'all' && <MarketPulseCard events={events} />}
-      <DuneFeedCards limit={8} />
+      {/* NOTE: the Dune-derived summary cards (bridge_flow / mev_sandwich /
+          smart_money_rotation) were removed from the Context Feed — they are
+          low-signal one-liners that don't match the rich token-signal cards
+          this feed is for. That data still lives on its dedicated surfaces
+          (MEV Radar, Smart Money, Bridge flows). */}
       {/* Chain + type filters are vertical dropdowns (same pattern as the
           swap / whale-tracker pickers) — they only reveal options on click,
           so the two rows no longer overlap or scroll horizontally. Chain rows
