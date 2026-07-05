@@ -43,6 +43,9 @@ const GROUPS: Record<string, string[]> = {
     // Crypto tier payments — watches the treasury for incoming USDC and
     // grants the tier on match. Exits instantly when no payments are pending.
     'payment-verify',
+    // Samples live network gas price per chain into gas_samples so Smart Gas
+    // Timing can learn cheap-hour patterns. Skips instantly with no Alchemy key.
+    'gas-sample',
   ],
   // Hourly.
   hourly: [
