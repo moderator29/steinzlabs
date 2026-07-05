@@ -16,11 +16,20 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 const NAME = 'trustwallet-probe';
+// Round 2 discovery — the confirmed endpoint is /v1/search/assets ({docs,total},
+// price usually null but verified market cap present). These probe for the
+// dedicated PRICE and SECURITY endpoints (USDT on Ethereum as the sample token,
+// asset_id c60_t0xdAC17F958D2ee523a2206206994597C13D831ec7).
+const USDT = 'c60_t0xdAC17F958D2ee523a2206206994597C13D831ec7';
 const ENDPOINTS = [
-  { path: '/v1/-/healthy' },
-  { path: '/v1/assets/popular' },
-  { path: '/v2/market/tickers' },
   { path: '/v1/search/assets', query: { query: 'ethereum' } },
+  { path: '/v1/assets/popular' },
+  { path: `/v1/assets/${USDT}` },
+  { path: '/v1/assets', query: { asset_ids: USDT } },
+  { path: '/v1/markets', query: { asset_ids: USDT } },
+  { path: `/v1/assets/${USDT}/market` },
+  { path: `/v1/security/${USDT}` },
+  { path: `/v1/assets/${USDT}/security` },
 ];
 
 export async function GET(request: NextRequest) {

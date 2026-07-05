@@ -161,3 +161,146 @@ export async function twProbe(paths: Array<{ path: string; query?: Record<string
   }
   return out;
 }
+
+// ─── Data helpers (asset info / search / trending) ──────────────────────────
+// Built against the endpoints + response fields verified from the official
+// @trustwallet/cli package (price, market_cap, price_change_24h, symbol,
+// decimals, logoUrl, totalSupply, circulatingSupply). Every helper is ADDITIVE:
+// returns null/[] on any miss so callers fall back to their existing source.
+// The per-token assetId format (c{coinType}[_t{address}]) + exact asset path are
+// TW's documented convention; if a live shape differs, twGet null-returns and
+// the caller's primary serves — zero regression.
+
+// Trust Wallet / SLIP-44 coin types for the chains we trade.
+const TW_COIN_TYPE: Record<string, number> = {
+  ethereum: 60, eth: 60,
+  bsc: 20000714, bnb: 20000714, smartchain: 20000714,
+  polygon: 966, matic: 966,
+  avalanche: 10009000, avax: 10009000,
+  arbitrum: 9001, optimism: 10, base: 8453,
+  solana: 501, sol: 501,
+  fantom: 250, cronos: 25, tron: 195,
+};
+
+export interface TwAsset {
+  price: number | null;
+  priceChange24h: number | null;
+  marketCap: number | null;
+  volume24h: number | null;
+  symbol: string | null;
+  name: string | null;
+  decimals: number | null;
+  logo: string | null;
+  circulatingSupply: number | null;
+  totalSupply: number | null;
+  source: 'trustwallet';
+}
+
+function twAssetId(chain: string, address?: string | null): string | null {
+  const coin = TW_COIN_TYPE[chain.toLowerCase()];
+  if (coin == null) return null;
+  return address ? `c${coin}_t${address}` : `c${coin}`;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function num(v: any): number | null { const n = typeof v === 'string' ? parseFloat(v) : v; return typeof n === 'number' && isFinite(n) ? n : null; }
+
+// Live gateway envelope is { docs: [...], total, currency } (confirmed via the
+// probe). Each doc: { name, symbol, type, price (often null), decimals,
+// asset_id "c{coin}_t{addr}", chain_name, market_cap, market_cap_verified,
+// volume_24h, liquidity_usd, tags, verifiers }.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function docsOf(body: any): any[] {
+  if (Array.isArray(body)) return body;
+  if (Array.isArray(body?.docs)) return body.docs;
+  if (Array.isArray(body?.data)) return body.data;
+  return [];
+}
+
+// TW chain_name → our canonical chain name.
+const TW_CHAIN_NAME: Record<string, string> = {
+  ethereum: 'ethereum', smartchain: 'bsc', polygon: 'polygon', avalanchec: 'avalanche',
+  arbitrum: 'arbitrum', optimism: 'optimism', base: 'base', solana: 'solana', fantom: 'fantom', cronos: 'cronos', tron: 'tron',
+};
+function addrFromAssetId(assetId: string | undefined | null): string | null {
+  if (!assetId) return null;
+  const i = assetId.indexOf('_t');
+  return i >= 0 ? assetId.slice(i + 2) : null;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseTwAsset(a: any): TwAsset | null {
+  if (!a || typeof a !== 'object') return null;
+  const symbol = a.symbol ?? a.ticker ?? null;
+  // Prefer the trust-verified market cap when present.
+  const marketCap = num(a.market_cap_verified) ?? num(a.market_cap ?? a.marketCap);
+  const price = num(a.price ?? a.price_usd);
+  if (price == null && marketCap == null && !symbol) return null;
+  const addr = addrFromAssetId(a.asset_id);
+  const chain = TW_CHAIN_NAME[String(a.chain_name ?? '').toLowerCase()] ?? a.chain_name ?? null;
+  return {
+    price,
+    priceChange24h: num(a.price_change_24h ?? a.priceChange),
+    marketCap,
+    volume24h: num(a.volume_24h ?? a.volume),
+    symbol,
+    name: a.name ?? null,
+    decimals: num(a.decimals),
+    logo: (addr && chain) ? null : null, // logo built by caller via trustWalletAssetLogoUrl
+    circulatingSupply: num(a.circulating_supply),
+    totalSupply: num(a.total_supply),
+    source: 'trustwallet',
+  };
+}
+
+/**
+ * Real metadata + verified market cap for one token via the confirmed
+ * /v1/search/assets endpoint (searching by the address, then matching the doc
+ * whose asset_id carries it on the requested chain). null when unavailable.
+ */
+export async function twAssetInfo(chain: string, address?: string | null): Promise<TwAsset | null> {
+  if (!address) return null;
+  const coin = TW_COIN_TYPE[chain.toLowerCase()];
+  const body = await twGet<unknown>('/v1/search/assets', { query: address });
+  const docs = docsOf(body);
+  if (docs.length === 0) return null;
+  const lc = address.toLowerCase();
+  // Match the doc for this exact token: asset_id contains our address, and
+  // (when we know the coin type) the same coin prefix — avoids a same-address
+  // hit on the wrong chain.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const hit = docs.find((d: any) => {
+    const aid = String(d.asset_id ?? '').toLowerCase();
+    const addrMatch = aid.includes(lc);
+    const coinMatch = coin == null || aid.startsWith(`c${coin}_`);
+    return addrMatch && coinMatch;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  }) ?? docs.find((d: any) => String(d.asset_id ?? '').toLowerCase().includes(lc));
+  return hit ? parseTwAsset(hit) : null;
+}
+
+export interface TwSearchHit { symbol: string; name: string; address: string | null; chain: string | null; marketCap: number | null; verified: boolean }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toHit(d: any): TwSearchHit {
+  return {
+    symbol: d.symbol ?? '',
+    name: d.name ?? '',
+    address: addrFromAssetId(d.asset_id),
+    chain: TW_CHAIN_NAME[String(d.chain_name ?? '').toLowerCase()] ?? d.chain_name ?? null,
+    marketCap: num(d.market_cap_verified) ?? num(d.market_cap),
+    verified: Array.isArray(d.verifiers) ? d.verifiers.includes('trustwallet') : false,
+  };
+}
+
+/** Search assets by symbol/name/address. [] when unavailable. */
+export async function twSearchAssets(query: string): Promise<TwSearchHit[]> {
+  const body = await twGet<unknown>('/v1/search/assets', { query });
+  return docsOf(body).map(toHit).filter((h) => h.symbol || h.address);
+}
+
+/** Trending / popular assets. [] when unavailable. */
+export async function twPopularAssets(): Promise<TwSearchHit[]> {
+  const body = await twGet<unknown>('/v1/assets/popular');
+  return docsOf(body).map(toHit).filter((h) => h.symbol || h.address);
+}
