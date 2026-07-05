@@ -887,7 +887,7 @@ export default function WalletIntelligencePage() {
                   </div>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
                     {[
-                      { label: 'Total Balance', value: totalUsd > 0 ? `$${totalUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '$0.00', icon: DollarSign, color: 'var(--nl-success)' },
+                      { label: 'Total Balance', value: !Number.isFinite(totalUsd) ? '—' : `$${totalUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}`, icon: DollarSign, color: 'var(--nl-success)' },
                       { label: 'TX Count', value: walletData.txCount.toLocaleString(), icon: Activity, color: 'var(--nl-purple)' },
                       { label: 'Tokens Held', value: walletData.holdings.length.toString(), icon: TrendingUp, color: 'var(--nl-blue)' },
                       { label: 'Chain', value: walletData.chain, icon: Clock, color: 'var(--nl-warning)' },

@@ -20,7 +20,7 @@ export interface ContractSecurity {
   isHoneypot: boolean;
   buyTax: number;
   sellTax: number;
-  isOpenSource: boolean;
+  isOpenSource: boolean | null;
   isProxy: boolean;
   isMintable: boolean;
   ownershipRenounced: boolean;

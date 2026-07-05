@@ -56,7 +56,7 @@ export interface TokenSecurityResult {
   isHoneypot: boolean;
   buyTax: number;
   sellTax: number;
-  isOpenSource: boolean;
+  isOpenSource: boolean | null;
   isMintable: boolean;
   isProxy: boolean;
   hasHiddenOwner: boolean;
@@ -171,7 +171,7 @@ function parseSolanaTokenSecurity(t: Record<string, unknown>): TokenSecurityResu
     isHoneypot: nonTransferable,
     buyTax: 0,
     sellTax: 0,
-    isOpenSource: true, // Not surfaced by GoPlus Solana — assume native programs
+    isOpenSource: null, // GoPlus doesn't report this for Solana — unknown, not a fabricated "verified"
     isMintable,
     isProxy: false,
     hasHiddenOwner: false,

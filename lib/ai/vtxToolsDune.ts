@@ -312,9 +312,11 @@ async function handleLabelAddress(input: { address: string; chain?: string }): P
     .eq('chain', chain)
     .maybeSingle<{ score: number; win_rate_pct: number; basis: Record<string, unknown> }>();
   if (!data) return JSON.stringify({ address: input.address, chain, label: 'unknown' });
-  const label = data.score >= 90 ? 'smart_money_elite'
-              : data.score >= 70 ? 'smart_money'
-              : data.score >= 40 ? 'profitable_trader'
+  // Labels reflect the Dune smart-money SCORE (turnover-weighted ranking), not
+  // proven profit — win-rate isn't available, so never assert "profitable".
+  const label = data.score >= 90 ? 'high_activity_smart_money'
+              : data.score >= 70 ? 'active_smart_money'
+              : data.score >= 40 ? 'active_trader'
               : 'retail';
   return JSON.stringify({ address: input.address, chain, label, score: data.score, win_rate_pct: data.win_rate_pct });
 }

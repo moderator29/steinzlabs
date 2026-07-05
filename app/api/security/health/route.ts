@@ -109,6 +109,22 @@ export async function GET(_req: NextRequest) {
     honeypotCount = count ?? 0;
   } catch { /* table absent */ }
 
+  // Scan COVERAGE — has the user actually run the on-demand scanners? A wallet
+  // that was never scanned has 0 rows, which is indistinguishable from
+  // "scanned and clean" unless we check. Without coverage we must NOT affirm a
+  // clean ~95-100 score (false safety assurance).
+  let approvalScanned = false;
+  let honeypotScanned = false;
+  try {
+    const { count } = await admin.from('approval_audit_results').select('id', { count: 'exact', head: true }).eq('user_id', user.id);
+    approvalScanned = (count ?? 0) > 0;
+  } catch { /* table absent */ }
+  try {
+    const { count } = await admin.from('user_token_security_flags').select('id', { count: 'exact', head: true }).eq('user_id', user.id);
+    honeypotScanned = (count ?? 0) > 0;
+  } catch { /* table absent */ }
+  const scanned = approvalScanned || honeypotScanned;
+
   // Map raw counts into a 0–100 sub-score where 0 issues = 100.
   // Each issue subtracts a chunk; clamp so a single high-severity token
   // doesn't zero the whole component.
@@ -116,14 +132,13 @@ export async function GET(_req: NextRequest) {
   const threatScore   = clamp(100 - threatCount   * 15, 0, 100);
   const honeypotScore = clamp(100 - honeypotCount * 25, 0, 100);
 
-  // Security-driven composite. A clean wallet (no dangerous approvals, no recent
-  // threats, no honeypots held) scores ~95–100; reputation only nudges the top.
-  const composite = Math.round(
-    approvalScore   * 0.40 +
-    threatScore     * 0.30 +
-    honeypotScore   * 0.25 +
-    reputationScore * 0.05,
-  );
+  // Security-driven composite from REAL security posture only — approval risk,
+  // threat alerts, honeypot holdings. (Platform-standing/engagement was removed:
+  // a gamification metric must not move a security number.) Null when the wallet
+  // has never been scanned, so the UI shows "—" instead of a fake clean score.
+  const composite = scanned
+    ? Math.round(approvalScore * 0.45 + threatScore * 0.30 + honeypotScore * 0.25)
+    : null;
 
   const breakdown: ComponentBreakdown = {
     reputation: reputationScore,
@@ -133,6 +148,17 @@ export async function GET(_req: NextRequest) {
   };
 
   const computedAt = new Date().toISOString();
+
+  // Never cached / never trended a fake clean score for an unscanned wallet.
+  if (composite == null) {
+    return NextResponse.json({
+      score: null,
+      scanned: false,
+      breakdown,
+      counts: { approvalDanger, threatCount, honeypotCount },
+      computedAt,
+    });
+  }
 
   // Upsert the cache row. RLS only lets the owner SELECT; service role
   // writes here.
@@ -178,6 +204,7 @@ export async function GET(_req: NextRequest) {
 
   return NextResponse.json({
     score: composite,
+    scanned: true,
     breakdown,
     counts: { approvalDanger, threatCount, honeypotCount },
     computedAt,

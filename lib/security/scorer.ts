@@ -82,14 +82,18 @@ export function scoreTokenSecurity(raw: Record<string, unknown>): RiskAssessment
   };
   if (holderCount < 50) { score -= 15; reasons.push("low_holder_count"); }
 
-  // Contract code
+  // Contract code. openSource is tri-state: true/false when the source explicitly
+  // reports it, null when unknown (e.g. GoPlus doesn't report it for Solana) —
+  // unknown must NOT be scored as either verified OR unverified (no fake penalty
+  // or fake pass).
+  const openSourceKnown = raw.is_open_source === "1" || raw.is_open_source === "0" || typeof raw.isOpenSource === 'boolean';
   const isOpenSource = raw.is_open_source === "1" || raw.isOpenSource === true;
   const isProxy = raw.is_proxy === "1" || raw.isProxy === true;
   sections.contractCode = {
-    ok: isOpenSource && !isProxy,
-    detail: `${isOpenSource ? "Verified source" : "Source unverified"}${isProxy ? " · upgradeable proxy" : ""}`,
+    ok: openSourceKnown ? (isOpenSource && !isProxy) : !isProxy,
+    detail: `${openSourceKnown ? (isOpenSource ? "Verified source" : "Source unverified") : "Source verification unknown"}${isProxy ? " · upgradeable proxy" : ""}`,
   };
-  if (!isOpenSource) { score -= 10; reasons.push("source_unverified"); }
+  if (openSourceKnown && !isOpenSource) { score -= 10; reasons.push("source_unverified"); }
   if (isProxy) { score -= 5; reasons.push("upgradeable_proxy"); }
 
   // Similar scam match

@@ -27,7 +27,7 @@ export interface SniperAudit {
   buyTax: number;
   sellTax: number;
   mintable: boolean;
-  verified: boolean;
+  verified: boolean | null;
   /** Fraction of LP that is locked/burned (0..1); null when unknown. */
   lpLockedPct: number | null;
   /** True when execution MUST be blocked (honeypot / can't sell / etc.). */
