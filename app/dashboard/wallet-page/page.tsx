@@ -1517,7 +1517,7 @@ export default function WalletPage() {
 
             {activeTab === 'dapps' && (
               <div role="tabpanel" id="wallet-panel-dapps" aria-labelledby="wallet-tab-dapps" className="mb-6">
-                <DappDirectory />
+                <DappDirectory solanaAddress={activeWallet?.solanaAddress} />
               </div>
             )}
 

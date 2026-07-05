@@ -1,7 +1,58 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Search, ExternalLink } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Search, ExternalLink, Layers } from 'lucide-react';
+
+interface StakeAccount { stakeAccount: string; validator: string | null; stakedSol: number; state: string; }
+
+// REAL native-SOL staking positions read from chain via /api/wallet/staking.
+// Honest empties: no accounts → a "stake with Jito/Marinade" CTA (real dApps),
+// never a fabricated position. Only shown when a Solana address is present.
+function StakingPositions({ solanaAddress }: { solanaAddress: string }) {
+  const [data, setData] = useState<{ accounts: StakeAccount[]; totalStakedSol: number; networkApyPct: number | null } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetch(`/api/wallet/staking?address=${encodeURIComponent(solanaAddress)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelled) setData(d); })
+      .catch(() => { if (!cancelled) setData(null); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [solanaAddress]);
+
+  if (loading || !data) return null;
+  const apy = data.networkApyPct != null ? `${data.networkApyPct.toFixed(1)}%` : '—';
+
+  return (
+    <div className="rounded-xl nl-glass p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-white"><Layers className="w-3.5 h-3.5 text-[#8FA3FF]" /> SOL Staking</div>
+        <span className="text-[10px] text-slate-400">Network APY ~{apy}</span>
+      </div>
+      {data.accounts.length > 0 ? (
+        <>
+          <div className="text-sm font-bold text-white">{data.totalStakedSol.toLocaleString(undefined, { maximumFractionDigits: 4 })} SOL staked</div>
+          <div className="space-y-1">
+            {data.accounts.slice(0, 4).map((a) => (
+              <div key={a.stakeAccount} className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-400 font-mono truncate max-w-[150px]">{a.validator ? `${a.validator.slice(0, 4)}…${a.validator.slice(-4)}` : 'Undelegated'}</span>
+                <span className="flex items-center gap-2">
+                  <span className="text-white">{a.stakedSol.toLocaleString(undefined, { maximumFractionDigits: 3 })} SOL</span>
+                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${a.state === 'active' ? 'bg-emerald-500/15 text-emerald-300' : a.state === 'deactivating' ? 'bg-amber-500/15 text-amber-300' : 'bg-white/5 text-slate-400'}`}>{a.state}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className="text-[11px] text-slate-400">No active SOL stake accounts. Stake with a validator via <a href="https://www.jito.network" target="_blank" rel="noopener noreferrer" className="text-[#8FA3FF] hover:underline">Jito</a> or <a href="https://marinade.finance" target="_blank" rel="noopener noreferrer" className="text-[#8FA3FF] hover:underline">Marinade</a> to earn ~{apy}.</p>
+      )}
+    </div>
+  );
+}
 
 // Curated directory of REAL, well-known dApps — every entry is a genuine live
 // product with its real URL. No fabricated listings. Logos are each dApp's own
@@ -72,7 +123,7 @@ function DappLogo({ dapp, size = 40 }: { dapp: Dapp; size?: number }) {
   return <img src={`https://icons.duckduckgo.com/ip3/${domain}.ico`} alt={dapp.name} width={size} height={size} onError={() => setFailed(true)} className="rounded-xl shrink-0 bg-[#0f172a] object-cover" style={{ width: size, height: size }} />;
 }
 
-export function DappDirectory() {
+export function DappDirectory({ solanaAddress }: { solanaAddress?: string | null }) {
   const [cat, setCat] = useState<(typeof CATEGORIES)[number]>('All');
   const [q, setQ] = useState('');
 
@@ -86,6 +137,7 @@ export function DappDirectory() {
 
   return (
     <div className="space-y-3">
+      {solanaAddress && <StakingPositions solanaAddress={solanaAddress} />}
       <div className="flex items-center gap-2 bg-[#060A12] border border-white/[0.06] rounded-xl px-3 py-2.5 focus-within:border-[#0066FF]/40 transition-colors">
         <Search className="w-4 h-4 text-gray-600 shrink-0" />
         <input

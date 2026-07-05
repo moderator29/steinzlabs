@@ -94,6 +94,63 @@ export async function getSolanaSOLBalance(address: string): Promise<number> {
   });
 }
 
+export interface SolanaStakeAccount {
+  stakeAccount: string;
+  validator: string | null;       // vote account of the validator
+  stakedSol: number;              // delegated SOL (or total lamports if undelegated)
+  state: 'active' | 'deactivating' | 'inactive';
+  activationEpoch: string | null;
+}
+
+const STAKE_PROGRAM = 'Stake11111111111111111111111111111111111111';
+// u64 max = "never deactivating" sentinel Solana uses on active stake.
+const U64_MAX = '18446744073709551615';
+
+/**
+ * The wallet's REAL native-SOL stake accounts, read straight from the chain via
+ * getProgramAccounts on the Stake program, filtered by the withdraw authority
+ * (offset 44). Returns [] when the wallet has none or on any RPC error — never
+ * fabricates a position. Liquid-staking tokens (JitoSOL/mSOL) are NOT here;
+ * those already show as SPL tokens in holdings.
+ */
+export async function getSolanaStakeAccounts(walletAddress: string): Promise<SolanaStakeAccount[]> {
+  if (!walletAddress || walletAddress.startsWith('0x')) return [];
+  const key = cacheKey('solana', 'stake_accounts', { address: walletAddress });
+  return withCache(key, TTL.WALLET_BALANCE, async () => {
+    try {
+      const result = await solanaRpc('getProgramAccounts', [
+        STAKE_PROGRAM,
+        {
+          encoding: 'jsonParsed',
+          filters: [{ memcmp: { offset: 44, bytes: walletAddress } }],
+        },
+      ]) as Array<{ pubkey: string; account: { lamports: number; data: { parsed?: { info?: Record<string, unknown> } } } }>;
+      if (!Array.isArray(result)) return [];
+      const out: SolanaStakeAccount[] = [];
+      for (const r of result) {
+        const info = r.account?.data?.parsed?.info as { stake?: { delegation?: { voter?: string; stake?: string; activationEpoch?: string; deactivationEpoch?: string } } } | undefined;
+        const delegation = info?.stake?.delegation;
+        const lamports = Number(r.account?.lamports ?? 0);
+        const stakedSol = delegation?.stake ? Number(delegation.stake) / 1e9 : lamports / 1e9;
+        const deact = delegation?.deactivationEpoch;
+        const state: SolanaStakeAccount['state'] = !delegation ? 'inactive'
+          : (deact && deact !== U64_MAX) ? 'deactivating'
+          : 'active';
+        out.push({
+          stakeAccount: r.pubkey,
+          validator: delegation?.voter ?? null,
+          stakedSol,
+          state,
+          activationEpoch: delegation?.activationEpoch ?? null,
+        });
+      }
+      return out.sort((a, b) => b.stakedSol - a.stakedSol);
+    } catch {
+      return [];
+    }
+  });
+}
+
 export async function getSolanaWalletTokens(walletAddress: string): Promise<SolanaBalance[]> {
   const key = cacheKey('solana', 'wallet_tokens', { walletAddress });
   return withCache(key, TTL.WALLET_BALANCE, async () => {
