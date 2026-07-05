@@ -138,6 +138,59 @@ export interface CmcMeta {
   contracts: Array<{ platform: string; address: string }>;
 }
 
+// Market-listing row shaped to match CoinGecko's /coins/markets output so it
+// drops into the market-data route's mapper unchanged. Sparkline/logo aren't
+// in the free listings endpoint, so those come back empty (UI degrades to a
+// dash, never a fabricated series).
+export interface CmcListingCoin {
+  id: string;
+  symbol: string;
+  name: string;
+  current_price: number;
+  price_change_percentage_1h_in_currency: number | null;
+  price_change_percentage_24h: number;
+  price_change_percentage_7d_in_currency: number;
+  total_volume: number;
+  market_cap: number;
+  market_cap_rank: number | null;
+  sparkline_in_7d: { price: number[] };
+  image: string;
+}
+
+/**
+ * Top-N coins ranked by market cap — a third independent source behind
+ * CoinGecko/CoinPaprika for the market table so it stays live during an
+ * upstream outage. One call, hard-cached, credit-cheap. Returns [] when
+ * unconfigured or rate-limited.
+ */
+export async function cmcTopListings(limit: number): Promise<CmcListingCoin[]> {
+  if (!cmcConfigured()) return [];
+  const body = await cmcGet<{ data?: any[] }>('/v1/cryptocurrency/listings/latest', { // eslint-disable-line @typescript-eslint/no-explicit-any
+    start: '1',
+    limit: String(Math.min(Math.max(limit, 1), 250)),
+    sort: 'market_cap',
+    convert: 'USD',
+  });
+  const rows = Array.isArray(body?.data) ? body!.data : [];
+  return rows.map((c) => {
+    const q = c.quote?.USD ?? {};
+    return {
+      id: c.slug ?? String(c.id ?? c.symbol ?? ''),
+      symbol: String(c.symbol ?? '').toUpperCase(),
+      name: String(c.name ?? ''),
+      current_price: typeof q.price === 'number' ? q.price : 0,
+      price_change_percentage_1h_in_currency: typeof q.percent_change_1h === 'number' ? q.percent_change_1h : null,
+      price_change_percentage_24h: typeof q.percent_change_24h === 'number' ? q.percent_change_24h : 0,
+      price_change_percentage_7d_in_currency: typeof q.percent_change_7d === 'number' ? q.percent_change_7d : 0,
+      total_volume: typeof q.volume_24h === 'number' ? q.volume_24h : 0,
+      market_cap: typeof q.market_cap === 'number' ? q.market_cap : 0,
+      market_cap_rank: typeof c.cmc_rank === 'number' ? c.cmc_rank : null,
+      sparkline_in_7d: { price: [] },
+      image: '',
+    };
+  });
+}
+
 /** Official logo + metadata + known contract addresses for a listed ticker. */
 export async function cmcMetaBySymbol(symbol: string): Promise<CmcMeta | null> {
   const sym = symbol.replace(/^\$/, '').toUpperCase().trim();

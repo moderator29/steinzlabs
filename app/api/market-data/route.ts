@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cmcConfigured, cmcTopListings } from '@/lib/services/coinmarketcap';
 
 // ISR — edge cache for 5 minutes
 export const revalidate = 300;
@@ -74,17 +75,30 @@ export async function GET(request: Request) {
   try {
     coins = await fromCoinGecko(limit, cgCategory);
   } catch {
-    try {
-      // CoinPaprika has no category filter — only useful for the unfiltered
-      // top list. For a category request we'd rather return empty than the
-      // wrong set, so only fall back when no category is active.
-      if (cgCategory) throw new Error('no category fallback');
-      coins = await fromCoinPaprika(limit);
-    } catch {
+    // Neither CMC nor CoinPaprika has a category filter, so for a category
+    // request we'd rather return empty than the wrong set — only the
+    // unfiltered top list has fallbacks.
+    if (cgCategory) {
       return NextResponse.json(
         { tokens: [], category, total: 0, timestamp: new Date().toISOString() },
         { headers: { 'Cache-Control': 'public, s-maxage=60' } }
       );
+    }
+    // Tier 2: CoinMarketCap (env-gated, authoritative, credit-cheap — 1 cached
+    // call). Tier 3: CoinPaprika (keyless). Two independent sources behind
+    // CoinGecko so the market table stays live through an upstream outage.
+    try {
+      const cmc = cmcConfigured() ? await cmcTopListings(limit) : [];
+      coins = cmc.length > 0 ? cmc : await fromCoinPaprika(limit);
+    } catch {
+      try {
+        coins = await fromCoinPaprika(limit);
+      } catch {
+        return NextResponse.json(
+          { tokens: [], category, total: 0, timestamp: new Date().toISOString() },
+          { headers: { 'Cache-Control': 'public, s-maxage=60' } }
+        );
+      }
     }
   }
 
