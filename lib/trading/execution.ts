@@ -73,9 +73,12 @@ async function getZeroXQuote(
     toToken,
     fromAmount: (parseInt(amountWei) / 1e18).toString(),
     toAmount: toAmountEth,
-    fromAmountUSD: '0',
-    toAmountUSD: '0',
-    priceImpact: 0,
+    // USD legs aren't in the 0x quote and we don't price them here — empty, not a
+    // fabricated "0". priceImpact uses 0x's REAL estimatedPriceImpact (percent);
+    // 0 only if 0x genuinely omits it.
+    fromAmountUSD: '',
+    toAmountUSD: '',
+    priceImpact: data.estimatedPriceImpact != null ? Number(data.estimatedPriceImpact) : 0,
     route: [{ protocol: '0x', fromToken, toToken, portion: 100 }],
     gasEstimate: (parseInt(data.gas || '200000') * 20e9 / 1e18).toFixed(6),
     chain,
