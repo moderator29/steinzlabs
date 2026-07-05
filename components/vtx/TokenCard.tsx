@@ -5,6 +5,7 @@ import { TrendingUp, TrendingDown, Bell, BarChart3, Eye, ShoppingCart } from 'lu
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { TrustScoreBadge } from '@/components/trust/TrustScoreBadge';
+import { tokenLogoCandidates } from '@/lib/wallet/tokenLogoCandidates';
 
 export interface TokenCardData {
   symbol: string;
@@ -27,7 +28,10 @@ export interface TokenCardData {
   trustScore?: 'A' | 'B' | 'C' | 'D' | 'F';
 }
 
-function formatNum(n: number): string {
+function formatNum(n: number | undefined | null): string {
+  // Honest em-dash for unknown/zero — a valid token with no reported market
+  // cap should read "—", never a fabricated "$0.00".
+  if (!n || isNaN(n) || n <= 0) return '—';
   if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
   if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
   if (n >= 1e3) return `$${(n / 1e3).toFixed(2)}K`;
@@ -53,9 +57,13 @@ export function TokenCard({ token }: { token: TokenCardData }) {
   const router = useRouter();
   const [watching, setWatching] = useState(false);
   const [toast, setToast] = useState('');
+  const [logoIdx, setLogoIdx] = useState(0);
 
   const isPositive = token.change24h >= 0;
   const trust = token.trustScore ? TRUST_BADGE[token.trustScore] : null;
+  // Real logo cascade: server image → Trust Wallet asset registry → monogram.
+  const logoCandidates = tokenLogoCandidates({ primary: token.logo, address: token.contractAddress, chain: token.chain });
+  const currentLogo = logoCandidates[logoIdx];
 
   const handleWatch = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -106,12 +114,12 @@ export function TokenCard({ token }: { token: TokenCardData }) {
 
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
-          {token.logo ? (
+          {currentLogo ? (
             <img
-              src={token.logo}
+              src={currentLogo}
               alt={token.symbol}
-              className="w-8 h-8 rounded-full bg-[#0D1117]"
-              onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${token.symbol}&background=0066FF&color=fff&size=64&bold=true`; }}
+              className="w-8 h-8 rounded-full bg-[#0D1117] object-cover"
+              onError={() => setLogoIdx((i) => i + 1)}
             />
           ) : (
             <div className="w-8 h-8 rounded-full bg-[#0066FF]/20 flex items-center justify-center text-xs font-bold text-[#0066FF]">

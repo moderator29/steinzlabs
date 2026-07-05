@@ -17,6 +17,8 @@ import { StreamingCursor } from '@/components/vtx/StreamingCursor';
 import { MessageActions } from '@/components/vtx/MessageActions';
 import { SuggestionPills } from '@/components/vtx/SuggestionPills';
 import { VtxModelPicker, type VtxModelId } from '@/components/vtx/ModelPicker';
+import { TrustScoreBadge } from '@/components/trust/TrustScoreBadge';
+import { tokenLogoCandidates } from '@/lib/wallet/tokenLogoCandidates';
 
 // §11 — Replace DexScreener / TradingView iframes with native
 // lightweight-charts. Lazy-loaded so the lightweight-charts bundle
@@ -185,13 +187,16 @@ interface TokenCardData {
   fdv: number;
   pairAddress?: string;
   chain?: string;
-  trustScore?: number;
-  imageUrl?: string;
+  address?: string;
+  logo?: string | null;
+  /** TW/CMC identity verification (real "listed/verified" signal, not a heuristic). */
+  verified?: boolean;
   dexUrl?: string;
 }
 
 function formatCompact(n: number): string {
-  if (!n || isNaN(n)) return 'N/A';
+  // Honest em-dash for unknown/zero — never a fake "$0.00" on a real token.
+  if (!n || isNaN(n)) return '—';
   if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
   if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
   if (n >= 1e3) return `$${(n / 1e3).toFixed(2)}K`;
@@ -210,58 +215,47 @@ function TokenStatsCard({ token, address }: { token?: string; address?: string }
   const [cardData, setCardData] = useState<TokenCardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  // Real logo cascade: server-provided image → Trust Wallet asset registry →
+  // lettered monogram (never a generated ui-avatars placeholder).
+  const [logoIdx, setLogoIdx] = useState(0);
 
   const fetchData = async () => {
     setLoading(true);
     setError(false);
+    setLogoIdx(0);
     try {
-      let pairs: any[] = [];
-
-      if (address) {
-        // Search by contract address
-        const isSolana = !address.startsWith('0x') && address.length >= 32;
-        const chain = isSolana ? 'solana' : 'ethereum';
-        const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`);
-        if (res.ok) {
-          const data = await res.json();
-          pairs = data.pairs || [];
-        }
-      } else if (token) {
-        // Search by symbol
-        const res = await fetch(`https://api.dexscreener.com/latest/dex/search/?q=${encodeURIComponent(token)}`);
-        if (res.ok) {
-          const data = await res.json();
-          pairs = (data.pairs || []).filter((p: any) =>
-            p.baseToken?.symbol?.toLowerCase() === token.toLowerCase()
-          );
-          if (pairs.length === 0) pairs = data.pairs?.slice(0, 1) || [];
-        }
+      // Route through /api/vtx/token-card — the ONE resolver that returns real,
+      // cross-checked data (DexScreener + Trust Wallet verified market cap +
+      // CoinMarketCap FDV/logo backstop) and honest empties. No client-side
+      // heuristic trust score, no fabricated numbers.
+      const isSolana = !!address && !address.startsWith('0x') && address.length >= 32;
+      const chainGuess = isSolana ? 'solana' : 'ethereum';
+      const url = address
+        ? `/api/vtx/token-card?address=${encodeURIComponent(address)}&chain=${chainGuess}&tf=24h`
+        : `/api/vtx/token-card?symbol=${encodeURIComponent(token || '')}&tf=24h`;
+      const res = await fetch(url);
+      if (!res.ok) { setError(true); setLoading(false); return; }
+      const d = await res.json();
+      // Unresolved token → explicit empty shape (source 'none'/'error'): show
+      // nothing rather than a fake $0 card.
+      if (!d || d.source === 'none' || d.source === 'error' || (!d.price && !d.marketCap)) {
+        setError(true); setLoading(false); return;
       }
-
-      // Pick best pair by liquidity
-      const best = pairs.sort((a: any, b: any) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
-      if (!best) { setError(true); setLoading(false); return; }
-
-      const priceChange = parseFloat(best.priceChange?.h24 || '0');
-      const trustScore = Math.min(100, Math.max(0, 100
-        - (Math.abs(priceChange) > 50 ? 20 : 0)
-        - (best.liquidity?.usd < 50000 ? 30 : 0)
-        - (best.liquidity?.usd < 10000 ? 20 : 0)
-      ));
-
       setCardData({
-        name: best.baseToken?.name || token || 'Unknown',
-        symbol: best.baseToken?.symbol || '',
-        price: parseFloat(best.priceUsd || '0'),
-        priceChange24h: priceChange,
-        volume24h: best.volume?.h24 || 0,
-        liquidity: best.liquidity?.usd || 0,
-        marketCap: best.marketCap || 0,
-        fdv: best.fdv || 0,
-        pairAddress: best.pairAddress,
-        chain: best.chainId,
-        trustScore,
-        dexUrl: best.url,
+        name: d.name || token || 'Unknown',
+        symbol: (d.symbol || token || '').toUpperCase().replace(/^\$/, ''),
+        price: d.price || 0,
+        priceChange24h: d.change24h || 0,
+        volume24h: d.volume24h || 0,
+        liquidity: d.liquidity || 0,
+        marketCap: d.marketCap || 0,
+        fdv: d.fdv || 0,
+        pairAddress: d.pairAddress,
+        chain: d.chain || (address ? chainGuess : undefined),
+        address: address || undefined,
+        logo: d.logo ?? null,
+        verified: Boolean(d.twVerified || d.cmcVerified),
+        dexUrl: d.dexUrl,
       });
     } catch {
       setError(true);
@@ -284,23 +278,36 @@ function TokenStatsCard({ token, address }: { token?: string; address?: string }
   if (error || !cardData) return null;
 
   const isPositive = cardData.priceChange24h >= 0;
-  const trustColor = cardData.trustScore! >= 70 ? 'text-[#10B981] bg-[#10B981]/10' : cardData.trustScore! >= 40 ? 'text-[#F59E0B] bg-[#F59E0B]/10' : 'text-[#EF4444] bg-[#EF4444]/10';
-  const trustLabel = cardData.trustScore! >= 70 ? 'Trusted' : cardData.trustScore! >= 40 ? 'Caution' : 'Risky';
+  const logoCandidates = tokenLogoCandidates({ primary: cardData.logo, address: cardData.address, chain: cardData.chain });
+  const currentLogo = logoCandidates[logoIdx];
 
   return (
     <div className="mt-2 bg-[#0d1117] rounded-xl border border-white/[0.08] overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-3.5 pt-3 pb-2">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center border border-white/10 flex-shrink-0">
-            <span className="text-[10px] font-bold text-[#0066FF]">{cardData.symbol.slice(0, 2)}</span>
-          </div>
+          {currentLogo ? (
+            <img
+              src={currentLogo}
+              alt={cardData.symbol}
+              className="w-8 h-8 rounded-full bg-[#0D1117] object-cover flex-shrink-0 border border-white/10"
+              onError={() => setLogoIdx((i) => i + 1)}
+            />
+          ) : (
+            <div className="w-8 h-8 bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center border border-white/10 flex-shrink-0">
+              <span className="text-[10px] font-bold text-[#0066FF]">{cardData.symbol.slice(0, 2)}</span>
+            </div>
+          )}
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-sm font-bold text-white">{cardData.symbol}</span>
-              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${trustColor}`}>
-                {trustLabel}
-              </span>
+              {/* Real §7 Naka Trust Score when we have a CA+chain (risk), else a
+                  TW/CMC "Verified" identity chip. Never a heuristic label. */}
+              {cardData.address && cardData.chain ? (
+                <TrustScoreBadge chain={cardData.chain} address={cardData.address} size="sm" showLabel={false} />
+              ) : cardData.verified ? (
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded text-[#10B981] bg-[#10B981]/10 border border-[#10B981]/20">Verified</span>
+              ) : null}
             </div>
             <span className="text-[10px] text-gray-500 truncate max-w-[120px]">{cardData.name}</span>
           </div>

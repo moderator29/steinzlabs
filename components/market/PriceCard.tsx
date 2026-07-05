@@ -70,7 +70,7 @@ function Stat({ label, value, sub, tile = false }: { label: string; value: strin
 
 export function PriceCard(props: PriceCardProps) {
   const {
-    symbol, name, address, logo, trusted,
+    symbol, name, address, chain, logo, trusted,
     price, change24h, points,
     volume24h, volumeChange24h,
     marketCap, liquidity, supply, fdv, pctUnlocked, orbUrl,
@@ -102,7 +102,7 @@ export function PriceCard(props: PriceCardProps) {
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <TokenLogo src={logo} symbol={symbol} size={40} />
+            <TokenLogo src={logo} symbol={symbol} address={address} chain={chain} size={40} />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-base font-bold text-white truncate">{symbol}</span>

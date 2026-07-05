@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { getBuiltinWalletAddress } from '@/lib/wallet/builtinWallet';
+import { tokenLogoCandidates } from '@/lib/wallet/tokenLogoCandidates';
 import { notifySwapCompleted } from '@/lib/notifications';
 import { getWalletSessionKey } from '@/lib/wallet/walletSession';
 import { decryptPrivateKey } from '@/lib/wallet/encryption';
@@ -193,16 +194,23 @@ function getTokenAddresses(sellSymbol: string, buySymbol: string, chainId: strin
 
 function TokenBadge({ symbol, size = 28 }: { symbol: string; size?: number }) {
   const token = getTokenInfo(symbol);
-  const [imgError, setImgError] = useState(false);
+  const [imgIdx, setImgIdx] = useState(0);
+  // For imported/pasted tokens we know the real CA + chain, so cascade through
+  // the indexer image then the Trust Wallet asset registry before falling back
+  // to a lettered glyph — a valid contract should show real art whenever it
+  // exists on any source.
+  const imp = token as Partial<ImportedToken>;
+  const logoCandidates = tokenLogoCandidates({ primary: token.logo, address: imp.address, chain: imp.chain });
+  const currentLogo = logoCandidates[imgIdx];
 
-  if (token.logo && !imgError) {
+  if (currentLogo) {
     return (
       <img
-        src={token.logo}
+        src={currentLogo}
         alt={symbol}
         className="rounded-full"
         style={{ width: size, height: size, minWidth: size }}
-        onError={() => setImgError(true)}
+        onError={() => setImgIdx((i) => i + 1)}
       />
     );
   }
@@ -215,6 +223,20 @@ function TokenBadge({ symbol, size = 28 }: { symbol: string; size?: number }) {
       {symbol.slice(0, 2)}
     </div>
   );
+}
+
+// Search-result token logo with a real-image cascade (indexer → Trust Wallet
+// registry → lettered glyph). Own component so each row keeps its own retry
+// index inside the results .map().
+function SearchResultLogo({ logo, address, chain, symbol }: { logo: string | null; address: string; chain: string; symbol: string }) {
+  const [idx, setIdx] = useState(0);
+  const candidates = tokenLogoCandidates({ primary: logo, address, chain });
+  const current = candidates[idx];
+  if (!current) {
+    return <div className="w-9 h-9 rounded-full bg-[#0066FF]/20 flex items-center justify-center text-xs font-bold text-white">{symbol.slice(0, 2)}</div>;
+  }
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={current} alt={symbol} className="w-9 h-9 rounded-full object-cover" onError={() => setIdx((i) => i + 1)} />;
 }
 
 function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
@@ -230,7 +252,7 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
   const [importError, setImportError] = useState<string | null>(null);
   // Remote name search (DexScreener via /api/swap/token-search) so ANY token
   // is findable by name/symbol, not just the 26-entry curated list.
-  const [remoteResults, setRemoteResults] = useState<Array<{ chain: string; address: string; symbol: string; name: string; logo: string | null; liquidityUsd: number }>>([]);
+  const [remoteResults, setRemoteResults] = useState<Array<{ chain: string; address: string; symbol: string; name: string; logo: string | null; liquidityUsd: number; verified?: boolean }>>([]);
   const [remoteSearching, setRemoteSearching] = useState(false);
   const [resolvingRemote, setResolvingRemote] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -463,12 +485,16 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
                       disabled={resolvingRemote === t.address}
                       className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors disabled:opacity-60"
                     >
-                      {t.logo
-                        // eslint-disable-next-line @next/next/no-img-element
-                        ? <img src={t.logo} alt="" className="w-9 h-9 rounded-full object-cover" />
-                        : <div className="w-9 h-9 rounded-full bg-[#0066FF]/20 flex items-center justify-center text-xs font-bold text-white">{t.symbol.slice(0, 2)}</div>}
+                      <SearchResultLogo logo={t.logo} address={t.address} chain={t.chain} symbol={t.symbol} />
                       <div className="text-start flex-1 min-w-0">
-                        <div className="text-sm font-semibold text-white">{t.symbol}</div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm font-semibold text-white">{t.symbol}</span>
+                          {t.verified && (
+                            <span title="Verified by Trust Wallet" className="inline-flex items-center gap-0.5 text-[9px] font-bold text-[#10B981] bg-[#10B981]/10 border border-[#10B981]/20 rounded px-1 py-px">
+                              <CheckCircle className="w-2.5 h-2.5" /> Verified
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-gray-500 truncate">{t.name} · {t.address.slice(0, 6)}…{t.address.slice(-4)}</div>
                       </div>
                       {resolvingRemote === t.address
