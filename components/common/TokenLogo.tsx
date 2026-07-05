@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { tokenLogoCandidates } from '@/lib/wallet/tokenLogoCandidates';
 
 interface TokenMetadata {
   symbol: string;
@@ -66,26 +67,33 @@ function symbolColor(symbol: string): string {
 
 export function TokenLogo({ address, chain = 'ethereum', size = 32, showSymbol = false, className = '' }: TokenLogoProps) {
   const [meta, setMeta] = useState<TokenMetadata | null>(null);
-  const [imgError, setImgError] = useState(false);
+  // Cascade through real logo candidates (indexer image → Trust Wallet asset
+  // registry) before giving up to a lettered avatar, so a valid CA that
+  // DexScreener has no image for still shows real token art when the registry
+  // hosts it.
+  const [candidateIdx, setCandidateIdx] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setCandidateIdx(0);
     fetchTokenMeta(address, chain).then((m) => { if (!cancelled) setMeta(m); });
     return () => { cancelled = true; };
   }, [address, chain]);
 
   const letter = meta?.symbol?.slice(0, 1) ?? address.slice(0, 1).toUpperCase();
   const color = symbolColor(meta?.symbol ?? address);
+  const candidates = meta ? tokenLogoCandidates({ primary: meta.logo, address, chain }) : [];
+  const currentLogo = candidates[candidateIdx];
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      {meta?.logo && !imgError ? (
+      {currentLogo ? (
         <img
-          src={meta.logo}
-          alt={meta.symbol}
+          src={currentLogo}
+          alt={meta?.symbol ?? ''}
           className="rounded-full object-cover flex-shrink-0"
           style={{ width: size, height: size }}
-          onError={() => setImgError(true)}
+          onError={() => setCandidateIdx((i) => i + 1)}
         />
       ) : (
         <div

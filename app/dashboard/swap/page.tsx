@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { getBuiltinWalletAddress } from '@/lib/wallet/builtinWallet';
+import { tokenLogoCandidates } from '@/lib/wallet/tokenLogoCandidates';
 import { notifySwapCompleted } from '@/lib/notifications';
 import { getWalletSessionKey } from '@/lib/wallet/walletSession';
 import { decryptPrivateKey } from '@/lib/wallet/encryption';
@@ -193,16 +194,23 @@ function getTokenAddresses(sellSymbol: string, buySymbol: string, chainId: strin
 
 function TokenBadge({ symbol, size = 28 }: { symbol: string; size?: number }) {
   const token = getTokenInfo(symbol);
-  const [imgError, setImgError] = useState(false);
+  const [imgIdx, setImgIdx] = useState(0);
+  // For imported/pasted tokens we know the real CA + chain, so cascade through
+  // the indexer image then the Trust Wallet asset registry before falling back
+  // to a lettered glyph — a valid contract should show real art whenever it
+  // exists on any source.
+  const imp = token as Partial<ImportedToken>;
+  const logoCandidates = tokenLogoCandidates({ primary: token.logo, address: imp.address, chain: imp.chain });
+  const currentLogo = logoCandidates[imgIdx];
 
-  if (token.logo && !imgError) {
+  if (currentLogo) {
     return (
       <img
-        src={token.logo}
+        src={currentLogo}
         alt={symbol}
         className="rounded-full"
         style={{ width: size, height: size, minWidth: size }}
-        onError={() => setImgError(true)}
+        onError={() => setImgIdx((i) => i + 1)}
       />
     );
   }
