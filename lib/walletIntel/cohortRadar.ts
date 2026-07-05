@@ -31,12 +31,13 @@ export interface CohortRadarResult {
     cohortMedian: number;
     cohortP25: number;
     cohortP75: number;
-    /** 0..100 percentile of target vs cohort. Concentration is inverted
-     *  so higher percentile == better diversification. */
-    percentile: number;
+    /** 0..100 percentile of target vs cohort, or null when the cohort is empty
+     *  (no fabricated 50). Concentration is inverted so higher == better. */
+    percentile: number | null;
   }>;
-  /** Overall band — average percentile across axes with samples. */
-  overallPercentile: number;
+  /** Overall band — average percentile across axes with samples; null when
+   *  there is no cohort to compare against. */
+  overallPercentile: number | null;
 }
 
 function percentile(sorted: number[], q: number): number {
@@ -48,8 +49,9 @@ function percentile(sorted: number[], q: number): number {
   return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
 }
 
-function rankPercentile(target: number, sorted: number[]): number {
-  if (sorted.length === 0) return 50;
+function rankPercentile(target: number, sorted: number[]): number | null {
+  // Empty cohort → no percentile (null), never a fabricated middling 50.
+  if (sorted.length === 0) return null;
   let count = 0;
   for (const v of sorted) {
     if (v <= target) count += 1;
@@ -74,7 +76,7 @@ export function buildCohortRadar(target: CohortMember, cohort: CohortMember[]): 
     const t = typeof target[axis] === 'number' && Number.isFinite(target[axis]!) ? target[axis]! : 0;
     let p = rankPercentile(t, sample);
     // Lower concentration is better → invert percentile so 1 == top.
-    if (axis === 'concentration') p = 100 - p;
+    if (axis === 'concentration' && p != null) p = 100 - p;
     result[axis] = {
       target: t,
       cohortMedian: percentile(sample, 0.5),
@@ -82,11 +84,11 @@ export function buildCohortRadar(target: CohortMember, cohort: CohortMember[]): 
       cohortP75: percentile(sample, 0.75),
       percentile: p,
     };
-    if (sample.length > 0) percentiles.push(p);
+    if (p != null) percentiles.push(p);
   }
 
   const overall = percentiles.length === 0
-    ? 50
+    ? null
     : Math.round(percentiles.reduce((s, p) => s + p, 0) / percentiles.length);
   return { axes: result, overallPercentile: overall };
 }

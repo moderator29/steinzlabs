@@ -28,8 +28,8 @@ export interface ScoreComponents {
 }
 
 export interface ScoreResult {
-  success_rate: number;
-  total_score: number;
+  success_rate: number | null;
+  total_score: number | null;
   components: ScoreComponents;
 }
 
@@ -50,11 +50,13 @@ const WEIGHTS = {
  *   - All components null → return 50 (the neutral default).
  *   - Single component → that component is the score (weight = 100%).
  */
-export function combineComponents(c: ScoreComponents): number {
+export function combineComponents(c: ScoreComponents): number | null {
   const entries = (Object.keys(WEIGHTS) as Array<keyof ScoreComponents>)
     .map((k) => ({ k, v: c[k], w: WEIGHTS[k] }))
     .filter((e) => typeof e.v === 'number' && Number.isFinite(e.v));
-  if (entries.length === 0) return 50;
+  // No components → no score. Return null so a zero-activity user renders "—",
+  // never a fabricated neutral 50 "success rate".
+  if (entries.length === 0) return null;
   const totalW = entries.reduce((s, e) => s + e.w, 0);
   const weighted = entries.reduce((s, e) => s + (e.v as number) * e.w, 0);
   return Math.round(Math.max(0, Math.min(100, weighted / totalW)));
