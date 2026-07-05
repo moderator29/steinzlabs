@@ -1,4 +1,5 @@
 import { fetchWithRetry } from "@/lib/api/fetchWithRetry";
+import { getGtTopPool, getGtCandles } from "@/lib/services/geckoterminal";
 
 export interface Candle {
   time: number; // unix seconds
@@ -20,6 +21,18 @@ const TF_TO_DAYS: Record<Timeframe, number> = {
   "1d": 365,
   "1w": 365,
   "1M": 1825,
+};
+
+// Our timeframe → GeckoTerminal OHLCV (timeframe, aggregate) pair.
+const GT_TF: Record<Timeframe, ['minute' | 'hour' | 'day', number]> = {
+  "1m": ["minute", 1],
+  "5m": ["minute", 5],
+  "15m": ["minute", 15],
+  "1h": ["hour", 1],
+  "4h": ["hour", 4],
+  "1d": ["day", 1],
+  "1w": ["day", 7],
+  "1M": ["day", 30],
 };
 
 // DexScreener resolution mapping (their chart endpoint uses different codes)
@@ -102,6 +115,19 @@ export async function fetchOhlcv(
   }
   if (!candles || candles.length === 0) {
     candles = await fetchDexscreenerOhlc(chain, token, tf);
+  }
+  // GeckoTerminal fallback (keyless, Solana + 100+ EVM nets). The token here is
+  // usually a TOKEN contract, but DexScreener's chart endpoint expects a PAIR
+  // address and hardcodes "uniswap" — so it silently returns nothing for
+  // Solana / non-uniswap memecoins. Resolve the token's deepest pool, then pull
+  // real candles. This is what makes a big memecoin's chart actually render.
+  if ((!candles || candles.length === 0) && /^0x|^[1-9A-HJ-NP-Za-km-z]{32,}$/.test(token)) {
+    const pool = await getGtTopPool(chain, token).catch(() => null);
+    if (pool) {
+      const [gtTf, agg] = GT_TF[tf];
+      const gt = await getGtCandles(chain, pool, gtTf, 300, agg).catch(() => []);
+      if (gt.length > 0) candles = gt.map((c) => ({ time: c.time, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume }));
+    }
   }
   if (!candles) candles = [];
 

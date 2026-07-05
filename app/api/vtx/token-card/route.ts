@@ -4,6 +4,7 @@ import { getBirdeyeOHLCV, getBirdeyeTokenOverview } from '@/lib/services/birdeye
 import { getTokenSecurity } from '@/lib/services/goplus';
 import { twGatewayConfigured, twAssetInfo } from '@/lib/services/trustwallet';
 import { cmcConfigured, cmcQuoteBySymbol, cmcMetaBySymbol } from '@/lib/services/coinmarketcap';
+import { getGtOHLCV } from '@/lib/services/geckoterminal';
 
 // VTX inline token card data — price, real 24h stats, chart series, logo.
 // Priority for ANY token: resolve to a real DexScreener pair (by address, or
@@ -81,7 +82,8 @@ async function buildPairCard(pair: any, opts: { address: string; symbol?: string
     synth.push(price);
   }
 
-  // Real candles: Birdeye (Solana-strong) → CoinGecko (majors) → synthetic.
+  // Real candles: Birdeye (Solana-strong) → GeckoTerminal (keyless, 100+ nets,
+  // best for long-tail memecoins) → CoinGecko (majors) → synthetic.
   let series = synth;
   let chartSource = 'dexscreener';
   try {
@@ -91,6 +93,15 @@ async function buildPairCard(pair: any, opts: { address: string; symbol?: string
     const real = ohlcv.slice(-tail).map((c) => c.close).filter((v) => typeof v === 'number' && v > 0);
     if (real.length > 1) { series = real; chartSource = 'birdeye'; }
   } catch { /* fall through */ }
+  // GeckoTerminal OHLCV keyed by the pair address — this is what makes a large
+  // memecoin like The Black Bull actually render a chart when Birdeye misses it.
+  if (chartSource === 'dexscreener' && pair.pairAddress) {
+    try {
+      const tfArgs = tf === '7d' ? { tfType: 'hour' as const, agg: 4, lim: 42 } : tf === '1h' ? { tfType: 'minute' as const, agg: 15, lim: 24 } : { tfType: 'hour' as const, agg: 1, lim: 24 };
+      const gt = await getGtOHLCV(tkChain, pair.pairAddress, tfArgs.tfType, tfArgs.lim, tfArgs.agg);
+      if (gt.length > 1) { series = gt; chartSource = 'geckoterminal'; }
+    } catch { /* fall through */ }
+  }
   if (chartSource === 'dexscreener') {
     const cgSym = symbol || pair.baseToken?.symbol;
     if (cgSym) {
@@ -114,10 +125,18 @@ async function buildPairCard(pair: any, opts: { address: string; symbol?: string
     if (secRes.status === 'fulfilled' && secRes.value) trusted = secRes.value.safetyLevel === 'SAFE' && !secRes.value.isHoneypot;
   } catch { /* best-effort */ }
 
-  // DexScreener marketCap is circulating-based; fdv is fully-diluted. Show both
-  // honestly so a low-float token isn't misread.
-  const marketCap = Number(pair.marketCap) || Number(pair.fdv) || 0;
-  const fdv = Number(pair.fdv) || marketCap;
+  // DexScreener's API returns BOTH a circulating-based marketCap and an fdv.
+  // For long-tail / memecoin tokens (everything routed through this pair path)
+  // DexScreener's own UI headlines the FDV — circulating-supply data is
+  // unreliable for these, so the FDV is the number DexScreener and traders
+  // actually quote. We match that: headline = FDV when it exceeds the reported
+  // circulating cap (e.g. The Black Bull reads $267M FDV, not $116M circ), and
+  // still expose fdv separately. Majors keep their real circulating cap via the
+  // CoinGecko/CMC paths, which have accurate supply.
+  const fdvVal = Number(pair.fdv) || 0;
+  const circMcap = Number(pair.marketCap) || 0;
+  const marketCap = fdvVal > circMcap ? fdvVal : (circMcap || fdvVal);
+  const fdv = fdvVal || circMcap;
   return {
     points: series, changePct, source: chartSource,
     price,

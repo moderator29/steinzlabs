@@ -22,6 +22,8 @@ import {
 import { searchPairs, getNewPairs, getTokenPairs } from '@/lib/services/dexscreener';
 import { getTokenMetadata, getTokenHolderCount, getContractCode, getEthBalance } from '@/lib/services/alchemy';
 import { getSolanaTokenMeta, getSolanaTokenSupply, getSolanaSOLBalance } from '@/lib/services/alchemy-solana';
+import { buildSolanaWalletIntelligence } from '@/lib/services/solana-intelligence';
+import { buildEvmWalletIntelligence } from '@/lib/services/evm-intelligence';
 import { getSocialScore } from '@/lib/services/lunarcrush';
 import { cmcConfigured, cmcQuoteBySymbol } from '@/lib/services/coinmarketcap';
 import { getEntityLabel, getAddressIntel } from '@/lib/services/arkham';
@@ -103,6 +105,15 @@ async function executeTokenMarketData(input: Record<string, unknown>): Promise<s
         lines.push(`  Price: $${p.priceUsd} | 24h: ${p.priceChange?.h24 ?? 0}%`);
         lines.push(`  Volume 24h: $${(p.volume?.h24 ?? 0).toLocaleString()}`);
         lines.push(`  Liquidity: $${(p.liquidity?.usd ?? 0).toLocaleString()}`);
+        // Report the figure DexScreener/traders quote: FDV when it exceeds the
+        // circulating cap (avoids the "$116M vs $267M" understatement). Show
+        // both so the model can explain a genuine low-float gap if asked.
+        {
+          const fdvN = Number(p.fdv) || 0;
+          const mcN = Number(p.marketCap) || 0;
+          const headline = fdvN > mcN ? fdvN : (mcN || fdvN);
+          lines.push(`  Market Cap: $${headline.toLocaleString()}${fdvN > mcN && mcN > 0 ? ` (FDV; circulating ~$${mcN.toLocaleString()})` : ''}`);
+        }
         lines.push(`  FDV: $${(p.fdv ?? 0).toLocaleString()}`);
         lines.push(`  Buys/Sells 24h: ${p.txns?.h24?.buys ?? 0} / ${p.txns?.h24?.sells ?? 0}`);
         lines.push(`  Contract: ${p.baseToken.address}`);
@@ -165,27 +176,59 @@ async function executeWalletProfile(input: Record<string, unknown>): Promise<str
   const chain = (input.chain as string) ?? 'ethereum';
   const lines: string[] = [`Wallet profile for ${address}:`];
 
+  // Use the SAME full-holdings pipeline the Wallet Intelligence page uses —
+  // native balance + EVERY token with USD values — not just the native coin.
+  // (Previously this only fetched SOL/ETH balance and told users "no other
+  // tokens detected" for wallets holding thousands of dollars in tokens.)
+  const usd = (v: number | null | undefined) => `$${Math.round(Number(v) || 0).toLocaleString()}`;
+  const emitHoldings = (tokens: Array<{ symbol: string; balance: string; valueUSD: number | null }>) => {
+    const priced = tokens.filter((t) => (Number(t.valueUSD) || 0) > 0).sort((a, b) => (Number(b.valueUSD) || 0) - (Number(a.valueUSD) || 0));
+    const shown = priced.length ? priced : tokens;
+    const top = shown.slice(0, 15);
+    if (top.length) {
+      lines.push(`  Token holdings (${tokens.length} total):`);
+      for (const t of top) {
+        lines.push(`    ${t.symbol}: ${Number(t.balance).toLocaleString(undefined, { maximumFractionDigits: 4 })}${(Number(t.valueUSD) || 0) > 0 ? ` (${usd(t.valueUSD)})` : ''}`);
+      }
+      if (shown.length > top.length) lines.push(`    …and ${shown.length - top.length} more`);
+    }
+  };
+
   try {
     const isSolana = !address.startsWith('0x');
     if (isSolana) {
-      const [balance, meta] = await Promise.all([
-        getSolanaSOLBalance(address).catch(() => 0),
+      const [wi, meta] = await Promise.all([
+        buildSolanaWalletIntelligence(address).catch(() => null),
         getAddressIntel(address).catch(() => null),
       ]);
       lines.push(`  Chain: Solana`);
-      lines.push(`  SOL Balance: ${balance.toFixed(4)} SOL`);
+      if (wi) {
+        lines.push(`  SOL Balance: ${wi.solBalance.toFixed(4)} SOL${wi.solValueUSD != null ? ` (${usd(wi.solValueUSD)})` : ''}`);
+        lines.push(`  Total Portfolio Value: ${usd(wi.totalBalanceUSD)} across ${wi.tokens.length + 1} assets`);
+        emitHoldings(wi.tokens);
+        if (wi.isWhale) lines.push(`  Whale tier: ${wi.whaleScore ?? 'yes'}`);
+      } else {
+        lines.push('  Could not load Solana holdings from the intelligence pipeline.');
+      }
       if (meta?.arkhamEntity) {
         lines.push(`  Entity: ${meta.arkhamEntity.name} (${meta.arkhamEntity.type})`);
         lines.push(`  Verified: ${meta.arkhamEntity.verified}`);
       }
       if (meta?.labels?.length) lines.push(`  Labels: ${meta.labels.join(', ')}`);
     } else {
-      const [balance, intel] = await Promise.all([
-        getEthBalance(address, chain).catch(() => '0'),
+      const [wi, intel] = await Promise.all([
+        buildEvmWalletIntelligence(address, chain).catch(() => null),
         getAddressIntel(address).catch(() => null),
       ]);
       lines.push(`  Chain: ${chain}`);
-      lines.push(`  ETH Balance: ${balance} ETH`);
+      if (wi) {
+        lines.push(`  ${wi.nativeSymbol} Balance: ${Number(wi.nativeBalance).toFixed(4)} ${wi.nativeSymbol}${wi.nativeValueUSD != null ? ` (${usd(wi.nativeValueUSD)})` : ''}`);
+        lines.push(`  Total Portfolio Value: ${usd(wi.totalBalanceUSD)} across ${wi.tokens.length + 1} assets`);
+        emitHoldings(wi.tokens);
+        lines.push(`  Tx count: ${wi.txCount}`);
+      } else {
+        lines.push(`  Could not load ${chain} holdings from the intelligence pipeline.`);
+      }
       if (intel?.arkhamEntity) {
         lines.push(`  Entity: ${intel.arkhamEntity.name} (${intel.arkhamEntity.type})`);
         lines.push(`  Verified: ${intel.arkhamEntity.verified}`);
