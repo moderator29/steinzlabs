@@ -46,6 +46,9 @@ const GROUPS: Record<string, string[]> = {
     // Samples live network gas price per chain into gas_samples so Smart Gas
     // Timing can learn cheap-hour patterns. Skips instantly with no Alchemy key.
     'gas-sample',
+    // Autonomous VTX Sentinel watches — evaluate each active sentinel against
+    // live data and notify on real change. Exits instantly with no sentinels.
+    'vtx-sentinel',
   ],
   // Hourly.
   hourly: [
