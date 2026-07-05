@@ -212,17 +212,20 @@ export async function GET(req: NextRequest) {
     const card = out as any;
     const twChain = (chain || card?.chain) as string | undefined;
     const twAddr = (address || undefined) as string | undefined;
-    if (twGatewayConfigured() && twChain && (twAddr || card?.symbol)) {
+    if (twGatewayConfigured() && twChain && twAddr) {
       const tw = await twAssetInfo(twChain, twAddr).catch(() => null);
-      if (tw && typeof tw.price === 'number' && tw.price > 0) {
-        card.price = tw.price;
-        if (tw.marketCap != null && tw.marketCap > 0) card.marketCap = tw.marketCap;
+      // TW's authoritative contribution is the trust-verified market cap +
+      // metadata (its search price is usually null); DexScreener keeps price,
+      // chart and liquidity. Only override a field when TW actually has it.
+      if (tw && (tw.marketCap || tw.price)) {
+        if (tw.price != null && tw.price > 0) { card.price = tw.price; card.priceSource = 'trustwallet'; }
+        if (tw.marketCap != null && tw.marketCap > 0) { card.marketCap = tw.marketCap; card.marketCapSource = 'trustwallet'; }
         if (tw.priceChange24h != null) card.change24h = tw.priceChange24h;
         if (tw.volume24h != null && tw.volume24h > 0) card.volume24h = tw.volume24h;
-        if (tw.circulatingSupply != null && tw.circulatingSupply > 0) card.supply = tw.circulatingSupply;
-        if (tw.logo) card.logo = card.logo || tw.logo;
         if (tw.symbol) card.symbol = card.symbol || tw.symbol;
-        card.priceSource = 'trustwallet';
+        if (tw.name) card.name = card.name || tw.name;
+        if (tw.marketCap && tw.marketCap > 0 && card.price > 0) card.supply = tw.marketCap / card.price;
+        card.twVerified = tw.marketCap != null && tw.marketCap > 0;
         out = card;
       }
     }
