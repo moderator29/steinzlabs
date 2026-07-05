@@ -1158,8 +1158,23 @@ async function buildResponseCards(opts: {
       // the sign-time quote hits the exact contract instead of re-resolving a
       // bare symbol. Unresolvable symbols stay address-less — the quote probe
       // then returns its honest 422 instead of a fabricated quote.
-      const fromAddr = resolveSwapAddress(swapIntent.from, swapChain);
-      const toAddr = resolveSwapAddress(swapIntent.to, swapChain);
+      // Curated resolver first; for a long-tail ticker it doesn't know (e.g.
+      // ANSEM), fall back to DexScreener's deepest exact-symbol pair on this
+      // chain so the card carries the REAL contract — without it the token
+      // logo can't render and the quote has nothing to route to.
+      const resolveSym = async (sym: string): Promise<string | null> => {
+        const known = resolveSwapAddress(sym, swapChain);
+        if (known) return known;
+        try {
+          const pairs = await searchPairs(sym);
+          const want = sym.replace(/^\$/, '').toUpperCase();
+          const onChain = pairs.filter((p) => p.chainId === swapChain && (p.baseToken?.symbol || '').toUpperCase() === want);
+          const best = (onChain.length ? onChain : pairs.filter((p) => (p.baseToken?.symbol || '').toUpperCase() === want))
+            .sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0))[0];
+          return best?.baseToken?.address ?? null;
+        } catch { return null; }
+      };
+      const [fromAddr, toAddr] = await Promise.all([resolveSym(swapIntent.from), resolveSym(swapIntent.to)]);
       swapCard = {
         fromToken: swapIntent.from,
         toToken: swapIntent.to,
