@@ -567,14 +567,19 @@ function BubbleMapInner() {
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatMessages]);
 
-  const fetchMap = useCallback(async (m: ViewMode = mode) => {
-    if (!tokenAddress.trim()) return;
+  const fetchMap = useCallback(async (m: ViewMode = mode, addrOverride?: string, chainOverride?: string) => {
+    // Allow an explicit address/chain (e.g. when the agent pastes a CA) so we
+    // don't race React state — reading tokenAddress right after setTokenAddress
+    // would still see the previous value.
+    const addr = (addrOverride ?? tokenAddress).trim();
+    const ch = chainOverride ?? chain;
+    if (!addr) return;
     setLoading(true);
     setSelectedNode(null);
     setErrorMsg(null);
     try {
       const res = await fetch(
-        `/api/bubble-map?token=${encodeURIComponent(tokenAddress.trim())}&chain=${chain}&mode=${m}`
+        `/api/bubble-map?token=${encodeURIComponent(addr)}&chain=${ch}&mode=${m}`
       );
       const data = await res.json().catch(() => null) as (BubbleMapData & { error?: string }) | null;
       // Honest error states — the old code silently dropped API errors
@@ -667,6 +672,28 @@ function BubbleMapInner() {
   const sendChat = useCallback(async (text?: string) => {
     const msg = (text ?? chatInput).trim();
     if (!msg || chatLoading) return;
+
+    // If the user pasted a bare token address into the agent, LOAD the bubble
+    // map for it instead of treating it as a question — that's exactly what the
+    // agent's welcome message promises ("Enter a token address to visualize
+    // holder distribution"). Previously this fell through to the chat API with
+    // no map context, so it just replied "No bubble map data has been loaded".
+    const isEvm = /^0x[a-fA-F0-9]{40}$/.test(msg);
+    const isSol = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(msg) && !msg.startsWith('0x');
+    if ((isEvm || isSol) && msg !== tokenAddress.trim()) {
+      const nextChain = isSol ? 'solana' : (chain === 'solana' ? 'ethereum' : chain);
+      const shortCa = `${msg.slice(0, 6)}…${msg.slice(-4)}`;
+      setChatMessages(p => [...p,
+        { role: 'user', content: msg, timestamp: Date.now() },
+        { role: 'assistant', content: `Loading the bubble map for ${shortCa} on ${nextChain}. Give me a second — then ask me anything about the holders, clusters, or risk.`, timestamp: Date.now() },
+      ]);
+      setChatInput('');
+      setTokenAddress(msg);
+      setChain(nextChain);
+      void fetchMap(mode, msg, nextChain);
+      return;
+    }
+
     setChatMessages(p => [...p, { role: 'user', content: msg, timestamp: Date.now() }]);
     setChatInput('');
     setChatLoading(true);
@@ -706,7 +733,7 @@ function BubbleMapInner() {
     } catch {
       setChatMessages(p => [...p, { role: 'assistant', content: 'Connection failed.', timestamp: Date.now() }]);
     } finally { setChatLoading(false); }
-  }, [chatInput, chatLoading, chatMessages, mapData, tokenAddress]);
+  }, [chatInput, chatLoading, chatMessages, mapData, tokenAddress, chain, mode, fetchMap]);
 
   // Phase C — pre-canned questions surfaced above the chat input so
   // first-time users have an instant on-ramp. Tap to fill the input
@@ -889,7 +916,7 @@ function BubbleMapInner() {
                       <Layers className="w-10 h-10 text-gray-700" />
                     </div>
                     <p className="text-sm font-semibold text-gray-400">No token loaded</p>
-                    <p className="text-xs text-gray-600 max-w-xs text-center">Enter a token contract address above to visualize the holder distribution network</p>
+                    <p className="text-xs text-gray-600 max-w-xs text-center">Paste a token contract address in the search above — or drop it into the agent below — to visualize the holder distribution network.</p>
                   </div>
                 ) : holderNodes.length === 0 ? (
                   /* Honest empty state — the intel pipeline resolved the token
