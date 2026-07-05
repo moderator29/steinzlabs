@@ -2,6 +2,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getBirdeyeOHLCV, getBirdeyeTokenOverview } from '@/lib/services/birdeye';
 import { getTokenSecurity } from '@/lib/services/goplus';
+import { twGatewayConfigured, twAssetInfo } from '@/lib/services/trustwallet';
 
 // VTX inline token card data — price, real 24h stats, chart series, logo.
 // Priority for ANY token: resolve to a real DexScreener pair (by address, or
@@ -201,7 +202,31 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'missing address or symbol' }, { status: 400 });
     }
 
-    const out = data ?? EMPTY;
+    let out = data ?? EMPTY;
+
+    // Trust Wallet graceful-primary: when the gateway returns a valid quote for
+    // this token, prefer its price / market cap / 24h change / supply / logo
+    // (authoritative), while keeping DexScreener's chart, liquidity and pair.
+    // Additive — if TW isn't configured or returns nothing, DexScreener stands.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const card = out as any;
+    const twChain = (chain || card?.chain) as string | undefined;
+    const twAddr = (address || undefined) as string | undefined;
+    if (twGatewayConfigured() && twChain && (twAddr || card?.symbol)) {
+      const tw = await twAssetInfo(twChain, twAddr).catch(() => null);
+      if (tw && typeof tw.price === 'number' && tw.price > 0) {
+        card.price = tw.price;
+        if (tw.marketCap != null && tw.marketCap > 0) card.marketCap = tw.marketCap;
+        if (tw.priceChange24h != null) card.change24h = tw.priceChange24h;
+        if (tw.volume24h != null && tw.volume24h > 0) card.volume24h = tw.volume24h;
+        if (tw.circulatingSupply != null && tw.circulatingSupply > 0) card.supply = tw.circulatingSupply;
+        if (tw.logo) card.logo = card.logo || tw.logo;
+        if (tw.symbol) card.symbol = card.symbol || tw.symbol;
+        card.priceSource = 'trustwallet';
+        out = card;
+      }
+    }
+
     cache.set(key, { at: Date.now(), data: out });
     return NextResponse.json(out, { headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' } });
   } catch {
