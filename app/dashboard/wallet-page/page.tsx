@@ -22,6 +22,7 @@ import { WalletTokenRow } from '@/components/wallet/WalletTokenRow';
 import { WatchlistTab } from '@/components/wallet/WatchlistTab';
 import { ScanQrModal } from '@/components/wallet/ScanQrModal';
 import { NftTab } from '@/components/wallet/NftTab';
+import { DappDirectory } from '@/components/wallet/DappDirectory';
 import { BiometricUnlockRow } from '@/components/wallet/BiometricUnlockRow';
 // Audit B4 — shared AES-GCM crypto, lifted from this file so the new
 // UnlockWalletModal can verify a typed password without duplicating
@@ -337,7 +338,7 @@ export default function WalletPage() {
   const [activeChain, setActiveChain] = useState<ChainInfo>(ETHEREUM_CHAIN);
   const [multiChainBalances, setMultiChainBalances] = useState<Record<string, WalletData | null>>({});
   const [multiChainLoading, setMultiChainLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'crypto' | 'watchlist' | 'nfts' | 'activity'>('crypto');
+  const [activeTab, setActiveTab] = useState<'crypto' | 'watchlist' | 'nfts' | 'activity' | 'dapps'>('crypto');
   const [hideBalance, setHideBalance] = useState(false);
   const [hideSmallBalances, setHideSmallBalances] = useState(false);
   const [tokenSort, setTokenSort] = useState<'value' | 'name' | 'balance'>('value');
@@ -1489,6 +1490,7 @@ export default function WalletPage() {
                 { id: 'watchlist' as const, label: 'Watchlist' },
                 { id: 'nfts' as const, label: 'NFTs' },
                 { id: 'activity' as const, label: 'Activity' },
+                { id: 'dapps' as const, label: 'dApps' },
               ]).map((t) => (
                 <button
                   key={t.id}
@@ -1510,6 +1512,12 @@ export default function WalletPage() {
             {activeTab === 'watchlist' && (
               <div role="tabpanel" id="wallet-panel-watchlist" aria-labelledby="wallet-tab-watchlist" className="mb-6">
                 <WatchlistTab />
+              </div>
+            )}
+
+            {activeTab === 'dapps' && (
+              <div role="tabpanel" id="wallet-panel-dapps" aria-labelledby="wallet-tab-dapps" className="mb-6">
+                <DappDirectory solanaAddress={activeWallet?.solanaAddress} />
               </div>
             )}
 

@@ -277,17 +277,17 @@ export default function PortfolioPage() {
             {loadingIntel && !intel ? "—" : formatPrice(totalValueUsd)}
           </div>
           <div className="flex items-center gap-2">
+            {/* This is TODAY'S CAPITAL FLOW (deposits/buys in − withdrawals/sells
+                out), NOT profit/loss — a $500 buy is +$500 flow, not a gain.
+                Neutral styling + explicit label so it never reads as P&L. */}
             <span
-              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                today.delta >= 0 ? "text-emerald-400 bg-emerald-500/10" : "text-rose-400 bg-rose-500/10"
-              }`}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-300 bg-white/[0.05]"
+              title="Net capital moved in/out today — not profit or loss"
             >
-              {today.delta >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
               {today.delta >= 0 ? "+" : ""}
               {formatPrice(today.delta)}
-              {today.pct != null ? ` (${formatPercent(today.pct)})` : ""}
             </span>
-            <span className="text-[11px] text-slate-500">today</span>
+            <span className="text-[11px] text-slate-500">net flow today</span>
           </div>
         </div>
         <div className="mt-1 text-xs text-slate-500">

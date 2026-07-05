@@ -14,7 +14,7 @@ export interface GoPlusResult {
   buyTax: number;
   sellTax: number;
   liquidity: number;
-  isOpenSource: boolean;
+  isOpenSource: boolean | null;
   isMintable: boolean;
   hasBlacklist: boolean;
   holderCount: number;

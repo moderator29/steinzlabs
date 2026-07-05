@@ -19,8 +19,10 @@ export interface MetricSample {
  * Compute percentile rank using the linear-interpolation method
  * (R-7 / Excel PERCENTILE). Returns 0..100.
  */
-export function percentileRank(cohort: number[], walletValue: number): number {
-  if (cohort.length === 0) return 0;
+export function percentileRank(cohort: number[], walletValue: number): number | null {
+  // No cohort → no ranking. Return null (caller shows "—"), never a fabricated
+  // 0 that brands a no-data wallet "bottom quartile".
+  if (cohort.length === 0) return null;
   const sorted = [...cohort].sort((a, b) => a - b);
   const below = sorted.filter((v) => v < walletValue).length;
   const equal = sorted.filter((v) => v === walletValue).length;
@@ -30,16 +32,16 @@ export function percentileRank(cohort: number[], walletValue: number): number {
 
 export interface PercentileResult {
   metric: string;
-  rank: number;       // 0..100
+  rank: number | null;       // 0..100, or null when the cohort is empty
   walletValue: number;
-  cohortMedian: number;
+  cohortMedian: number | null;
 }
 
 export function percentileMatrix(samples: Record<string, MetricSample>): PercentileResult[] {
   return Object.entries(samples).map(([metric, s]) => {
     const sorted = [...s.cohort].sort((a, b) => a - b);
     const median = sorted.length === 0
-      ? 0
+      ? null
       : sorted.length % 2 === 1
         ? sorted[(sorted.length - 1) / 2]
         : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
@@ -56,7 +58,8 @@ export function percentileMatrix(samples: Record<string, MetricSample>): Percent
  * Verdict label for the radar chart — categorical bucket so the UI
  * can color the polygon edge differently for top performers.
  */
-export function rankVerdict(rank: number): 'top-1' | 'top-10' | 'top-25' | 'median' | 'bottom-25' {
+export function rankVerdict(rank: number | null): 'top-1' | 'top-10' | 'top-25' | 'median' | 'bottom-25' | 'insufficient-data' {
+  if (rank == null) return 'insufficient-data';
   if (rank >= 99) return 'top-1';
   if (rank >= 90) return 'top-10';
   if (rank >= 75) return 'top-25';

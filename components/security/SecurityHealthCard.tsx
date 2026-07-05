@@ -11,7 +11,8 @@ import Link from 'next/link';
  */
 
 interface HealthResponse {
-  score: number;
+  score: number | null;
+  scanned?: boolean;
   breakdown: { reputation: number; approvals: number; threats: number; honeypots: number };
   counts: { approvalDanger: number; threatCount: number; honeypotCount: number };
 }
@@ -29,7 +30,7 @@ function healthReason(counts: { approvalDanger: number; threatCount: number; hon
   if (counts.approvalDanger > 0) issues.push(`${counts.approvalDanger} risky approval${counts.approvalDanger > 1 ? 's' : ''}`);
   if (counts.threatCount > 0) issues.push(`${counts.threatCount} threat alert${counts.threatCount > 1 ? 's' : ''} (30d)`);
   if (counts.honeypotCount > 0) issues.push(`${counts.honeypotCount} honeypot token${counts.honeypotCount > 1 ? 's' : ''} held`);
-  if (issues.length === 0) return 'No dangerous approvals, active threats, or honeypots detected — your wallet is clean.';
+  if (issues.length === 0) return 'No dangerous approvals, active threats, or honeypots detected on the scans you have run.';
   return `Found: ${issues.join(' · ')}. Resolve these to raise your score.`;
 }
 
@@ -62,10 +63,12 @@ export function SecurityHealthCard({ has2fa = false }: { has2fa?: boolean }) {
             <div
               className="w-20 h-20 rounded-full flex items-center justify-center font-bold text-2xl"
               style={{
-                background: `conic-gradient(${ringColor(health?.score ?? 0)} ${((health?.score ?? 0) / 100) * 360}deg, rgba(255,255,255,0.06) 0deg)`,
+                background: health?.score != null
+                  ? `conic-gradient(${ringColor(health.score)} ${(health.score / 100) * 360}deg, rgba(255,255,255,0.06) 0deg)`
+                  : 'rgba(255,255,255,0.06)',
               }}
             >
-              <div className="w-[68px] h-[68px] rounded-full bg-[#05081E] flex items-center justify-center" style={{ color: ringColor(health?.score ?? 0) }}>
+              <div className="w-[68px] h-[68px] rounded-full bg-[#05081E] flex items-center justify-center" style={{ color: health?.score != null ? ringColor(health.score) : '#64748b' }}>
                 {health?.score ?? '—'}
               </div>
             </div>
@@ -76,20 +79,24 @@ export function SecurityHealthCard({ has2fa = false }: { has2fa?: boolean }) {
             <ShieldCheck className="w-4 h-4 text-emerald-300" /> Security Health
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Driven by real wallet-security posture: approval risk (40%), threat alerts (30%), honeypot holdings (25%), plus a small platform-standing nudge (5%).
+            Driven by real wallet-security posture: approval risk (45%), threat alerts (30%), honeypot holdings (25%).
           </p>
-          {health && (
+          {health && health.score != null && (
             <>
               <p className="text-xs mt-1.5" style={{ color: ringColor(health.score) }}>
                 {healthReason(health.counts)}
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
                 <Metric label="Approvals"  value={health.breakdown.approvals} />
                 <Metric label="Threats"    value={health.breakdown.threats} />
                 <Metric label="Honeypots"  value={health.breakdown.honeypots} />
-                <Metric label="Reputation" value={health.breakdown.reputation} />
               </div>
             </>
+          )}
+          {health && health.score == null && (
+            <p className="text-xs mt-1.5 text-slate-400">
+              Not scored yet — run an approval or token scan and your real security health appears here. We never show a &ldquo;clean&rdquo; score for a wallet that hasn&rsquo;t been scanned.
+            </p>
           )}
         </div>
       </div>

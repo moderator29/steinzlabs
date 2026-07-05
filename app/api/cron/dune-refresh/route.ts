@@ -62,7 +62,13 @@ function mapSmartMoneyScore(rows: unknown[]): Array<Record<string, unknown>> {
       basis: x.basis ?? {},
       fetched_at: new Date().toISOString(),
     };
-  }).filter((r) => r.wallet_address);
+  }).filter((r) =>
+    r.wallet_address &&
+    // Drop high-frequency bots / routers / MM hot wallets — a wallet doing 5k+
+    // trades in 90d isn't smart money, and its huge turnover was being
+    // mislabeled downstream as P&L. Keep the table honest at the source.
+    (r.trade_count_90d == null || Number(r.trade_count_90d) <= 5000),
+  );
 }
 
 function mapBridgeFlows(rows: unknown[]): Array<Record<string, unknown>> {

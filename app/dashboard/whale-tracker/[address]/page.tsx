@@ -398,7 +398,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
             role="tablist"
             aria-label="Whale detail sections"
             onKeyDown={handleTabKeys}
-            className="mt-5 flex gap-1 border-b border-slate-800 -mb-px overflow-x-auto"
+            className="mt-5 flex gap-1 border-b border-slate-800 -mb-px overflow-x-auto scrollbar-hide"
           >
             {WHALE_TABS.map((t) => {
               const selected = tab === t;
@@ -412,7 +412,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
                   aria-controls={`whale-panel-${t}`}
                   tabIndex={selected ? 0 : -1}
                   onClick={() => setTab(t)}
-                  className={`px-3 py-2 text-xs uppercase tracking-wide transition whitespace-nowrap ${
+                  className={`shrink-0 px-3 py-2 text-xs uppercase tracking-wide transition whitespace-nowrap ${
                     selected ? "text-[#6F7EFF] border-b-2 border-[#0066FF]/60" : "text-slate-500 hover:text-white"
                   }`}
                 >
@@ -536,7 +536,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
                 </button>
               </div>
             )}
-            <div className="rounded-xl nl-glass overflow-hidden">
+            <div className="rounded-xl nl-glass overflow-x-auto scrollbar-hide">
             {data.activity.length === 0 ? (
               <div className="py-12 text-center text-sm text-slate-500">
                 No recorded activity yet. The whale-activity-poll cron populates this as new on-chain events arrive.
@@ -815,7 +815,7 @@ function HoldingsPanel({ address, chain }: { address: string; chain: string }) {
         </div>
         <span className="text-[10px] text-slate-500">{holdings.length} tokens</span>
       </div>
-      <div className="rounded-xl nl-glass overflow-hidden">
+      <div className="rounded-xl nl-glass overflow-x-auto scrollbar-hide">
         <table className="w-full text-xs">
           <thead className="text-[10px] uppercase tracking-wide text-slate-500 bg-slate-900/30 border-b border-slate-800">
             <tr>
@@ -933,7 +933,7 @@ function CounterpartiesPanel({ activity }: { activity: ActivityRow[] }) {
   }
 
   return (
-    <div className="rounded-xl nl-glass overflow-hidden">
+    <div className="rounded-xl nl-glass overflow-x-auto scrollbar-hide">
       <table className="w-full text-xs">
         <thead className="text-[10px] uppercase tracking-wide text-slate-500 bg-slate-900/30 border-b border-slate-800">
           <tr>

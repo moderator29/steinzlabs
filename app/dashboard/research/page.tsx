@@ -323,7 +323,10 @@ function MarketBriefCard({ post, onOpen }: { post: ResearchPost; onOpen: () => v
 
       <div className="rounded-2xl nl-glass nl-sheen overflow-hidden">
         {post.image_url && (
-          <div className="h-40 sm:h-48 w-full overflow-hidden">
+          <div className="w-full aspect-[3/1] overflow-hidden">
+            {/* Cover is a fixed 1200×400 (3:1) banner with edge-anchored text —
+                match its aspect ratio so object-cover shows the whole banner
+                instead of cropping title/date/market-cap off both mobile edges. */}
             <img src={post.image_url} alt={post.title} className="w-full h-full object-cover" />
           </div>
         )}

@@ -419,9 +419,6 @@ export default function ViewProofPage() {
     ? `https://bscscan.com/tx/${event.txHash}`
     : `https://etherscan.io/tx/${event.txHash}`;
 
-  const totalVotes = yesVotes + noVotes;
-  const yesPct = totalVotes > 0 ? Math.round((yesVotes / totalVotes) * 100) : 50;
-
   const handleVote = (vote: 'yes' | 'no') => {
     if (voted) return;
     setVoted(vote);
@@ -735,14 +732,13 @@ export default function ViewProofPage() {
         <div
           className="nl-glass rounded-xl p-4 border border-white/10"
           style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
-          title="Endorse Signal: vote bullish or bearish to share your read with the community. This is a sentiment poll, not a trade."
+          title="Your Take: mark your own read on this signal. This is a personal note (not aggregated community sentiment) and does not place a trade."
         >
           <div className="flex items-center justify-between mb-1">
-            <h3 className="font-bold text-sm">Endorse Signal</h3>
-            {totalVotes > 0 && <span className="text-xs text-gray-500">{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</span>}
+            <h3 className="font-bold text-sm">Your Take</h3>
           </div>
           <p className="text-[11px] text-gray-500 mb-3 leading-relaxed">
-            Community sentiment poll — this does not place a trade. Use Swap above to act.
+            Mark your own read — a personal note, not aggregated community data or a trade. Use Swap above to act.
           </p>
           <div className="grid grid-cols-2 gap-2 mb-2">
             <button
@@ -758,17 +754,10 @@ export default function ViewProofPage() {
               <ThumbsDown className="w-4 h-4" /> Bearish
             </button>
           </div>
-          {totalVotes > 0 && (
-            <>
-              <div className="flex rounded-full h-2 overflow-hidden">
-                <div className="bg-[#10B981]" style={{ width: `${yesPct}%` }}></div>
-                <div className="bg-[#EF4444]" style={{ width: `${100 - yesPct}%` }}></div>
-              </div>
-              <div className="flex justify-between text-[10px] mt-1">
-                <span className="text-[#10B981]">{yesPct}% Bullish ({yesVotes})</span>
-                <span className="text-[#EF4444]">{100 - yesPct}% Bearish ({noVotes})</span>
-              </div>
-            </>
+          {voted && (
+            <p className="text-[10px] text-gray-500 text-center">
+              Noted your read as <span className={voted === 'yes' ? 'text-[#10B981]' : 'text-[#EF4444]'}>{voted === 'yes' ? 'Bullish' : 'Bearish'}</span>. Aggregated community sentiment is coming soon.
+            </p>
           )}
         </div>
 

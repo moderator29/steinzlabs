@@ -18,15 +18,15 @@ import { Info, Shield } from "lucide-react";
 type Band = "highly_trusted" | "trusted" | "caution" | "high_risk" | "dangerous";
 
 interface Layers {
-  security: number;
-  liquidity: number;
-  holders: number;
-  market: number;
-  social: number;
+  security: number | null;
+  liquidity: number | null;
+  holders: number | null;
+  market: number | null;
+  social: number | null;
 }
 
 interface ScoreData {
-  score: number;
+  score: number | null;
   band: Band;
   bandLabel: string;
   bandColor: string;
@@ -151,8 +151,8 @@ export function TrustScoreBadge({
         title={CANONICAL_TOOLTIP}
       >
         <Shield size={size === "sm" ? 9 : size === "lg" ? 14 : 11} />
-        {data.score}
-        {showLabel && <span className="hidden sm:inline">· {data.bandLabel}</span>}
+        {data.score == null ? '—' : data.score}
+        {showLabel && <span className="hidden sm:inline">· {data.score == null ? 'No data' : data.bandLabel}</span>}
       </button>
       {open && (
         <div
@@ -179,17 +179,21 @@ export function TrustScoreBadge({
   );
 }
 
-function Row({ label, value, weight }: { label: string; value: number; weight: number }) {
+function Row({ label, value, weight }: { label: string; value: number | null; weight: number }) {
+  // A null layer means "not measured" — draw an empty track + "—", never a red
+  // 0 that implies worst-possible for a dimension we simply didn't score.
   return (
     <div className="flex items-center gap-2">
       <span className="text-[11px] text-white/70 w-16">{label}</span>
       <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
-        <div
-          className="h-full rounded-full"
-          style={{ width: `${value}%`, background: BAND_COLOR[bandFor(value)] }}
-        />
+        {value != null && (
+          <div
+            className="h-full rounded-full"
+            style={{ width: `${value}%`, background: BAND_COLOR[bandFor(value)] }}
+          />
+        )}
       </div>
-      <span className="text-[10px] font-mono text-white/60 w-9 text-end">{value}</span>
+      <span className="text-[10px] font-mono text-white/60 w-9 text-end">{value ?? '—'}</span>
       <span className="text-[9px] text-white/40 w-7 text-end">{weight}%</span>
     </div>
   );

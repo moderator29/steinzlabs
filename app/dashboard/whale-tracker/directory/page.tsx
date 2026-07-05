@@ -25,6 +25,7 @@ import {
   Copy as CopyIcon,
 } from 'lucide-react';
 import FollowWhaleModal from '@/components/whales/FollowWhaleModal';
+import { WhaleAvatar as SharedWhaleAvatar } from '@/components/whales/WhaleAvatar';
 import { SelectMenu, type SelectOption } from '@/components/ui/SelectMenu';
 import { getChainMeta } from '@/lib/chains/chainMeta';
 import { ChainLogo } from '@/components/common/ChainLogo';
@@ -544,11 +545,22 @@ function WhaleCard({ row, watched, onOpen, onFollow, onToggleWatch, onCopy }: {
   return (
     <div className="group nl-glass nl-glass--interactive rounded-xl p-5 cursor-pointer" onClick={onOpen}>
       <div className="flex items-start gap-3">
-        <WhaleAvatar label={row.label} address={row.address} size={40} />
+        {/* Real profile picture (Arkham/ENS/X avatar) resolved inline in the
+            directory list — no longer only after opening the detail page. */}
+        <SharedWhaleAvatar address={row.address} chain={row.chain} size={40} className="!rounded-xl" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="font-bold text-white text-sm truncate">{row.label || short(row.address)}</span>
             {row.verified && <CheckCircle2 className="w-3.5 h-3.5 text-[#0066FF] shrink-0" />}
+            {row.x_handle && (
+              <a
+                href={`https://x.com/${row.x_handle.replace(/^@/, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-[10px] text-slate-400 hover:text-[#8FA3FF] truncate shrink-0"
+              >@{row.x_handle.replace(/^@/, '')}</a>
+            )}
           </div>
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
             <span className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-semibold ${c.bg} ${c.fg}`}><ChainLogo chain={row.chain} size={11} />{row.chain.toUpperCase()}</span>

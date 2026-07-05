@@ -369,6 +369,10 @@ async function getWalletsFromDune(): Promise<{ wallets: SmartWallet[]; recentMov
   const { data: duneRows, error } = await admin
     .from('dune_smart_money_score')
     .select('wallet_address, chain, score, win_rate_pct, realized_pnl_usd_90d, trade_count_90d, basis')
+    // Exclude high-frequency bots / routers / MM hot wallets — a wallet doing
+    // 5k+ trades in 90d isn't "smart money", and its huge turnover was being
+    // mislabeled as P&L. Keeps the fallback honest if it ever renders.
+    .lte('trade_count_90d', 5000)
     .order('score', { ascending: false, nullsFirst: false })
     .limit(40);
   if (error || !duneRows || duneRows.length === 0) return null;
@@ -403,10 +407,13 @@ async function getWalletsFromDune(): Promise<{ wallets: SmartWallet[]; recentMov
     const p = profile.get(r.wallet_address.toLowerCase());
     const winRate = r.win_rate_pct != null ? Math.round(Number(r.win_rate_pct)) : null;
     const trades = r.trade_count_90d ?? 0;
-    const pnl90 = Number(r.realized_pnl_usd_90d ?? 0);
-    const vol90 = Number((r.basis?.volume_usd_90d as number) ?? 0) || Number(p?.portfolio_value_usd ?? 0);
+    // NOTE: dune_smart_money_score.realized_pnl_usd_90d is 90d gross TURNOVER,
+    // not profit (it scales with trade count and buy==sell). Treat it as volume
+    // ONLY — never as P&L — so we don't display an inflated fake profit.
+    const turnover90 = Number(r.realized_pnl_usd_90d ?? 0);
+    const vol90 = Number((r.basis?.volume_usd_90d as number) ?? 0) || turnover90 || Number(p?.portfolio_value_usd ?? 0);
     const portfolio = Number(p?.portfolio_value_usd ?? 0);
-    const pnlChange = portfolio > 0 ? Number(((pnl90 / portfolio) * 100).toFixed(1)) : 0;
+    const pnlChange = 0;
     const chainLabel = CHAIN_LABEL[r.chain] ?? r.chain?.toUpperCase().slice(0, 4) ?? 'ETH';
     const avgHold = formatHold(p?.avg_hold_hours != null ? Number(p.avg_hold_hours) : null);
     const label = p?.label || shortenAddress(r.wallet_address);
@@ -420,10 +427,12 @@ async function getWalletsFromDune(): Promise<{ wallets: SmartWallet[]; recentMov
       recentTrades: byWallet.get(r.wallet_address.toLowerCase()) ?? [],
       chain: r.chain, chains: [chainLabel], lastActive: p?.last_active_at ? timeAgo(p.last_active_at) : 'recent',
       rank: i + 1, tags, winRate,
-      pnl: pnl90 !== 0 ? signedUsd(pnl90) : 'N/A', pnlChange, trades, avgHold,
-      bestTrade: pnl90 > 0 ? formatVolume(pnl90) : 'N/A',
+      // No real P&L available from this surface — turnover is not profit, so
+      // show N/A rather than an inflated number.
+      pnl: 'N/A', pnlChange, trades, avgHold,
+      bestTrade: 'N/A',
       archetype: normalizeArchetype(p?.archetype ?? null, winRate ?? 0, trades, pnlChange, avgHold),
-      weeklyPnlChange: pnlChange, isRiser: i < 3 && pnl90 > 0, duneScore: r.score ?? null,
+      weeklyPnlChange: pnlChange, isRiser: false, duneScore: r.score ?? null,
     };
   });
   return { wallets, recentMoves };
@@ -556,10 +565,14 @@ async function getConvergenceFromTable(): Promise<ConvergenceSignal[]> {
 
 export async function GET() {
   try {
-    // PRIMARY: Dune's independent smart-money score (Nansen-style ranking),
-    // enriched with our profiles. Falls back to the curated whales dataset, then
-    // to raw Alchemy/DexScreener — so the board is always populated + honest.
-    const [dune, whaleFallback, convergence] = await Promise.all([
+    // PRIMARY: our curated whales dataset — it carries REAL win-rate, realized
+    // P&L, portfolio value and 7d volume. The free-plan Dune smart-money surface
+    // was demoted because its `realized_pnl_usd_90d` is actually gross turnover
+    // (not profit) and it ranks high-frequency bots/routers as "elite" with a
+    // null win-rate — i.e. inflated, misleading numbers. Dune is now only a
+    // last resort when the whales table is empty, and even then its volume is
+    // NOT presented as P&L (see getWalletsFromDune).
+    const [dune, whalePrimary, convergence] = await Promise.all([
       getWalletsFromDune(),
       getWalletsFromWhales(),
       getConvergenceFromTable(),
@@ -568,10 +581,13 @@ export async function GET() {
     let wallets: SmartWallet[];
     let recentMoves: SmartTrade[];
     let source: string;
-    if (dune && dune.wallets.length > 0) {
+    if (whalePrimary.wallets.length > 0) {
+      wallets = whalePrimary.wallets; recentMoves = whalePrimary.recentMoves; source = 'whales';
+    } else if (dune && dune.wallets.length > 0) {
       wallets = dune.wallets; recentMoves = dune.recentMoves; source = 'dune';
     } else {
-      wallets = whaleFallback.wallets; recentMoves = whaleFallback.recentMoves; source = 'whales';
+      wallets = []; recentMoves = [];
+      source = 'empty';
     }
 
     // Fallback: only if both the Dune surface and curated table are empty,

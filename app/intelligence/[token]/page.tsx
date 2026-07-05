@@ -221,73 +221,12 @@ export default function ViewProofPage() {
           </div>
         </div>
 
-        {/* Historical Pattern Matching */}
-        {intelligence.patternMatching.historicalOutcomes.totalMatches > 0 && (
-          <div className="nl-glass rounded-lg p-6" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
-            <h3 className="text-lg font-bold text-white mb-4">
-              Historical Pattern Matching
-            </h3>
-
-            <p className="text-gray-300 mb-4">
-              Similar tokens with this holder profile historically:
-            </p>
-
-            <div className="grid grid-cols-4 gap-4 mb-6">
-              <div className="nl-card rounded p-3">
-                <div className="text-sm text-gray-400">Average Gain</div>
-                <div className="text-2xl font-bold text-green-500">
-                  +{intelligence.patternMatching.historicalOutcomes.avgGain}%
-                </div>
-              </div>
-              <div className="nl-card rounded p-3">
-                <div className="text-sm text-gray-400">Avg Hold Time</div>
-                <div className="text-2xl font-bold text-white">
-                  {intelligence.patternMatching.historicalOutcomes.avgHoldTime}d
-                </div>
-              </div>
-              <div className="nl-card rounded p-3">
-                <div className="text-sm text-gray-400">Success Rate</div>
-                <div className="text-2xl font-bold text-green-500">
-                  {intelligence.patternMatching.historicalOutcomes.successRate}%
-                </div>
-              </div>
-              <div className="nl-card rounded p-3">
-                <div className="text-sm text-gray-400">Total Matches</div>
-                <div className="text-2xl font-bold text-white">
-                  {intelligence.patternMatching.historicalOutcomes.totalMatches}
-                </div>
-              </div>
-            </div>
-
-            {/* AI Prediction */}
-            <div className="nl-glass rounded-lg p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
-              <h4 className="text-sm font-medium text-white mb-2">AI Prediction</h4>
-              <div className="grid grid-cols-3 gap-4 mb-3">
-                <div>
-                  <div className="text-xs text-gray-400">Expected Gain</div>
-                  <div className="text-lg font-bold text-[#0066FF]">
-                    {intelligence.patternMatching.aiPrediction.expectedGain}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-400">Timeframe</div>
-                  <div className="text-lg font-bold text-white">
-                    {intelligence.patternMatching.aiPrediction.timeframe}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-400">Confidence</div>
-                  <div className="text-lg font-bold text-green-500">
-                    {intelligence.patternMatching.aiPrediction.confidence}%
-                  </div>
-                </div>
-              </div>
-              <p className="text-sm text-gray-300">
-                {intelligence.patternMatching.aiPrediction.reasoning}
-              </p>
-            </div>
-          </div>
-        )}
+        {/* Historical Pattern Matching / "AI Prediction" removed: the previous
+            block derived "expected gain", "success rate" and a "confidence %"
+            from unrelated recent tokens (not a real backtest), presenting
+            fabricated predictive numbers. Removed rather than shown, per the
+            no-fabricated-data rule. A real cohort-backtested version can replace
+            it later with honest, sourced figures. */}
 
         {/* Trading Actions */}
         <div className="flex gap-4">

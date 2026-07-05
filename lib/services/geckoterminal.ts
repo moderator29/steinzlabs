@@ -262,6 +262,94 @@ export async function getTokenInfo(chain: string, address: string): Promise<GtTo
   });
 }
 
+/**
+ * Real OHLCV candles for a pool — keyless, covers Solana + 100+ EVM networks,
+ * so the chart resolves for long-tail memecoins Birdeye/CoinGecko don't index.
+ * Needs the POOL (pair) address, not the token. Returns close prices
+ * oldest→newest (GeckoTerminal returns newest-first). [] on any failure.
+ */
+export async function getGtOHLCV(
+  chain: string,
+  poolAddress: string,
+  timeframe: 'hour' | 'day' | 'minute' = 'hour',
+  limit = 48,
+  aggregate = 1,
+): Promise<number[]> {
+  const network = GT_NETWORK[chain];
+  if (!network || !poolAddress) return [];
+  try {
+    const res = await fetch(
+      `${BASE}/networks/${network}/pools/${poolAddress}/ohlcv/${timeframe}?limit=${limit}&aggregate=${aggregate}&currency=usd`,
+      { headers: { Accept: 'application/json;version=20230302' }, signal: AbortSignal.timeout(TIMEOUT_MS) },
+    );
+    if (!res.ok) return [];
+    const body = (await res.json()) as { data?: { attributes?: { ohlcv_list?: unknown[][] } } };
+    const list = body?.data?.attributes?.ohlcv_list;
+    if (!Array.isArray(list)) return [];
+    return list
+      .map((row) => Number(row?.[4])) // [ts, open, high, low, close, volume]
+      .filter((v) => Number.isFinite(v) && v > 0)
+      .reverse();
+  } catch {
+    return [];
+  }
+}
+
+export interface GtCandle { time: number; open: number; high: number; low: number; close: number; volume: number }
+
+/** Full OHLC candles for a pool (keyless). Returns oldest→newest; [] on failure. */
+export async function getGtCandles(
+  chain: string,
+  poolAddress: string,
+  timeframe: 'hour' | 'day' | 'minute' = 'hour',
+  limit = 300,
+  aggregate = 1,
+): Promise<GtCandle[]> {
+  const network = GT_NETWORK[chain];
+  if (!network || !poolAddress) return [];
+  try {
+    const res = await fetch(
+      `${BASE}/networks/${network}/pools/${poolAddress}/ohlcv/${timeframe}?limit=${limit}&aggregate=${aggregate}&currency=usd`,
+      { headers: { Accept: 'application/json;version=20230302' }, signal: AbortSignal.timeout(TIMEOUT_MS) },
+    );
+    if (!res.ok) return [];
+    const body = (await res.json()) as { data?: { attributes?: { ohlcv_list?: unknown[][] } } };
+    const list = body?.data?.attributes?.ohlcv_list;
+    if (!Array.isArray(list)) return [];
+    return list
+      .map((r) => ({ time: Number(r?.[0]), open: Number(r?.[1]), high: Number(r?.[2]), low: Number(r?.[3]), close: Number(r?.[4]), volume: Number(r?.[5]) || 0 }))
+      .filter((c) => Number.isFinite(c.time) && Number.isFinite(c.close) && c.close > 0)
+      .sort((a, b) => a.time - b.time);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Top pool address for a token on a network (deepest liquidity), so an OHLCV
+ * lookup can be keyed off a token contract the caller pasted. null on failure.
+ */
+export async function getGtTopPool(chain: string, tokenAddress: string): Promise<string | null> {
+  const network = GT_NETWORK[chain];
+  if (!network || !tokenAddress) return null;
+  try {
+    const res = await fetch(
+      `${BASE}/networks/${network}/tokens/${tokenAddress}/pools?page=1`,
+      { headers: { Accept: 'application/json;version=20230302' }, signal: AbortSignal.timeout(TIMEOUT_MS) },
+    );
+    if (!res.ok) return null;
+    const body = (await res.json()) as { data?: Array<{ attributes?: { address?: string; reserve_in_usd?: string } }> };
+    const pools = body?.data;
+    if (!Array.isArray(pools) || pools.length === 0) return null;
+    const best = pools
+      .slice()
+      .sort((a, b) => (Number(b.attributes?.reserve_in_usd) || 0) - (Number(a.attributes?.reserve_in_usd) || 0))[0];
+    return best?.attributes?.address ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Universal CA resolution + search (swap token selector) ─────────────────
 // GeckoTerminal indexes 100+ DEX networks keylessly, making it the widest
 // free fallback behind DexScreener for resolving arbitrary pasted contract

@@ -40,15 +40,15 @@ export function bandFor(score: number): { band: TrustBand; label: string; color:
 }
 
 export interface TrustLayers {
-  security: number;
-  liquidity: number;
-  holders: number;
-  market: number;
-  social: number;
+  security: number | null;
+  liquidity: number | null;
+  holders: number | null;
+  market: number | null;
+  social: number | null;
 }
 
 export interface TrustResult {
-  score: number;
+  score: number | null;
   band: TrustBand;
   bandLabel: string;
   bandColor: string;
@@ -205,22 +205,23 @@ export async function calculateTrustScore(input: CalculateInput): Promise<TrustR
     weightTotal += w;
   });
 
-  // When nothing at all resolved, present a neutral 50 ("insufficient data")
-  // rather than a scary low score. In practice at least liquidity/market
-  // resolve for any real token.
-  const composite = weightTotal > 0 ? clamp(weightedSum / weightTotal) : 50;
+  // When NOTHING resolved we return null ("insufficient data") — the badge
+  // renders "—", never a fabricated neutral 50. In practice at least
+  // liquidity/market resolve for any real token, so this only hits truly
+  // unresolvable inputs.
+  const composite = weightTotal > 0 ? clamp(weightedSum / weightTotal) : null;
 
-  // Display shape keeps every dimension; a null (no-data) layer shows as 0 in
-  // the breakdown bars but did not participate in the math above.
+  // Display shape carries null (no-data) layers through as null so the badge
+  // breakdown draws "—" for an unmeasured dimension, not a red 0.
   const layers: TrustLayers = {
-    security: raw.security ?? 0,
-    liquidity: raw.liquidity ?? 0,
-    holders: raw.holders ?? 0,
-    market: raw.market ?? 0,
-    social: raw.social ?? 0,
+    security: raw.security ?? null,
+    liquidity: raw.liquidity ?? null,
+    holders: raw.holders ?? null,
+    market: raw.market ?? null,
+    social: raw.social ?? null,
   };
 
-  const band = bandFor(composite);
+  const band = bandFor(composite ?? 0);
 
   return {
     score: composite,
