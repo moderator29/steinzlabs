@@ -16,6 +16,7 @@ import { ArrowDownUp, RefreshCw, CheckCircle, AlertTriangle, ExternalLink, Loade
 import Link from 'next/link';
 import { useAppKit } from '@reown/appkit/react';
 import { TrustScoreBadge } from '@/components/trust/TrustScoreBadge';
+import { tokenLogoCandidates } from '@/lib/wallet/tokenLogoCandidates';
 import SwapRoutePreview from '@/components/swap/SwapRoutePreview';
 import { useExpertMode } from '@/lib/hooks/useExpertMode';
 import { useSwapBroadcast, detectWalletKind } from '@/lib/hooks/useSwapBroadcast';
@@ -71,16 +72,21 @@ const LOGO: Record<string, string> = {
   DOGE: 'https://assets.coingecko.com/coins/images/5/small/dogecoin.png',
 };
 
-function TokenGlyph({ symbol }: { symbol: string }) {
-  const src = LOGO[symbol.toUpperCase()];
-  if (!src) {
+// Real token logo: curated major map first, then the Trust Wallet asset
+// registry keyed by the real CA (so a proof/imported token shows its actual
+// art, not a 2-letter glyph), then the lettered fallback.
+function TokenGlyph({ symbol, address, chain }: { symbol: string; address?: string; chain?: string }) {
+  const [idx, setIdx] = useState(0);
+  const candidates = tokenLogoCandidates({ primary: LOGO[symbol.toUpperCase()], address, chain });
+  const current = candidates[idx];
+  if (!current) {
     return (
       <div className="w-8 h-8 rounded-full bg-[#141824] border border-white/10 flex items-center justify-center text-[10px] font-bold text-white">
         {symbol.slice(0, 2).toUpperCase()}
       </div>
     );
   }
-  return <img src={src} alt={symbol} className="w-8 h-8 rounded-full bg-[#141824]" />;
+  return <img src={current} alt={symbol} className="w-8 h-8 rounded-full bg-[#141824] object-cover" onError={() => setIdx((i) => i + 1)} />;
 }
 
 export function SwapCard({ swap, walletAddress, onCancel, source = 'vtx' }: Props) {
@@ -389,7 +395,7 @@ export function SwapCard({ swap, walletAddress, onCancel, source = 'vtx' }: Prop
       {/* From / To */}
       <div className="px-4 pb-4 space-y-2">
         <div className="flex items-center gap-3 bg-white/[0.03] rounded-xl p-3.5 border border-white/[0.06] transition-colors hover:border-white/[0.1]">
-          <TokenGlyph symbol={quote.fromToken} />
+          <TokenGlyph symbol={quote.fromToken} address={quote.fromTokenAddress} chain={quote.chain} />
           <div className="flex-1 min-w-0">
             <div className="text-[10px] uppercase tracking-wider text-gray-500">You pay</div>
             <div className="text-base font-bold text-white font-mono leading-tight">
@@ -405,7 +411,7 @@ export function SwapCard({ swap, walletAddress, onCancel, source = 'vtx' }: Prop
         </div>
 
         <div className="flex items-center gap-3 bg-white/[0.03] rounded-xl p-3.5 border border-white/[0.06] transition-colors hover:border-white/[0.1]">
-          <TokenGlyph symbol={quote.toToken} />
+          <TokenGlyph symbol={quote.toToken} address={quote.toTokenAddress} chain={quote.chain} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <div className="text-[10px] uppercase tracking-wider text-gray-500">You receive</div>
