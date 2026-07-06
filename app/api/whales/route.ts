@@ -17,7 +17,10 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
   // it surfaced top-whale-SCORE whales instead of top-PnL. Add explicit
   // sort + min_pnl filter so the leaderboard can rank by realised 30d
   // PnL like the panel name promises.
-  const sortBy = (sp.get("sort") ?? "score").toLowerCase();
+  // Directory ranks by real 7d DEX volume by default — the top list is the most
+  // ACTIVE whales (by traded volume), not the biggest passive holders. Callers
+  // that want the PnL leaderboard or score view pass ?sort=pnl / ?sort=score.
+  const sortBy = (sp.get("sort") ?? "volume").toLowerCase();
   const minPnl = Math.max(0, parseInt(sp.get("min_pnl") ?? "0", 10) || 0);
   // Active-trader rosters rank by 7d DEX volume; PnL leaderboard by realised
   // PnL; everything else by composite score.
