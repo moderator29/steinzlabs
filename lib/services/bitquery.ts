@@ -34,6 +34,7 @@ const EVM_NETWORK_BY_CHAIN: Record<string, string> = {
   optimism: 'optimism',
   polygon: 'matic',
   bsc: 'bsc',
+  avalanche: 'avalanche',
 };
 
 export interface ActiveTrader {

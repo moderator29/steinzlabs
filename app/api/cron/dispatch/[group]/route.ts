@@ -54,12 +54,17 @@ const GROUPS: Record<string, string[]> = {
   hourly: [
     'price-cache-refresh', 'market-stats-snapshot', 'watchlist-refresh',
     'token-popularity-aggregator', 'cult-signal-feed', 'smart-money-convergence',
+    // Whale discovery pulled to hourly for the directory fill-up: 8 chains via
+    // Bitquery, top ~500 active traders each, ranked by real 7d DEX volume. The
+    // sliding 7-day window churns the discoverable set so successive runs keep
+    // adding NEW real whales. Dial back to six-hourly once the roster saturates.
+    'bitquery-traders',
   ],
   // Every 6 hours.
   'six-hourly': [
     'cluster-analysis', 'security-monitor', 'notification-digest', 'telegram-heartbeat',
     'biz-mention-scrape', 'funding-rates-snapshot', 'reputation-feedback',
-    'whale-score-populator', 'whale-backfill-pnl', 'whale-discovery', 'bitquery-traders', 'market-pulse-warm', 'cult-refresh-treasury',
+    'whale-score-populator', 'whale-backfill-pnl', 'whale-discovery', 'market-pulse-warm', 'cult-refresh-treasury',
     'cult-conviction-score', 'cult-offering-draw',
   ],
   // Every 12 hours (00:00 + 12:00 UTC) — the research brief publishes two
