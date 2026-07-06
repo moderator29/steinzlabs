@@ -54,13 +54,15 @@ export const CAPABILITY_SCHEMA = {
         'token_safety',
         'smart_money_flows',
         'smart_money_rotation',
+        'wallet_activity',
       ],
-      description: 'Which on-chain query best answers the user. Pick exactly one. Use smart_money_flows for "what is smart money accumulating/net-buying"; smart_money_rotation for "what is smart money rotating INTO/OUT OF" or momentum shifts.',
+      description: 'Which on-chain query best answers the user. Pick exactly one. Use smart_money_flows for "what is smart money accumulating/net-buying"; smart_money_rotation for "what is smart money rotating INTO/OUT OF" or momentum shifts; wallet_activity to drill into ONE specific wallet the user names by address ("what is 0x… doing", "what has this whale been buying/selling").',
     },
     metric: { type: 'string', enum: ['win_rate', 'pnl_30d_usd', 'whale_score'], description: 'For top_whales: ranking metric.' },
     archetype: { type: 'string', enum: ['accumulator', 'sniper', 'swing', 'distributor'], description: 'Optional whale style filter.' },
     chain: { type: 'string', description: 'Optional chain filter (ethereum, solana, base, arbitrum, bsc, polygon).' },
     token: { type: 'string', description: 'Token symbol or contract address, for whales_buying_token / token_safety.' },
+    address: { type: 'string', description: 'A specific wallet address to drill into, for wallet_activity.' },
     action: { type: 'string', enum: ['buy', 'sell', 'swap'], description: 'For recent_whale_moves.' },
     min_usd: { type: 'number', description: 'For recent_whale_moves: minimum trade size in USD.' },
     hours: { type: 'number', description: 'Lookback window in hours (default 24).' },
@@ -75,6 +77,7 @@ export interface CapabilityInput {
   archetype?: string;
   chain?: string;
   token?: string;
+  address?: string;
   action?: string;
   min_usd?: number;
   hours?: number;
@@ -261,6 +264,48 @@ export async function runCapability(input: CapabilityInput): Promise<CapabilityR
         columns: ['token_symbol', 'chain', 'delta_usd', 'current_net_usd', 'prior_net_usd'],
         rows,
         summaryHint: `Tokens smart money is rotating INTO (positive delta) or OUT of (negative), measured as the change in net flow vs the prior ${Math.round(hours / 24) || 1}d window${chain ? ` on ${chain}` : ''}. A sign flip in current vs prior net is the strongest signal.`,
+      };
+    }
+    case 'wallet_activity': {
+      // Drill into ONE cohort member the user named by address: their recent
+      // moves + a real net-flow summary (buys − sells) over the window. All
+      // from whale_activity — no fabricated positions.
+      const addr = (input.address || input.token || '').trim();
+      const isAddr = /^0x[a-fA-F0-9]{40}$/.test(addr) || /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr);
+      if (!isAddr) return empty('wallet_activity', 'Give me a wallet address (0x… or a Solana address) to look into.');
+      const hours = Math.max(1, Math.min(720, Math.floor(Number(input.hours) || 168)));
+      const since = new Date(Date.now() - hours * 3600_000).toISOString();
+      let q = sb.from('whale_activity')
+        .select('token_symbol, token_address, action, value_usd, chain, timestamp')
+        .ilike('whale_address', addr)
+        .gte('timestamp', since)
+        .order('value_usd', { ascending: false })
+        .limit(MAX_ROWS);
+      if (chain) q = q.eq('chain', chain);
+      const { data } = await q;
+      const acts = (data ?? []) as Array<{ token_symbol: string | null; token_address: string | null; action: string; value_usd: number | null; chain: string; timestamp: string }>;
+      // Net flow per token: buys add, sells subtract (real trade-time USD).
+      const net = new Map<string, { symbol: string; net: number }>();
+      for (const a of acts) {
+        const key = (a.token_symbol || a.token_address || '').toUpperCase();
+        if (!key) continue;
+        const sign = a.action === 'sell' ? -1 : a.action === 'buy' ? 1 : 0;
+        const cur = net.get(key) ?? { symbol: a.token_symbol || key, net: 0 };
+        cur.net += sign * Number(a.value_usd ?? 0);
+        net.set(key, cur);
+      }
+      const topNet = Array.from(net.values()).sort((a, b) => Math.abs(b.net) - Math.abs(a.net)).slice(0, limit);
+      return {
+        capability: 'wallet_activity',
+        columns: ['token_symbol', 'net_usd', 'moves'],
+        rows: topNet.map((t) => ({
+          token_symbol: t.symbol,
+          net_usd: Math.round(t.net),
+          moves: acts.filter((a) => (a.token_symbol || a.token_address || '').toUpperCase() === t.symbol.toUpperCase()).length,
+        })),
+        summaryHint: acts.length === 0
+          ? `No recorded activity for ${addr.slice(0, 6)}…${addr.slice(-4)} in the last ${Math.round(hours / 24) || 1}d. This wallet may not be in the tracked cohort.`
+          : `${addr.slice(0, 6)}…${addr.slice(-4)}: net USD flow per token over the last ${Math.round(hours / 24) || 1}d (positive = net buying, negative = net selling), from ${acts.length} recorded moves.`,
       };
     }
     default:

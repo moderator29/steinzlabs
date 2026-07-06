@@ -160,33 +160,34 @@ export default function WalletClustersPage() {
     <div className="min-h-screen text-white pb-24">
       {/* Hero */}
       <div className="sticky top-0 z-30 nl-glass backdrop-blur-xl border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-start gap-3">
+        {/* Compact header — the title text + PRO/NEXT-GEN badges were dropped so
+            the cluster icon, CSV download, and Cluster Radar entry all fit fully
+            inside the mobile banner without clipping. The subtitle carries the
+            context and yields (truncates) so the action buttons never get cut. */}
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-2">
           <BackButton />
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold">Wallet Clusters</h1>
-              <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-[#0066FF]/15 text-[#6F7EFF] border border-[#0066FF]/30">NEXT-GEN</span>
-              <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">PRO</span>
-            </div>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              5-signal on-chain intelligence · AI-named archetypes · community reputation
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0066FF]/25 to-[#4F46E5]/20 border border-[#0066FF]/30 flex items-center justify-center shrink-0">
+            <Layers className="w-5 h-5 text-[#8FA3FF]" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] text-slate-500 truncate">
+              5-signal on-chain intelligence · AI-named archetypes
             </p>
           </div>
-          {/* §9.2 new feature — export the filtered cluster view as CSV
-              for downstream analysis. Disabled until rows resolve so the
-              button can't produce an empty file. */}
+          {/* §9.2 — export the filtered cluster view as CSV. Disabled until rows
+              resolve so the button can't produce an empty file. */}
           <button
             type="button"
             onClick={exportCsv}
             disabled={!rows.length || loading}
             title={rows.length ? `Export ${rows.length} cluster${rows.length === 1 ? '' : 's'} to CSV` : 'Nothing to export yet'}
-            className="whale-settings-btn disabled:opacity-40 disabled:cursor-not-allowed"
+            className="whale-settings-btn shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
             aria-label="Export clusters as CSV"
           >
             <Download className="w-4 h-4" />
           </button>
           <Link href="/dashboard/cluster-radar" title="Coordinated Cluster Radar" className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-[#00C8FF] bg-[#0066FF]/10 border border-[#0066FF]/30 hover:border-[#0066FF]/50 transition-colors">
-            <Layers className="w-3.5 h-3.5" /> Cluster Radar
+            <Layers className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Cluster </span>Radar
           </Link>
           <HowItWorksButton content={walletClustersHowItWorks} className="shrink-0" />
         </div>
@@ -219,7 +220,7 @@ export default function WalletClustersPage() {
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
             <button
               onClick={() => { setArchetype(''); setOffset(0); }}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors ${!archetype ? 'bg-[#0066FF]/15 text-[#8FA3FF] border border-[#0066FF]/40' : 'bg-white/5 text-slate-400 border border-transparent hover:text-white'}`}
+              className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors ${!archetype ? 'bg-[#0066FF]/15 text-[#8FA3FF] border border-[#0066FF]/40' : 'bg-white/5 text-slate-400 border border-transparent hover:text-white'}`}
             >
               All <span className="text-slate-500 text-[10px]">{total}</span>
             </button>
@@ -232,7 +233,7 @@ export default function WalletClustersPage() {
                 <button
                   key={a}
                   onClick={() => { setArchetype(active ? '' : a); setOffset(0); }}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors ${active ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/40' : 'bg-white/5 text-slate-400 border border-transparent hover:text-white'}`}
+                  className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors ${active ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/40' : 'bg-white/5 text-slate-400 border border-transparent hover:text-white'}`}
                 >
                   <Icon className="w-3 h-3" />
                   {meta.label}
@@ -323,7 +324,7 @@ export default function WalletClustersPage() {
         {!loading && total > rows.length && (
           <div className="flex items-center justify-center gap-2 mt-6">
             <button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 24))} className="px-3 py-1.5 rounded-lg nl-button--ghost text-xs disabled:opacity-40">Prev</button>
-            <span className="text-xs text-slate-500">{offset + 1}–{Math.min(offset + 24, total)} of {total}</span>
+            <span className="text-xs text-slate-500">{offset + 1} to {Math.min(offset + 24, total)} of {total}</span>
             <button disabled={offset + 24 >= total} onClick={() => setOffset(offset + 24)} className="px-3 py-1.5 rounded-lg nl-button--ghost text-xs disabled:opacity-40">Next</button>
           </div>
         )}

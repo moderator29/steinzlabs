@@ -26,6 +26,7 @@ const SUGGESTIONS = [
   'Show me the top whales by win rate',
   'Biggest whale buys in the last 24 hours',
   'Which whales are buying WETH?',
+  'What has 0x28c6c06298d514db089934071355e5743bf21d60 been trading this week?',
 ];
 
 function fmtCell(v: string | number | boolean | null, col: string): string {

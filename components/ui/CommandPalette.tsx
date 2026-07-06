@@ -35,6 +35,16 @@ const DEFAULT_ITEMS: CommandItem[] = [
   { id: 'go-sniper',     label: 'Sniper bot',     group: 'Navigation', href: '/dashboard/sniper' },
   { id: 'go-vtx',        label: 'VTX Agent',     group: 'Navigation', href: '/dashboard/vtx-ai' },
   { id: 'go-alerts',     label: 'Alerts',         group: 'Navigation', href: '/dashboard/alerts' },
+  { id: 'go-ask-chain',  label: 'Ask the Chain',  group: 'Navigation', href: '/dashboard/ask-chain', hint: 'NL smart-money & wallet queries' },
+  // Intelligence tools
+  { id: 'go-sentinel',   label: 'VTX Sentinel',   group: 'Intelligence', href: '/dashboard/sentinel', hint: 'Autonomous token/wallet watches' },
+  { id: 'go-cost-basis', label: 'Cost Basis & PnL', group: 'Intelligence', href: '/dashboard/cost-basis', hint: 'Realized + unrealized PnL for any wallet' },
+  { id: 'go-rug-risk',   label: 'Rug-Risk Composite', group: 'Intelligence', href: '/dashboard/rug-risk', hint: 'Live rug-enabler score' },
+  { id: 'go-deployer-dna', label: 'Deployer DNA', group: 'Intelligence', href: '/dashboard/security/deployer-dna', hint: 'Serial-rugger fingerprint' },
+  { id: 'go-sandwich',   label: 'Sandwich Forensics', group: 'Intelligence', href: '/dashboard/sandwich-forensics', hint: 'MEV extracted from your swaps' },
+  { id: 'go-liq-radar',  label: 'Liquidity-Cliff Radar', group: 'Intelligence', href: '/dashboard/liquidity-radar', hint: 'Pool depth & slippage-by-size' },
+  { id: 'go-depeg',      label: 'Depeg Radar',    group: 'Intelligence', href: '/dashboard/depeg-radar', hint: 'Stablecoin peg monitor' },
+  { id: 'go-gas-timing', label: 'Smart Gas Timing', group: 'Intelligence', href: '/dashboard/gas-timing', hint: 'Cheapest hours to transact' },
   // Actions
   { id: 'act-swap',      label: 'Open swap',       group: 'Actions',   href: '/dashboard/swap' },
   { id: 'act-research',  label: 'Open research',   group: 'Actions',   href: '/research' },

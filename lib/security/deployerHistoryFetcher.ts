@@ -144,6 +144,17 @@ export async function resolveDeployer(chain: string, token: string): Promise<str
   return null;
 }
 
+// Address-first scoring: caller already has the deployer wallet (not a token),
+// so skip the token→creator resolution and score the deployer's full history
+// directly. EVM only — Solana resolution is inherently token-first (authority
+// is discovered from a mint), so there is no cheap address-first path there.
+export async function fetchAndScoreDeployerByAddress(chain: string, deployer: string): Promise<DeployerHistoryResult | null> {
+  const lower = chain.toLowerCase();
+  if (!(lower in ETHERSCAN_CHAINID)) return null;
+  const history = await fetchEvmDeployerHistory(lower as EvmChain, deployer);
+  return { deployer, history: scoreDeployerRugHistory(history) };
+}
+
 export async function fetchAndScoreDeployerHistory(chain: string, token: string): Promise<DeployerHistoryResult | null> {
   const lower = chain.toLowerCase();
   if (lower === 'solana') {
