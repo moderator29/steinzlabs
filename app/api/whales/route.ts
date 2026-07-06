@@ -17,13 +17,15 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
   // it surfaced top-whale-SCORE whales instead of top-PnL. Add explicit
   // sort + min_pnl filter so the leaderboard can rank by realised 30d
   // PnL like the panel name promises.
-  // Directory ranks by real 7d DEX volume by default — the top list is the most
-  // ACTIVE whales (by traded volume), not the biggest passive holders. Callers
-  // that want the PnL leaderboard or score view pass ?sort=pnl / ?sort=score.
-  const sortBy = (sp.get("sort") ?? "volume").toLowerCase();
+  // Directory DEFAULTS to composite whale_score (industry standard): the most
+  // notable, well-known whales lead page one — the big names with real data,
+  // not the long tail of freshly-discovered wallets that have volume but no PnL
+  // yet. Callers that want the active-volume roster or PnL leaderboard pass
+  // ?sort=volume / ?sort=pnl.
+  const sortBy = (sp.get("sort") ?? "score").toLowerCase();
   const minPnl = Math.max(0, parseInt(sp.get("min_pnl") ?? "0", 10) || 0);
-  // Active-trader rosters rank by 7d DEX volume; PnL leaderboard by realised
-  // PnL; everything else by composite score.
+  // PnL leaderboard ranks by realised PnL; the active-trader roster by 7d DEX
+  // volume; everything else by composite score.
   const orderColumn = sortBy === "pnl" ? "pnl_30d_usd" : sortBy === "volume" ? "volume_7d_usd" : "whale_score";
   // Optional: only wallets active on >= N of the last 7 days (daily traders).
   const minActiveDays = Math.max(0, parseInt(sp.get("min_active_days") ?? "0", 10) || 0);
@@ -41,6 +43,11 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
         .select("id, address, chain, label, entity_type, archetype, portfolio_value_usd, pnl_30d_usd, win_rate, avg_hold_hours, whale_score, volume_7d_usd, active_days_7d, follower_count, x_handle, verified, last_active_at", { count: "exact" })
         .eq("is_active", true)
         .order(orderColumn, { ascending: false, nullsFirst: false })
+        // Tiebreak so the biggest, most-established whales (largest portfolios)
+        // lead within an equal score band, then most-recently-active — keeps the
+        // marquee names (MicroStrategy, BlackRock, etc.) on the first pages.
+        .order("portfolio_value_usd", { ascending: false, nullsFirst: false })
+        .order("last_active_at", { ascending: false, nullsFirst: false })
         .range(offset, offset + limit - 1);
 
       if (minPnl > 0) query = query.gte("pnl_30d_usd", minPnl);

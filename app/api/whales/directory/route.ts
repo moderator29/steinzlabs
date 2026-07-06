@@ -43,8 +43,15 @@ export const GET = withTierGate('mini', async (request: NextRequest) => {
   const activity = sp.get('activity') || '';
   const offset = Math.max(0, parseInt(sp.get('offset') || '0', 10) || 0);
   const limit = Math.max(1, Math.min(60, parseInt(sp.get('limit') || '24', 10) || 24));
+  // Newly-discovered whales land with a real activity score but no enrichment
+  // yet (portfolio / 7d volume / PnL are filled asynchronously by the backfill
+  // cron). An industry-standard directory never shows blank rows, so the default
+  // view hides these un-enriched wallets until they have at least ONE displayable
+  // metric — no deletion, no fabricated numbers, they simply surface once real.
+  // A specific-address search always bypasses this so any wallet is findable.
+  const includeUnenriched = sp.get('include_unenriched') === '1';
 
-  const cacheKey = `whales:dir:${chain}:${entityType}:${q}:${sort}:${minScore}:${minPortfolioUsd}:${activity}:${offset}:${limit}`;
+  const cacheKey = `whales:dir:${chain}:${entityType}:${q}:${sort}:${minScore}:${minPortfolioUsd}:${activity}:${includeUnenriched ? 1 : 0}:${offset}:${limit}`;
 
   try {
     const data = await cacheWithFallback(cacheKey, 20, async () => {
@@ -59,6 +66,11 @@ export const GET = withTierGate('mini', async (request: NextRequest) => {
         )
         .eq('is_active', true)
         .order(column, { ascending, nullsFirst: false })
+        // Tiebreak so the biggest, most-established whales lead within an equal
+        // sort band (e.g. many share whale_score) — the recognizable names on the
+        // first pages, then most-recently-active, industry-standard leaderboard.
+        .order('portfolio_value_usd', { ascending: false, nullsFirst: false })
+        .order('last_active_at', { ascending: false, nullsFirst: false })
         .range(offset, offset + limit - 1);
 
       if (chain) query = query.eq('chain', chain);
@@ -68,6 +80,12 @@ export const GET = withTierGate('mini', async (request: NextRequest) => {
       // dominate the list) unless the user explicitly filters to an entity type
       // or searches an address. This is why the directory was "mostly CEX".
       else if (!q) query = query.not('entity_type', 'in', '(exchange,cex,bridge,institutional)');
+      // Hide un-enriched wallets from the default view — a real whale must have
+      // at least one displayable metric (holdings, 7d volume, or realised PnL).
+      // Skipped for explicit searches so every address stays findable.
+      if (!includeUnenriched && !q) {
+        query = query.or('portfolio_value_usd.gt.0,volume_7d_usd.gt.0,pnl_30d_usd.not.is.null');
+      }
       if (minScore > 0) query = query.gte('whale_score', minScore);
       if (minPortfolioUsd > 0) query = query.gte('portfolio_value_usd', minPortfolioUsd);
       if (activity === 'daily') query = query.gte('active_days_7d', DAILY_ACTIVE_MIN_DAYS);

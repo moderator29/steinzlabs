@@ -7,7 +7,7 @@ import BackButton from '@/components/ui/BackButton';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
-import { getBuiltinWalletAddress } from '@/lib/wallet/builtinWallet';
+import { getBuiltinWalletAddress, hydrateBuiltinWalletFromCloud } from '@/lib/wallet/builtinWallet';
 import { tokenLogoCandidates } from '@/lib/wallet/tokenLogoCandidates';
 import { notifySwapCompleted } from '@/lib/notifications';
 import { getWalletSessionKey } from '@/lib/wallet/walletSession';
@@ -709,6 +709,12 @@ export default function SwapPage() {
   useEffect(() => {
     const sync = () => setBuiltinAddr(getBuiltinWalletAddress());
     sync();
+    // If this browser has no local wallet but the user created one before (it
+    // lives in their cloud backup), restore it so swap detects the REAL wallet
+    // instead of wrongly prompting "create a wallet". No-op when one is local.
+    if (!getBuiltinWalletAddress()) {
+      void hydrateBuiltinWalletFromCloud().then((addr) => { if (addr) setBuiltinAddr(addr); });
+    }
     window.addEventListener('steinz_wallet_changed', sync);
     window.addEventListener('storage', sync);
     return () => {

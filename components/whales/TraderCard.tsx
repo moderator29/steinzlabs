@@ -52,6 +52,15 @@ function short(a: string): string {
   return a.length > 14 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a;
 }
 
+// Stable "Naka Whale #N" handle derived from the address — same wallet always
+// maps to the same number, so an untracked whale reads as a consistent identity
+// across the directory, profile and watchlist instead of a bare 0x… string.
+function nakaWhaleNumber(addr: string): number {
+  let h = 0;
+  for (let i = 0; i < addr.length; i++) h = (h * 31 + addr.charCodeAt(i)) >>> 0;
+  return (h % 9000) + 1000;
+}
+
 function chainColor(c: string): { bg: string; fg: string } {
   switch (c) {
     case 'ethereum': return { bg: 'bg-[#627EEA]/10', fg: 'text-[#627EEA]' };
@@ -99,18 +108,23 @@ export default function TraderCard({ trader, watched, onOpen, onFollow, onToggle
   const pnl = Number(trader.pnl_30d_usd || 0);
   const custodial = CUSTODIAL_ENTITIES.has((trader.entity_type || '').toLowerCase());
   const copyable = isCopyTradeable(trader);
-  const seed = (trader.label || trader.address).slice(0, 2).toUpperCase();
+  // Every whale reads as a real identity — named entities keep their label, and
+  // untracked wallets get a stable "Naka Whale #N" handle + a branded Naka
+  // avatar so the directory never shows a bare 0x… address.
+  const named = !!(trader.label && trader.label.trim());
+  const displayName = named ? trader.label! : `Naka Whale #${nakaWhaleNumber(trader.address)}`;
+  const seed = named ? trader.label!.slice(0, 2).toUpperCase() : null;
 
   return (
     <div className="group nl-glass nl-glass--interactive rounded-xl p-5 cursor-pointer" onClick={onOpen}>
       <div className="flex items-start gap-3">
-        <div className="rounded-xl flex items-center justify-center font-bold text-white shrink-0"
-          style={{ width: 40, height: 40, background: avatarColor(trader.label || trader.address), fontSize: 18 }}>
-          {seed}
+        <div className="rounded-xl flex items-center justify-center font-bold text-white shrink-0 overflow-hidden"
+          style={{ width: 40, height: 40, background: named ? avatarColor(trader.label!) : 'linear-gradient(135deg,#0066FF 0%,#00C8FF 100%)', fontSize: named ? 18 : 20 }}>
+          {named ? seed : <span aria-hidden style={{ filter: 'saturate(0) brightness(2)' }}>🐺</span>}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="font-bold text-white text-sm truncate">{trader.label || short(trader.address)}</span>
+            <span className="font-bold text-white text-sm truncate">{displayName}</span>
             {trader.verified && <CheckCircle2 className="w-3.5 h-3.5 text-[#0066FF] shrink-0" />}
           </div>
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">

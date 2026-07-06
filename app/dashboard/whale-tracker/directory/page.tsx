@@ -149,6 +149,19 @@ function short(a: string): string {
   return a.length > 14 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a;
 }
 
+// Stable "Naka Whale #N" handle for wallets with no known label — same address
+// always maps to the same number, so an untracked whale reads as a consistent
+// Naka identity across the directory instead of a bare 0x… string.
+function nakaWhaleNumber(addr: string): number {
+  let h = 0;
+  for (let i = 0; i < addr.length; i++) h = (h * 31 + addr.charCodeAt(i)) >>> 0;
+  return (h % 9000) + 1000;
+}
+
+function whaleDisplayName(label: string | null, address: string): string {
+  return label && label.trim() ? label : `Naka Whale #${nakaWhaleNumber(address)}`;
+}
+
 function chainColor(c: string): { bg: string; fg: string } {
   switch (c) {
     case 'ethereum': return { bg: 'bg-[#627EEA]/10', fg: 'text-[#627EEA]' };
@@ -550,7 +563,7 @@ function WhaleCard({ row, watched, onOpen, onFollow, onToggleWatch, onCopy }: {
         <SharedWhaleAvatar address={row.address} chain={row.chain} size={40} className="!rounded-xl" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="font-bold text-white text-sm truncate">{row.label || short(row.address)}</span>
+            <span className="font-bold text-white text-sm truncate">{whaleDisplayName(row.label, row.address)}</span>
             {row.verified && <CheckCircle2 className="w-3.5 h-3.5 text-[#0066FF] shrink-0" />}
             {row.x_handle && (
               <a
