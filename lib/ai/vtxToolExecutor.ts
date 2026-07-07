@@ -87,20 +87,44 @@ async function executeTokenMarketData(input: Record<string, unknown>): Promise<s
   const lines: string[] = [];
   // An address query is an exact lookup; a symbol/name query is a fuzzy search.
   const isAddress = detectTokenAddress(identifier) !== null;
+  const upper = identifier.toUpperCase().replace(/^\$/, '');
+  // Recognised major -> CoinGecko id. For these the AUTHORITATIVE price comes
+  // from CoinGecko/CMC and we SKIP the DexScreener symbol search entirely: a
+  // bare "SOL"/"BTC"/"ETH" search returns wrapped/derivative/same-ticker scam
+  // pairs whose price contradicts the real asset (and the inline token card,
+  // which also resolves majors via CoinGecko).
+  const majorCgId = !isAddress ? (MAJOR_CG_ID[upper] ?? null) : null;
+  // For an address or long-tail ticker the on-chain DexScreener pair is primary;
+  // for a listed major the CoinGecko/CMC listing is primary.
+  const primarySource = majorCgId ? 'CoinGecko/CoinMarketCap listing' : 'on-chain DexScreener pair';
 
   // DexScreener — address → exact token pairs, symbol → text search. Prefer
   // pairs on the requested chain (input.chain, e.g. "ethereum"/"solana") so a
   // same-ticker pair on the wrong chain doesn't shadow the one the caller asked
-  // about; fall back to all pairs when none match that chain.
-  try {
+  // about; fall back to all pairs when none match that chain. Skipped for
+  // recognised majors (priced authoritatively via CoinGecko/CMC below).
+  if (!majorCgId) try {
     const rawPairs = isAddress ? await getTokenPairs(identifier) : await searchPairs(identifier);
     // chainId is a chain name (not an address), so lowercasing for the
     // case-insensitive compare is safe here.
     const onChain = chain ? rawPairs.filter((p) => p.chainId?.toLowerCase() === chain.toLowerCase()) : [];
-    const pairs = onChain.length > 0 ? onChain : rawPairs;
+    let pairs = onChain.length > 0 ? onChain : rawPairs;
+    // Symbol search: a fuzzy "PEPE" query returns dozens of same-name clones.
+    // Collapse to the deepest-liquidity EXACT-symbol pair so the tool never
+    // quotes a wash-traded impostor as the real token.
+    if (!isAddress && pairs.length > 0) {
+      const exact = pairs.filter((p) => (p.baseToken?.symbol || '').toUpperCase() === upper);
+      pairs = exact.length ? exact : pairs;
+    }
+    // Always lead with the deepest-liquidity pool — this is the pair the inline
+    // token card picks (pickBestPair), so the headline price/MCap the model sees
+    // matches the card instead of an arbitrary shallow pool for the same token.
     if (pairs.length > 0) {
-      const top = pairs.slice(0, 3);
-      lines.push(`DexScreener data for "${identifier}"${onChain.length > 0 ? ` (chain: ${chain})` : ''}:`);
+      pairs = [...pairs].sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0));
+    }
+    if (pairs.length > 0) {
+      const top = isAddress ? pairs.slice(0, 3) : pairs.slice(0, 1);
+      lines.push(`PRIMARY SOURCE - on-chain DexScreener data for "${identifier}"${onChain.length > 0 ? ` (chain: ${chain})` : ''}:`);
       for (const p of top) {
         lines.push(`  ${p.baseToken.name} (${p.baseToken.symbol}) on ${p.chainId}/${p.dexId}`);
         lines.push(`  Price: $${p.priceUsd} | 24h: ${p.priceChange?.h24 ?? 0}%`);
@@ -130,17 +154,20 @@ async function executeTokenMarketData(input: Record<string, unknown>): Promise<s
   try {
     let coinId: string | null = null;
     if (!isAddress) {
-      const upper = identifier.toUpperCase();
-      coinId = MAJOR_CG_ID[upper] ?? null;
+      coinId = majorCgId;
       if (!coinId) {
         const { coins } = await searchTokens(identifier);
-        const match = coins.find((c) => c.symbol?.toUpperCase() === upper) ?? coins[0];
-        coinId = match?.id ?? null;
+        // Exact-ticker, best market-cap rank first — so a symbol resolves to the
+        // real listed token, not a same-ticker clone CoinGecko also indexes.
+        const exact = coins
+          .filter((c) => c.symbol?.toUpperCase() === upper)
+          .sort((a, b) => (a.market_cap_rank ?? Number.MAX_SAFE_INTEGER) - (b.market_cap_rank ?? Number.MAX_SAFE_INTEGER));
+        coinId = exact[0]?.id ?? coins[0]?.id ?? null;
       }
     }
     if (!coinId) throw new Error('no coingecko id');
     const detail = await getTokenDetail(coinId);
-    lines.push(`CoinGecko data for ${detail.name}:`);
+    lines.push(`${majorCgId ? 'PRIMARY SOURCE - ' : 'Cross-check - '}CoinGecko data for ${detail.name}:`);
     lines.push(`  Price: $${detail.market_data?.current_price?.usd}`);
     lines.push(`  Market Cap: $${(detail.market_data?.market_cap?.usd ?? 0).toLocaleString()}`);
     lines.push(`  Volume 24h: $${(detail.market_data?.total_volume?.usd ?? 0).toLocaleString()}`);
@@ -156,7 +183,7 @@ async function executeTokenMarketData(input: Record<string, unknown>): Promise<s
     try {
       const q = await cmcQuoteBySymbol(identifier);
       if (q && (q.price != null || q.marketCap != null)) {
-        lines.push(`CoinMarketCap data for ${q.name} (${q.symbol})${q.cmcRank ? `, rank #${q.cmcRank}` : ''}:`);
+        lines.push(`${majorCgId ? 'Confirmation - ' : 'Cross-check - '}CoinMarketCap data for ${q.name} (${q.symbol})${q.cmcRank ? `, rank #${q.cmcRank}` : ''}:`);
         if (q.price != null) lines.push(`  Price: $${q.price}`);
         if (q.marketCap != null) lines.push(`  Market Cap: $${q.marketCap.toLocaleString()}`);
         if (q.fdv != null) lines.push(`  FDV (fully diluted): $${q.fdv.toLocaleString()}`);
@@ -169,7 +196,14 @@ async function executeTokenMarketData(input: Record<string, unknown>): Promise<s
     } catch { /* CMC unlisted / unconfigured — fine, other sources cover it */ }
   }
 
-  return lines.length > 0 ? lines.join('\n') : `No market data found for "${identifier}".`;
+  if (lines.length === 0) return `No market data found for "${identifier}".`;
+  // Consistency directive: with multiple real feeds present, the model must
+  // quote ONE authoritative number (the PRIMARY source), not an average or a
+  // silently-picked alternate — that mismatch is what makes reported data look
+  // inconsistent vs the inline token card, which resolves the same way.
+  lines.push('');
+  lines.push(`PRICING GUIDANCE: Quote the ${primarySource} as THE price / market cap for this token — it is the same source the inline token card uses. Treat other listed sources as confirmation only. If two sources differ by more than ~2%, state the discrepancy explicitly; never average them or invent a number between them.`);
+  return lines.join('\n');
 }
 
 async function executeWalletProfile(input: Record<string, unknown>): Promise<string> {

@@ -38,6 +38,9 @@ function toCardData(r: WatchRow): TraderCardData {
     active_days_7d: (w.active_days_7d as number) ?? null,
     follower_count: (w.follower_count as number) ?? null,
     verified: (w.verified as boolean) ?? false,
+    naka_number: (w.naka_number as number) ?? null,
+    logo_url: (w.logo_url as string) ?? null,
+    logo_source: (w.logo_source as string) ?? null,
   };
 }
 

@@ -61,7 +61,7 @@ export const GET = withTierGate('mini', async (request: NextRequest) => {
       let query = supabase
         .from('whales')
         .select(
-          'id, address, chain, label, entity_type, archetype, portfolio_value_usd, pnl_30d_usd, win_rate, whale_score, trade_count_30d, avg_hold_hours, volume_7d_usd, active_days_7d, follower_count, x_handle, tg_handle, website, verified, last_active_at, first_seen_at',
+          'id, address, chain, label, entity_type, archetype, portfolio_value_usd, pnl_30d_usd, win_rate, whale_score, trade_count_30d, avg_hold_hours, volume_7d_usd, active_days_7d, follower_count, x_handle, tg_handle, website, verified, last_active_at, first_seen_at, naka_number, logo_url, logo_source',
           { count: 'exact' },
         )
         .eq('is_active', true)

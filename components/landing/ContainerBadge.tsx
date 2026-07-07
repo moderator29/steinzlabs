@@ -33,9 +33,9 @@ const BADGE_CONFIG: Record<BadgeType, {
     text: 'NEW',
   },
   BETA: {
-    bg: 'linear-gradient(135deg,#78350f,#d97706)',
-    border: '1px solid rgba(245,158,11,.5)',
-    shadow: '0 0 12px rgba(245,158,11,.4)',
+    bg: 'linear-gradient(135deg,#064e3b,#059669)',
+    border: '1px solid rgba(16,185,129,.55)',
+    shadow: '0 0 12px rgba(16,185,129,.45)',
     text: 'BETA',
   },
 };

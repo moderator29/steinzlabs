@@ -38,7 +38,12 @@ export async function GET(request: NextRequest) {
       total_market_cap: json.data.total_market_cap.usd,
       total_volume: json.data.total_volume.usd,
       btc_dominance: json.data.market_cap_percentage.btc,
-      active_chains: 15,
+      // Data honesty (owner audit): this was a hardcoded `15`, a
+      // fabricated value persisted every snapshot. Store the real
+      // active-cryptocurrencies count CoinGecko /global returns instead.
+      // (The column name `active_chains` is a legacy misnomer — the value
+      // is coin count, which is the only related real signal /global gives.)
+      active_chains: json.data.active_cryptocurrencies,
     });
     if (error && !error.message?.includes("duplicate")) throw error;
 

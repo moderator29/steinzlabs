@@ -40,7 +40,7 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
         // §whale-tracker-grade — added avg_hold_hours so the PnL leaderboard
         // can derive Accumulator / Distributor / Sniper badges from
         // existing columns the backfill cron already populates.
-        .select("id, address, chain, label, entity_type, archetype, portfolio_value_usd, pnl_30d_usd, win_rate, avg_hold_hours, whale_score, volume_7d_usd, active_days_7d, follower_count, x_handle, verified, last_active_at", { count: "exact" })
+        .select("id, address, chain, label, entity_type, archetype, portfolio_value_usd, pnl_30d_usd, win_rate, avg_hold_hours, whale_score, volume_7d_usd, active_days_7d, follower_count, x_handle, verified, last_active_at, naka_number, logo_url, logo_source", { count: "exact" })
         .eq("is_active", true)
         .order(orderColumn, { ascending: false, nullsFirst: false })
         // Tiebreak so the biggest, most-established whales (largest portfolios)

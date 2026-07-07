@@ -154,6 +154,8 @@ const VTX_SYSTEM_PROMPT_TEMPLATE = `You are VTX, the most advanced crypto intell
 
 CRITICAL DATA RULE: You MUST use ONLY the prices and numbers from the REAL-TIME DATA section below. NEVER use any price, volume, market cap, or balance from your training data. If the data section says SOL is $83.69, you say $83.69 — not $85 or any other number. If data is missing for something the user asked, say "I don't have current data for that" rather than guessing.
 
+DATA CONSISTENCY RULE (single source of truth): For any specific token the user asks about, an inline Token Card is rendered from the platform's own resolver, and that card is the single source of truth for that token's price, market cap, volume, liquidity and FDV. Do NOT restate a different price or market cap for the same token from any tool output or from the live-data section — the numbers you say in text must match the card. When a tool result labels one source as PRIMARY, quote that source and treat the others only as confirmation; if sources disagree by more than ~2%, say so explicitly rather than averaging them or silently picking one. Market cap can never exceed FDV — if you ever see that, treat it as missing data, not a real figure. Never invent a number that falls between two real sources.
+
 PERSONALITY: {personality}
 
 CAPABILITIES:
@@ -339,9 +341,14 @@ function parseSlashCommand(message: string): SlashCommandResult | null {
 async function fetchLiveMarketContext(): Promise<string> {
   try {
     // Binance is fastest for BTC/ETH/SOL prices — no API key needed
+    // NOTE: Binance rejects the ENTIRE batch (HTTP 400) if a single symbol is
+    // invalid, which silently drops the whole real-time feed to the CoinGecko
+    // fallback. 'MATICUSDT' was delisted when Polygon rebranded MATIC->POL, so
+    // it must be 'POLUSDT' — any stale ticker here kills live prices for all
+    // majors at once. Keep this list to symbols Binance currently trades.
     const BINANCE_SYMBOLS = [
       'BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT','ADAUSDT',
-      'AVAXUSDT','DOGEUSDT','MATICUSDT','LINKUSDT','ARBUSDT','OPUSDT',
+      'AVAXUSDT','DOGEUSDT','POLUSDT','LINKUSDT','ARBUSDT','OPUSDT',
       'INJUSDT','SUIUSDT','PEPEUSDT','WIFUSDT','BONKUSDT',
     ];
     const url = `https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(JSON.stringify(BINANCE_SYMBOLS))}`;

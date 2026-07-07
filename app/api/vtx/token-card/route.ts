@@ -283,6 +283,27 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Invariant guard — FDV (fully-diluted) is total-supply * price and can
+    // never be LESS than the circulating market cap. The TW/CMC backstops above
+    // override marketCap and fdv from independent sources, which can leave the
+    // card showing MCap > FDV (nonsensical, and exactly the kind of self-
+    // contradictory number the card must never emit). When both are present and
+    // inverted, raise FDV to at least the market cap.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fin = out as any;
+    if (fin && typeof fin === 'object') {
+      const mc = Number(fin.marketCap) || 0;
+      const fd = Number(fin.fdv) || 0;
+      if (mc > 0 && fd > 0 && fd < mc) fin.fdv = mc;
+      // Keep supply consistent with the FINAL price + market cap actually shown
+      // (an earlier block may have recomputed it against a since-overridden
+      // price). Only derive when both are real and positive.
+      if ((fin.supply == null || Number(fin.supply) <= 0) && mc > 0 && Number(fin.price) > 0) {
+        fin.supply = mc / Number(fin.price);
+      }
+      out = fin;
+    }
+
     cache.set(key, { at: Date.now(), data: out });
     return NextResponse.json(out, { headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' } });
   } catch {

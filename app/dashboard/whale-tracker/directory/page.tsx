@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import FollowWhaleModal from '@/components/whales/FollowWhaleModal';
 import { WhaleAvatar as SharedWhaleAvatar } from '@/components/whales/WhaleAvatar';
+import { whaleDisplayName } from '@/lib/whales/naming';
 import { SelectMenu, type SelectOption } from '@/components/ui/SelectMenu';
 import { getChainMeta } from '@/lib/chains/chainMeta';
 import { ChainLogo } from '@/components/common/ChainLogo';
@@ -48,6 +49,10 @@ interface WhaleRow {
   x_handle: string | null;
   verified: boolean;
   last_active_at: string | null;
+  // Persisted unique Naka display number (whales.naka_number).
+  naka_number: number | null;
+  logo_url: string | null;
+  logo_source: string | null;
 }
 
 interface DirectoryResponse {
@@ -149,19 +154,6 @@ function short(a: string): string {
   return a.length > 14 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a;
 }
 
-// Stable "Naka Whale #N" handle for wallets with no known label — same address
-// always maps to the same number, so an untracked whale reads as a consistent
-// Naka identity across the directory instead of a bare 0x… string.
-function nakaWhaleNumber(addr: string): number {
-  let h = 0;
-  for (let i = 0; i < addr.length; i++) h = (h * 31 + addr.charCodeAt(i)) >>> 0;
-  return (h % 9000) + 1000;
-}
-
-function whaleDisplayName(label: string | null, address: string): string {
-  return label && label.trim() ? label : `Naka Whale #${nakaWhaleNumber(address)}`;
-}
-
 function chainColor(c: string): { bg: string; fg: string } {
   switch (c) {
     case 'ethereum': return { bg: 'bg-[#627EEA]/10', fg: 'text-[#627EEA]' };
@@ -174,25 +166,6 @@ function chainColor(c: string): { bg: string; fg: string } {
     case 'avalanche': return { bg: 'bg-[#E84142]/10', fg: 'text-[#E84142]' };
     default: return { bg: 'bg-slate-800', fg: 'text-slate-400' };
   }
-}
-
-function avatarColor(seed: string): string {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) & 0xffff;
-  return `hsl(${h % 360} 65% 55%)`;
-}
-
-function WhaleAvatar({ label, address, size = 40 }: { label: string | null; address: string; size?: number }) {
-  const seed = (label || address).slice(0, 2).toUpperCase();
-  const bg = avatarColor(label || address);
-  return (
-    <div
-      className="rounded-xl flex items-center justify-center font-bold text-white shrink-0"
-      style={{ width: size, height: size, background: bg, fontSize: size / 2.2 }}
-    >
-      {seed}
-    </div>
-  );
 }
 
 export default function WhaleDirectoryPage() {
@@ -560,10 +533,10 @@ function WhaleCard({ row, watched, onOpen, onFollow, onToggleWatch, onCopy }: {
       <div className="flex items-start gap-3">
         {/* Real profile picture (Arkham/ENS/X avatar) resolved inline in the
             directory list — no longer only after opening the detail page. */}
-        <SharedWhaleAvatar address={row.address} chain={row.chain} size={40} className="!rounded-xl" />
+        <SharedWhaleAvatar address={row.address} chain={row.chain} logoUrl={row.logo_url} logoSource={row.logo_source} size={40} className="!rounded-xl" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="font-bold text-white text-sm truncate">{whaleDisplayName(row.label, row.address)}</span>
+            <span className="font-bold text-white text-sm truncate">{whaleDisplayName({ label: row.label, nakaNumber: row.naka_number, address: row.address, chain: row.chain })}</span>
             {row.verified && <CheckCircle2 className="w-3.5 h-3.5 text-[#0066FF] shrink-0" />}
             {row.x_handle && (
               <a

@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useFeatureUsageLog } from "@/lib/hooks/useFeatureUsageLog";
 import { LABEL_META, canonicalAction, type WhaleLabel } from "@/lib/whales/labels";
 import { addressesEqual } from "@/lib/utils/addressNormalize";
+import { whaleDisplayName } from "@/lib/whales/naming";
 // Naka Labs brand icons — swap what's in the library, lucide-fallback
 // for icons not yet available (BellOff, ArrowUpRight, ArrowDownLeft,
 // ArrowLeftRight, Telescope) — they remain visually consistent with the
@@ -51,6 +52,9 @@ interface FeedRow {
   timestamp: string;
   label: string | null;
   entity_type: string | null;
+  // Persisted unique Naka display number (whales.naka_number); null for wallets
+  // not in the whales table.
+  naka_number: number | null;
   // Resolved WhaleLabel (cex/smart_money/insider/...) bridged from the
   // whales.entity_type vocabulary, so the colored label pill renders.
   whale_label: WhaleLabel;
@@ -70,6 +74,7 @@ interface WatchlistItem {
   whale_address: string;
   chain: string;
   label: string | null;
+  naka_number?: number | null;
   alert_enabled: boolean;
   alert_threshold_usd: number | null;
   alert_channels: string[] | null;
@@ -83,6 +88,7 @@ interface TopWhale {
   move_count: number;
   label: string | null;
   entity_type: string | null;
+  naka_number: number | null;
 }
 
 const CHAIN_PILLS: Array<{ id: string; label: string }> = [
@@ -766,11 +772,16 @@ function FeedCard({
                 </span>
               );
             })()}
-            {row.label && (
-              <span className="text-[10px] text-slate-400 truncate max-w-[140px]" title={row.label}>
-                {row.label}
-              </span>
-            )}
+            {(() => {
+              // Every whale reads as a real identity: named whales keep their
+              // label, unnamed wallets get the stable, unique "Naka Whale #N".
+              const name = whaleDisplayName({ label: row.label, nakaNumber: row.naka_number, address: row.whale_address, chain: row.chain });
+              return (
+                <span className="text-[10px] text-slate-400 truncate max-w-[140px]" title={name}>
+                  {name}
+                </span>
+              );
+            })()}
             {/* §whale-tracker-grade — behavioral badges inline on the feed
                 row so users can spot trader archetype at a glance. */}
             <WhaleBadgeRow badges={deriveBadges(row)} />
@@ -921,7 +932,7 @@ function WatchlistPanel({
                   className="flex-1 text-start min-w-0"
                 >
                   <div className="text-sm font-semibold text-white truncate">
-                    {it.label ?? short(it.whale_address)}
+                    {whaleDisplayName({ label: it.label, nakaNumber: it.naka_number, address: it.whale_address, chain: it.chain })}
                   </div>
                   <div className="text-[10px] font-mono text-slate-500 uppercase">
                     {it.chain} · {short(it.whale_address)}
@@ -1001,7 +1012,7 @@ function TopTodayPanel({
                 className="flex-1 text-start min-w-0"
               >
                 <div className="text-xs font-semibold text-white truncate">
-                  {w.label ?? short(w.whale_address)}
+                  {whaleDisplayName({ label: w.label, nakaNumber: w.naka_number, address: w.whale_address, chain: w.chain })}
                 </div>
                 <div className="text-[10px] font-mono text-slate-500 uppercase">
                   {w.chain} · {w.move_count} moves
@@ -1083,11 +1094,14 @@ interface PnlWhaleRow {
   address: string;
   chain: string;
   label: string | null;
+  naka_number: number | null;
   pnl_30d_usd: number | null;
   win_rate: number | null;
   whale_score: number | null;
   portfolio_value_usd: number | null;
   avg_hold_hours: number | null;
+  logo_url?: string | null;
+  logo_source?: string | null;
 }
 
 function PnlLeaderboardPanel({
@@ -1152,7 +1166,7 @@ function PnlLeaderboardPanel({
                 className="flex items-center gap-2 rounded-lg p-2 hover:bg-slate-900/50 transition-colors"
               >
                 <span className="text-xs font-mono text-slate-600 w-5 text-center">#{i + 1}</span>
-                <WhaleAvatar address={w.address} chain={w.chain} size={28} />
+                <WhaleAvatar address={w.address} chain={w.chain} logoUrl={w.logo_url} logoSource={w.logo_source} size={28} />
                 <button
                   type="button"
                   onClick={() => onOpen(w.address, w.chain)}
@@ -1160,7 +1174,7 @@ function PnlLeaderboardPanel({
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="text-xs font-semibold text-white truncate">
-                      {w.label ?? short(w.address)}
+                      {whaleDisplayName({ label: w.label, nakaNumber: w.naka_number, address: w.address, chain: w.chain })}
                     </span>
                     <WhaleBadgeRow badges={badges} />
                   </div>

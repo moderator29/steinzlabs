@@ -768,9 +768,17 @@ function BubbleMapInner() {
   const fmtTime = (ts: number) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div className="min-h-screen text-white">
+    // Half-render fix: the page is a full-height flex column so the main
+    // graph/agent region can grow to fill the viewport. Previously the root
+    // was only `min-h-screen` and the panels had fixed pixel heights
+    // (h-[500px] / h-[440px]), so on a tall screen everything bunched at the
+    // top and the lower ~half stayed empty (the reported "map shows half"
+    // bug). `min-h-[100dvh]` gives the column a real height to distribute;
+    // `flex-1` children expand to fill it, and grow past it (body scroll)
+    // when content is tall — so mobile stacking still works.
+    <div className="flex flex-col min-h-[100dvh] text-white">
       {/* Header */}
-      <div className="sticky top-0 z-40 nl-glass backdrop-blur-xl border-b border-white/[0.04]">
+      <div className="sticky top-0 z-40 shrink-0 nl-glass backdrop-blur-xl border-b border-white/[0.04]">
         <div className="flex items-center gap-3 px-4 h-14 max-w-[1440px] mx-auto">
           <BackButton />
           <div className="w-9 h-9 bg-gradient-to-br from-[#0066FF] to-[#4F46E5] rounded-xl flex items-center justify-center shadow-lg shadow-[#0066FF]/20 flex-shrink-0">
@@ -787,7 +795,7 @@ function BubbleMapInner() {
         </div>
       </div>
 
-      <div className="max-w-[1440px] mx-auto p-3 sm:p-4 space-y-3 sm:space-y-4 pb-8">
+      <div className="flex-1 min-h-0 w-full max-w-[1440px] mx-auto p-3 sm:p-4 pb-8 flex flex-col gap-3 sm:gap-4">
         {/* Token entry */}
         <GlassCard className="rounded-2xl p-3 sm:p-4">
           <div className="flex gap-2">
@@ -896,14 +904,15 @@ function BubbleMapInner() {
           </GlassCard>
         )}
 
-        {/* Main area */}
-        <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 items-stretch">
+        {/* Main area — grows to fill the remaining viewport height so the
+            graph + agent never leave a dead band at the bottom. */}
+        <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 sm:gap-4 items-stretch">
           {/* Left column: graph + concentration */}
-          <div className="flex-1 min-w-0 space-y-3 sm:space-y-4">
+          <div className="flex-1 min-w-0 flex flex-col gap-3 sm:gap-4 min-h-0">
             <GlassCard
               className={isFullscreen
                 ? 'fixed inset-0 z-50 rounded-none bg-[#05080F] overflow-hidden'
-                : 'relative rounded-2xl overflow-hidden h-[420px] sm:h-[500px]'}
+                : 'relative rounded-2xl overflow-hidden flex-1 min-h-[420px]'}
             >
               <div className={isFullscreen ? 'absolute inset-0' : 'relative w-full h-full'}>
                 {loading ? (
@@ -988,8 +997,10 @@ function BubbleMapInner() {
             )}
           </div>
 
-          {/* Right column: holders + agent */}
-          <div className="w-full lg:w-[380px] xl:w-[420px] flex-shrink-0 space-y-3 sm:space-y-4">
+          {/* Right column: holders + agent. Flex column so the agent panel
+              stretches to fill the leftover height beside the graph instead
+              of sitting at a fixed 440px with empty space below it. */}
+          <div className="w-full lg:w-[380px] xl:w-[420px] flex-shrink-0 flex flex-col gap-3 sm:gap-4 min-h-0">
             {/* Holder distribution list */}
             {holderNodes.length > 0 && (
               <GlassCard className="rounded-2xl overflow-hidden">
@@ -1027,8 +1038,10 @@ function BubbleMapInner() {
               </GlassCard>
             )}
 
-            {/* Bubble Map Agent */}
-            <GlassCard className="rounded-2xl overflow-hidden flex flex-col h-[440px]">
+            {/* Bubble Map Agent — fills remaining column height (with a
+                sensible floor) so it aligns with the graph panel and the
+                chat log gets maximum room. */}
+            <GlassCard className="rounded-2xl overflow-hidden flex flex-col flex-1 min-h-[440px]">
               <div className="px-4 py-3 border-b border-white/[0.04] flex items-center gap-2 flex-shrink-0">
                 <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#0066FF]/20 to-[#4F46E5]/20 border border-[#0066FF]/15 flex items-center justify-center flex-shrink-0">
                   <Bot className="w-3.5 h-3.5 text-[#0066FF]" />

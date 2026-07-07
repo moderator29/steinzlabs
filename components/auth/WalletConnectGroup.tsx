@@ -16,7 +16,6 @@
  */
 
 import { WalletAuthButton } from './WalletAuthButton';
-import { SolanaWalletAuthButton } from './SolanaWalletAuthButton';
 
 interface Props {
   mode: 'signin' | 'signup';
@@ -24,11 +23,17 @@ interface Props {
   redirectTo?: string;
 }
 
+/**
+ * A single, unified "Connect Wallet" action. The separate Phantom (Solana)
+ * step that used to sit below/beside this was removed per product direction —
+ * the primary wallet-connect button is the only wallet entry point on the auth
+ * pages now. SolanaWalletAuthButton is retained in the codebase but no longer
+ * rendered here.
+ */
 export function WalletConnectGroup({ mode, redirectTo }: Props) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+    <div className="grid grid-cols-1 gap-2.5">
       <WalletAuthButton mode={mode} redirectTo={redirectTo} />
-      <SolanaWalletAuthButton mode={mode} redirectTo={redirectTo} />
     </div>
   );
 }

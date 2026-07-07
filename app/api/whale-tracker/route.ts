@@ -4,6 +4,7 @@ import { getTopTraders } from '@/lib/services/birdeye';
 import { getTokenPrice } from '@/lib/services/coingecko';
 import { getExplorerUrl } from '@/lib/chain-explorer';
 import { checkTierServer } from '@/lib/subscriptions/serverTierCheck';
+import { whaleDisplayName } from '@/lib/whales/naming';
 
 // Cache ETH price for 60s to avoid repeated CoinGecko calls within a single request cycle
 let ethPriceCache: { price: number; ts: number } = { price: 0, ts: 0 };
@@ -169,7 +170,7 @@ async function getSolanaWhales(): Promise<WhaleProfile[]> {
           id: `sol-${t.address}`,
           address: t.address,
           shortAddress: shortAddr(t.address),
-          name: `Solana Trader #${i + 1}`,
+          name: whaleDisplayName({ address: t.address, chain: 'solana' }),
           chain: 'solana',
           tier: tier(t.volume),
           whaleScore: score,
@@ -299,7 +300,7 @@ async function getEvmWhales(chain: string): Promise<WhaleProfile[]> {
           id: `${chain}-${addr}`,
           address: addr,
           shortAddress: shortAddr(addr),
-          name: `${chain.charAt(0).toUpperCase() + chain.slice(1)} Trader #${i + 1}`,
+          name: whaleDisplayName({ address: addr, chain }),
           chain,
           tier: tier(d.vol),
           whaleScore: score,
@@ -365,7 +366,7 @@ async function getBscWhales(): Promise<WhaleProfile[]> {
       id: `bsc-${addr}`,
       address: addr,
       shortAddress: shortAddr(addr),
-      name: `BSC Trader #${i + 1}`,
+      name: whaleDisplayName({ address: addr, chain: 'bsc' }),
       chain: 'bsc',
       tier: 'MID' as WhaleTier,
       whaleScore: 0,  // unknown — no volume data from public RPC

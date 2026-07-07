@@ -5,7 +5,8 @@ import dynamic from 'next/dynamic';
 import { X, Loader2, Zap, Shield, Target, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { CHAIN_CONFIGS, SNIPER_CHAINS, type SniperChain } from '@/lib/sniper/chains';
-import { LAUNCHPADS, launchpadIconUrl } from '@/lib/sniper/launchpads';
+import { LAUNCHPADS } from '@/lib/sniper/launchpads';
+import { LaunchpadIcon } from './sniperShared';
 import { SecurityGate } from '@/components/security/SecurityGate';
 import { Toggle as SquareToggle } from '@/components/ui/Toggle';
 import { normalizeAddress } from '@/lib/utils/addressNormalize';
@@ -418,12 +419,9 @@ export function NewSniperModal({ onClose, onSaved, userId, prefillToken }: Props
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {SNIPE_PROTECTION_LAUNCHPADS.map(lp => {
                       const active = protectedLaunchpads.includes(lp.id);
-                      const icon = launchpadIconUrl(lp.id);
                       return (
                         <button key={lp.id} type="button" onClick={() => toggleLaunchpad(lp.id)} className={SEG_CLS(active) + ' flex items-center gap-1.5 text-xs font-semibold'}>
-                          {icon
-                            ? <img src={icon} alt="" className="w-4 h-4 rounded-full flex-shrink-0" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-                            : <span className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-[9px] flex-shrink-0">{lp.label[0]}</span>}
+                          <LaunchpadIcon id={lp.id} size={16} />
                           <span className="truncate">{lp.label}</span>
                         </button>
                       );
