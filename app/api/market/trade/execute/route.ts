@@ -2,7 +2,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenSecurity } from '@/lib/services/goplus';
 import { getSwapQuote, getChainId, needsPermit2 } from '@/lib/services/zerox';
-import { checkOfac } from '@/lib/security/ofac';
+import { checkOfacStrict } from '@/lib/security/ofac';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { SWAP_RISK_THRESHOLD } from '@/lib/market/constants';
 import { resolveTokenAddress } from '@/lib/market/tokenResolver';
@@ -118,12 +118,17 @@ export async function POST(req: NextRequest) {
     }
 
     // §3 P1-D.4 — OFAC blocklist gate. Refuse to quote a swap when the
-    // taker is sanctioned. Falls open if Chainalysis is unreachable.
-    const ofac = await checkOfac(walletAddress);
+    // taker is sanctioned. This is a fund-movement path, so it MUST fail
+    // CLOSED: checkOfacStrict treats an 'unavailable' Chainalysis response
+    // as sanctioned=true, so an upstream outage cannot silently let a
+    // sanctioned wallet trade through (the old checkOfac fell open here).
+    const ofac = await checkOfacStrict(walletAddress);
     if (ofac.sanctioned) {
       return NextResponse.json({
         blocked: true,
-        blockReason: 'Wallet appears on the OFAC SDN list',
+        blockReason: ofac.source === 'unavailable'
+          ? 'Compliance (OFAC) check is temporarily unavailable — please try again shortly'
+          : 'Wallet appears on the OFAC SDN list',
         ofac,
       }, { status: 403 });
     }
