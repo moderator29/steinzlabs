@@ -29,7 +29,14 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
 const NAME = 'sniper-feed-enrich-security';
+// Total GoPlus calls attempted per tick.
 const BATCH = 40;
+// Max Solana rows attempted per tick. GoPlus token_security for Solana is
+// plan-gated on the current API key (see the fetch block below) — every call
+// currently throws. Capping the Solana attempts keeps the tick cheap while
+// still probing, so enrichment resumes automatically the moment the plan
+// covers Solana. EVM rows (which GoPlus scans fine) are never starved by it.
+const SOLANA_PROBE = 10;
 
 interface FeedRow {
   id: string;

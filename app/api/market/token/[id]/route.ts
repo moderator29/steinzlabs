@@ -2,6 +2,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getBestPair } from '@/lib/services/dexscreener';
 import { COMMUNITY_TOKEN_CONTRACTS, SYMBOL_TO_SLUG } from '@/lib/market/tokenIdMaps';
+import { headlineMarketCap, clampFdv } from '@/lib/market/headline';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,6 +33,14 @@ async function dexscreenerFallback(contract: string) {
   const change1h = pair.priceChange?.h1 ?? 0;
   const change24hAbs = (change24h / 100) * priceUsd;
 
+  // Same headline-market-cap convention the token card + agent use
+  // (lib/market/headline.ts): for long-tail tokens DexScreener's circulating
+  // marketCap is unreliable, so the FDV is headlined when it exceeds it. Using
+  // the raw pair.marketCap here made the coin-detail page disagree with the
+  // token card for the same token (card said $267M, detail said $116M).
+  const marketCap = headlineMarketCap(pair.fdv, pair.marketCap);
+  const fdv = clampFdv(pair.fdv ?? pair.marketCap, marketCap);
+
   return {
     id: contract.toLowerCase(),
     symbol: pair.baseToken.symbol.toLowerCase(),
@@ -43,8 +52,8 @@ async function dexscreenerFallback(contract: string) {
     },
     market_data: {
       current_price: { usd: priceUsd },
-      market_cap: { usd: pair.marketCap ?? 0 },
-      fully_diluted_valuation: { usd: pair.fdv ?? 0 },
+      market_cap: { usd: marketCap },
+      fully_diluted_valuation: { usd: fdv },
       total_volume: { usd: pair.volume?.h24 ?? 0 },
       high_24h: { usd: 0 },
       low_24h: { usd: 0 },

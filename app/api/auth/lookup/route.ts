@@ -1,12 +1,23 @@
 import { NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { rateLimit, rateLimitResponse } from '@/lib/rateLimit';
 
 export async function POST(request: Request) {
   try {
+    // This endpoint resolves a username to its account email for the
+    // username-login flow, so it necessarily returns PII (the email) to an
+    // UNAUTHENTICATED caller. Without a rate limit it is a mass username→email
+    // harvesting / account-enumeration oracle (and each miss also triggers an
+    // expensive admin.listUsers scan). Bucket per source IP to keep the flow
+    // usable for real logins while blocking bulk enumeration.
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const rl = await rateLimit(`auth:lookup:${ip}`, { interval: 60_000, maxRequests: 10 });
+    if (!rl.success) return rateLimitResponse(rl);
+
     const { username } = await request.json();
 
-    if (!username) {
+    if (!username || typeof username !== 'string') {
       return NextResponse.json({ error: 'Username is required' }, { status: 400 });
     }
 

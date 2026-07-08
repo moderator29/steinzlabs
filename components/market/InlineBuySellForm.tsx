@@ -370,8 +370,14 @@ export default function InlineBuySellForm({ symbol, chain, tokenAddress, priceUS
           chain,
           fromToken: mode === 'BUY' ? 'USDC' : symbol,
           toToken: mode === 'BUY' ? symbol : 'USDC',
-          fromAmount: amountNum,
-          toAmount: estTokens,
+          // fromAmount/toAmount are the human QUANTITIES of the from/to
+          // tokens (same convention as the swap page + VTX SwapCard logs).
+          // BUY spends USDC (amountNum) for the token (estTokens);
+          // SELL spends the token (estTokens) for USDC (≈ amountNum USD).
+          // Logging amountNum as the token qty on a sell recorded a USD
+          // figure as a token count (and vice-versa) → wrong Activity history.
+          fromAmount: mode === 'BUY' ? amountNum : estTokens,
+          toAmount: mode === 'BUY' ? estTokens : amountNum,
           status: 'confirmed',
           source: 'market',
         }),

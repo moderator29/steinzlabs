@@ -46,7 +46,12 @@ async function broadcastEvm(chain: string, signedHex: string): Promise<{ ok: boo
   else if (chain === 'avalanche')              url = AVAX_RPC;
   else if (ALCHEMY_URL[chain])                 url = ALCHEMY_URL[chain];
   else return { ok: false, error: 'Unsupported EVM chain' };
-  if (!url.includes('undefined') === false && !url) return { ok: false, error: 'RPC not configured' };
+  // Guard against a missing/mis-templated RPC URL. A blank env var leaves
+  // `undefined` baked into the Alchemy URL; the old condition (`!url.includes(
+  // 'undefined') === false && !url`) reduced to `url.includes('undefined') &&
+  // !url`, which is unreachable for any non-empty string, so a missing
+  // ALCHEMY_API_KEY silently broadcast to a bad URL instead of failing honestly.
+  if (!url || url.includes('undefined')) return { ok: false, error: 'RPC not configured' };
 
   try {
     const res = await fetch(url, {
