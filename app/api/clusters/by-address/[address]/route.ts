@@ -61,7 +61,7 @@ export const GET = withTierGate("pro", async (
 
     const enrichedMembers = members.map((a) => ({
       address: a,
-      ...(labelMap.get(a) ?? { label: null, entity_type: null, whale_score: 0, verified: false }),
+      ...(labelMap.get(a.toLowerCase()) ?? { label: null, entity_type: null, whale_score: 0, verified: false }),
     }));
 
     // Community labels on this cluster

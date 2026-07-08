@@ -262,7 +262,21 @@ function StatCard({ label, value, hint, clickable }: { label: string; value: str
   );
 }
 
+// Only http(s) links are safe to render as a clickable anchor. A profile's
+// social_links are user-controlled, and a `javascript:` / `data:` value would
+// execute in the viewer's session on click (stored XSS). Anything else is
+// shown as inert text so a malicious link can never be navigated to.
+function isSafeHttpUrl(value: string): boolean {
+  try {
+    const proto = new URL(value).protocol.toLowerCase();
+    return proto === 'http:' || proto === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 function OverviewTab({ profile }: { profile: ProfileResponse['profile'] }) {
+  const links = Object.entries(profile.social_links ?? {});
   return (
     <GlassCard className="p-4 space-y-3">
       <div>
@@ -275,13 +289,17 @@ function OverviewTab({ profile }: { profile: ProfileResponse['profile'] }) {
           <div className="text-sm text-slate-200 whitespace-pre-wrap">{profile.bio}</div>
         </div>
       )}
-      {Object.keys(profile.social_links).length > 0 && (
+      {links.length > 0 && (
         <div>
           <div className="text-[11px] uppercase tracking-wide text-slate-400 mb-1">Links</div>
           <ul className="text-sm text-[var(--nl-blue,#0066FF)] space-y-0.5">
-            {Object.entries(profile.social_links).map(([k, v]) => (
-              <li key={k}><a href={v} target="_blank" rel="noopener noreferrer">{k}</a></li>
-            ))}
+            {links.map(([k, v]) =>
+              isSafeHttpUrl(v) ? (
+                <li key={k}><a href={v} target="_blank" rel="noopener noreferrer">{k}</a></li>
+              ) : (
+                <li key={k} className="text-slate-300">{k}</li>
+              ),
+            )}
           </ul>
         </div>
       )}

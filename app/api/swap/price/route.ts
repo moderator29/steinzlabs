@@ -124,7 +124,9 @@ export async function GET(request: NextRequest) {
           buyTokenAddress: buy.address,
           routePlan: quote.routePlan,
         },
-        gasEstimateUsd: 0.001,
+        // No real Solana network-fee estimate available here; return null so the
+        // UI shows an honest dash instead of a fabricated flat 0.001.
+        gasEstimateUsd: null,
       });
     }
 

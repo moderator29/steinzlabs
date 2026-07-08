@@ -94,7 +94,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const nowIso = new Date().toISOString();
   const admin = getSupabaseAdmin();
 
-  await admin
+  // Atomic status transition. The read-then-write above is NOT enough: two
+  // concurrent confirms (double-click, client retry, two tabs) both read
+  // status="pending" and would each propagate to the source order — double-
+  // incrementing a DCA bot's executions_completed and inserting a duplicate
+  // dca_executions row, corrupting the ledger. Gate the write on the row still
+  // being pending and only propagate if THIS request flipped it. Postgres
+  // re-checks the WHERE under the row lock, so exactly one confirm wins.
+  const { data: won } = await admin
     .from("pending_trades")
     .update({
       status: "confirmed",
@@ -103,7 +110,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       client_reported_amount_out: body.clientReportedAmountOut ?? null,
       client_reported_price: body.clientReportedPrice ?? null,
     })
-    .eq("id", pending.id);
+    .eq("id", pending.id)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
+  if (!won) {
+    return NextResponse.json({ error: "Already confirmed" }, { status: 409 });
+  }
 
   // Propagate to source order. We store tx_hash only; actual execution
   // amounts are filled in by the receipt-reconciliation cron.

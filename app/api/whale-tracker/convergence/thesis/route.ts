@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { cacheWithFallback } from '@/lib/cache/redis';
 import { vtxAnalyze } from '@/lib/services/anthropic';
 import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -24,8 +25,11 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
-  const tokenAddress = (body.tokenAddress || '').trim().toLowerCase();
   const chain = (body.chain || '').trim().toLowerCase();
+  // normalizeAddress (not .toLowerCase()) so a Solana base58 mint keeps its case
+  // and still matches smart_money_convergence.token_address — lowercasing it made
+  // every Solana convergence thesis 404.
+  const tokenAddress = normalizeAddress((body.tokenAddress || '').trim(), chain);
   if (!tokenAddress || !chain) {
     return NextResponse.json({ error: 'tokenAddress and chain required' }, { status: 400 });
   }
@@ -46,7 +50,8 @@ export async function POST(req: NextRequest) {
         }>();
       if (!conv) return { thesis: null, unavailable: true };
 
-      const addrs = (conv.wallets ?? []).map((a) => a.toLowerCase()).slice(0, 12);
+      // normalizeAddress so Solana base58 wallets keep case and match whales.address.
+      const addrs = (conv.wallets ?? []).map((a) => normalizeAddress(a)).slice(0, 12);
       const { data: whales } = await sb
         .from('whales')
         .select('address, label, archetype, win_rate, pnl_30d_usd, avg_hold_hours')

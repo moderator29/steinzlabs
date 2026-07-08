@@ -229,9 +229,23 @@ async function ingestWhale(
       .upsert(row, { onConflict: "tx_hash,whale_address,chain" });
     if (!error) inserted++;
   }
+  // Advance last_active_at ONLY to the newest REAL on-chain activity timestamp
+  // we actually ingested — never wall-clock now(). Stamping now() on every poll
+  // (including no-activity polls) fabricated activity for whales that hadn't
+  // traded and clobbered the honest on-chain value whale-backfill-pnl computes.
+  // That is the same self-poisoning the metrics_refreshed_at migration fixed for
+  // the pnl cron; last_active_at must stay pure. updated_at is the poll heartbeat
+  // and the rotation cursor (see the SELECT below), so it always advances.
+  const whaleUpdate: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  let newestTs = 0;
+  for (const r of rows) {
+    const t = new Date(r.timestamp).getTime();
+    if (Number.isFinite(t) && t > newestTs) newestTs = t;
+  }
+  if (newestTs > 0) whaleUpdate.last_active_at = new Date(newestTs).toISOString();
   await supabase
     .from("whales")
-    .update({ last_active_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .update(whaleUpdate)
     .eq("address", whale.address)
     .eq("chain", whale.chain);
   return inserted;
@@ -250,12 +264,17 @@ export async function GET(request: NextRequest) {
     // live feed shows the WHOLE directory to every user, so gating to the
     // handful of followed whales left the feed empty. We poll the directory
     // broadly and let the per-token price cache keep cost bounded.
+    // Rotate on updated_at (the poll heartbeat), NOT last_active_at. Ordering by
+    // last_active_at while also writing it made this cron self-poison its own
+    // selector — and forced it to fabricate last_active_at=now to advance the
+    // rotation. updated_at is bumped every poll (below) purely for rotation, so
+    // last_active_at can stay a pure on-chain value.
     const { data: whales } = await supabase
       .from("whales")
       .select("address, chain")
       .eq("is_active", true)
       .in("chain", Object.keys(ALCHEMY_HOSTS))
-      .order("last_active_at", { ascending: true, nullsFirst: true })
+      .order("updated_at", { ascending: true, nullsFirst: true })
       .limit(WHALES_PER_TICK);
 
     const queue = (whales ?? []) as WhaleRow[];

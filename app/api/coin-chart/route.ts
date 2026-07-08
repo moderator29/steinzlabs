@@ -1,6 +1,5 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
-import { getBestPair } from '@/lib/services/dexscreener';
 
 // In-memory cache: key = `${coinId}_${tf}` → { data, ts }
 const cache = new Map<string, { data: [number, number][]; ts: number }>();
@@ -76,62 +75,13 @@ async function fetchBinanceChart(symbol: string, tf: string): Promise<[number, n
   }
 }
 
-// Fetch chart data from DexScreener (for DEX tokens by contract address)
-async function fetchDexScreenerChart(tokenAddress: string, tf: string): Promise<[number, number][] | null> {
-  try {
-    const best = await getBestPair(tokenAddress);
-    if (!best?.priceUsd) return null;
-
-    // DexScreener doesn't provide historical OHLCV via free API,
-    // so we generate a synthetic chart from current price + priceChange
-    const currentPrice = parseFloat(best.priceUsd);
-    const change1h = best.priceChange?.h1 || 0;
-    const change6h = best.priceChange?.h6 || 0;
-    const change24h = best.priceChange?.h24 || 0;
-
-    const now = Date.now();
-    const points: [number, number][] = [];
-
-    let numPoints: number;
-    let msStep: number;
-    let startPriceMultiplier: number;
-
-    switch (tf) {
-      case '1H':
-        numPoints = 60; msStep = 60_000;
-        startPriceMultiplier = 1 / (1 + change1h / 100);
-        break;
-      case '6H':
-        numPoints = 72; msStep = 5 * 60_000;
-        startPriceMultiplier = 1 / (1 + change6h / 100);
-        break;
-      case '1W':
-        numPoints = 168; msStep = 60 * 60_000;
-        startPriceMultiplier = 1 / (1 + change24h / 100) * 0.97;
-        break;
-      case '1M':
-        numPoints = 120; msStep = 6 * 60 * 60_000;
-        startPriceMultiplier = 1 / (1 + change24h / 100) * 0.92;
-        break;
-      default: // 1D
-        numPoints = 96; msStep = 15 * 60_000;
-        startPriceMultiplier = 1 / (1 + change24h / 100);
-        break;
-    }
-
-    const startPrice = currentPrice * startPriceMultiplier;
-    for (let i = 0; i <= numPoints; i++) {
-      const t = now - (numPoints - i) * msStep;
-      const progress = i / numPoints;
-      // Smooth interpolation with slight noise for realism
-      const noise = (Math.sin(i * 2.3) * 0.008 + Math.cos(i * 1.7) * 0.005) * currentPrice;
-      const price = startPrice + (currentPrice - startPrice) * progress + noise;
-      points.push([t, Math.max(0, price)]);
-    }
-    return points;
-  } catch {
-    return null;
-  }
+// DexScreener's free API does not provide historical OHLCV, and we NEVER
+// fabricate a price series (the old code synthesized one from the current price
+// with sine/cosine "noise for realism" — a fake chart). Return null so the
+// caller falls back to a real source (GeckoTerminal/CoinGecko) or honestly
+// reports no chart. Real DEX OHLCV should come from GeckoTerminal.
+async function fetchDexScreenerChart(_tokenAddress: string, _tf: string): Promise<[number, number][] | null> {
+  return null;
 }
 
 // Fetch chart data from CoinGecko (fallback)

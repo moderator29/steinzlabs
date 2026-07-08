@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCultAccess } from '@/lib/cult/access';
+import { verifyAdminRequest } from '@/lib/auth/adminAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const runtime = 'nodejs';
@@ -61,13 +62,17 @@ export async function GET(_req: NextRequest) {
 /**
  * POST — submit a draft for tomorrow's Daily Seal.
  *
- * Chosen-only. Body: { title, body, seal_date? }. seal_date defaults to
- * tomorrow UTC; explicit dates must still be >= today + 1 day to prevent
- * overwriting an already-generated seal.
+ * Authoring the seal is a privileged write: the accepted draft becomes the
+ * official Daily Seal broadcast to the entire cult. "Chosen" is retired, so
+ * this must be gated to platform admins via the admin bearer — like every
+ * other privileged cult write (see sanctum/annals). Previously it only checked
+ * cult membership, so ANY member could author (or spam future-dated) seals for
+ * the whole cult — a broadcast-injection hole. Body: { title, body, seal_date? };
+ * seal_date defaults to tomorrow UTC and must be >= today + 1 day.
  */
 export async function POST(req: NextRequest) {
-  const access = await getCultAccess();
-  if (!access.allowed || !access.userId) {
+  const adminUserId = await verifyAdminRequest(req);
+  if (!adminUserId) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
 
@@ -104,7 +109,7 @@ export async function POST(req: NextRequest) {
     .from('cult_daily_seal_drafts')
     .insert({
       seal_date: sealDate,
-      author_id: access.userId,
+      author_id: adminUserId,
       title,
       body,
     })

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { withTierGate } from '@/lib/subscriptions/apiTierGate';
 import { buildContractIntelligence, topHolderRisk, type ContractHolder } from '@/lib/services/contract-intelligence';
-import { getContractPrice, getTokenDetail } from '@/lib/services/coingecko';
+import { getContractPrice } from '@/lib/services/coingecko';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -175,20 +175,19 @@ export const GET = withTierGate('pro', async (request: NextRequest) => {
     // CoinGecko enrichment happens up-front so the center bubble can colorize
     // by 24h price change (green = up, red = down, blue = flat/unknown).
     let cgPrice = 0;
-    let cgMarketCap = 0;
-    let cgChange24h = 0;
     try {
       cgPrice = await getContractPrice(token, intel.chain);
-      if (cgPrice > 0) {
-        try {
-          const detail = await getTokenDetail(intel.symbol.toLowerCase());
-          cgMarketCap = detail.market_data?.market_cap?.usd ?? 0;
-          cgChange24h = detail.market_data?.price_change_percentage_24h ?? 0;
-        } catch { /* detail miss — keep price-only */ }
-      }
     } catch { /* CoinGecko down or contract not indexed */ }
 
-    const effectiveChange24h = cgChange24h !== 0 ? cgChange24h : intel.market.priceChange24h;
+    // Market cap + 24h change come ONLY from the CONTRACT-accurate intel.market
+    // (DexScreener/Birdeye, resolved by contract address). We must NOT enrich
+    // these from getTokenDetail(symbol): that endpoint keys on a CoinGecko coin
+    // id (a slug like "uniswap"), not a symbol ("uni"). Passing the symbol
+    // either 404s or, on a symbol/id collision (e.g. "gas", "eos"), returns a
+    // DIFFERENT token's market cap and price move, which then painted this
+    // token's bubble with foreign data (violates the real data only rule).
+    const cgMarketCap = intel.market.marketCap ?? 0;
+    const effectiveChange24h = intel.market.priceChange24h ?? 0;
     const centerColor =
       effectiveChange24h > 1 ? '#10B981' :
       effectiveChange24h < -1 ? '#EF4444' :
@@ -259,7 +258,7 @@ export const GET = withTierGate('pro', async (request: NextRequest) => {
         symbol: intel.symbol,
         chain: intel.chain,
         price: cgPrice > 0 ? cgPrice : (intel.market.priceUSD ?? 0),
-        priceChange24h: cgChange24h !== 0 ? cgChange24h : intel.market.priceChange24h,
+        priceChange24h: effectiveChange24h,
         volume24h: intel.market.volume24h,
         marketCap: cgMarketCap > 0 ? cgMarketCap : intel.market.marketCap,
         liquidity: intel.market.liquidity,

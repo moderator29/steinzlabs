@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
+import { verifyAdminContext, hasPermission, unauthorizedResponse } from '@/lib/auth/adminAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { logAdminAction } from '@/lib/admin/auditLog';
 
@@ -28,8 +28,16 @@ const Body = z.discriminatedUnion('action', [
 ]);
 
 export async function POST(req: NextRequest) {
-  const adminId = await verifyAdminRequest(req);
-  if (!adminId) return unauthorizedResponse();
+  // Moderation mutations (suspend, force_disable, remove_message, ...) must
+  // require an actual moderation privilege, not merely "is some admin".
+  // Without this, a read_only or finance admin could disable users and delete
+  // DMs. user.suspend is held by super_admin, support and moderator only.
+  const ctx = await verifyAdminContext(req);
+  if (!ctx) return unauthorizedResponse();
+  if (!hasPermission(ctx.role, 'user.suspend')) {
+    return NextResponse.json({ error: 'Forbidden', missingPermission: 'user.suspend' }, { status: 403 });
+  }
+  const adminId = ctx.userId;
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
 

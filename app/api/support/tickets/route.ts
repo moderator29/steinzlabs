@@ -27,9 +27,14 @@ export async function GET() {
   const { data: { user }, error } = await supabase.auth.getUser();
   if (!user || error) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
+  // Bind the list to the caller. RLS is meant to scope this, but the sibling
+  // [id] route double-checks ownership rather than trusting RLS alone; the
+  // list endpoint must match — otherwise a single misconfigured/dropped RLS
+  // policy leaks every user's ticket subjects, emails and descriptions.
   const { data, error: qErr } = await supabase
     .from('support_tickets')
     .select('id, subject, category, status, priority, created_at, updated_at, resolved_at')
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(100);
 

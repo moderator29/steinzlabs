@@ -48,6 +48,7 @@ interface AnalysisResult {
   found?: boolean;
   reason?: string;
   tooEarly?: boolean;
+  securityUnavailable?: boolean;
   age?: string | null;
   ageMs?: number | null;
   launchpad?: Launchpad | null;
@@ -537,7 +538,52 @@ function ContractAnalyzerInner() {
           </>
         )}
 
-        {result && !analyzing && result.found !== false && !result.tooEarly && (
+        {/* SECURITY UNAVAILABLE — token is tradable but no security source
+            returned data. We do NOT show a score/verdict: an absent scan is
+            honest-unknown, never a fake SAFE. */}
+        {result && !analyzing && result.found !== false && !result.tooEarly && result.securityUnavailable && (
+          <>
+            <div className="nl-glass rounded-2xl p-6 text-center" style={{ boxShadow: '0 0 0 1px rgba(148,163,184,.3)' }}>
+              <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-white/[0.04] flex items-center justify-center">
+                <HelpCircle className="w-7 h-7 text-gray-400" />
+              </div>
+              <p className="text-sm font-semibold text-gray-200">Security data unavailable</p>
+              <p className="text-[11px] text-gray-500 mt-2 max-w-[300px] mx-auto leading-relaxed">
+                This token is tradable, but no contract security source (GoPlus / address intelligence) returned data for it right now. We will not show a safety score we cannot back with a real scan. Re-check shortly, or verify the contract on a block explorer before interacting.
+              </p>
+              <p className="text-[10px] text-gray-700 font-mono mt-3 break-all">{result.address}</p>
+            </div>
+
+            {result.dexData && result.dexData.liquidity > 0 && (
+              <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-white/[0.03] rounded-xl p-2.5">
+                    <p className="text-[9px] text-gray-500">Liquidity</p>
+                    <p className="text-xs font-bold font-mono">${result.dexData.liquidity.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                  </div>
+                  {result.age && (
+                    <div className="bg-white/[0.03] rounded-xl p-2.5">
+                      <p className="text-[9px] text-gray-500 flex items-center gap-1"><Clock className="w-3 h-3" /> Age</p>
+                      <p className="text-xs font-bold">{result.age}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Only a genuinely-run live simulation is surfaced here. */}
+            {result.honeypotVerdict && result.honeypotVerdict.sources.simulation.available && (
+              <HoneypotVerdictPanel data={result.honeypotVerdict} />
+            )}
+
+            <button onClick={() => { setResult(null); setInput(''); }}
+              className="w-full nl-btn-neon py-2.5 rounded-xl text-xs text-gray-400 hover:text-white transition-all">
+              Analyze another contract
+            </button>
+          </>
+        )}
+
+        {result && !analyzing && result.found !== false && !result.tooEarly && !result.securityUnavailable && (
           <>
             {/* Token Header with DexScreener data */}
             {result.dexData && (

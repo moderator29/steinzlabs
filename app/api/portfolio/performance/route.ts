@@ -206,12 +206,19 @@ export async function GET(_request: NextRequest) {
     .sort((a, b) => a[0] - b[0])
     .map(([time, value]) => ({ time, value }));
 
-  // Best / worst tokens by realized PnL.
+  // Best / worst tokens by realized PnL. The map is keyed by the internal
+  // FIFO key `${chain}::${SYMBOL}` (needed so bridged twins don't merge), but
+  // that raw key must NOT leak to the UI — it rendered "ethereum::PEPE" as the
+  // token name. Strip the chain prefix for the user-facing symbol.
+  const bareSymbol = (key: string) => {
+    const i = key.indexOf('::');
+    return i >= 0 ? key.slice(i + 2) : key;
+  };
   let bestToken: PerformanceStats["bestToken"] = null;
   let worstToken: PerformanceStats["worstToken"] = null;
-  for (const [symbol, pnl] of realizedBySymbol) {
-    if (!bestToken || pnl > bestToken.pnl) bestToken = { symbol, pnl };
-    if (!worstToken || pnl < worstToken.pnl) worstToken = { symbol, pnl };
+  for (const [key, pnl] of realizedBySymbol) {
+    if (!bestToken || pnl > bestToken.pnl) bestToken = { symbol: bareSymbol(key), pnl };
+    if (!worstToken || pnl < worstToken.pnl) worstToken = { symbol: bareSymbol(key), pnl };
   }
 
   const avgHoldHours =

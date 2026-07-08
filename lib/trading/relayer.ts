@@ -29,6 +29,14 @@ export interface TradeIntent {
   fromTokenSymbol?: string | null;
   toTokenAddress: string;
   toTokenSymbol?: string | null;
+  /**
+   * RAW base units of the from-token (wei / smallest unit) as a decimal string.
+   * This is what every caller passes (limit-order-monitor/dca-executor/
+   * stop-loss-monitor all pass an *amountInBase value) and what the read path
+   * requires: it is written verbatim to pending_trades.amount_in and later fed
+   * to getSwapQuote/Jupiter as `sellAmount`, both of which do BigInt(sellAmount)
+   * and therefore reject a human-decimal value. Do NOT pass a human amount here.
+   */
   amountIn: string;
   slippageBps: number;
   reason: TradeNotificationReason;

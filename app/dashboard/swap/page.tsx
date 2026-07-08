@@ -13,6 +13,7 @@ import { notifySwapCompleted } from '@/lib/notifications';
 import { getWalletSessionKey } from '@/lib/wallet/walletSession';
 import { decryptPrivateKey } from '@/lib/wallet/encryption';
 import { addressesEqual } from '@/lib/utils/addressNormalize';
+import { toBaseUnits } from '@/lib/market/swapTokenMeta';
 import UnlockWalletModal from '@/components/wallet/UnlockWalletModal';
 import { NakaLogo, WalletConnectLogo } from '@/components/wallet/WalletLogo';
 import { WalletConnectHealthPanel } from '@/components/wallet/WalletConnectHealthPanel';
@@ -975,7 +976,12 @@ export default function SwapPage() {
       try {
         const tokenAddresses = getTokenAddresses(f, t, c);
         const decimals = getTokenInfo(f).decimals;
-        const rawAmount = BigInt(Math.round(parseFloat(amount) * (10 ** decimals))).toString();
+        // String-based base-unit conversion (floor) — `parseFloat(amount) *
+        // 10**decimals` loses precision above 2**53 and Math.round can push the
+        // sell amount a few wei ABOVE the real balance, reverting a MAX swap
+        // with "insufficient funds". toBaseUnits shifts the decimal by string
+        // surgery and never rounds up. See lib/market/swapTokenMeta.
+        const rawAmount = toBaseUnits(amount, decimals);
         const params = new URLSearchParams({
           chain: c,
           sellToken: tokenAddresses.sellToken,
@@ -1150,7 +1156,11 @@ export default function SwapPage() {
       // Step 1: Get firm swap quote from 0x API
       const tokenAddresses = getTokenAddresses(fromToken, toToken, chain);
       const decimals = getTokenInfo(fromToken).decimals;
-      const rawAmount = BigInt(Math.round(parseFloat(fromAmount) * (10 ** decimals))).toString();
+      // String-based base-unit conversion (floor). The old float path
+      // (`parseFloat * 10**decimals` + Math.round) could round the
+      // EXECUTABLE sell amount a few wei above the wallet balance on a MAX
+      // swap and revert on-chain. toBaseUnits never exceeds what the user holds.
+      const rawAmount = toBaseUnits(fromAmount, decimals);
       // Carry the user's slippage tolerance through to the quote so it
       // actually applies on-chain. `slippage` is a percent string (e.g.
       // "0.5"); the server caps it again.

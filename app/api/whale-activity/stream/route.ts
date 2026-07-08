@@ -22,7 +22,10 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams;
   const followedRaw = sp.get("followed");
-  const minUsd = Math.max(0, parseFloat(sp.get("min_usd") ?? "50000"));
+  // Guard against a non-numeric ?min_usd — parseFloat("abc") is NaN, which
+  // would flow into .gte("value_usd", NaN) and make every tick error out.
+  const parsedMin = parseFloat(sp.get("min_usd") ?? "50000");
+  const minUsd = Number.isFinite(parsedMin) ? Math.max(0, parsedMin) : 50000;
   // Shape-based normalize (no per-address chain here): lowercases EVM-shaped
   // addresses, preserves case-sensitive Solana base58 — so .in() below matches
   // stored whale_address values for both chains instead of dropping Solana.

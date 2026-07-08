@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 
 const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 
@@ -35,8 +36,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const secretKey = process.env.TURNSTILE_SECRET_KEY;
 
-  // Fail open if secret key is not configured (dev environments)
+  // Fail CLOSED in production: a missing secret is a misconfigured deploy, not a
+  // Cloudflare outage, and must never silently wave bot traffic past the login /
+  // signup Turnstile gate (this is the LIVE captcha route the client calls).
+  // Mirrors the hardened /api/auth/verify-turnstile sibling. Dev/preview keep the
+  // fail-open so local iteration isn't blocked; a deliberate outage bypass is
+  // still available via TURNSTILE_EMERGENCY_BYPASS above.
   if (!secretKey) {
+    if (process.env.NODE_ENV === 'production' && !emergencyBypass) {
+      Sentry.captureException(new Error('TURNSTILE_SECRET_KEY missing in production'));
+      return NextResponse.json(
+        { success: false, error: 'Bot protection misconfigured' },
+        { status: 503 },
+      );
+    }
     return NextResponse.json({ success: true, failOpen: true });
   }
 

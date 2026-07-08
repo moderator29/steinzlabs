@@ -9,6 +9,10 @@ const ALLOWED_ATTRS: Record<string, Set<string>> = {
   '*': new Set(['class']),
 };
 
+// Schemes an <a href> is allowed to carry. Relative URLs have no scheme and
+// are always allowed.
+const SAFE_URL_SCHEMES = new Set(['http', 'https', 'mailto', 'tel']);
+
 export function sanitizeHtml(html: string): string {
   if (typeof window === 'undefined') return html;
   const parser = new DOMParser();
@@ -38,7 +42,14 @@ export function sanitizeHtml(html: string): string {
 
     if (tag === 'a') {
       const href = el.getAttribute('href') || '';
-      if (href.startsWith('javascript:') || href.startsWith('data:')) {
+      // Browsers ignore embedded whitespace/control chars and are
+      // case-insensitive on the scheme, so the old startsWith('javascript:')
+      // check was trivially bypassed by "JavaScript:", " javascript:" or
+      // "java\tscript:". Strip control chars + whitespace, lowercase, then
+      // allowlist safe schemes.
+      const normalized = href.replace(/[\u0000-\u0020\u007f]+/g, '').toLowerCase();
+      const scheme = normalized.match(/^([a-z][a-z0-9+.-]*):/)?.[1];
+      if (scheme && !SAFE_URL_SCHEMES.has(scheme)) {
         el.removeAttribute('href');
       }
       el.setAttribute('rel', 'noopener noreferrer');
