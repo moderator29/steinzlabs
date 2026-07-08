@@ -54,6 +54,13 @@ const HISTORY_INDEX_KEY = 'vtx_chat_history';
 const TIER_KEY = 'steinz_user_tier';
 const USAGE_KEY = 'vtx-ai-daily-usage';
 const SETTINGS_KEY = 'vtx_settings';
+// Records which authenticated user the VTX local caches belong to, so we can
+// detect an account switch on a shared browser and purge before reading.
+const CACHE_OWNER_KEY = 'vtx_cache_owner';
+const VTX_LOCAL_KEYS = [STORAGE_KEY, HISTORY_INDEX_KEY, USAGE_KEY, SETTINGS_KEY, TIER_KEY];
+function purgeVtxLocalCache() {
+  for (const k of VTX_LOCAL_KEYS) { try { localStorage.removeItem(k); } catch { /* ignore */ } }
+}
 
 interface AgentSettings {
   webSearch: boolean;
@@ -489,6 +496,22 @@ function VtxAiPageInner() {
   useEffect(() => {
     if (!initialized.current) {
       initialized.current = true;
+      void (async () => {
+      // ── Cross-account isolation guard ──────────────────────────────
+      // Every VTX localStorage cache is per-user. Before reading any of them,
+      // confirm they belong to the CURRENT authenticated user; if the browser
+      // last cached a DIFFERENT user (or nobody), purge them first so account B
+      // never sees account A's conversations / history / settings on a shared
+      // device. (The server GET is already user-scoped — this closes the
+      // client-cache leak.)
+      let uid: string | null = null;
+      try { const { data } = await supabase.auth.getUser(); uid = data?.user?.id ?? null; } catch { uid = null; }
+      let owner: string | null = null;
+      try { owner = localStorage.getItem(CACHE_OWNER_KEY); } catch { owner = null; }
+      if (owner !== uid) {
+        purgeVtxLocalCache();
+        try { if (uid) localStorage.setItem(CACHE_OWNER_KEY, uid); else localStorage.removeItem(CACHE_OWNER_KEY); } catch { /* ignore */ }
+      }
       setMessages(loadHistory());
       setTier(getUserTier());
       setDailyUsage(getDailyUsage());
@@ -541,6 +564,10 @@ function VtxAiPageInner() {
               .map(({ _count, _updated, ...e }) => e)
               .sort((a, b) => (a.date < b.date ? 1 : -1));
             setChatSessions(entries);
+          } else {
+            // New / empty account: clear any locally cached sessions so we
+            // never leave another user's stale conversation list on screen.
+            setChatSessions([]);
           }
         })
         .catch(err => console.error('[VTX] Failed to load Supabase history:', err instanceof Error ? err.message : err));
@@ -567,6 +594,7 @@ function VtxAiPageInner() {
         // Defer send until state is mounted
         setTimeout(() => { void handleSend(q); }, 50);
       }
+      })();
     }
   }, [searchParams]);
 
@@ -828,7 +856,16 @@ function VtxAiPageInner() {
   const formatTime = (ts?: number) => {
     if (!ts) return '';
     const d = new Date(ts);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const now = new Date();
+    const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    // Today → time only; older → include the date so the chat stream isn't a
+    // wall of context-free times (the message date was previously invisible).
+    if (d.toDateString() === now.toDateString()) return time;
+    const sameYear = d.getFullYear() === now.getFullYear();
+    const date = d.toLocaleDateString([], sameYear
+      ? { month: 'short', day: 'numeric' }
+      : { month: 'short', day: 'numeric', year: 'numeric' });
+    return `${date} · ${time}`;
   };
 
   const cleanContent = (text: string) => {
