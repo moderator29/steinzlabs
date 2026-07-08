@@ -323,11 +323,19 @@ function MarketBriefCard({ post, onOpen }: { post: ResearchPost; onOpen: () => v
 
       <div className="rounded-2xl nl-glass nl-sheen overflow-hidden">
         {post.image_url && (
-          <div className="w-full aspect-[3/1] overflow-hidden">
-            {/* Cover is a fixed 1200×400 (3:1) banner with edge-anchored text —
-                match its aspect ratio so object-cover shows the whole banner
-                instead of cropping title/date/market-cap off both mobile edges. */}
-            <img src={post.image_url} alt={post.title} className="w-full h-full object-cover" />
+          <div className="w-full overflow-hidden">
+            {/* Cover is a fixed 1200x400 (3:1) banner with edge-anchored title,
+                date, vibe and market-cap text. Render it at its own intrinsic
+                ratio (w-full h-auto) instead of forcing a fixed-height box with
+                object-cover — cover-cropping shaved the edge-anchored labels off
+                on any viewport whose box did not land exactly 3:1. h-auto shows
+                the full banner cleanly at every width, no clipping. */}
+            <img
+              src={post.image_url}
+              alt={post.title}
+              className="block w-full h-auto"
+              loading="lazy"
+            />
           </div>
         )}
         <div className="p-5">

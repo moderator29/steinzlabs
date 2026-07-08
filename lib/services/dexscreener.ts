@@ -21,6 +21,20 @@ async function dexFetch(path: string): Promise<unknown> {
   return res.json();
 }
 
+// Live-cadence fetch — used by the terminal token-stats panel's ~4s poller.
+// A tight 5s Next data-cache window keeps the panel feeling live while still
+// collapsing a burst of polls (many users on the same hot token) down to one
+// upstream call per 5s, well under DexScreener's ~300 req/min budget.
+async function dexFetchLive(path: string): Promise<unknown> {
+  const res = await fetch(`${BASE}${path}`, {
+    headers: { Accept: 'application/json' },
+    next: { revalidate: 5 },
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
+  if (!res.ok) throw new Error(`Dexscreener error: ${res.status}`);
+  return res.json();
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface DexPair {
@@ -72,6 +86,39 @@ export async function getPair(chain: string, pairAddress: string): Promise<DexPa
     const data = await dexFetch(`/latest/dex/pairs/${chain}/${pairAddress}`) as { pairs: DexPair[] | null };
     return data.pairs?.[0] ?? null;
   });
+}
+
+/**
+ * Live variant of getTokenPairs for the terminal stats panel. Short 5s cache
+ * (vs the 30s TOKEN_PRICE cache the rest of the app shares) so the ~4s poll
+ * surfaces genuinely fresh pair data without touching global TTLs.
+ */
+export async function getTokenPairsLive(tokenAddress: string): Promise<DexPair[]> {
+  const key = cacheKey('dexscreener', 'token_pairs_live', { tokenAddress: normalizeAddress(tokenAddress) });
+  return withCache(key, 5_000, async () => {
+    const data = await dexFetchLive(`/latest/dex/tokens/${tokenAddress}`) as { pairs: DexPair[] | null };
+    return data.pairs ?? [];
+  });
+}
+
+export interface DexSocials {
+  website: string | null;
+  twitter: string | null;
+  telegram: string | null;
+}
+
+/** Pull website / twitter / telegram out of a pair's `info` block. Real links
+ *  only — returns null for any channel DexScreener doesn't carry. */
+export function extractDexSocials(pair: DexPair): DexSocials {
+  const website = pair.info?.websites?.find((w) => !!w?.url)?.url ?? null;
+  let twitter: string | null = null;
+  let telegram: string | null = null;
+  for (const s of pair.info?.socials ?? []) {
+    const t = (s.type || '').toLowerCase();
+    if (!twitter && (t === 'twitter' || t === 'x')) twitter = s.url;
+    else if (!telegram && t === 'telegram') telegram = s.url;
+  }
+  return { website, twitter, telegram };
 }
 
 export async function searchPairs(query: string): Promise<DexPair[]> {

@@ -8,7 +8,7 @@ import {
 import { PageHeader } from '@/components/common/PageHeader';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { notificationsHowItWorks } from '@/lib/howItWorks/content/notifications';
-import { getLocalNotifications, markAllNotificationsRead } from '@/lib/notifications';
+import { getLocalNotifications, markAllNotificationsRead, markNotificationRead } from '@/lib/notifications';
 
 /**
  * §3.2 — full Notifications surface, reached from the side-nav. Loads from the
@@ -74,17 +74,21 @@ export default function NotificationsPage() {
     }));
     let merged = local;
     try {
-      const userId = typeof window !== 'undefined' ? localStorage.getItem('steinz_user_id') || '' : '';
-      const res = await fetch(`/api/notifications${userId ? `?userId=${userId}` : ''}`);
+      // The GET route derives the user from the authenticated session cookie and
+      // ignores any client-supplied userId (IDOR fix), so we send none.
+      const res = await fetch('/api/notifications', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.notifications)) {
           const localIds = new Set(local.map((n) => n.id));
           const api: NotifItem[] = data.notifications
             .filter((n: { id: string }) => !localIds.has(n.id))
-            .map((n: { id: string; type: string; title: string; message: string; created_at?: string; time?: string }) => {
+            .map((n: { id: string; type: string; title: string; message: string; created_at?: string; time?: string; read?: boolean; href?: string }) => {
               const ts = n.created_at ? new Date(n.created_at).getTime() : 0;
-              return { id: n.id, type: n.type, title: n.title, message: n.message, ts, time: n.time || timeAgo(ts), read: reads.has(n.id) };
+              // Honor the durable server-side read flag (set from another device
+              // or via the [id]/read route) OR the local acknowledgement list —
+              // previously this ignored the server flag and used only READ_KEY.
+              return { id: n.id, type: n.type, title: n.title, message: n.message, ts, time: n.time || timeAgo(ts), read: (n.read ?? false) || reads.has(n.id), href: n.href };
             });
           merged = [...local, ...api];
           // Content-level dedup: every client notification is stored locally
@@ -116,8 +120,26 @@ export default function NotificationsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Mark a single notification read on interaction. Persists durably for
+  // server-backed (sb-) rows via markNotificationRead, records local-only ids in
+  // READ_KEY, then navigates when the notification carries a link.
+  const markOne = (n: NotifItem) => {
+    if (!n.read) {
+      markNotificationRead(n.id);
+      try {
+        localStorage.setItem(READ_KEY, JSON.stringify(Array.from(new Set([...readIdSet(), n.id]))));
+      } catch { /* ignore */ }
+      setItems((prev) => prev.map((i) => (i.id === n.id ? { ...i, read: true } : i)));
+    }
+    if (n.href) router.push(n.href);
+  };
+
   const markAll = () => {
     markAllNotificationsRead();
+    // markAllNotificationsRead only touches the local store, so durably mark the
+    // server-backed rows read too (keeps cross-device state and the header bell
+    // in sync) — otherwise sb- notifications reappeared unread on reload.
+    items.forEach((i) => { if (!i.read && i.id.startsWith('sb-')) markNotificationRead(i.id); });
     try {
       const all = Array.from(new Set([...readIdSet(), ...items.map((i) => i.id)]));
       localStorage.setItem(READ_KEY, JSON.stringify(all));
@@ -162,7 +184,7 @@ export default function NotificationsPage() {
           {items.map((n) => (
             <button
               key={n.id}
-              onClick={() => n.href && router.push(n.href)}
+              onClick={() => markOne(n)}
               className={`w-full text-start flex items-start gap-3 px-4 py-3 rounded-xl nl-glass border transition-colors ${
                 n.read
                   ? 'border-white/[0.06]'

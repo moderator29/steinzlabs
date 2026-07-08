@@ -23,6 +23,35 @@ import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 const FREE_TIER_LIMIT = 25;
 const MAX_TOOL_ITERATIONS = 5;
 
+// ─── Graceful tool execution ────────────────────────────────────────────────
+// Run a single VTX tool defensively. A tool that throws (bad input, a provider
+// 5xx, a timeout, an unhandled rejection) becomes a well-formed "unavailable"
+// tool_result instead of rejecting the surrounding Promise.all and aborting the
+// entire streamed answer with the blanket "VTX could not generate a response".
+// This is the degrade-gracefully contract: the agent still answers with whatever
+// real data the OTHER tools returned and states honestly that this source was
+// unavailable — never a fabricated fallback.
+async function safeExecuteVTXTool(
+  toolName: string,
+  toolInput: Record<string, unknown>,
+  userId: string | null,
+): Promise<string> {
+  try {
+    const out = await executeVTXTool(toolName, toolInput, userId);
+    return typeof out === 'string' && out.length > 0
+      ? out
+      : JSON.stringify({ unavailable: true, tool: toolName, note: 'This data source returned no data. Answer from the other tools and say this one had nothing.' });
+  } catch (err) {
+    logger.error({ tool: toolName, err: err instanceof Error ? err.message : String(err) }, '[VTX-AI] tool execution failed');
+    return JSON.stringify({
+      unavailable: true,
+      tool: toolName,
+      error: err instanceof Error ? err.message : 'tool execution failed',
+      note: "This data source was unavailable. Continue with the other tools' real results and state honestly that this one could not be reached — do not invent a value.",
+    });
+  }
+}
+
 // ─── Rate Limiting (Redis-backed, in-process fallback) ──────────────────────
 
 import { getRedis } from "@/lib/cache/redis";
@@ -153,6 +182,8 @@ function detectArkhamIntent(message: string): {
 const VTX_SYSTEM_PROMPT_TEMPLATE = `You are VTX, the most advanced crypto intelligence agent built by NAKA LABS. You are NOT a chatbot. You are a real-time AI intelligence engine that combines crypto analysis, financial markets, security intelligence, and general knowledge.
 
 CRITICAL DATA RULE: You MUST use ONLY the prices and numbers from the REAL-TIME DATA section below. NEVER use any price, volume, market cap, or balance from your training data. If the data section says SOL is $83.69, you say $83.69 — not $85 or any other number. If data is missing for something the user asked, say "I don't have current data for that" rather than guessing.
+
+DATA CONSISTENCY RULE (single source of truth): For any specific token the user asks about, an inline Token Card is rendered from the platform's own resolver, and that card is the single source of truth for that token's price, market cap, volume, liquidity and FDV. Do NOT restate a different price or market cap for the same token from any tool output or from the live-data section — the numbers you say in text must match the card. When a tool result labels one source as PRIMARY, quote that source and treat the others only as confirmation; if sources disagree by more than ~2%, say so explicitly rather than averaging them or silently picking one. Market cap can never exceed FDV — if you ever see that, treat it as missing data, not a real figure. Never invent a number that falls between two real sources.
 
 PERSONALITY: {personality}
 
@@ -339,9 +370,14 @@ function parseSlashCommand(message: string): SlashCommandResult | null {
 async function fetchLiveMarketContext(): Promise<string> {
   try {
     // Binance is fastest for BTC/ETH/SOL prices — no API key needed
+    // NOTE: Binance rejects the ENTIRE batch (HTTP 400) if a single symbol is
+    // invalid, which silently drops the whole real-time feed to the CoinGecko
+    // fallback. 'MATICUSDT' was delisted when Polygon rebranded MATIC->POL, so
+    // it must be 'POLUSDT' — any stale ticker here kills live prices for all
+    // majors at once. Keep this list to symbols Binance currently trades.
     const BINANCE_SYMBOLS = [
       'BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT','ADAUSDT',
-      'AVAXUSDT','DOGEUSDT','MATICUSDT','LINKUSDT','ARBUSDT','OPUSDT',
+      'AVAXUSDT','DOGEUSDT','POLUSDT','LINKUSDT','ARBUSDT','OPUSDT',
       'INJUSDT','SUIUSDT','PEPEUSDT','WIFUSDT','BONKUSDT',
     ];
     const url = `https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(JSON.stringify(BINANCE_SYMBOLS))}`;
@@ -770,7 +806,14 @@ export async function POST(request: NextRequest) {
           try {
             let streamIterations = 0;
             while (true) {
-              const stream = vtxStreamRaw({ messages: loopMessages, system: systemPrompt, webSearch: webSearchEnabled || forceWebSearch, effort: vtxEffort });
+              // At the cap, force a tools-FREE turn so the model MUST synthesize
+              // and stream a final text answer from the real data it already
+              // gathered. Without this, a long-tail token (e.g. squidgrow) that
+              // needs several lookups burns every iteration on tool_use and the
+              // loop breaks with zero text deltas — the exact "VTX could not
+              // generate a response" the owner reported.
+              const capped = streamIterations >= MAX_TOOL_ITERATIONS;
+              const stream = vtxStreamRaw({ messages: loopMessages, system: systemPrompt, webSearch: webSearchEnabled || forceWebSearch, effort: vtxEffort, ...(capped ? { tools: [] } : {}) });
               for await (const event of stream) {
                 if (
                   event.type === 'content_block_delta' &&
@@ -784,14 +827,17 @@ export async function POST(request: NextRequest) {
               }
               const finalMsg: Anthropic.Message = await stream.finalMessage();
 
-              if (finalMsg.stop_reason === 'tool_use' && streamIterations < MAX_TOOL_ITERATIONS) {
+              if (!capped && finalMsg.stop_reason === 'tool_use') {
                 const toolUseBlocks = finalMsg.content.filter(
                   (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use'
                 );
+                // safeExecuteVTXTool: a single failing tool degrades to an
+                // "unavailable" result instead of rejecting Promise.all and
+                // killing the whole streamed answer.
                 const toolResults = await Promise.all(
                   toolUseBlocks.map(async (block) => {
                     toolsUsed.push(block.name);
-                    const result = await executeVTXTool(
+                    const result = await safeExecuteVTXTool(
                       block.name,
                       block.input as Record<string, unknown>,
                       callerUserId
@@ -853,25 +899,31 @@ export async function POST(request: NextRequest) {
     let toolIterations = 0;
     let toolsUsed: string[] = [];
 
-    while (toolIterations < MAX_TOOL_ITERATIONS) {
+    while (toolIterations <= MAX_TOOL_ITERATIONS) {
+      // At the cap, force a tools-FREE turn so the model synthesizes a final
+      // text answer from the data already gathered instead of ending on an
+      // unfulfilled tool_use with no text (the "could not generate" failure).
+      const capped = toolIterations >= MAX_TOOL_ITERATIONS;
       const vtxResponse = await vtxQuery({
         messages: loopMessages,
         system: systemPrompt,
         webSearch: webSearchEnabled || forceWebSearch,
         effort: vtxEffort,
+        ...(capped ? { tools: [] } : {}),
       });
 
-      if (vtxResponse.stop_reason === 'tool_use') {
+      if (!capped && vtxResponse.stop_reason === 'tool_use') {
         // Collect all tool_use blocks from this response
         const toolUseBlocks = vtxResponse.content.filter(
           (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use'
         );
 
-        // Execute all tool calls in parallel
+        // Execute all tool calls in parallel — safeExecuteVTXTool degrades a
+        // failing tool to an "unavailable" result instead of aborting the turn.
         const toolResults = await Promise.all(
           toolUseBlocks.map(async (block) => {
             toolsUsed.push(block.name);
-            const result = await executeVTXTool(block.name, block.input as Record<string, unknown>, callerUserId);
+            const result = await safeExecuteVTXTool(block.name, block.input as Record<string, unknown>, callerUserId);
             return {
               type: 'tool_result' as const,
               tool_use_id: block.id,
@@ -923,12 +975,20 @@ export async function POST(request: NextRequest) {
     // ── Build inline cards (token + swap) ───────────────────────────────────
     // Shared with the streaming path so streamed, card-worthy replies keep
     // card parity with the non-streaming response.
-    const { tokenCard, swapCard } = await buildResponseCards({
-      cleanMessage,
-      tokenDetected,
-      chartAddress: chartPayload?.address ?? null,
-      walletAddress: body.context?.walletAddress ?? null,
-    });
+    // Best-effort — a card-build failure must never turn a good text reply into
+    // a 500. Parity with the streaming path, which already guards this.
+    let tokenCard: Record<string, unknown> | null = null;
+    let swapCard: Record<string, unknown> | null = null;
+    try {
+      ({ tokenCard, swapCard } = await buildResponseCards({
+        cleanMessage,
+        tokenDetected,
+        chartAddress: chartPayload?.address ?? null,
+        walletAddress: body.context?.walletAddress ?? null,
+      }));
+    } catch (cardErr) {
+      logger.error({ err: cardErr instanceof Error ? cardErr.message : cardErr }, '[VTX-AI] Card build error:');
+    }
 
     return NextResponse.json({
       reply: finalReply,

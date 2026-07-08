@@ -68,7 +68,7 @@ export const GET = withTierGate("pro", async (_request: NextRequest) => {
     const { data: whales } = await admin
       .from("whales")
       .select(
-        "address,chain,label,entity_type,archetype,whale_score,portfolio_value_usd,pnl_30d_usd,win_rate,volume_7d_usd,active_days_7d,follower_count,verified,last_active_at",
+        "address,chain,label,entity_type,archetype,whale_score,portfolio_value_usd,pnl_30d_usd,win_rate,volume_7d_usd,active_days_7d,follower_count,verified,last_active_at,naka_number,logo_url,logo_source",
       )
       .in("address", addrs);
     const byKey = new Map<string, Record<string, unknown>>();

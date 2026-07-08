@@ -30,7 +30,9 @@ export interface SniperToken {
   name: string;
   chain: string;
   liquidity: number;
-  tax: number;
+  // Max(buy,sell) tax as a whole-number percent; undefined when unknown
+  // (feed security not yet enriched) so the UI shows "—", never a fake 0%.
+  tax?: number;
   honeypot: boolean;
   securityScore: number;
   detectedAt: number;
@@ -147,7 +149,14 @@ export async function GET(request: NextRequest) {
       name: r.name ?? 'Unknown',
       chain: r.chain,
       liquidity: r.liquidity_usd ?? 0,
-      tax: Math.max(r.buy_tax ?? 0, r.sell_tax ?? 0),
+      // Tax is stored as a 0..1 fraction (GoPlus convention). Surface it as a
+      // whole-number percent to match the card's "{tax}%" label, and as
+      // undefined (→ "—") when neither tax is known — the feed's security
+      // enrichment leaves these null, so returning 0 fabricated a "0% fee" for
+      // every unaudited token instead of honestly showing "unknown".
+      tax: (r.buy_tax == null && r.sell_tax == null)
+        ? undefined
+        : Math.round(Math.max(r.buy_tax ?? 0, r.sell_tax ?? 0) * 100),
       honeypot: !!r.is_honeypot,
       securityScore: r.security_score ?? 0,
       detectedAt: r.pool_created_at ? Date.parse(r.pool_created_at) : Date.parse(r.first_seen_at),
@@ -213,8 +222,11 @@ export async function POST(request: NextRequest) {
       const dexArr = Array.isArray(raw?.dex) ? (raw!.dex as Array<Record<string, unknown>>) : [];
       const liquidity = parseFloat(String(dexArr[0]?.liquidity ?? '0'));
       const holders = Array.isArray(raw?.holders) ? (raw!.holders as Array<Record<string, unknown>>) : [];
+      // GoPlus `percent` is a 0..1 fraction; surface top10HolderPercent as a real
+      // percent (×100) to match the rest of the app (token-detail mapHolders,
+      // the execute safety gate) instead of returning e.g. 0.9 for 90%.
       const top10 = parseFloat(
-        holders.slice(0, 10).reduce((sum, h) => sum + parseFloat(String(h.percent ?? '0')), 0).toFixed(2)
+        (holders.slice(0, 10).reduce((sum, h) => sum + (parseFloat(String(h.percent ?? '0')) || 0), 0) * 100).toFixed(2)
       );
 
       const flags = sec.checks

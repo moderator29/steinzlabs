@@ -25,9 +25,18 @@ export async function GET() {
       totalMarketCap: g.totalMarketCapUSD,
       totalVolume: g.totalVolumeUSD,
       btcDominance: g.btcDominancePercent,
-      volumeChange24h: g.marketCapChange24hPercent,
+      // Data honesty (owner audit): CoinGecko /global exposes ONLY the
+      // 24h market-cap change %. It does NOT expose a 24h *volume* change
+      // or a 24h *dominance* change. The previous code copied the
+      // market-cap change into volumeChange24h (a wrong, misleading
+      // number) and hardcoded dominanceChange24h to 0 (a fabricated
+      // "flat" reading). Both are now null so consumers render "—"
+      // instead of an invented value.
+      volumeChange24h: null,
       marketCapChange24h: g.marketCapChange24hPercent,
-      dominanceChange24h: 0,
+      dominanceChange24h: null,
+      // NOTE: this is active *cryptocurrencies* (coin count), not chains.
+      activeCryptocurrencies: g.activeCryptocurrencies,
       chainsTracked: g.activeCryptocurrencies,
     }, {
       headers: { "Cache-Control": "public, max-age=60, s-maxage=120" },

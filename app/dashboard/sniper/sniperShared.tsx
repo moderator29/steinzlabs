@@ -129,26 +129,48 @@ export function sourceMeta(raw: string): { label: string; color: string; short: 
   if (s.includes('quick')) return pick(raw.replace(/_/g, ' '), '#418ACA');
   if (s.includes('aerodrome')) return pick(raw.replace(/_/g, ' '), '#1E6BFF');
   if (s.includes('camelot')) return pick(raw.replace(/_/g, ' '), '#E0A857');
+  // Launchpad brand colors so the monogram fallback reads as intentional brand,
+  // not a broken image, whenever the real logo can't be fetched.
+  if (s.includes('believe')) return pick('Believe', '#4ADE80');
+  if (s.includes('bags')) return pick('Bags', '#7C3AED');
+  if (s.includes('moonshot') || s.includes('moonit')) return pick('Moonshot', '#FACC15');
+  if (s.includes('heaven')) return pick('Heaven', '#38BDF8');
+  if (s.includes('bonk') || s.includes('launchlab')) return pick("Let's Bonk", '#FF6B00');
+  if (s.includes('jup') || s.includes('studio')) return pick('Jup Studio', '#22D3EE');
+  if (s.includes('meteora') || s.includes('dbc')) return pick('Meteora', '#3B82F6');
+  if (s.includes('raydium')) return pick('Raydium', '#3D5AFE');
+  if (s.includes('orca')) return pick('Orca', '#FFD15C');
+  if (s.includes('bankr')) return pick('Bankr', '#22C55E');
   if (s.includes('four') || s.includes('meme')) return pick(raw.replace(/_/g, ' '), '#F0B90B');
+  if (s.includes('pumpswap')) return pick('Pump.swap', '#16A34A');
   if (s.includes('pump')) return pick(raw.replace(/_/g, ' '), '#22C55E');
   return pick(raw.replace(/_/g, ' '), '#6B7280');
 }
 
-/** Real launchpad logo (DexScreener CDN) with a colored-monogram fallback so a
- *  missing/404 icon never reads as broken. `icon` may be an explicit URL from
- *  the feed (SniperToken.sourceIcon); otherwise it's resolved from the id. */
+/** Real launchpad logo with a branded-monogram fallback so a missing/404 icon
+ *  never reads as broken. Tries, in order: an explicit feed URL, a locally
+ *  hosted brand asset (`/launchpads/<id>.png` — drop real PNGs there and they
+ *  win), then the DexScreener dex-icon CDN. When every image source fails it
+ *  renders a brand-colored monogram. This local-first order means launchpads
+ *  DexScreener doesn't host as a DEX (Believe, Bags, Moonshot, Heaven…) can be
+ *  given their real logo simply by adding the file — no code change. */
 export function LaunchpadIcon({ id, icon, size = 16 }: { id?: string | null; icon?: string | null; size?: number }) {
-  const [failed, setFailed] = useState(false);
-  const src = icon ?? launchpadIconUrl(id);
   const meta = sourceMeta(id ?? 'dex');
-  if (src && !failed) {
+  const candidates = [
+    icon,
+    id ? `/launchpads/${id}.png` : null,
+    launchpadIconUrl(id),
+  ].filter((s): s is string => Boolean(s));
+  const [idx, setIdx] = useState(0);
+  const src = candidates[idx];
+  if (src) {
     return (
       <img
         src={src}
         alt={meta.label}
         width={size}
         height={size}
-        onError={() => setFailed(true)}
+        onError={() => setIdx((i) => i + 1)}
         className="rounded-md object-cover shrink-0"
         style={{ width: size, height: size }}
       />

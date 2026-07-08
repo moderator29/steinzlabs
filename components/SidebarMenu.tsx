@@ -43,11 +43,11 @@ const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { icon: BarChart3, label: 'Dashboard', path: '/dashboard' },
       { icon: Sparkles, label: 'Ask the Chain', path: '/dashboard/ask-chain', badge: 'AI' },
-      { icon: ScanSearch, label: 'Token X-Ray', path: '/dashboard/token-xray', badge: 'NEW' },
-      { icon: TrendingUp, label: 'Narrative Radar', path: '/dashboard/sector-rotation', badge: 'NEW' },
-      { icon: PieChart, label: 'Portfolio', path: '/dashboard/portfolio', badge: 'NEW' },
+      { icon: ScanSearch, label: 'Token X-Ray', path: '/dashboard/token-xray', badge: 'BETA' },
+      { icon: TrendingUp, label: 'Narrative Radar', path: '/dashboard/sector-rotation', badge: 'BETA' },
+      { icon: PieChart, label: 'Portfolio', path: '/dashboard/portfolio', badge: 'BETA' },
       { icon: Bell, label: 'Notifications', path: '/dashboard/notifications' },
-      { icon: Bell, label: 'Alerts Center', path: '/dashboard/alerts-center', badge: 'NEW' },
+      { icon: Bell, label: 'Alerts Center', path: '/dashboard/alerts-center', badge: 'BETA' },
     ],
   },
   {
@@ -75,7 +75,7 @@ const NAV_CATEGORIES: NavCategory[] = [
       { icon: Trophy, label: 'Smart Money', path: '/dashboard/smart-money' },
       { icon: Radio, label: 'Network Metrics', path: '/dashboard/network-metrics' },
       { icon: Fish, label: 'Whale Tracker', path: '/dashboard/whale-tracker' },
-      { icon: Circle, label: 'Bubble Map', path: '/dashboard/bubble-map', badge: 'NEW' },
+      { icon: Circle, label: 'Bubble Map', path: '/dashboard/bubble-map', badge: 'BETA' },
     ],
   },
   {
@@ -92,13 +92,13 @@ const NAV_CATEGORIES: NavCategory[] = [
   {
     title: 'Tools',
     items: [
-      { icon: Wallet, label: 'Wallet', path: '/dashboard/wallet-page', badge: 'NEW' },
+      { icon: Wallet, label: 'Wallet', path: '/dashboard/wallet-page', badge: 'BETA' },
       { icon: Bot, label: 'VTX Agent', path: '/dashboard/vtx-ai' },
-      { icon: Crosshair, label: 'Sniper Bot', path: '/dashboard/sniper' },
-      { icon: LineChart, label: 'Market Maker', path: '/dashboard/market-maker', badge: 'NEW' },
-      { icon: Network, label: 'Network Graph', path: '/dashboard/network-graph', badge: 'NEW' },
+      { icon: Crosshair, label: 'Sniper Bot', path: '/dashboard/sniper', badge: 'BETA' },
+      { icon: LineChart, label: 'Market Maker', path: '/dashboard/market-maker', badge: 'BETA' },
+      { icon: Network, label: 'Network Graph', path: '/dashboard/network-graph', badge: 'BETA' },
       { icon: Bell, label: 'Alerts', path: '/dashboard/alerts' },
-      { icon: FlaskConical, label: 'Research Lab', path: '/dashboard/research', badge: 'NEW' },
+      { icon: FlaskConical, label: 'Research Lab', path: '/dashboard/research', badge: 'BETA' },
       { icon: Archive, label: 'Archive', path: '/dashboard/archive' },
     ],
   },

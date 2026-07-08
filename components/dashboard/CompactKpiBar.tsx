@@ -6,9 +6,11 @@ interface MarketGlobals {
   totalMarketCap: number;
   totalVolume: number;
   btcDominance: number;
-  volumeChange24h: number;
-  marketCapChange24h: number;
-  dominanceChange24h: number;
+  // null when the source (CoinGecko /global) doesn't expose the metric —
+  // the pill then hides its change badge rather than showing a fake value.
+  volumeChange24h: number | null;
+  marketCapChange24h: number | null;
+  dominanceChange24h: number | null;
   chainsTracked: number;
 }
 
@@ -60,7 +62,7 @@ export function CompactKpiBar() {
       />
       <KpiPill
         icon={<Globe size={12} />}
-        label="Chains"
+        label="Coins"
         value={data ? `${data.chainsTracked}` : "—"}
         change={null}
         live

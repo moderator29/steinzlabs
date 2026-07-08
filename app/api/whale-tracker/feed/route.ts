@@ -25,6 +25,9 @@ interface FeedRow {
   label: string | null;
   entity_type: string | null;
   whale_label: WhaleLabel;
+  // Persisted unique Naka display number (whales.naka_number); null when the
+  // wallet isn't in the whales table (ephemeral live wallet).
+  naka_number: number | null;
   // #8: behavioral metrics the feed actually enriches each row with — typed so
   // they aren't silently dropped from the contract.
   pnl_30d_usd?: number | null;
@@ -144,11 +147,12 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
       // already populates.
       const { data: whaleRows } = await admin
         .from("whales")
-        .select("address,chain,label,entity_type,pnl_30d_usd,win_rate,avg_hold_hours")
+        .select("address,chain,label,entity_type,naka_number,pnl_30d_usd,win_rate,avg_hold_hours")
         .in("address", uniqAddrs);
       const labels = new Map<string, {
         label: string | null;
         entity_type: string | null;
+        naka_number: number | null;
         pnl_30d_usd: number | null;
         win_rate: number | null;
         avg_hold_hours: number | null;
@@ -158,6 +162,7 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
         chain: string;
         label: string | null;
         entity_type: string | null;
+        naka_number: number | null;
         pnl_30d_usd: number | null;
         win_rate: number | null;
         avg_hold_hours: number | null;
@@ -167,6 +172,7 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
           {
             label: w.label,
             entity_type: w.entity_type,
+            naka_number: w.naka_number,
             pnl_30d_usd: w.pnl_30d_usd,
             win_rate: w.win_rate,
             avg_hold_hours: w.avg_hold_hours,
@@ -201,6 +207,7 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
           label,
           entity_type,
           whale_label,
+          naka_number: meta?.naka_number ?? null,
           pnl_30d_usd: meta?.pnl_30d_usd ?? null,
           win_rate: meta?.win_rate ?? null,
           avg_hold_hours: meta?.avg_hold_hours ?? null,

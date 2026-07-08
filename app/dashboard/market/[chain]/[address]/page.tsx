@@ -25,17 +25,18 @@
 
 import { use, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { Star, Bell, Share2, Brain, X, Maximize2, Minimize2 } from "lucide-react";
+import { Star, Bell, Share2, Brain, X, Maximize2, Minimize2, CandlestickChart as CandleIcon, LineChart as LineIcon, AreaChart as AreaIcon, BarChart3, Settings2 } from "lucide-react";
 import SocialVelocityPill from "@/components/market/SocialVelocityPill";
 import DuneIntelligenceStrip from "@/components/market/DuneIntelligenceStrip";
 import TokenIntelligencePanel from "@/components/market/TokenIntelligencePanel";
 import TradingViewChart, { getTradingViewSymbol, isKnownTradingViewSymbol } from "@/components/TradingViewChart";
-import { AdvancedChart } from "@/components/trading/AdvancedChart";
+import { AdvancedChart, type ChartType, type IndicatorConfig } from "@/components/trading/AdvancedChart";
 import SecurityPanel from "@/components/market/SecurityPanel";
 import { useTheme } from "@/lib/theme/ThemeProvider";
 import InlineBuySellForm from "@/components/market/InlineBuySellForm";
 import RecentTradesRail from "@/components/market/RecentTradesRail";
 import BuySellRatioBar from "@/components/market/BuySellRatioBar";
+import TokenStatsPanel from "@/components/market/TokenStatsPanel";
 import PortfolioHistoryPanel from "@/components/market/PortfolioHistoryPanel";
 import { BackButton } from "@/components/ui/BackButton";
 import { useTokenDetail } from "@/hooks/market/useTokenDetail";
@@ -102,6 +103,96 @@ function writeChartInterval(tokenKey: string, value: string): void {
   }
 }
 
+// Bug #1 (pro-chart coverage) — the off-CEX AdvancedChart branch used to
+// be hardcoded to candlesticks + ema21/volume with no user controls, so
+// every long-tail coin (i.e. everything not in the ~65-symbol TradingView
+// map) rendered as a stripped-down "lesser" chart. It now ships the same
+// pro controls the CEX widget has: chart type (candles / line / area /
+// bars) + a full indicator menu (EMA / SMA / Bollinger / VWAP / RSI /
+// MACD / volume), all persisted per token so a returning trader keeps
+// their study setup. Data stays 100% real (DEX/CG OHLCV via
+// /api/market/ohlcv) — no fabricated candles are ever synthesized.
+const CHART_TYPES: { id: ChartType; label: string }[] = [
+  { id: 'candlestick', label: 'Candles' },
+  { id: 'line',        label: 'Line'    },
+  { id: 'area',        label: 'Area'    },
+  { id: 'bars',        label: 'Bars'    },
+];
+
+const INDICATOR_OPTIONS: { key: keyof IndicatorConfig; label: string }[] = [
+  { key: 'ema9',      label: 'EMA 9'     },
+  { key: 'ema21',     label: 'EMA 21'    },
+  { key: 'ema50',     label: 'EMA 50'    },
+  { key: 'ema200',    label: 'EMA 200'   },
+  { key: 'sma20',     label: 'SMA 20'    },
+  { key: 'sma50',     label: 'SMA 50'    },
+  { key: 'sma200',    label: 'SMA 200'   },
+  { key: 'bollinger', label: 'Bollinger' },
+  { key: 'vwap',      label: 'VWAP'      },
+  { key: 'rsi',       label: 'RSI'       },
+  { key: 'macd',      label: 'MACD'      },
+  { key: 'volume',    label: 'Volume'    },
+];
+
+const DEFAULT_INDICATORS: IndicatorConfig = { ema21: true, ema50: true, volume: true };
+const VALID_CHART_TYPES: ChartType[] = ['candlestick', 'line', 'area', 'bars'];
+
+// Volume-source routing — CoinGecko's /ohlc endpoint (used for slug-charted
+// coins) returns candles with NO volume, leaving the AdvancedChart volume
+// pane blank. When the detail payload exposes a real contract/pool we route
+// the OHLCV request to GeckoTerminal (real per-bar volume). These map a
+// coin's on-chain identity to a GeckoTerminal-supported network slug (mirrors
+// GT_NETWORK in lib/services/geckoterminal). Only nets that actually carry
+// pool OHLCV are listed; anything else leaves volume honestly empty.
+const CG_PLATFORM_TO_CHAIN: Record<string, string> = {
+  ethereum: 'ethereum',
+  'polygon-pos': 'polygon',
+  'binance-smart-chain': 'bsc',
+  solana: 'solana',
+  'arbitrum-one': 'arbitrum',
+  'optimistic-ethereum': 'optimism',
+  base: 'base',
+  avalanche: 'avalanche',
+};
+// DexScreener chainId values already line up with our GT network keys.
+const GT_SUPPORTED_NETS = new Set(['ethereum', 'polygon', 'bsc', 'solana', 'arbitrum', 'optimism', 'base', 'avalanche']);
+
+function readChartType(tokenKey: string): ChartType {
+  if (typeof window === 'undefined') return 'candlestick';
+  try {
+    const v = localStorage.getItem(`steinz_chart_type_${tokenKey}`);
+    return v && VALID_CHART_TYPES.includes(v as ChartType) ? (v as ChartType) : 'candlestick';
+  } catch {
+    return 'candlestick';
+  }
+}
+
+function writeChartType(tokenKey: string, value: ChartType): void {
+  if (typeof window === 'undefined') return;
+  try { localStorage.setItem(`steinz_chart_type_${tokenKey}`, value); } catch { /* non-fatal */ }
+}
+
+function readIndicators(tokenKey: string): IndicatorConfig {
+  if (typeof window === 'undefined') return { ...DEFAULT_INDICATORS };
+  try {
+    const raw = localStorage.getItem(`steinz_chart_ind_${tokenKey}`);
+    if (!raw) return { ...DEFAULT_INDICATORS };
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const out: IndicatorConfig = {};
+    for (const { key } of INDICATOR_OPTIONS) {
+      if (typeof parsed[key] === 'boolean') out[key] = parsed[key] as boolean;
+    }
+    return Object.keys(out).length > 0 ? out : { ...DEFAULT_INDICATORS };
+  } catch {
+    return { ...DEFAULT_INDICATORS };
+  }
+}
+
+function writeIndicators(tokenKey: string, value: IndicatorConfig): void {
+  if (typeof window === 'undefined') return;
+  try { localStorage.setItem(`steinz_chart_ind_${tokenKey}`, JSON.stringify(value)); } catch { /* non-fatal */ }
+}
+
 export default function CoinDetailPage({ params }: { params: Promise<RouteParams> }) {
   const { chain, address } = use(params);
   const { user } = useAuth();
@@ -115,6 +206,10 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
   const tokenKey = `${chain}:${address}`;
   const [chartInterval, setChartInterval] = useState<string>(() => readChartInterval(tokenKey));
   const [chartFullscreen, setChartFullscreen] = useState(false);
+  // Bug #1 — pro-chart controls for the off-CEX AdvancedChart branch.
+  const [chartType, setChartType] = useState<ChartType>(() => readChartType(tokenKey));
+  const [indicators, setIndicators] = useState<IndicatorConfig>(() => readIndicators(tokenKey));
+  const [indicatorsOpen, setIndicatorsOpen] = useState(false);
 
   // Audit M8 #9 — preload the TradingView script so by the time the
   // dynamic chart import resolves, the widget code is already in the
@@ -133,6 +228,32 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
   const handleIntervalChange = (id: string) => {
     setChartInterval(id);
     writeChartInterval(tokenKey, id);
+  };
+
+  const handleChartTypeChange = (t: ChartType) => {
+    setChartType(t);
+    writeChartType(tokenKey, t);
+  };
+
+  const handleIndicatorToggle = (key: keyof IndicatorConfig) => {
+    setIndicators((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      writeIndicators(tokenKey, next);
+      return next;
+    });
+  };
+
+  // Panel Buy/Sell actions scroll to the live trade form — the desktop right
+  // rail on lg+, or the mobile inline form below the chart otherwise.
+  const scrollToTrade = () => {
+    if (typeof document === 'undefined') return;
+    const desktop = document.getElementById('desktop-trade-form');
+    const mobile = document.getElementById('mobile-trade-form');
+    // Prefer whichever form is actually visible (offsetParent is null when the
+    // element is display:none, e.g. the desktop rail on a phone).
+    const visible = (el: HTMLElement | null) => (el && el.offsetParent !== null ? el : null);
+    const target = visible(desktop) ?? visible(mobile) ?? desktop ?? mobile;
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
   const md = detail?.market_data;
@@ -156,6 +277,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
     change_h24?: number | null;
     // Audit P1 #20 — used by AdvancedChart fallback below
     pair_address?: string;
+    pair_chain_id?: string;
     liquidity_usd?: number | null;
   } | undefined;
   const vol5m = dex?.volume_m5;
@@ -172,6 +294,43 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
   const name = detail?.name ?? address;
   const logo = detail?.image?.small;
   const watched = isWatched(address);
+  // Bug #1 — only route to the real TradingView (Binance/Bybit) widget when
+  // we have a VERIFIED CEX symbol. Guessing BINANCE:{SYM}USDT for an
+  // unlisted coin would render "Invalid symbol" or, worse, a same-ticker
+  // DIFFERENT coin's chart (fake data). Everything else uses AdvancedChart,
+  // which now ships the full pro toolbar and renders REAL DEX/CG candles.
+  // Wait for detail to load so we branch on the real ticker, not the
+  // address slice — avoids a first-paint flip from Advanced → widget.
+  const useWidget = !!detail && isKnownTradingViewSymbol(symbol);
+
+  // Real-volume routing for the AdvancedChart. The URL `address` is often a
+  // CoinGecko slug (e.g. "chainlink"), which the OHLCV route charts via
+  // CoinGecko /ohlc — candles only, NO volume. When the detail payload
+  // exposes the coin's real on-chain identity, hand it to the chart so the
+  // OHLCV route pulls REAL per-bar volume from GeckoTerminal instead.
+  //  1. DexScreener fallback payload already carries the deepest POOL address
+  //     + chain — best case, used directly.
+  //  2. Else pick a contract from CoinGecko `platforms`, preferring the one on
+  //     the page's chain, mapped to a GeckoTerminal-supported network.
+  // No on-chain identity → props stay undefined and the volume pane is left
+  // honestly empty (never synthesized).
+  const platforms = (detail as unknown as { platforms?: Record<string, string> } | null)?.platforms;
+  let volumeNetwork: string | undefined;
+  let volumeAddress: string | undefined;
+  let volumePair: string | undefined;
+  if (dex?.pair_address && dex.pair_chain_id && GT_SUPPORTED_NETS.has(dex.pair_chain_id)) {
+    volumeNetwork = dex.pair_chain_id;
+    volumePair = dex.pair_address;
+  } else if (platforms) {
+    const supported = Object.entries(platforms).filter(
+      ([plat, addr]) => !!addr && !!CG_PLATFORM_TO_CHAIN[plat],
+    );
+    const chosen = supported.find(([plat]) => CG_PLATFORM_TO_CHAIN[plat] === chain) ?? supported[0];
+    if (chosen) {
+      volumeNetwork = CG_PLATFORM_TO_CHAIN[chosen[0]];
+      volumeAddress = chosen[1];
+    }
+  }
 
   return (
     <div className="flex flex-col min-h-screen text-white pb-20 md:pb-0">
@@ -270,7 +429,9 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
         {/* Checkprice-style stats strip */}
         <div className="flex items-center gap-4 px-4 pb-3 overflow-x-auto text-xs whitespace-nowrap">
           <span className="text-lg md:text-xl font-mono font-bold tabular-nums">
-            {loading ? '—' : formatPrice(price)}
+            {/* Honest price: show — while loading AND when the source has no
+                real price (price <= 0), never a fabricated $0.00. */}
+            {loading ? '—' : price > 0 ? formatPrice(price) : '—'}
           </span>
           <PriceChangeDisplay value={change24hUnified} size="sm" />
           <div className="h-4 w-px bg-slate-800/60 hidden md:block" />
@@ -297,8 +458,27 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
         </div>
       </div>
 
-      {/* Body — checkprice-style 2-column on desktop, stacked on mobile */}
+      {/* Body — 3-column on lg (stats panel · chart · trade rail), 2-column on
+          md (chart · trade rail), stacked on mobile (stats panel on top). */}
       <div className="flex-1 min-h-0 flex flex-col md:flex-row">
+        {/* LEFT stats panel — OUR aurora take on the DEX token panel. Single
+            instance: shows on mobile (stacked, top) and lg+ (left column),
+            hidden at md where 3 columns would crowd. Real DexScreener /
+            GeckoTerminal / CoinGecko data, ~4s live refresh. */}
+        <aside className="flex md:hidden lg:flex w-full lg:w-[300px] shrink-0 flex-col p-3 lg:p-3 lg:border-r lg:border-slate-800/50">
+          <TokenStatsPanel
+            chain={chain}
+            address={address}
+            initialName={detail?.name}
+            initialSymbol={symbol}
+            initialLogo={logo}
+            watched={watched}
+            onToggleWatch={() => toggleWatchlist(address)}
+            onBuy={scrollToTrade}
+            onSell={scrollToTrade}
+          />
+        </aside>
+
         <div className="flex-1 min-w-0 flex flex-col">
           {/*
             Audit M3 — interval selector + fullscreen toggle. Restored
@@ -339,18 +519,85 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
                   );
                 })}
               </div>
-              <button
-                type="button"
-                onClick={() => setChartFullscreen((v) => !v)}
-                className="flex-shrink-0 p-1.5 rounded-md text-slate-300 hover:text-white hover:bg-white/5"
-                title={chartFullscreen ? 'Exit fullscreen' : 'Fullscreen chart'}
-                aria-label={chartFullscreen ? 'Exit fullscreen' : 'Fullscreen chart'}
-              >
-                {chartFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-              </button>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {/* Bug #1 — chart-type + indicator controls. The real
+                    TradingView widget carries its own native top/side
+                    toolbar, so these only render for the AdvancedChart
+                    (off-CEX) branch, giving every long-tail coin the same
+                    pro study tools as the BTC widget. */}
+                {!useWidget && (
+                  <>
+                    <div className="flex items-center gap-0.5">
+                      {CHART_TYPES.map((ct) => {
+                        const active = ct.id === chartType;
+                        const Icon = ct.id === 'candlestick' ? CandleIcon : ct.id === 'line' ? LineIcon : ct.id === 'area' ? AreaIcon : BarChart3;
+                        return (
+                          <button
+                            key={ct.id}
+                            type="button"
+                            onClick={() => handleChartTypeChange(ct.id)}
+                            title={ct.label}
+                            aria-label={ct.label}
+                            aria-pressed={active}
+                            className={`p-1.5 rounded-md transition-colors ${
+                              active ? 'bg-[#0066FF]/20 text-[#8FA3FF]' : 'text-slate-300 hover:text-white hover:bg-white/5'
+                            }`}
+                          >
+                            <Icon size={14} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setIndicatorsOpen((v) => !v)}
+                        className="flex items-center gap-1 px-2 py-1.5 rounded-md text-[11px] font-semibold text-slate-300 hover:text-white hover:bg-white/5"
+                        aria-expanded={indicatorsOpen}
+                      >
+                        <Settings2 size={13} />
+                        <span className="hidden sm:inline">Indicators</span>
+                        <span className="text-[9px] font-mono text-[#8FA3FF]">
+                          {INDICATOR_OPTIONS.filter((o) => indicators[o.key]).length}
+                        </span>
+                      </button>
+                      {indicatorsOpen && (
+                        <>
+                          <div className="fixed inset-0 z-30" onClick={() => setIndicatorsOpen(false)} aria-hidden />
+                          <div className="absolute top-full right-0 mt-1 w-44 nl-glass rounded-lg shadow-2xl z-40 p-1 max-h-[60vh] overflow-y-auto" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+                            {INDICATOR_OPTIONS.map(({ key, label }) => {
+                              const active = !!indicators[key];
+                              return (
+                                <button
+                                  key={key}
+                                  type="button"
+                                  onClick={() => handleIndicatorToggle(key)}
+                                  className="w-full flex items-center justify-between px-2 py-1.5 text-[11px] rounded hover:bg-white/5 text-start transition-colors"
+                                >
+                                  <span className={active ? 'text-white' : 'text-slate-500'}>{label}</span>
+                                  <span className={`w-3 h-3 rounded border ${active ? 'bg-[#0066FF]/80 border-[#4D6BFF]' : 'border-slate-700'}`} />
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setChartFullscreen((v) => !v)}
+                  className="flex-shrink-0 p-1.5 rounded-md text-slate-300 hover:text-white hover:bg-white/5"
+                  title={chartFullscreen ? 'Exit fullscreen' : 'Fullscreen chart'}
+                  aria-label={chartFullscreen ? 'Exit fullscreen' : 'Fullscreen chart'}
+                >
+                  {chartFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                </button>
+              </div>
             </div>
             <div className={chartFullscreen ? 'flex-1 min-h-0' : 'h-[380px] md:h-[560px]'}>
-              {isKnownTradingViewSymbol(symbol) ? (
+              {useWidget ? (
                 <TradingViewChart
                   symbol={getTradingViewSymbol(symbol) ?? `${symbol}USD`}
                   interval={chartInterval}
@@ -363,9 +610,12 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
                   chain={chain}
                   token={address}
                   tf={tfForAdvanced(chartInterval)}
-                  chartType="candlestick"
-                  indicators={{ ema21: true, volume: true }}
+                  chartType={chartType}
+                  indicators={indicators}
                   height={chartFullscreen ? 0 : 560}
+                  volumeNetwork={volumeNetwork}
+                  volumeAddress={volumeAddress}
+                  volumePair={volumePair}
                 />
               )}
             </div>
@@ -441,7 +691,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
         </div>
 
         {/* Desktop right rail — buy/sell + recent trades */}
-        <aside className="hidden md:block w-[320px] shrink-0 nl-glass rounded-none overflow-y-auto p-3 space-y-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+        <aside id="desktop-trade-form" className="hidden md:block w-[320px] shrink-0 nl-glass rounded-none overflow-y-auto p-3 space-y-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           <InlineBuySellForm
             symbol={symbol}
             chain={chain}

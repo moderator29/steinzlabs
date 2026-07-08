@@ -21,12 +21,14 @@ interface WhaleRow {
   portfolio_value_usd: number | null; volume_7d_usd: number | null;
   trade_count_30d: number | null; avg_hold_hours: number | null;
   archetype: string | null; verified: boolean | null; last_active_at: string | null; logo_url: string | null;
+  // Persisted unique Naka display number (whales.naka_number); null when absent.
+  naka_number: number | null;
 }
 
 interface TopToken { symbol: string; valueUsd: number }
 
 interface ComparedWallet {
-  address: string; label: string | null; entityType: string | null; chain: string;
+  address: string; label: string | null; nakaNumber: number | null; entityType: string | null; chain: string;
   archetype: string | null; winRate: number | null; whaleScore: number | null;
   pnl30dUsd: number | null; pnl7dUsd: number | null; portfolioUsd: number | null;
   volume7dUsd: number | null; trades30d: number | null; avgHoldHours: number | null;
@@ -50,7 +52,7 @@ export async function GET(req: NextRequest) {
   const orFilter = requested.map((a) => `address.ilike.${a}`).join(',');
   const { data: whaleRows } = await admin
     .from('whales')
-    .select('address, chain, label, entity_type, win_rate, whale_score, pnl_7d_usd, pnl_30d_usd, portfolio_value_usd, volume_7d_usd, trade_count_30d, avg_hold_hours, archetype, verified, last_active_at, logo_url')
+    .select('address, chain, label, entity_type, win_rate, whale_score, pnl_7d_usd, pnl_30d_usd, portfolio_value_usd, volume_7d_usd, trade_count_30d, avg_hold_hours, archetype, verified, last_active_at, logo_url, naka_number')
     .or(orFilter)
     .limit(4);
 
@@ -89,6 +91,7 @@ export async function GET(req: NextRequest) {
     return {
       address: w.address,
       label: w.label,
+      nakaNumber: w.naka_number ?? null,
       entityType: w.entity_type,
       chain: w.chain,
       archetype: w.archetype,

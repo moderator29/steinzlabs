@@ -66,13 +66,27 @@ export async function POST(request: NextRequest) {
   };
 
   if (id) {
+    // IDOR-safe: never upsert by bare id (that would let a caller overwrite —
+    // and re-own — another user's conversation by guessing its id). Update ONLY
+    // a row that already belongs to this user; if none matches, treat it as a
+    // fresh conversation for this user rather than clobbering someone else's.
     const { data, error } = await supabase
       .from('vtx_conversations')
-      .upsert({ id, ...record })
+      .update(record)
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .select()
+      .maybeSingle();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (data) return NextResponse.json({ conversation: data });
+    // No row owned by this user with that id — insert a new one (id is DB-generated).
+    const { data: created, error: insErr } = await supabase
+      .from('vtx_conversations')
+      .insert(record)
       .select()
       .single();
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ conversation: data });
+    if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 });
+    return NextResponse.json({ conversation: created });
   } else {
     const { data, error } = await supabase
       .from('vtx_conversations')

@@ -36,29 +36,51 @@ export const GET = withTierGate('mini', async (request: NextRequest) => {
   const chain = sp.get('chain') || '';
   const entityType = sp.get('entity_type') || '';
   const q = (sp.get('q') || '').trim();
-  const sort = (sp.get('sort') || 'score') as SortKey;
+  // DEFAULT = biggest whales first. The directory ranks by real held
+  // portfolio value (whales.portfolio_value_usd — net worth in USD) so the
+  // first pages are the genuinely largest wallets (Polychain, Paradigm,
+  // a16z, Pantera …), not the long tail of high-activity-but-small wallets
+  // that a composite whale_score used to surface. Every other sort
+  // (score / volume / pnl / win_rate / recent_activity) still works via ?sort.
+  const sort = (sp.get('sort') || 'portfolio') as SortKey;
   const minScore = parseInt(sp.get('min_score') || '0', 10) || 0;
   const minPortfolioUsd = parseInt(sp.get('min_portfolio_usd') || '0', 10) || 0;
   // activity: '' (all) | 'daily' (>=4 active days/7) | 'barely' (<=1).
   const activity = sp.get('activity') || '';
   const offset = Math.max(0, parseInt(sp.get('offset') || '0', 10) || 0);
   const limit = Math.max(1, Math.min(60, parseInt(sp.get('limit') || '24', 10) || 24));
+  // Newly-discovered whales land with a real activity score but no enrichment
+  // yet (portfolio / 7d volume / PnL are filled asynchronously by the backfill
+  // cron). An industry-standard directory never shows blank rows, so the default
+  // view hides these un-enriched wallets until they have at least ONE displayable
+  // metric — no deletion, no fabricated numbers, they simply surface once real.
+  // A specific-address search always bypasses this so any wallet is findable.
+  const includeUnenriched = sp.get('include_unenriched') === '1';
 
-  const cacheKey = `whales:dir:${chain}:${entityType}:${q}:${sort}:${minScore}:${minPortfolioUsd}:${activity}:${offset}:${limit}`;
+  const cacheKey = `whales:dir:${chain}:${entityType}:${q}:${sort}:${minScore}:${minPortfolioUsd}:${activity}:${includeUnenriched ? 1 : 0}:${offset}:${limit}`;
 
   try {
     const data = await cacheWithFallback(cacheKey, 20, async () => {
       const supabase = getSupabaseAdmin();
-      const column = SORT_COLUMN[sort] || 'whale_score';
+      const column = SORT_COLUMN[sort] || 'portfolio_value_usd';
       const ascending = SORT_ASCENDING.has(sort);
       let query = supabase
         .from('whales')
         .select(
-          'id, address, chain, label, entity_type, archetype, portfolio_value_usd, pnl_30d_usd, win_rate, whale_score, trade_count_30d, avg_hold_hours, volume_7d_usd, active_days_7d, follower_count, x_handle, tg_handle, website, verified, last_active_at, first_seen_at',
+          'id, address, chain, label, entity_type, archetype, portfolio_value_usd, pnl_30d_usd, win_rate, whale_score, trade_count_30d, avg_hold_hours, volume_7d_usd, active_days_7d, follower_count, x_handle, tg_handle, website, verified, last_active_at, first_seen_at, naka_number, logo_url, logo_source',
           { count: 'exact' },
         )
         .eq('is_active', true)
+        // nullsFirst:false → wallets with no value for the sort column (e.g. a
+        // null portfolio) always sort LAST, never onto page one.
         .order(column, { ascending, nullsFirst: false })
+        // Deterministic tiebreak chain so the biggest, most-established whales
+        // lead within an equal sort band (many share a value) and pagination is
+        // stable across pages: largest held portfolio, then composite score,
+        // then most-recently-active.
+        .order('portfolio_value_usd', { ascending: false, nullsFirst: false })
+        .order('whale_score', { ascending: false, nullsFirst: false })
+        .order('last_active_at', { ascending: false, nullsFirst: false })
         .range(offset, offset + limit - 1);
 
       if (chain) query = query.eq('chain', chain);
@@ -68,6 +90,12 @@ export const GET = withTierGate('mini', async (request: NextRequest) => {
       // dominate the list) unless the user explicitly filters to an entity type
       // or searches an address. This is why the directory was "mostly CEX".
       else if (!q) query = query.not('entity_type', 'in', '(exchange,cex,bridge,institutional)');
+      // Hide un-enriched wallets from the default view — a real whale must have
+      // at least one displayable metric (holdings, 7d volume, or realised PnL).
+      // Skipped for explicit searches so every address stays findable.
+      if (!includeUnenriched && !q) {
+        query = query.or('portfolio_value_usd.gt.0,volume_7d_usd.gt.0,pnl_30d_usd.not.is.null');
+      }
       if (minScore > 0) query = query.gte('whale_score', minScore);
       if (minPortfolioUsd > 0) query = query.gte('portfolio_value_usd', minPortfolioUsd);
       if (activity === 'daily') query = query.gte('active_days_7d', DAILY_ACTIVE_MIN_DAYS);

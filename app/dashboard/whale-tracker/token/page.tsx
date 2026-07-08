@@ -11,10 +11,11 @@ import { Loader2, Search, TrendingUp, TrendingDown, Users, BadgeCheck, ScanSearc
 import BackButton from '@/components/ui/BackButton';
 import { ChainLogo } from '@/components/common/ChainLogo';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { whaleDisplayName } from '@/lib/whales/naming';
 import { tokenLensHowItWorks } from '@/lib/howItWorks/content/token-lens';
 
 interface Position {
-  address: string; label: string | null; archetype: string | null;
+  address: string; label: string | null; nakaNumber: number | null; archetype: string | null;
   winRate: number | null; whaleScore: number | null; chain: string | null; verified: boolean;
   buyUsd: number; sellUsd: number; netUsd: number; txs: number;
   firstSeen: string; lastSeen: string; side: 'accumulating' | 'distributing';
@@ -22,7 +23,6 @@ interface Position {
 interface Summary { whales: number; totalBuy: number; totalSell: number; net: number; accumulating: number; distributing: number }
 interface LensResult { query: string; window: string; found: boolean; summary: Summary | null; positions: Position[] }
 
-function short(a: string): string { return a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a; }
 function fmtUsd(n: number): string {
   const s = n < 0 ? '-' : ''; const abs = Math.abs(n);
   if (abs >= 1e9) return `${s}$${(abs / 1e9).toFixed(2)}B`;
@@ -139,7 +139,7 @@ export default function TokenLensPage() {
                   {p.chain && <ChainLogo chain={p.chain} className="w-5 h-5 shrink-0" />}
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold truncate inline-flex items-center gap-1">
-                      {p.label || short(p.address)}
+                      {whaleDisplayName({ label: p.label, nakaNumber: p.nakaNumber, address: p.address, chain: p.chain })}
                       {p.verified && <BadgeCheck className="w-3.5 h-3.5 text-[#00C8FF]" />}
                     </div>
                     <div className="text-[10px] text-slate-500 flex flex-wrap items-center gap-x-2">

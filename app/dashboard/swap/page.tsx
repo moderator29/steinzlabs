@@ -7,7 +7,7 @@ import BackButton from '@/components/ui/BackButton';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
-import { getBuiltinWalletAddress } from '@/lib/wallet/builtinWallet';
+import { getBuiltinWalletAddress, hydrateBuiltinWalletFromCloud } from '@/lib/wallet/builtinWallet';
 import { tokenLogoCandidates } from '@/lib/wallet/tokenLogoCandidates';
 import { notifySwapCompleted } from '@/lib/notifications';
 import { getWalletSessionKey } from '@/lib/wallet/walletSession';
@@ -709,6 +709,12 @@ export default function SwapPage() {
   useEffect(() => {
     const sync = () => setBuiltinAddr(getBuiltinWalletAddress());
     sync();
+    // If this browser has no local wallet but the user created one before (it
+    // lives in their cloud backup), restore it so swap detects the REAL wallet
+    // instead of wrongly prompting "create a wallet". No-op when one is local.
+    if (!getBuiltinWalletAddress()) {
+      void hydrateBuiltinWalletFromCloud().then((addr) => { if (addr) setBuiltinAddr(addr); });
+    }
     window.addEventListener('steinz_wallet_changed', sync);
     window.addEventListener('storage', sync);
     return () => {
@@ -1983,8 +1989,12 @@ export default function SwapPage() {
       />
 
       {showReview && (() => {
+        // Honest impact state — 0x-based EVM quotes only carry a price-impact
+        // figure when a confident market mid-price was available server-side.
+        // When it's unknown we must NOT paint a green "Low 0%"; show "—".
+        const hasImpact = priceImpact != null && priceImpact !== '';
         const pi = parseFloat(priceImpact || '0');
-        const piColor =
+        const piColor = !hasImpact ? 'text-gray-400' :
           pi < 1 ? 'text-green-400' :
           pi < 5 ? 'text-yellow-400' :
           pi < 15 ? 'text-orange-400' :
@@ -2080,7 +2090,11 @@ export default function SwapPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Price impact</span>
-                  <span className={`font-semibold ${piColor}`}>{priceImpact}% <span className="text-[10px] font-normal opacity-80">({piLabel})</span></span>
+                  {hasImpact ? (
+                    <span className={`font-semibold ${piColor}`}>{priceImpact}% <span className="text-[10px] font-normal opacity-80">({piLabel})</span></span>
+                  ) : (
+                    <span className="text-gray-400" title="No confident market price available to compute impact">—</span>
+                  )}
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Slippage tolerance</span>
@@ -2096,7 +2110,7 @@ export default function SwapPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Route</span>
-                  <span style={{ color: activeChain.color }} className="font-medium">{activeChain.dex}</span>
+                  <span style={{ color: activeChain.color }} className="font-medium">{routeLabel}</span>
                 </div>
               </div>
 
@@ -2125,6 +2139,7 @@ export default function SwapPage() {
                   fromToken={fromToken}
                   toToken={toToken}
                   amountIn={fromAmount}
+                  toDecimals={getTokenInfo(toToken).decimals}
                   selectedProvider={selectedProvider ?? undefined}
                   onSelect={(r) => { setSelectedProvider(r.provider); setSelectedRoute(r); }}
                 />

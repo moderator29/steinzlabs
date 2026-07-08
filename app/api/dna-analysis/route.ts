@@ -5,6 +5,9 @@ import { vtxAnalyze } from '@/lib/services/anthropic';
 import { getTrendingByVolume, getTrendingByHolderGrowth } from '@/lib/services/birdeye';
 import { buildSolanaWalletIntelligence } from '@/lib/services/solana-intelligence';
 import { buildEvmWalletIntelligence } from '@/lib/services/evm-intelligence';
+import { lookupEntity } from '@/lib/clusters/entityRegistry';
+import { getEntityByAddress } from '@/lib/services/arkham';
+import { normalizeAddress, isEvmAddress } from '@/lib/utils/addressNormalize';
 
 // ─── Chain Detection ──────────────────────────────────────────────────────────
 
@@ -23,6 +26,73 @@ interface Holding {
   valueUsd: string | null;
   contractAddress: string | null;
   logoUrl?: string | null;
+}
+
+// Partner wallets = the counterparties this wallet interacts with most, derived
+// purely from its real recent transactions (the non-self side of each transfer).
+// Known EVM entities (CEX / DEX / bridge / mixer) are tagged from the on-chain
+// registry; volume is summed from the trade-time USD values the intel pipeline
+// already priced, so nothing here is invented.
+export interface PartnerWallet {
+  address: string;
+  txCount: number;
+  inbound: number;
+  outbound: number;
+  volumeUsd: number;
+  label: string | null;
+  category: string | null;
+  parent: string | null;
+}
+
+interface PartnerInteraction { counterparty: string; inbound: boolean; valueUsd: number }
+
+function aggregatePartners(interactions: PartnerInteraction[], evm: boolean): PartnerWallet[] {
+  const map = new Map<string, { count: number; inbound: number; outbound: number; volumeUsd: number }>();
+  for (const it of interactions) {
+    if (!it.counterparty) continue;
+    const e = map.get(it.counterparty) ?? { count: 0, inbound: 0, outbound: 0, volumeUsd: 0 };
+    e.count++;
+    if (it.inbound) e.inbound++; else e.outbound++;
+    if (Number.isFinite(it.valueUsd) && it.valueUsd > 0) e.volumeUsd += it.valueUsd;
+    map.set(it.counterparty, e);
+  }
+  return Array.from(map.entries())
+    .map(([address, c]) => {
+      const ent = evm && isEvmAddress(address) ? lookupEntity(address) : null;
+      return {
+        address,
+        txCount: c.count,
+        inbound: c.inbound,
+        outbound: c.outbound,
+        volumeUsd: Math.round(c.volumeUsd * 100) / 100,
+        label: ent?.name ?? null,
+        category: ent?.category ?? null,
+        parent: ent?.parent ?? null,
+      };
+    })
+    .sort((a, b) => b.txCount - a.txCount)
+    .slice(0, 6);
+}
+
+export interface WalletEntity {
+  name: string;
+  type: string;
+  parent: string | null;
+  verified: boolean;
+  source: 'registry' | 'arkham';
+}
+
+// Real entity label for the analyzed wallet itself: the free on-chain registry
+// resolves known EVM entities instantly; Arkham (when a key is configured)
+// covers everything else. Returns null — not a guess — when neither knows it.
+async function resolveWalletEntity(address: string, evm: boolean): Promise<WalletEntity | null> {
+  const reg = evm && isEvmAddress(address) ? lookupEntity(address) : null;
+  if (reg) return { name: reg.name, type: reg.category, parent: reg.parent ?? null, verified: true, source: 'registry' };
+  try {
+    const e = await getEntityByAddress(address);
+    if (e?.name) return { name: e.name, type: e.type ?? 'entity', parent: null, verified: !!e.verified, source: 'arkham' };
+  } catch { /* Arkham optional — ignore */ }
+  return null;
 }
 
 type WalletArchetype =
@@ -100,6 +170,15 @@ async function fetchSolDNA(address: string) {
   const txPerWeek = intel.metadata.txPerWeek;
   const archetype = computeArchetype(txCount, txPerWeek, memePercent, holdings.length);
 
+  // Partner wallets from the real parsed Solana transfers (counterparty +
+  // direction come straight off the on-chain swap/transfer parse).
+  const partnerWallets = aggregatePartners(
+    intel.transactions
+      .filter(tx => tx.counterparty)
+      .map(tx => ({ counterparty: tx.counterparty as string, inbound: tx.direction === 'in', valueUsd: tx.valueUSD ?? 0 })),
+    false,
+  );
+
   return {
     chain: 'Solana', address, holdings, totalBalanceUsd: totalBalance,
     txCount, firstSeen: intel.metadata.firstSeen, lastActive: intel.metadata.lastActive,
@@ -107,6 +186,7 @@ async function fetchSolDNA(address: string) {
     blueChipPercent: Math.round(blueChipPercent), memePercent: Math.round(memePercent),
     diversificationScore: Math.round((1 - hhi) * 100),
     archetype, archetypeDescription: archetypeDescription(archetype),
+    partnerWallets,
     dataSource: intel.dataSource,
     recentTxs: intel.transactions.slice(0, 25).map(tx => ({
       hash: tx.hash, type: tx.type, asset: tx.tokenSymbol || 'SOL',
@@ -158,6 +238,20 @@ async function fetchEvmDNA(address: string) {
   const txPerWeek = weeksActive >= 0.5 ? Math.round((txCount / weeksActive) * 10) / 10 : null;
   const archetype = computeArchetype(txCount, txPerWeek ?? 0, memePercent, holdings.length);
 
+  // Partner wallets from the wallet's real recent transactions — the non-self
+  // side of each transfer, tallied and tagged with known-entity labels.
+  const self = normalizeAddress(address);
+  const partnerWallets = aggregatePartners(
+    intel.transactions.map(tx => {
+      const from = tx.from ? normalizeAddress(tx.from) : '';
+      const to = tx.to ? normalizeAddress(tx.to) : '';
+      if (from === self && to && to !== self) return { counterparty: to, inbound: false, valueUsd: tx.valueUsd ?? 0 };
+      if (to === self && from && from !== self) return { counterparty: from, inbound: true, valueUsd: tx.valueUsd ?? 0 };
+      return { counterparty: '', inbound: false, valueUsd: 0 };
+    }),
+    true,
+  );
+
   return {
     chain: intel.chainName, address, holdings, totalBalanceUsd: totalBalance,
     txCount, firstSeen: intel.firstSeen, lastActive: intel.lastActive,
@@ -168,6 +262,7 @@ async function fetchEvmDNA(address: string) {
     blueChipPercent: Math.round(blueChipPercent), memePercent: Math.round(memePercent),
     diversificationScore: Math.round((1 - hhi) * 100), archetype,
     archetypeDescription: archetypeDescription(archetype),
+    partnerWallets,
     dataSource: intel.dataSource,
     recentTxs: intel.transactions.slice(0, 25).map(tx => ({
       hash: tx.hash, type: tx.type,
@@ -289,9 +384,10 @@ export const GET = withTierGate('mini', async (request: NextRequest) => {
       data.holdings.filter(h => h.contractAddress).map(h => h.contractAddress!.toLowerCase())
     );
 
-    const [coinsWorthWatching, aiAnalysisRaw] = await Promise.all([
+    const [coinsWorthWatching, aiAnalysisRaw, entity] = await Promise.all([
       chainType === 'SOL' ? fetchCoinsWorthWatching(data.archetype, heldAddresses) : Promise.resolve([]),
       buildAIAnalysis(data),
+      resolveWalletEntity(address, chainType === 'EVM'),
     ]);
 
     // Numbers come from CODE (transparent, grounded), narrative from the LLM.
@@ -316,10 +412,11 @@ export const GET = withTierGate('mini', async (request: NextRequest) => {
       archetypeDescription: data.archetypeDescription, recentTransactions: data.recentTxs,
       coinsWorthWatching,
       aiAnalysis,
+      entity,
       tradingStyle: (aiAnalysis as { tradingStyle?: string } | null)?.tradingStyle || data.archetype.replace(/_/g, ' '),
       riskClassification: (aiAnalysis as { riskClassification?: string } | null)?.riskClassification || 'BALANCED',
       favoriteTokens: data.holdings.slice(0, 5).map(h => h.symbol),
-      partnerWallets: [],
+      partnerWallets: data.partnerWallets,
     });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'DNA analysis failed';

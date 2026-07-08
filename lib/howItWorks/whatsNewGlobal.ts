@@ -7,6 +7,46 @@ import type { WhatsNewEntry } from '@/lib/howItWorks/types';
  */
 export const GLOBAL_WHATS_NEW: WhatsNewEntry[] = [
   {
+    date: 'July 2026',
+    tag: 'NEW',
+    text: 'Live token terminal: every coin now opens a real time stats panel (price, liquidity, FDV, market cap, buys and sells) that refreshes every few seconds from live DEX data.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'NEW',
+    text: 'Market search now finds any of thousands of coins by name, symbol, or contract address, with accurate live data.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'IMPROVED',
+    text: 'AI Scanner runs deeper multi source security checks (honeypot, taxes, mint authority, liquidity locks, holder concentration) and shows exactly why it rated a token.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'FIXED',
+    text: 'VTX Agent no longer stalls on some tokens and now sources coin data live from DEX pairs, so its numbers match the price cards across the app.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'IMPROVED',
+    text: 'Whale Tracker now leads with the biggest wallets by real held portfolio value.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'IMPROVED',
+    text: 'Portfolio and Wallet now show a real combined balance across every chain, and long tail tokens price correctly instead of reading zero.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'FIXED',
+    text: 'Swap now shows a real price impact and network fee instead of a flat zero.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'IMPROVED',
+    text: 'Tightened account security so nothing from one account can appear after signing into another on a shared device.',
+  },
+  {
     date: 'June 2026',
     tag: 'NEW',
     text: 'Daily Research Brief: an automated daily market read now lands in Research Labs and, if you want it, your inbox.',

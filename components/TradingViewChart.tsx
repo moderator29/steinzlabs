@@ -65,6 +65,45 @@ const SYMBOL_MAP: Record<string, string> = {
   ONE: 'BINANCE:ONEUSDT',
   KAVA: 'BINANCE:KAVAUSDT',
   ZIL: 'BINANCE:ZILUSDT',
+  // Bug #1 (pro-chart coverage) — widened the verified CEX map so the
+  // real TradingView widget (BTC-style) covers the current CoinGecko
+  // top-~150 instead of only ~65. Every symbol below is a confirmed
+  // Binance spot USDT listing, so the widget shows the RIGHT coin's real
+  // chart — no guessed/invalid symbols. Anything not here still gets the
+  // full-featured AdvancedChart backed by real DEX/CG OHLCV.
+  TRX: 'BINANCE:TRXUSDT',
+  TON: 'BINANCE:TONUSDT',
+  XLM: 'BINANCE:XLMUSDT',
+  ICP: 'BINANCE:ICPUSDT',
+  FLOKI: 'BINANCE:FLOKIUSDT',
+  FET: 'BINANCE:FETUSDT',
+  WLD: 'BINANCE:WLDUSDT',
+  ONDO: 'BINANCE:ONDOUSDT',
+  ENA: 'BINANCE:ENAUSDT',
+  JASMY: 'BINANCE:JASMYUSDT',
+  JTO: 'BINANCE:JTOUSDT',
+  TAO: 'BINANCE:TAOUSDT',
+  STRK: 'BINANCE:STRKUSDT',
+  DYDX: 'BINANCE:DYDXUSDT',
+  AR: 'BINANCE:ARUSDT',
+  ETHFI: 'BINANCE:ETHFIUSDT',
+  EIGEN: 'BINANCE:EIGENUSDT',
+  BOME: 'BINANCE:BOMEUSDT',
+  PENGU: 'BINANCE:PENGUUSDT',
+  RAY: 'BINANCE:RAYUSDT',
+  POPCAT: 'BINANCE:POPCATUSDT',
+  PNUT: 'BINANCE:PNUTUSDT',
+  MEW: 'BINANCE:MEWUSDT',
+  TURBO: 'BINANCE:TURBOUSDT',
+  VIRTUAL: 'BINANCE:VIRTUALUSDT',
+  NEIRO: 'BINANCE:NEIROUSDT',
+  ORDI: 'BINANCE:ORDIUSDT',
+  ENJ: 'BINANCE:ENJUSDT',
+  CHZ: 'BINANCE:CHZUSDT',
+  DASH: 'BINANCE:DASHUSDT',
+  ZEC: 'BINANCE:ZECUSDT',
+  QNT: 'BINANCE:QNTUSDT',
+  GMX: 'BINANCE:GMXUSDT',
 };
 
 export function getTradingViewSymbol(tokenSymbol: string, chain?: string): string | null {

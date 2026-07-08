@@ -5,6 +5,7 @@ import { buildSolanaWalletIntelligence } from '@/lib/services/solana-intelligenc
 import { buildEvmWalletIntelligence, EVM_CHAIN_CONFIG, KNOWN_TOKEN_LOGOS } from '@/lib/services/evm-intelligence';
 import { buildWalletRealizedPnl } from '@/lib/walletIntel/walletPnl';
 import { lookupEntity } from '@/lib/clusters/entityRegistry';
+import { getEntityByAddress } from '@/lib/services/arkham';
 import { normalizeAddress, isEvmAddress } from '@/lib/utils/addressNormalize';
 import type { TokenSecurityResult } from '@/lib/security/goplusService';
 
@@ -130,6 +131,30 @@ function buildCounterparties(txs: TxSide[], wallet: string): CounterpartyLink[] 
     })
     .sort((a, b) => b.count - a.count)
     .slice(0, 6);
+}
+
+// ─── Wallet Entity Label ──────────────────────────────────────────────────────
+// Is the *queried* wallet itself a known entity (CEX hot wallet, DEX router,
+// bridge, mixer…)? The free on-chain registry resolves these instantly; Arkham
+// (when a key is configured) fills the long tail. Returns null — not a guess —
+// when neither source knows the address.
+
+export interface WalletEntity {
+  name: string;
+  type: string;
+  parent: string | null;
+  verified: boolean;
+  source: 'registry' | 'arkham';
+}
+
+async function resolveWalletEntity(address: string, evm: boolean): Promise<WalletEntity | null> {
+  const reg = evm && isEvmAddress(address) ? lookupEntity(address) : null;
+  if (reg) return { name: reg.name, type: reg.category, parent: reg.parent ?? null, verified: true, source: 'registry' };
+  try {
+    const e = await getEntityByAddress(address);
+    if (e?.name) return { name: e.name, type: e.type ?? 'entity', parent: null, verified: !!e.verified, source: 'arkham' };
+  } catch { /* Arkham optional — ignore */ }
+  return null;
 }
 
 // ─── EVM Data Fetcher (uses shared evm-intelligence.ts) ──────────────────────
@@ -317,7 +342,10 @@ export async function GET(request: Request) {
     const txs = (walletData.recentTransactions as TxSide[] | undefined) ?? [];
     const counterparties = buildCounterparties(txs, address);
 
-    return NextResponse.json({ ...walletData, contractSecurity: contractSecurityMap, realizedPnl, counterparties }, {
+    // Entity label for the queried wallet itself (registry + Arkham, best-effort).
+    const entity = await resolveWalletEntity(address, detectedType === 'EVM');
+
+    return NextResponse.json({ ...walletData, contractSecurity: contractSecurityMap, realizedPnl, counterparties, entity }, {
       headers: { 'Cache-Control': 'public, max-age=30' },
     });
   } catch (error: unknown) {

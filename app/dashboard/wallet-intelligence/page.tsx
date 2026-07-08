@@ -68,6 +68,14 @@ interface WalletData {
     category: string | null;
     parent: string | null;
   }>;
+  // Entity label for the queried wallet (registry / Arkham) — null when unknown.
+  entity?: {
+    name: string;
+    type: string;
+    parent: string | null;
+    verified: boolean;
+    source: 'registry' | 'arkham';
+  } | null;
   // Realized PnL from real Bitquery DEX trades (90d), FIFO cost basis.
   realizedPnl?: {
     byToken: Array<{ token: string; tokenSymbol: string | null; totalRealizedUsd: number; winRate: number; lots: number }>;
@@ -873,7 +881,21 @@ export default function WalletIntelligencePage() {
                       </div>
                       <div>
                         <div className="text-xs font-mono font-semibold">{walletData.address.slice(0, 8)}...{walletData.address.slice(-6)}</div>
-                        <div className="text-[10px] text-gray-500">{walletData.chain}</div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-gray-500">{walletData.chain}</span>
+                          {walletData.entity && (
+                            <span
+                              className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full font-bold border"
+                              style={{ color: '#F0B90B', borderColor: '#F0B90B40', backgroundColor: '#F0B90B14' }}
+                              title={`Identified entity${walletData.entity.verified ? ' (verified)' : ''} · ${walletData.entity.type} · source: ${walletData.entity.source}`}
+                            >
+                              {walletData.entity.name}
+                              {walletData.entity.parent && walletData.entity.parent !== walletData.entity.name && (
+                                <span className="opacity-70">· {walletData.entity.parent}</span>
+                              )}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <a

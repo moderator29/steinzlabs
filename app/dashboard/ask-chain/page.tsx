@@ -29,12 +29,28 @@ const SUGGESTIONS = [
   'What has 0x28c6c06298d514db089934071355e5743bf21d60 been trading this week?',
 ];
 
+// Signed, tiered USD formatter. Smart-money flows / rotation deltas / whale PnL
+// routinely run into the hundreds of millions and can be negative (net selling,
+// distribution, losing wallets), so the old `v>=1000 ? …K : $v` path rendered
+// "$431338.1K" for a $431M flow and "$-358836298" for a net outflow. Cover the
+// full K/M/B/T ladder and keep the sign in front of the $.
+function fmtUsdCompact(v: number): string {
+  const sign = v < 0 ? '-' : '';
+  const abs = Math.abs(v);
+  if (abs >= 1e12) return `${sign}$${(abs / 1e12).toFixed(2)}T`;
+  if (abs >= 1e9) return `${sign}$${(abs / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(2)}M`;
+  if (abs >= 1e3) return `${sign}$${(abs / 1e3).toFixed(1)}K`;
+  return `${sign}$${Math.round(abs)}`;
+}
+
 function fmtCell(v: string | number | boolean | null, col: string): string {
   if (v == null) return '—';
   if (typeof v === 'number') {
-    if (/usd|value|pnl/i.test(col)) return v >= 1000 ? `$${(v / 1000).toFixed(1)}K` : `$${Math.round(v)}`;
-    if (/rate|score/i.test(col)) return `${Math.round(v)}${/rate/i.test(col) ? '%' : ''}`;
-    return String(v);
+    if (/usd|value|pnl|net|inflow|outflow|delta/i.test(col)) return fmtUsdCompact(v);
+    if (/rate/i.test(col)) return `${Math.round(v)}%`;
+    if (/score/i.test(col)) return String(Math.round(v));
+    return v.toLocaleString();
   }
   return String(v);
 }

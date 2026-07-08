@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import FollowWhaleModal from '@/components/whales/FollowWhaleModal';
 import { WhaleAvatar as SharedWhaleAvatar } from '@/components/whales/WhaleAvatar';
+import { whaleDisplayName } from '@/lib/whales/naming';
 import { SelectMenu, type SelectOption } from '@/components/ui/SelectMenu';
 import { getChainMeta } from '@/lib/chains/chainMeta';
 import { ChainLogo } from '@/components/common/ChainLogo';
@@ -48,6 +49,10 @@ interface WhaleRow {
   x_handle: string | null;
   verified: boolean;
   last_active_at: string | null;
+  // Persisted unique Naka display number (whales.naka_number).
+  naka_number: number | null;
+  logo_url: string | null;
+  logo_source: string | null;
 }
 
 interface DirectoryResponse {
@@ -81,10 +86,12 @@ const ENTITY_PILLS: Array<{ id: string; label: string; Icon: typeof Users }> = [
   { id: 'influencer', label: 'Public Figures', Icon: Users },
 ];
 
+// Portfolio Value is the DEFAULT — biggest whales lead page one. The rest
+// remain selectable so the score / volume / PnL rosters still work.
 const SORT_OPTIONS = [
+  { id: 'portfolio', label: 'Portfolio Value' },
   { id: 'score', label: 'Whale Score' },
   { id: 'volume', label: 'DEX Volume 7d' },
-  { id: 'portfolio', label: 'Portfolio Value' },
   { id: 'pnl_30d', label: 'PnL 30d' },
   { id: 'win_rate', label: 'Win Rate' },
   { id: 'recent_activity', label: 'Recently Active' },
@@ -163,25 +170,6 @@ function chainColor(c: string): { bg: string; fg: string } {
   }
 }
 
-function avatarColor(seed: string): string {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) & 0xffff;
-  return `hsl(${h % 360} 65% 55%)`;
-}
-
-function WhaleAvatar({ label, address, size = 40 }: { label: string | null; address: string; size?: number }) {
-  const seed = (label || address).slice(0, 2).toUpperCase();
-  const bg = avatarColor(label || address);
-  return (
-    <div
-      className="rounded-xl flex items-center justify-center font-bold text-white shrink-0"
-      style={{ width: size, height: size, background: bg, fontSize: size / 2.2 }}
-    >
-      {seed}
-    </div>
-  );
-}
-
 export default function WhaleDirectoryPage() {
   const router = useRouter();
   const [rows, setRows] = useState<WhaleRow[]>([]);
@@ -194,7 +182,7 @@ export default function WhaleDirectoryPage() {
   const [chain, setChain] = useState('');
   const [entityType, setEntityType] = useState('');
   const [q, setQ] = useState('');
-  const [sort, setSort] = useState<string>('score');
+  const [sort, setSort] = useState<string>('portfolio');
   const [minScore, setMinScore] = useState(0);
   const [timeframe, setTimeframe] = useState('30d');
   const [performance, setPerformance] = useState('');
@@ -547,10 +535,10 @@ function WhaleCard({ row, watched, onOpen, onFollow, onToggleWatch, onCopy }: {
       <div className="flex items-start gap-3">
         {/* Real profile picture (Arkham/ENS/X avatar) resolved inline in the
             directory list — no longer only after opening the detail page. */}
-        <SharedWhaleAvatar address={row.address} chain={row.chain} size={40} className="!rounded-xl" />
+        <SharedWhaleAvatar address={row.address} chain={row.chain} logoUrl={row.logo_url} logoSource={row.logo_source} size={40} className="!rounded-xl" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="font-bold text-white text-sm truncate">{row.label || short(row.address)}</span>
+            <span className="font-bold text-white text-sm truncate">{whaleDisplayName({ label: row.label, nakaNumber: row.naka_number, address: row.address, chain: row.chain })}</span>
             {row.verified && <CheckCircle2 className="w-3.5 h-3.5 text-[#0066FF] shrink-0" />}
             {row.x_handle && (
               <a

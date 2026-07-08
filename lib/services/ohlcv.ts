@@ -95,22 +95,77 @@ async function fetchDexscreenerOhlc(
 }
 
 /**
+ * When we know the coin's real on-chain identity (contract/pool + network),
+ * prefer GeckoTerminal's pool OHLCV — it returns REAL per-bar volume, which
+ * CoinGecko's /ohlc endpoint never does. `pool` is a pair/pool address (used
+ * directly); otherwise `address` is a token contract whose deepest pool is
+ * resolved first. Returns null when no pool can be found or the source is
+ * empty, so callers fall through to the candles-only CoinGecko path.
+ */
+async function fetchGeckoterminalOhlcv(
+  network: string,
+  tf: Timeframe,
+  opts: { address?: string; pool?: string },
+): Promise<Candle[] | null> {
+  const [gtTf, agg] = GT_TF[tf];
+  let pool = opts.pool ?? null;
+  if (!pool && opts.address) {
+    pool = await getGtTopPool(network, opts.address).catch(() => null);
+  }
+  if (!pool) return null;
+  const gt = await getGtCandles(network, pool, gtTf, 300, agg).catch(() => []);
+  if (gt.length === 0) return null;
+  return gt.map((c) => ({ time: c.time, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume }));
+}
+
+/**
+ * Options carrying the coin's real on-chain identity so the OHLCV lookup can
+ * prefer a volume-bearing source. Populated by the terminal page from the
+ * CoinGecko detail payload (contract `platforms` / DexScreener pair) for coins
+ * that would otherwise chart via a volume-less CoinGecko slug.
+ */
+export interface OhlcvSource {
+  /** GeckoTerminal-supported network slug (ethereum, solana, base, …). */
+  network?: string;
+  /** Token contract address (deepest pool resolved automatically). */
+  address?: string;
+  /** Pool/pair address (used directly when known). */
+  pair?: string;
+}
+
+/**
  * Fetch OHLCV data with graceful fallback.
+ * - If a real on-chain identity is supplied (`source.network` + pool/contract),
+ *   prefer GeckoTerminal pool OHLCV so the volume pane fills with REAL volume.
  * - If `chain` is a CoinGecko id (e.g. "bitcoin") and `token` is that same id, use CoinGecko.
  * - If `chain` looks like an on-chain network and `token` looks like a pair address, use DexScreener.
  * - Otherwise try CoinGecko first, then DexScreener.
+ * Volume is never synthesized — when a source returns no volume the bar stays
+ * honestly empty.
  */
 export async function fetchOhlcv(
   chain: string,
   token: string,
   tf: Timeframe,
   limit = 500,
+  source?: OhlcvSource,
 ): Promise<Candle[]> {
   // Heuristic: short lowercase slug without 0x = CoinGecko id
   const looksLikeCgId = !/^0x|^[1-9A-HJ-NP-Za-km-z]{32,}$/.test(token) && token.length < 40;
   let candles: Candle[] | null = null;
 
-  if (looksLikeCgId) {
+  // Volume-bearing source first. CoinGecko's /ohlc (below) returns candles
+  // with NO volume, so any coin that has a known contract/pool + a supported
+  // network is routed to GeckoTerminal's pool OHLCV, which carries real
+  // per-bar volume. Falls through to CoinGecko candles when unavailable.
+  if (source?.network && (source.pair || source.address)) {
+    candles = await fetchGeckoterminalOhlcv(source.network, tf, {
+      address: source.address,
+      pool: source.pair,
+    });
+  }
+
+  if ((!candles || candles.length === 0) && looksLikeCgId) {
     candles = await fetchCoingeckoOhlc(token, tf);
   }
   if (!candles || candles.length === 0) {

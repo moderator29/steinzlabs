@@ -14,6 +14,7 @@ interface TopWhaleRow {
   move_count: number;
   label: string | null;
   entity_type: string | null;
+  naka_number: number | null;
 }
 
 /**
@@ -66,18 +67,19 @@ export const GET = withTierGate("mini", async (_request: NextRequest) => {
       const addresses = sorted.map((s) => s.address);
       const { data: whaleRows } = await admin
         .from("whales")
-        .select("address,chain,label,entity_type")
+        .select("address,chain,label,entity_type,naka_number")
         .in("address", addresses);
-      const enriched = new Map<string, { label: string | null; entity_type: string | null }>();
+      const enriched = new Map<string, { label: string | null; entity_type: string | null; naka_number: number | null }>();
       for (const w of (whaleRows ?? []) as Array<{
         address: string;
         chain: string;
         label: string | null;
         entity_type: string | null;
+        naka_number: number | null;
       }>) {
         enriched.set(
           `${w.chain}:${normalizeAddress(w.address, w.chain)}`,
-          { label: w.label, entity_type: w.entity_type },
+          { label: w.label, entity_type: w.entity_type, naka_number: w.naka_number },
         );
       }
 
@@ -91,6 +93,7 @@ export const GET = withTierGate("mini", async (_request: NextRequest) => {
           move_count: s.move_count,
           label: meta?.label ?? null,
           entity_type: meta?.entity_type ?? null,
+          naka_number: meta?.naka_number ?? null,
         };
       });
     });

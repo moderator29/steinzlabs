@@ -8,6 +8,7 @@ import { ExternalLink, CheckCircle2, Loader2, Copy, Download, Repeat2, Sparkles 
 import BackButton from "@/components/ui/BackButton";
 import { SecurityBadge } from "@/components/security/SecurityBadge";
 import { WhaleAvatar } from "@/components/whales/WhaleAvatar";
+import { whaleDisplayName } from "@/lib/whales/naming";
 import { ChainLogo } from "@/components/common/ChainLogo";
 import NewCopyRuleModal from "@/app/dashboard/copy-trading/NewCopyRuleModal";
 import { toast } from "sonner";
@@ -34,6 +35,7 @@ interface WhaleDetail {
     address: string;
     chain: string;
     label: string | null;
+    naka_number: number | null;
     entity_type: string | null;
     portfolio_value_usd: number | null;
     pnl_7d_usd: number | null;
@@ -343,8 +345,8 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <h1 className="text-xl md:text-2xl font-bold truncate">
-                    {/* Real name priority: Arkham entity > stored label > truncated address */}
-                    {data.arkham?.entity || w.label || `${w.address.slice(0, 6)}…${w.address.slice(-4)}`}
+                    {/* Real name priority: Arkham entity > stored label > stable "Naka Whale #N" */}
+                    {data.arkham?.entity || whaleDisplayName({ label: w.label, nakaNumber: w.naka_number, address: w.address, chain: w.chain })}
                   </h1>
                   {w.verified && <CheckCircle2 size={15} className="text-blue-400" />}
                   <SecurityBadge score={w.whale_score} size="md" />

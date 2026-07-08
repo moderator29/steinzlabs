@@ -2,6 +2,8 @@
 
 import { CheckCircle2, ChevronRight, TrendingUp, TrendingDown, Users, Star, Copy as CopyIcon } from 'lucide-react';
 import { ChainLogo } from '@/components/common/ChainLogo';
+import { WhaleAvatar } from '@/components/whales/WhaleAvatar';
+import { whaleDisplayName } from '@/lib/whales/naming';
 
 /**
  * Canonical whale/trader card — the single card used across the Whale Tracker
@@ -24,6 +26,13 @@ export interface TraderCardData {
   active_days_7d: number | null;
   follower_count: number | null;
   verified: boolean | null;
+  // Persisted, unique Naka display number (whales.naka_number). Drives the stable
+  // "Naka Whale #N" handle for wallets with no real label.
+  naka_number?: number | null;
+  // Optional cached avatar — when absent the WhaleAvatar lazy-resolves it and
+  // falls back to the Naka logo.
+  logo_url?: string | null;
+  logo_source?: string | null;
 }
 
 // Custodial / non-copy-tradeable entity types: exchange omnibus + institutional
@@ -66,12 +75,6 @@ function chainColor(c: string): { bg: string; fg: string } {
   }
 }
 
-function avatarColor(seed: string): string {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) & 0xffff;
-  return `hsl(${h % 360} 65% 55%)`;
-}
-
 function Metric({ label, value, Icon, tone = 'neutral' }: {
   label: string; value: string; Icon?: typeof TrendingUp; tone?: 'green' | 'red' | 'neutral';
 }) {
@@ -99,18 +102,30 @@ export default function TraderCard({ trader, watched, onOpen, onFollow, onToggle
   const pnl = Number(trader.pnl_30d_usd || 0);
   const custodial = CUSTODIAL_ENTITIES.has((trader.entity_type || '').toLowerCase());
   const copyable = isCopyTradeable(trader);
-  const seed = (trader.label || trader.address).slice(0, 2).toUpperCase();
+  // Every whale reads as a real identity — named entities keep their label, and
+  // unnamed wallets get a stable, unique "Naka Whale #N" handle. The avatar is a
+  // real profile picture when one exists, else the Naka logo (via WhaleAvatar).
+  const displayName = whaleDisplayName({
+    label: trader.label,
+    nakaNumber: trader.naka_number,
+    address: trader.address,
+    chain: trader.chain,
+  });
 
   return (
     <div className="group nl-glass nl-glass--interactive rounded-xl p-5 cursor-pointer" onClick={onOpen}>
       <div className="flex items-start gap-3">
-        <div className="rounded-xl flex items-center justify-center font-bold text-white shrink-0"
-          style={{ width: 40, height: 40, background: avatarColor(trader.label || trader.address), fontSize: 18 }}>
-          {seed}
-        </div>
+        <WhaleAvatar
+          address={trader.address}
+          chain={trader.chain}
+          logoUrl={trader.logo_url}
+          logoSource={trader.logo_source}
+          size={40}
+          className="!rounded-xl"
+        />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="font-bold text-white text-sm truncate">{trader.label || short(trader.address)}</span>
+            <span className="font-bold text-white text-sm truncate">{displayName}</span>
             {trader.verified && <CheckCircle2 className="w-3.5 h-3.5 text-[#0066FF] shrink-0" />}
           </div>
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">

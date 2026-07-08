@@ -350,6 +350,69 @@ export async function getGtTopPool(chain: string, tokenAddress: string): Promise
   }
 }
 
+// ─── Live pool stats (buyers / sellers for the terminal panel) ──────────────
+// GeckoTerminal's pool endpoint carries UNIQUE buyer/seller counts per window,
+// which DexScreener's public API does not. We use it to fill the panel's
+// "Traders" split with real data. Volume is still only a total per window (no
+// side split), so buyVol/sellVol stay honestly null.
+
+export interface GtPoolStats {
+  buys24h: number | null;
+  sells24h: number | null;
+  buyers24h: number | null;
+  sellers24h: number | null;
+  volume24h: number | null;
+  priceUsd: number | null;
+}
+
+interface GtPoolDetailResponse {
+  data?: {
+    attributes?: {
+      base_token_price_usd?: string | null;
+      volume_usd?: { h24?: string | null };
+      transactions?: {
+        h24?: { buys?: number; sells?: number; buyers?: number; sellers?: number };
+      };
+    };
+  };
+}
+
+/**
+ * Real 24h buyer/seller counts (+ txns + volume) for a single pool. Short 8s
+ * cache so the panel poll stays live without hammering the ~30 req/min free
+ * tier. Returns null on any error or unsupported network — the panel then
+ * shows an honest empty Traders state rather than a fabricated split.
+ */
+export async function getPoolStats(chain: string, poolAddress: string): Promise<GtPoolStats | null> {
+  const network = GT_NETWORK[chain];
+  if (!network || !poolAddress) return null;
+  const key = cacheKey('geckoterminal', 'pool_stats', { chain, poolAddress });
+  const cached = await withCache(key, 8_000, async (): Promise<GtPoolStats | null> => {
+    try {
+      const res = await fetch(`${BASE}/networks/${network}/pools/${poolAddress}`, {
+        headers: { Accept: 'application/json;version=20230302' },
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      if (!res.ok) return null;
+      const body = (await res.json()) as GtPoolDetailResponse;
+      const a = body.data?.attributes;
+      if (!a) return null;
+      const tx = a.transactions?.h24;
+      return {
+        buys24h: typeof tx?.buys === 'number' ? tx.buys : null,
+        sells24h: typeof tx?.sells === 'number' ? tx.sells : null,
+        buyers24h: typeof tx?.buyers === 'number' ? tx.buyers : null,
+        sellers24h: typeof tx?.sellers === 'number' ? tx.sellers : null,
+        volume24h: a.volume_usd?.h24 ? parseFloat(a.volume_usd.h24) : null,
+        priceUsd: a.base_token_price_usd ? parseFloat(a.base_token_price_usd) : null,
+      };
+    } catch {
+      return null;
+    }
+  });
+  return cached ?? null;
+}
+
 // ─── Universal CA resolution + search (swap token selector) ─────────────────
 // GeckoTerminal indexes 100+ DEX networks keylessly, making it the widest
 // free fallback behind DexScreener for resolving arbitrary pasted contract

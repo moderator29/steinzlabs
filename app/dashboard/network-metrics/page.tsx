@@ -1,18 +1,17 @@
 'use client';
 
-import { Radio, Activity, Cpu, HardDrive, Zap, Globe, Loader2, RefreshCw } from 'lucide-react';
+import { Radio, Activity, HardDrive, Zap, Globe, Loader2, RefreshCw } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { networkMetricsHowItWorks } from '@/lib/howItWorks/content/network-metrics';
-import { useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 
 interface ChainMetrics { gas: string; tps: string; blocks: string }
 
 export default function NetworkMetricsPage() {
-  const router = useRouter();
   const [selectedChain, setSelectedChain] = useState('Ethereum');
   const [metrics, setMetrics] = useState<Record<string, ChainMetrics>>({});
+  const [fetchedAt, setFetchedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const chains = ['Ethereum', 'Solana', 'Base', 'Polygon', 'Arbitrum'];
@@ -23,7 +22,11 @@ export default function NetworkMetricsPage() {
       const res = await fetch('/api/network-metrics');
       if (res.ok) {
         const data = await res.json();
-        if (!data.error) setMetrics(data);
+        if (!data.error) {
+          const { fetchedAt: ts, ...chainData } = data as Record<string, unknown> & { fetchedAt?: string };
+          setMetrics(chainData as Record<string, ChainMetrics>);
+          setFetchedAt(typeof ts === 'string' ? ts : null);
+        }
       }
     } catch { /* ignore */ }
     finally { setLoading(false); }
@@ -33,6 +36,16 @@ export default function NetworkMetricsPage() {
 
   const m = metrics[selectedChain] || { gas: '—', tps: '—', blocks: '—' };
 
+  // Honest health signal derived from real data: a chain is "responding" only
+  // when the Alchemy RPC actually returned a current block for it. A value of
+  // '—' (never fetched) or 'N/A' (fetch failed) means we cannot claim health,
+  // so we never render a fabricated "Healthy / Excellent" badge.
+  const hasBlock = m.blocks !== '—' && m.blocks !== 'N/A';
+  const hasGas = m.gas !== '—' && m.gas !== 'N/A' && !m.gas.startsWith('N/A');
+  const responding = hasBlock;
+  const statusLabel = loading ? 'Checking…' : responding ? 'Live' : 'Unavailable';
+  const statusColor = responding ? '#10B981' : '#F59E0B';
+
   return (
     <div className="min-h-screen text-white pb-20">
       <div className="sticky top-0 z-40 nl-glass backdrop-blur-xl border-b border-white/10">
@@ -40,7 +53,15 @@ export default function NetworkMetricsPage() {
           <BackButton />
           <Radio className="w-5 h-5 text-[#0066FF]" />
           <h1 className="text-sm font-heading font-bold">Network Metrics</h1>
-          <HowItWorksButton content={networkMetricsHowItWorks} className="ms-auto shrink-0" />
+          <button
+            onClick={fetchMetrics}
+            disabled={loading}
+            aria-label="Refresh network metrics"
+            className="ms-auto shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+          </button>
+          <HowItWorksButton content={networkMetricsHowItWorks} className="shrink-0" />
         </div>
       </div>
 
@@ -59,8 +80,10 @@ export default function NetworkMetricsPage() {
           </div>
           <h2 className="text-base font-heading font-bold">{selectedChain}</h2>
           <div className="flex items-center justify-center gap-1 mt-1">
-            <div className="w-2 h-2 bg-[#10B981] rounded-full animate-pulse"></div>
-            <span className="text-[10px] text-[#10B981]">Network Healthy</span>
+            <div className={`w-2 h-2 rounded-full ${responding ? 'animate-pulse' : ''}`} style={{ backgroundColor: statusColor }}></div>
+            <span className="text-[10px]" style={{ color: statusColor }}>
+              {loading ? 'Checking RPC…' : responding ? 'RPC Responding · Live' : 'RPC Unavailable'}
+            </span>
           </div>
         </div>
 
@@ -69,7 +92,7 @@ export default function NetworkMetricsPage() {
             { icon: Zap, label: 'Gas Price', value: m.gas, color: '#F59E0B' },
             { icon: Activity, label: 'TPS', value: m.tps, color: '#10B981' },
             { icon: HardDrive, label: 'Latest Block', value: m.blocks, color: '#0066FF' },
-            { icon: Globe, label: 'Status', value: loading ? 'Fetching...' : 'Live', color: '#10B981' },
+            { icon: Globe, label: 'Status', value: statusLabel, color: statusColor },
           ].map((item) => (
             <div key={item.label} className="nl-glass rounded-xl p-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
               <div className="flex items-center gap-1.5 mb-1">
@@ -89,15 +112,37 @@ export default function NetworkMetricsPage() {
               <span className="text-xs font-mono font-semibold">{m.blocks}</span>
             </div>
             <div className="flex justify-between py-2 border-b border-white/5">
+              <span className="text-xs text-gray-400">Gas Price</span>
+              <span className="text-xs font-mono font-semibold">{m.gas}</span>
+            </div>
+            <div className="flex justify-between py-2 border-b border-white/5">
               <span className="text-xs text-gray-400">Data Source</span>
-              <span className="text-xs font-semibold text-[#4D6BFF]">Alchemy RPC (Live)</span>
+              {/* Only claim "Live" when the RPC actually returned a current block
+                  for this chain; otherwise report the honest fetch state. */}
+              <span className="text-xs font-semibold text-[#4D6BFF]">
+                Alchemy RPC{responding ? ' · Live' : loading ? '' : ' · No response'}
+              </span>
+            </div>
+            <div className="flex justify-between py-2 border-b border-white/5">
+              <span className="text-xs text-gray-400">RPC Status</span>
+              <span className="text-xs font-semibold" style={{ color: statusColor }}>
+                {loading ? 'Checking…' : responding ? (hasGas ? 'Block + gas live' : 'Block live') : 'Not responding'}
+              </span>
             </div>
             <div className="flex justify-between py-2">
-              <span className="text-xs text-gray-400">Network Health</span>
-              <span className="text-xs font-semibold text-[#10B981]">Excellent</span>
+              <span className="text-xs text-gray-400">Last Updated</span>
+              <span className="text-xs font-mono font-semibold text-gray-300">
+                {fetchedAt ? new Date(fetchedAt).toLocaleTimeString() : '—'}
+              </span>
             </div>
           </div>
         </div>
+
+        {!loading && !responding && (
+          <p className="text-[11px] text-gray-500 text-center px-2">
+            No live data returned for {selectedChain} on the last poll. Figures show as “N/A” until the RPC responds — try Refresh.
+          </p>
+        )}
       </div>
     </div>
   );

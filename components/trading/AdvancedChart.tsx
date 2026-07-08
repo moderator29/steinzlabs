@@ -74,6 +74,17 @@ interface AdvancedChartProps {
    * dragged or zoomed by users scrolling the chat thread.
    */
   staticChart?: boolean;
+  /**
+   * Volume-source hint. When `token` is a (volume-less) CoinGecko slug but
+   * the coin has a known on-chain contract/pool, pass its real network +
+   * contract/pair so the OHLCV route fetches REAL per-bar volume from
+   * GeckoTerminal instead of CoinGecko's volume-less /ohlc. Omitted for
+   * coins with no on-chain identity — the volume pane then stays honestly
+   * empty rather than showing fabricated bars.
+   */
+  volumeNetwork?: string;
+  volumeAddress?: string;
+  volumePair?: string;
 }
 
 const BRAND_UP = "#22c55e";
@@ -103,6 +114,9 @@ export function AdvancedChart({
   enableSaveImage = false,
   replayIndex,
   staticChart = false,
+  volumeNetwork,
+  volumeAddress,
+  volumePair,
 }: AdvancedChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -123,7 +137,14 @@ export function AdvancedChart({
     setError(null);
     (async () => {
       try {
-        const res = await fetch(`/api/market/ohlcv/${encodeURIComponent(chain)}/${encodeURIComponent(token)}?tf=${tf}&limit=500`);
+        const qs = new URLSearchParams({ tf, limit: "500" });
+        // Real-volume routing: forward the coin's on-chain identity so the
+        // OHLCV route can prefer GeckoTerminal (which returns volume) over a
+        // volume-less CoinGecko slug. Absent hints → route falls back to CG.
+        if (volumeNetwork) qs.set("net", volumeNetwork);
+        if (volumeAddress) qs.set("addr", volumeAddress);
+        if (volumePair) qs.set("pair", volumePair);
+        const res = await fetch(`/api/market/ohlcv/${encodeURIComponent(chain)}/${encodeURIComponent(token)}?${qs.toString()}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = (await res.json()) as { candles: Candle[] };
         if (!cancelled) setCandles(json.candles);
@@ -136,7 +157,7 @@ export function AdvancedChart({
     return () => {
       cancelled = true;
     };
-  }, [chain, token, tf]);
+  }, [chain, token, tf, volumeNetwork, volumeAddress, volumePair]);
 
   // §3 P2-A.3 — pull the comparison token's candles on the same tf so
   // both series can be rebased to % change in the render effect.

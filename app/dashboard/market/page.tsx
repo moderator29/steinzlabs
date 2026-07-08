@@ -32,6 +32,18 @@ interface ResolvedMatch {
   chain: string;
   address: string | null;
   priceUsd: number;
+  liquidityUsd?: number | null;
+  volume24h?: number | null;
+  marketCap?: number | null;
+  change24h?: number | null;
+  source?: string;
+}
+
+function compactUsd(n: number): string {
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(1)}K`;
+  return `$${n.toFixed(0)}`;
 }
 
 function looksLikeAddress(q: string): boolean {
@@ -237,11 +249,23 @@ export default function DashboardMarketPage() {
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="text-sm text-white font-medium truncate">{m.name}</div>
-                  <div className="text-[10px] text-slate-500 uppercase">{m.symbol} · {m.chain}</div>
+                  <div className="text-[10px] text-slate-500 uppercase flex items-center gap-1.5 flex-wrap">
+                    <span>{m.symbol} · {m.chain}</span>
+                    {m.marketCap != null && m.marketCap > 0 && <span className="text-slate-600 normal-case">MCap {compactUsd(m.marketCap)}</span>}
+                    {m.liquidityUsd != null && m.liquidityUsd > 0 && <span className="text-slate-600 normal-case">Liq {compactUsd(m.liquidityUsd)}</span>}
+                    {m.volume24h != null && m.volume24h > 0 && <span className="text-slate-600 normal-case">Vol {compactUsd(m.volume24h)}</span>}
+                  </div>
                 </div>
-                {m.priceUsd > 0 && (
-                  <div className="text-sm text-white font-mono">${m.priceUsd < 0.01 ? m.priceUsd.toFixed(6) : m.priceUsd.toFixed(2)}</div>
-                )}
+                <div className="text-end shrink-0">
+                  {m.priceUsd > 0 && (
+                    <div className="text-sm text-white font-mono">${m.priceUsd < 0.01 ? m.priceUsd.toFixed(6) : m.priceUsd.toFixed(2)}</div>
+                  )}
+                  {m.change24h != null && (
+                    <div className={`text-[10px] font-mono ${m.change24h >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {m.change24h >= 0 ? '+' : ''}{m.change24h.toFixed(2)}%
+                    </div>
+                  )}
+                </div>
               </button>
             ))}
           </div>

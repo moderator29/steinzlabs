@@ -543,28 +543,40 @@ async function fetchAlchemyTransfers(): Promise<WhaleEvent[]> {
       return (tx.value || 0) >= 1;
     }).slice(0, 50);
 
-    return whaleTransfers.map((tx: any, i: number) => {
-      const isErc20 = tx.category === 'erc20';
-      const valueEth = tx.value || 0;
-      const valueUsd = isErc20 ? (tx.rawContract?.value ? parseInt(tx.rawContract.value, 16) / 1e18 * priceCache.eth : 0) : valueEth * priceCache.eth;
+    return whaleTransfers.map((tx: any, i: number): WhaleEvent | null => {
+      // No-null-address rule: a real transfer has both a sender and a
+      // recipient. Substituting a fake '0x0000' produced junk cards whose
+      // "from/to" pointed at the zero address and whose View-Proof links went
+      // nowhere. Drop those rows instead of fabricating an address.
+      const from = typeof tx.from === 'string' ? tx.from : '';
+      const to = typeof tx.to === 'string' ? tx.to : '';
+      if (!from || !to) return null;
 
-      // Deterministic sentiment based on transfer type, not position index
-      const tokenSym = isErc20 ? (tx.asset || 'ERC20') : 'ETH';
-      const isStable = ['USDC', 'USDT', 'DAI', 'BUSD', 'TUSD'].includes(tokenSym.toUpperCase());
+      const isErc20 = tx.category === 'erc20';
+      const amount = tx.value || 0; // alchemy returns the decimal-adjusted amount
+      // Only ETH has a known USD price in this path (priceCache.eth). The old
+      // code priced arbitrary ERC-20 amounts at the ETH price AND assumed 18
+      // decimals, inventing wildly wrong dollar figures (and trust scores). We
+      // don't have a per-token price here, so ERC-20 USD is honestly unknown.
+      const valueUsd = isErc20 ? 0 : amount * priceCache.eth;
+
+      const tokenSymbol = isErc20 ? (tx.asset || 'ERC20') : 'ETH';
+      const tokenName = isErc20 ? (tx.asset || 'ERC-20 Token') : 'Ethereum';
+      const isStable = ['USDC', 'USDT', 'DAI', 'BUSD', 'TUSD'].includes(tokenSymbol.toUpperCase());
       const sentiment = isStable ? 'HYPE' : isErc20 ? 'HYPE' : 'BULLISH';
 
-      // Deterministic trust score based on USD value of transfer
+      // Trust from the KNOWN USD value only. ERC-20 transfers (USD unknown)
+      // get the base score rather than a score derived from a fabricated $.
       const trustScore = valueUsd >= 1_000_000 ? 92
         : valueUsd >= 500_000 ? 88
         : valueUsd >= 100_000 ? 80
         : valueUsd >= 50_000 ? 72
         : 65;
 
-      const tokenSymbol = isErc20 ? (tx.asset || 'ERC20') : 'ETH';
-      const tokenName = isErc20 ? (tx.asset || 'ERC-20 Token') : 'Ethereum';
+      const amountStr = amount >= 1 ? amount.toLocaleString(undefined, { maximumFractionDigits: 2 }) : amount.toPrecision(3);
       const titleVal = isErc20
-        ? `${tokenSymbol} token transfer detected (${fmtUsd(valueUsd > 0 ? valueUsd : valueEth)})`
-        : `ETH whale moved ${valueEth.toFixed(1)} ETH (${fmtUsd(valueUsd)})`;
+        ? `${tokenSymbol} transfer: ${amountStr} ${tokenSymbol}`
+        : `ETH whale moved ${amount.toFixed(1)} ETH (${fmtUsd(valueUsd)})`;
 
       return {
         id: tx.hash ? `${tx.hash}-${i}` : `eth-${i}-${Date.now()}`,
@@ -572,11 +584,11 @@ async function fetchAlchemyTransfers(): Promise<WhaleEvent[]> {
         sentiment,
         title: titleVal,
         summary: isErc20
-          ? `${tokenSymbol} transferred on Ethereum. Whale wallet activity detected.`
-          : `${valueEth.toFixed(2)} ETH transferred on Ethereum. Volume: ${fmtUsd(valueUsd)}. Whale wallet activity detected.`,
-        from: tx.from || '0x0000',
-        to: tx.to || '0x0000',
-        value: valueEth,
+          ? `${amountStr} ${tokenSymbol} transferred on Ethereum. Whale wallet activity detected.`
+          : `${amount.toFixed(2)} ETH transferred on Ethereum. Volume: ${fmtUsd(valueUsd)}. Whale wallet activity detected.`,
+        from,
+        to,
+        value: amount,
         valueUsd: Math.round(valueUsd),
         chain: 'ethereum',
         trustScore,
@@ -585,10 +597,12 @@ async function fetchAlchemyTransfers(): Promise<WhaleEvent[]> {
         timestamp: tx.metadata?.blockTimestamp || new Date().toISOString(),
         tokenName,
         tokenSymbol,
-        tokenPrice: fmtPrice(priceCache.eth),
+        // Only headline a token price we actually know. Stamping the ETH price
+        // onto every ERC-20 card mislabeled each token as trading at ~$3–4k.
+        tokenPrice: isErc20 ? undefined : fmtPrice(priceCache.eth),
         platform: 'Ethereum Mainnet',
       };
-    });
+    }).filter((e: WhaleEvent | null): e is WhaleEvent => e !== null);
   } catch (error) {
 
     return [];

@@ -5,10 +5,13 @@ import { cookies } from 'next/headers';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { isEvmAddress, isSolanaAddress } from '@/lib/utils/addressNormalize';
 import { aaChainFor } from '@/lib/wallet/sessionKeyAA';
+import { getDexPriceForChain } from '@/lib/services/dexscreener';
 
 /**
  * #68 Market-Maker strategy CRUD.
- *  GET   → caller's strategies (+ recent fills summary).
+ *  GET   → caller's strategies, each enriched with a live_price from the SAME
+ *          real source the engine prices fills against (DexScreener), so the
+ *          dashboard's inventory value / unrealized + net PnL match execution.
  *  POST  → create a strategy (defaults to paused — nothing trades until the
  *          user explicitly activates and funds the kernel account).
  *  PATCH → update status (active|paused|stopped) or editable config.
@@ -42,7 +45,26 @@ export async function GET() {
     .select('*')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
-  return NextResponse.json({ strategies: strategies ?? [] });
+  const rows = strategies ?? [];
+
+  // Enrich each strategy with a live market price so the UI can value inventory
+  // and show unrealized + net PnL accurately — using the exact same real source
+  // the engine quotes fills against (DexScreener via getDexPriceForChain). Deduped
+  // by chain+token; any lookup that fails degrades to null (honest "unavailable",
+  // never a fabricated price). Read-only — persisted numbers stay the engine's job.
+  const priceCache = new Map<string, Promise<number>>();
+  const priceFor = (chain: string, addr: string): Promise<number> => {
+    const key = `${chain}:${addr.toLowerCase()}`;
+    let p = priceCache.get(key);
+    if (!p) { p = getDexPriceForChain(addr, chain).catch(() => 0); priceCache.set(key, p); }
+    return p;
+  };
+  const enriched = await Promise.all(rows.map(async (s) => {
+    const price = await priceFor(s.chain, s.token_address);
+    return { ...s, live_price: price > 0 ? price : null };
+  }));
+
+  return NextResponse.json({ strategies: enriched });
 }
 
 interface CreateBody {

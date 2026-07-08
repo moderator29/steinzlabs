@@ -1,53 +1,233 @@
+import 'server-only';
 import { NextResponse } from 'next/server';
-import { searchTokens, getContractPrice } from '@/lib/services/coingecko';
+import {
+  searchTokens as cgSearchTokens,
+  getMarketsByIds,
+  getContractPrice,
+} from '@/lib/services/coingecko';
+import {
+  searchPairs,
+  getTokenPairs,
+  type DexPair,
+} from '@/lib/services/dexscreener';
+import {
+  searchTokens as gtSearchTokens,
+  getTokenMeta,
+} from '@/lib/services/geckoterminal';
+import { getDextoolsToken, dextoolsEnabled } from '@/lib/services/dextools';
 import { resolveTokenChain } from '@/lib/market/tokenChainResolver';
+import { isEvmContract, isSolanaAddress } from '@/lib/market/tokenIdMaps';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// Smart search for the Market page. Accepts a raw query and figures out
-// whether the user pasted a contract address or typed a ticker / name.
-//
-//   EVM address   — 0x + 40 hex chars. We probe every supported chain via
-//                   CoinGecko's /simple/token_price/{platform}; first hit
-//                   with a non-zero price wins.
-//   Solana addr   — base58, 32–44 chars. Resolves against the solana
-//                   platform.
-//   Anything else — treated as a ticker/name and passed to /search.
-//
-// Response:
-//   { kind: "contract" | "ticker", matches: [ {...} ] }
-//
-// Matches include enough metadata for the Market page to show a result
-// card and link into the terminal at /dashboard/market/{chain}/{idOrAddr}.
+/**
+ * Universal market search / resolve.
+ *
+ * Widened from a CoinGecko-only lookup to cover ANY coin that exists on
+ * DexScreener or DexTools (10k+), searchable by name, symbol, or contract:
+ *
+ *   Contract (0x… / base58) → DexScreener token pairs (per-chain, real
+ *     price/liquidity/volume/mcap/logo), then CoinGecko contract-price +
+ *     DexTools (if configured) as fallbacks.
+ *
+ *   Name / symbol → CoinGecko /search (majors, enriched with real market
+ *     data for price + mcap + ranking) MERGED with DexScreener /search and
+ *     GeckoTerminal /search/pools (the long-tail). Results are deduped by
+ *     identity and ranked by mcap → liquidity → volume so the coin the user
+ *     means surfaces first.
+ *
+ * Every number is real (fetched from a live source). Nothing is fabricated;
+ * a source that returns nothing simply contributes no matches.
+ */
 
 interface ResolvedMatch {
-  id: string | null;         // CoinGecko id if known, else null
+  id: string | null;          // CoinGecko id when known (routes to rich page)
   name: string;
   symbol: string;
   image: string | null;
-  chain: string;             // Naka-facing chain id (ethereum, solana, bsc, ...)
-  address: string | null;    // contract address if kind=contract
+  chain: string;
+  address: string | null;     // contract when kind=contract or dex-sourced
   priceUsd: number;
+  liquidityUsd?: number | null;
+  volume24h?: number | null;
+  marketCap?: number | null;
+  change24h?: number | null;
+  source: 'coingecko' | 'dexscreener' | 'geckoterminal' | 'dextools';
 }
 
-const EVM_PLATFORMS: { chain: string; slug: string }[] = [
-  { chain: 'ethereum', slug: 'ethereum' },
-  { chain: 'bsc', slug: 'binance-smart-chain' },
-  { chain: 'polygon', slug: 'polygon-pos' },
-  { chain: 'base', slug: 'base' },
-  { chain: 'arbitrum', slug: 'arbitrum-one' },
-  { chain: 'optimism', slug: 'optimistic-ethereum' },
-  { chain: 'avalanche', slug: 'avalanche' },
-];
+const EVM_PLATFORMS = ['ethereum', 'bsc', 'polygon', 'base', 'arbitrum', 'optimism', 'avalanche'];
 
-function isEvmAddress(q: string): boolean {
-  return /^0x[a-fA-F0-9]{40}$/.test(q);
+// Rank score — mcap when known, else liquidity, else volume. Both are USD
+// magnitudes so a $1B major outranks a $2M long-tail pool naturally.
+function scoreOf(m: ResolvedMatch): number {
+  return m.marketCap || m.liquidityUsd || m.volume24h || 0;
 }
 
-function isSolanaAddress(q: string): boolean {
-  // Base58, 32–44 chars, no 0/O/I/l
-  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(q) && !q.startsWith('0x');
+function dedupeKey(m: ResolvedMatch): string {
+  return m.id ? `cg:${m.id}` : `${m.chain}:${(m.address ?? '').toLowerCase()}`;
+}
+
+function bestPairPerToken(pairs: DexPair[]): Map<string, DexPair> {
+  const byToken = new Map<string, DexPair>();
+  for (const p of pairs) {
+    const key = `${p.chainId?.toLowerCase()}:${p.baseToken.address?.toLowerCase()}`;
+    const existing = byToken.get(key);
+    if (!existing || (p.liquidity?.usd ?? 0) > (existing.liquidity?.usd ?? 0)) {
+      byToken.set(key, p);
+    }
+  }
+  return byToken;
+}
+
+function matchFromPair(p: DexPair): ResolvedMatch {
+  return {
+    id: null,
+    name: p.baseToken.name,
+    symbol: (p.baseToken.symbol || '').toUpperCase(),
+    image: p.info?.imageUrl ?? null,
+    chain: p.chainId,
+    address: p.baseToken.address,
+    priceUsd: p.priceUsd ? parseFloat(p.priceUsd) || 0 : 0,
+    liquidityUsd: p.liquidity?.usd ?? null,
+    volume24h: p.volume?.h24 ?? null,
+    marketCap: p.marketCap ?? p.fdv ?? null,
+    change24h: p.priceChange?.h24 ?? null,
+    source: 'dexscreener',
+  };
+}
+
+// ─── Contract resolution ──────────────────────────────────────────────────
+async function resolveContract(q: string): Promise<ResolvedMatch[]> {
+  const matches: ResolvedMatch[] = [];
+
+  // 1. DexScreener — one call returns every pair for the contract across chains.
+  try {
+    const pairs = await getTokenPairs(q);
+    for (const p of bestPairPerToken(pairs).values()) matches.push(matchFromPair(p));
+  } catch { /* fall through */ }
+
+  if (matches.length > 0) return matches.sort((a, b) => scoreOf(b) - scoreOf(a));
+
+  // 2. DexTools (only if a key is configured) — probe supported chains.
+  if (dextoolsEnabled() && isEvmContract(q)) {
+    const probes = await Promise.all(
+      EVM_PLATFORMS.map((chain) => getDextoolsToken(chain, q).catch(() => null)),
+    );
+    for (const t of probes) {
+      if (t && (t.priceUsd ?? 0) > 0) {
+        matches.push({
+          id: null, name: t.name, symbol: t.symbol, image: t.logo,
+          chain: t.chain, address: t.address, priceUsd: t.priceUsd ?? 0,
+          marketCap: t.marketCap, source: 'dextools',
+        });
+      }
+    }
+  }
+
+  // 3. GeckoTerminal token metadata (keyless, 100+ networks) for Solana / odd chains.
+  if (matches.length === 0 && isSolanaAddress(q)) {
+    const meta = await getTokenMeta('solana', q).catch(() => null);
+    if (meta && (meta.priceUsd ?? 0) > 0) {
+      matches.push({
+        id: null, name: meta.name, symbol: meta.symbol, image: meta.logo,
+        chain: 'solana', address: q, priceUsd: meta.priceUsd ?? 0, source: 'geckoterminal',
+      });
+    }
+  }
+
+  // 4. CoinGecko contract price across EVM platforms — last-resort price signal.
+  if (matches.length === 0 && isEvmContract(q)) {
+    await Promise.all(EVM_PLATFORMS.map(async (chain) => {
+      try {
+        const price = await getContractPrice(q, chain);
+        if (price > 0) {
+          matches.push({
+            id: null, name: `${chain.toUpperCase()} token`, symbol: `${q.slice(0, 6)}…`,
+            image: null, chain, address: q, priceUsd: price, source: 'coingecko',
+          });
+        }
+      } catch { /* chain miss */ }
+    }));
+  }
+
+  return matches.sort((a, b) => scoreOf(b) - scoreOf(a));
+}
+
+// ─── Name / symbol resolution ─────────────────────────────────────────────
+async function resolveText(q: string): Promise<ResolvedMatch[]> {
+  const [cgRes, dexRes, gtRes] = await Promise.allSettled([
+    cgSearchTokens(q),
+    searchPairs(q),
+    gtSearchTokens(q),
+  ]);
+
+  const out: ResolvedMatch[] = [];
+
+  // CoinGecko — enrich the top hits with real market data so majors carry a
+  // price + mcap and rank correctly. /search returns ids ordered by relevance;
+  // one /coins/markets call hydrates them.
+  if (cgRes.status === 'fulfilled') {
+    const coins = (cgRes.value.coins ?? []).slice(0, 10);
+    const ids = coins.map((c) => c.id);
+    let markets: Awaited<ReturnType<typeof getMarketsByIds>> = [];
+    try { markets = await getMarketsByIds(ids, false); } catch { /* keep unpriced */ }
+    const mById = new Map(markets.map((m) => [m.id, m]));
+    for (const c of coins) {
+      const m = mById.get(c.id);
+      out.push({
+        id: c.id,
+        name: c.name,
+        symbol: (c.symbol || '').toUpperCase(),
+        image: m?.image ?? c.thumb ?? null,
+        chain: resolveTokenChain({ id: c.id, symbol: c.symbol }).chain,
+        address: null,
+        priceUsd: m?.current_price ?? 0,
+        marketCap: m?.market_cap ?? null,
+        volume24h: m?.total_volume ?? null,
+        change24h: m?.price_change_percentage_24h ?? null,
+        source: 'coingecko',
+      });
+    }
+  }
+
+  // DexScreener — the 10k+ long-tail. Best pair per token, real numbers.
+  if (dexRes.status === 'fulfilled') {
+    for (const p of bestPairPerToken(dexRes.value).values()) out.push(matchFromPair(p));
+  }
+
+  // GeckoTerminal — extra long-tail coverage (keyless, 100+ networks).
+  if (gtRes.status === 'fulfilled') {
+    for (const h of gtRes.value.slice(0, 15)) {
+      out.push({
+        id: null, name: h.name, symbol: h.symbol, image: null,
+        chain: h.chain, address: h.address, priceUsd: 0,
+        liquidityUsd: h.liquidityUsd || null, source: 'geckoterminal',
+      });
+    }
+  }
+
+  // Dedupe by identity, preferring a CoinGecko entry (richer detail page) when
+  // the same token arrives from multiple sources.
+  const byKey = new Map<string, ResolvedMatch>();
+  for (const m of out) {
+    const key = dedupeKey(m);
+    const existing = byKey.get(key);
+    if (!existing) { byKey.set(key, m); continue; }
+    // Prefer the entry that carries a price / more signal.
+    if (scoreOf(m) > scoreOf(existing) || (m.priceUsd > 0 && existing.priceUsd === 0)) {
+      byKey.set(key, m);
+    }
+  }
+
+  const ql = q.toLowerCase();
+  return [...byKey.values()].sort((a, b) => {
+    // Exact symbol match bubbles to the top.
+    const aExact = a.symbol.toLowerCase() === ql ? 1 : 0;
+    const bExact = b.symbol.toLowerCase() === ql ? 1 : 0;
+    if (aExact !== bExact) return bExact - aExact;
+    return scoreOf(b) - scoreOf(a);
+  });
 }
 
 export async function GET(req: Request) {
@@ -55,78 +235,17 @@ export async function GET(req: Request) {
   const q = (searchParams.get('q') || '').trim();
   if (!q) return NextResponse.json({ kind: 'ticker', matches: [] });
 
-  // ─── Contract address path ────────────────────────────────────────────
-  if (isEvmAddress(q)) {
-    const matches: ResolvedMatch[] = [];
-    await Promise.all(EVM_PLATFORMS.map(async ({ chain }) => {
-      try {
-        const price = await getContractPrice(q, chain);
-        if (price > 0) {
-          matches.push({
-            id: null,
-            name: `${chain.toUpperCase()} token`,
-            symbol: q.slice(0, 6) + '…',
-            image: null,
-            chain,
-            address: q,
-            priceUsd: price,
-          });
-        }
-      } catch { /* chain miss, ignore */ }
-    }));
-    return NextResponse.json({ kind: 'contract', matches }, {
-      headers: { 'Cache-Control': 'public, max-age=60, s-maxage=120' },
-    });
-  }
-
-  if (isSolanaAddress(q)) {
-    try {
-      const price = await getContractPrice(q, 'solana');
-      if (price > 0) {
-        return NextResponse.json({
-          kind: 'contract',
-          matches: [{
-            id: null,
-            name: 'Solana token',
-            symbol: q.slice(0, 6) + '…',
-            image: null,
-            chain: 'solana',
-            address: q,
-            priceUsd: price,
-          }],
-        });
-      }
-    } catch { /* no-op */ }
-    return NextResponse.json({ kind: 'contract', matches: [] });
-  }
-
-  // ─── Ticker / name path ───────────────────────────────────────────────
   try {
-    const result = await searchTokens(q);
-    const topMatches = (result.coins ?? []).slice(0, 8);
-    // Audit M8 #5 — was sequentially fetching getTokenDetail() for the
-    // first match (~200-300ms blocking). Search results land WITHOUT
-    // a price pill on first paint and the detail page (which the user
-    // is about to click anyway) hydrates the price. Drops search
-    // latency by ~half for popular tickers (BTC / ETH / SOL).
-    // §market-resolve-chain-leak — was hardcoded chain: 'ethereum' with a
-    // comment claiming "router will pick the right chain on click". The
-    // router doesn't re-resolve; whatever chain we return goes literally
-    // into the URL, so SOL landed at /dashboard/market/ethereum/solana
-    // and XRP at /dashboard/market/ethereum/ripple. Resolve per match
-    // via the same tokenChainResolver the rest of the platform uses, so
-    // native L1s + L2-native tokens route to their real chain.
-    const matches: ResolvedMatch[] = topMatches.map((c) => ({
-      id: c.id,
-      name: c.name,
-      symbol: c.symbol.toUpperCase(),
-      image: c.thumb,
-      chain: resolveTokenChain({ id: c.id, symbol: c.symbol }).chain,
-      address: null,
-      priceUsd: 0,
-    }));
-    return NextResponse.json({ kind: 'ticker', matches }, {
-      headers: { 'Cache-Control': 'public, max-age=60, s-maxage=120' },
+    if (isEvmContract(q) || isSolanaAddress(q)) {
+      const matches = await resolveContract(q);
+      return NextResponse.json({ kind: 'contract', matches: matches.slice(0, 30) }, {
+        headers: { 'Cache-Control': 'public, max-age=30, s-maxage=60' },
+      });
+    }
+
+    const matches = await resolveText(q);
+    return NextResponse.json({ kind: 'ticker', matches: matches.slice(0, 30) }, {
+      headers: { 'Cache-Control': 'public, max-age=30, s-maxage=60' },
     });
   } catch (err) {
     console.error('[market/resolve]', err);

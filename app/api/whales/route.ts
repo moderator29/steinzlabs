@@ -17,11 +17,19 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
   // it surfaced top-whale-SCORE whales instead of top-PnL. Add explicit
   // sort + min_pnl filter so the leaderboard can rank by realised 30d
   // PnL like the panel name promises.
-  const sortBy = (sp.get("sort") ?? "score").toLowerCase();
+  // DEFAULT = biggest whales first: rank by real held portfolio value
+  // (whales.portfolio_value_usd, net worth in USD) so the first page is the
+  // genuinely largest wallets rather than the composite-score long tail.
+  // Explicit callers still get their roster: ?sort=pnl (PnL leaderboard),
+  // ?sort=volume (active-volume roster), ?sort=score (composite whale score).
+  const sortBy = (sp.get("sort") ?? "portfolio").toLowerCase();
   const minPnl = Math.max(0, parseInt(sp.get("min_pnl") ?? "0", 10) || 0);
-  // Active-trader rosters rank by 7d DEX volume; PnL leaderboard by realised
-  // PnL; everything else by composite score.
-  const orderColumn = sortBy === "pnl" ? "pnl_30d_usd" : sortBy === "volume" ? "volume_7d_usd" : "whale_score";
+  // PnL leaderboard ranks by realised PnL; the active-trader roster by 7d DEX
+  // volume; ?sort=score by composite score; the default by held portfolio USD.
+  const orderColumn = sortBy === "pnl" ? "pnl_30d_usd"
+    : sortBy === "volume" ? "volume_7d_usd"
+    : sortBy === "score" ? "whale_score"
+    : "portfolio_value_usd";
   // Optional: only wallets active on >= N of the last 7 days (daily traders).
   const minActiveDays = Math.max(0, parseInt(sp.get("min_active_days") ?? "0", 10) || 0);
 
@@ -35,9 +43,17 @@ export const GET = withTierGate("mini", async (request: NextRequest) => {
         // §whale-tracker-grade — added avg_hold_hours so the PnL leaderboard
         // can derive Accumulator / Distributor / Sniper badges from
         // existing columns the backfill cron already populates.
-        .select("id, address, chain, label, entity_type, archetype, portfolio_value_usd, pnl_30d_usd, win_rate, avg_hold_hours, whale_score, volume_7d_usd, active_days_7d, follower_count, x_handle, verified, last_active_at", { count: "exact" })
+        .select("id, address, chain, label, entity_type, archetype, portfolio_value_usd, pnl_30d_usd, win_rate, avg_hold_hours, whale_score, volume_7d_usd, active_days_7d, follower_count, x_handle, verified, last_active_at, naka_number, logo_url, logo_source", { count: "exact" })
         .eq("is_active", true)
+        // nullsFirst:false → rows with no value for the sort column sort LAST.
         .order(orderColumn, { ascending: false, nullsFirst: false })
+        // Deterministic tiebreak so the biggest, most-established whales
+        // (largest portfolios) lead within an equal band and pagination is
+        // stable page-to-page: held portfolio, then composite score, then most
+        // recently active — keeps the marquee names on the first pages.
+        .order("portfolio_value_usd", { ascending: false, nullsFirst: false })
+        .order("whale_score", { ascending: false, nullsFirst: false })
+        .order("last_active_at", { ascending: false, nullsFirst: false })
         .range(offset, offset + limit - 1);
 
       if (minPnl > 0) query = query.gte("pnl_30d_usd", minPnl);

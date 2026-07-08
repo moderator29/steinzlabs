@@ -9,38 +9,88 @@ import { withTierGate } from '@/lib/subscriptions/apiTierGate';
 
 export const runtime = 'nodejs';
 
-type SortKey = 'whale_score' | 'risk_score' | 'members' | 'recent';
-const ORDER: Record<SortKey, { col: string; asc: boolean }> = {
-  whale_score: { col: 'whale_score', asc: false },
-  risk_score:  { col: 'whale_score', asc: false }, // risk lives off-table; apply post-query
-  members:     { col: 'whale_score', asc: false }, // ditto
-  recent:      { col: 'updated_at', asc: false },
+// Only two sort keys map cleanly onto a wallet_clusters column and can be
+// ordered + paginated by the database. 'members' is a derived count that lives
+// in wallet_cluster_members, so it is sorted in-memory over the (small, ~300-row)
+// filtered set below. The previous ORDER map silently aliased 'members' and
+// 'risk_score' to whale_score, so the "Member Count" option lied about its
+// ordering — every row was still real, but the sort was not what the UI claimed.
+type SortKey = 'whale_score' | 'members' | 'recent';
+const DB_ORDER_COL: Record<'whale_score' | 'recent', string> = {
+  whale_score: 'whale_score',
+  recent: 'updated_at',
 };
+
+interface ClusterBaseRow {
+  cluster_id: string;
+  token_address: string | null;
+  behavior_type: string | null;
+  whale_score: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+const CLUSTER_COLS = 'cluster_id, token_address, behavior_type, whale_score, created_at, updated_at';
 
 export const GET = withTierGate('pro', async (request: NextRequest) => {
   const sp = request.nextUrl.searchParams;
   const archetype = sp.get('archetype');
-  const chain = sp.get('chain');
   const minScore = parseInt(sp.get('min_score') || '0', 10) || 0;
   const q = (sp.get('q') || '').trim();
-  const sort = (sp.get('sort') || 'whale_score') as SortKey;
+  const rawSort = sp.get('sort') || 'whale_score';
+  const sort: SortKey = rawSort === 'members' || rawSort === 'recent' ? rawSort : 'whale_score';
   const offset = Math.max(0, parseInt(sp.get('offset') || '0', 10) || 0);
   const limit = Math.max(1, Math.min(60, parseInt(sp.get('limit') || '24', 10) || 24));
 
   const supabase = getSupabaseAdmin();
 
   try {
-    let clusters = supabase
-      .from('wallet_clusters')
-      .select('cluster_id, token_address, behavior_type, whale_score, created_at, updated_at', { count: 'exact' })
-      .order(ORDER[sort].col, { ascending: ORDER[sort].asc, nullsFirst: false })
-      .range(offset, offset + limit - 1);
-    if (archetype) clusters = clusters.eq('behavior_type', archetype);
-    if (minScore > 0) clusters = clusters.gte('whale_score', minScore);
-    if (q) clusters = clusters.ilike('cluster_id', `%${q}%`);
+    let rows: ClusterBaseRow[] | null;
+    let count: number | null;
 
-    const { data: rows, error, count } = await clusters;
-    if (error) throw error;
+    if (sort === 'members') {
+      // Member Count sort: pull the full filtered cluster set (bounded — the
+      // table holds a few hundred clusters), tally REAL member counts from
+      // wallet_cluster_members, then sort + paginate in memory. Whale score is
+      // the deterministic tie-breaker so equal-size clusters stay stable.
+      let base = supabase.from('wallet_clusters').select(CLUSTER_COLS);
+      if (archetype) base = base.eq('behavior_type', archetype);
+      if (minScore > 0) base = base.gte('whale_score', minScore);
+      if (q) base = base.ilike('cluster_id', `%${q}%`);
+      const { data: allRows, error: baseErr } = await base;
+      if (baseErr) throw baseErr;
+      const all = (allRows ?? []) as ClusterBaseRow[];
+
+      const counts = new Map<string, number>();
+      if (all.length > 0) {
+        const { data: memberRows } = await supabase
+          .from('wallet_cluster_members')
+          .select('cluster_id')
+          .in('cluster_id', all.map((r) => r.cluster_id));
+        (memberRows ?? []).forEach((m) => counts.set(m.cluster_id, (counts.get(m.cluster_id) ?? 0) + 1));
+      }
+
+      all.sort((a, b) =>
+        (counts.get(b.cluster_id) ?? 0) - (counts.get(a.cluster_id) ?? 0) ||
+        (Number(b.whale_score) || 0) - (Number(a.whale_score) || 0),
+      );
+      count = all.length;
+      rows = all.slice(offset, offset + limit);
+    } else {
+      let clusters = supabase
+        .from('wallet_clusters')
+        .select(CLUSTER_COLS, { count: 'exact' })
+        .order(DB_ORDER_COL[sort], { ascending: false, nullsFirst: false })
+        .range(offset, offset + limit - 1);
+      if (archetype) clusters = clusters.eq('behavior_type', archetype);
+      if (minScore > 0) clusters = clusters.gte('whale_score', minScore);
+      if (q) clusters = clusters.ilike('cluster_id', `%${q}%`);
+
+      const res = await clusters;
+      if (res.error) throw res.error;
+      rows = (res.data ?? null) as ClusterBaseRow[] | null;
+      count = res.count;
+    }
 
     if (!rows || rows.length === 0) {
       return NextResponse.json({ clusters: [], total: count ?? 0, offset, limit, facets: { byArchetype: {} } });

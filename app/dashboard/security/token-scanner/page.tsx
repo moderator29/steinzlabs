@@ -1,6 +1,6 @@
 'use client';
 
-import { Shield, Search, AlertTriangle, CheckCircle, XCircle, Clock, Loader2, ExternalLink, Copy, Wallet, ArrowRight, Brain, ThumbsUp, ThumbsDown, ShieldAlert } from 'lucide-react';
+import { Shield, Search, AlertTriangle, CheckCircle, XCircle, Clock, Loader2, ExternalLink, Copy, Wallet, ArrowRight, Brain, ThumbsUp, ThumbsDown, ShieldAlert, HelpCircle } from 'lucide-react';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { securityCenterHowItWorks } from '@/lib/howItWorks/content/security';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
@@ -9,9 +9,26 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useNavState } from '@/lib/nav/useNavState';
 
+type CheckStatus = 'pass' | 'warn' | 'fail' | 'unavailable';
+type RiskTier = 'Critical' | 'High' | 'Medium' | 'Low' | 'Safe';
+
+interface ScanCheck {
+  id: string;
+  label: string;
+  category: string;
+  status: CheckStatus;
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
+  evidence: string;
+  source: string;
+}
+
+interface SourceStatus { name: string; ok: boolean; detail: string }
+
 interface ScanResult {
   contract: string;
   chainId: string;
+  chainLabel: string;
+  resolvedChain: string;
   name: string;
   symbol: string;
   totalSupply: string;
@@ -19,8 +36,12 @@ interface ScanResult {
   creatorAddress: string;
   ownerAddress: string;
   trustScore: number;
+  riskScore: number;
+  riskTier: RiskTier;
   safetyLevel: string;
   safetyColor: string;
+  tierColor: string;
+  scoreReasons: string[];
   buyTax: string;
   sellTax: string;
   isHoneypot: boolean;
@@ -32,7 +53,10 @@ interface ScanResult {
   ownerCanChangeBalance: boolean;
   lpHolders: unknown[];
   lpTotalSupply: string;
-  checks: { label: string; status: string }[];
+  checks: ScanCheck[];
+  sources: SourceStatus[];
+  reconciliation: string[];
+  lpAnalysis?: { status: CheckStatus; lockedOrBurnedPct: number | null; detail: string; source: string } | null;
   timestamp: string;
   dexData?: {
     price: number;
@@ -42,10 +66,17 @@ interface ScanResult {
     fdv: number;
     marketCap: number;
     url?: string;
-  };
-  solanaNote?: string;
+  } | null;
   aiAnalysis?: string;
 }
+
+const TIER_COPY: Record<RiskTier, string> = {
+  Safe: 'Passed all critical checks — no security red flags found',
+  Low: 'Minor concerns only — no critical security flags',
+  Medium: 'Some real risks detected — proceed with care',
+  High: 'Significant risks found — high caution advised',
+  Critical: 'Critical risk detected — avoid this token',
+};
 
 const CHAINS = [
   { id: '1', label: 'Ethereum', key: 'ethereum' },
@@ -96,6 +127,12 @@ export default function TokenScannerPage() {
           return;
         }
         setError(data.error || 'Failed to scan token');
+        return;
+      }
+
+      // 200 with an error field = honest "could not verify" (no source returned data).
+      if (data.error || data.couldNotVerify) {
+        setError(data.error || 'Could not verify this token — no security source returned data.');
         return;
       }
 
@@ -160,7 +197,7 @@ export default function TokenScannerPage() {
             value={scanInput}
             onChange={(e) => setScanInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleScan()}
-            placeholder="Contract address only (0x...), not wallet addresses"
+            placeholder="Contract address (0x… / Solana mint) or token symbol"
             className="flex-1 nl-glass rounded-xl px-3 py-2.5 text-xs font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/30"
           />
           <button
@@ -240,29 +277,57 @@ export default function TokenScannerPage() {
             </div>
             </TiltCard>
 
-            <div className="nl-glass rounded-2xl p-4 text-center nl-fade-up" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+            <div className="nl-glass rounded-2xl p-4 text-center nl-fade-up" style={{ boxShadow: `0 0 0 1px ${result.tierColor}66, 0 0 16px ${result.tierColor}30` }}>
               <div className="relative w-24 h-24 mx-auto mb-3">
                 <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
                   <circle cx="50" cy="50" r="40" fill="none" stroke="#1A2235" strokeWidth="8" />
                   <circle
                     cx="50" cy="50" r="40" fill="none"
-                    stroke={result.safetyColor}
+                    stroke={result.tierColor}
                     strokeWidth="8"
-                    strokeDasharray={getScoreStroke(result.trustScore)}
+                    strokeDasharray={getScoreStroke(result.riskScore ?? result.trustScore)}
                     strokeLinecap="round"
                   />
                 </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold" style={{ color: result.safetyColor }}>{result.trustScore}</span>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-2xl font-bold leading-none" style={{ color: result.tierColor }}>{result.riskScore ?? result.trustScore}</span>
+                  <span className="text-[8px] text-gray-500 mt-0.5">/ 100</span>
                 </div>
               </div>
-              <div className="text-sm font-bold" style={{ color: result.safetyColor }}>{result.safetyLevel}</div>
-              <p className="text-[10px] text-gray-500 mt-1">
-                {result.safetyLevel === 'SAFE' && 'Token passed most security checks'}
-                {result.safetyLevel === 'CAUTION' && 'Some risks detected, proceed with care'}
-                {result.safetyLevel === 'WARNING' && 'Significant risks found, high caution advised'}
-                {result.safetyLevel === 'DANGER' && 'Critical risks detected, avoid this token'}
-              </p>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style={{ color: result.tierColor, background: `${result.tierColor}1A`, border: `1px solid ${result.tierColor}44` }}>
+                {result.riskTier} Risk
+              </div>
+              <p className="text-[10px] text-gray-500 mt-2">{TIER_COPY[result.riskTier] ?? ''}</p>
+
+              {result.scoreReasons?.length > 0 && (
+                <div className="mt-3 text-left bg-white/[0.03] rounded-xl p-3">
+                  <p className="text-[9px] uppercase tracking-wider text-gray-500 mb-1.5">Why this rating</p>
+                  <ul className="space-y-1">
+                    {result.scoreReasons.map((r, i) => (
+                      <li key={i} className="text-[11px] text-gray-300 flex gap-1.5">
+                        <span className="text-gray-600">•</span>{r}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {result.sources?.length > 0 && (
+                <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+                  {result.sources.map((s) => (
+                    <span
+                      key={s.name}
+                      title={s.detail}
+                      className={`text-[9px] px-2 py-0.5 rounded-full border ${s.ok ? 'text-green-400 border-green-500/30 bg-green-500/10' : 'text-gray-500 border-white/10 bg-white/[0.03]'}`}
+                    >
+                      {s.ok ? '● ' : '○ '}{s.name}{!s.ok && s.detail ? ` · ${s.detail}` : ''}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {result.resolvedChain && result.chainLabel && (
+                <p className="text-[9px] text-gray-600 mt-2">Analyzed on {result.chainLabel}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-2 nl-fade-up">
@@ -336,22 +401,62 @@ export default function TokenScannerPage() {
             )}
 
             <div className="nl-glass rounded-2xl p-4 nl-fade-up" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
-              <h3 className="font-bold text-sm mb-3">Security Checks</h3>
-              <div className="space-y-2">
-                {result.checks.map((check) => {
-                  const Icon = check.status === 'pass' ? CheckCircle : check.status === 'fail' ? XCircle : Clock;
-                  const color = check.status === 'pass' ? '#10B981' : check.status === 'fail' ? '#EF4444' : '#F59E0B';
-                  return (
-                    <div key={check.label} className="flex items-center gap-3 py-1.5">
-                      <Icon className="w-4 h-4 flex-shrink-0" style={{ color }} />
-                      <span className="text-xs text-gray-300">{check.label}</span>
-                      <span className="ms-auto text-[10px] font-semibold uppercase" style={{ color }}>
-                        {check.status === 'pass' ? 'Pass' : check.status === 'fail' ? 'Fail' : 'Warning'}
-                      </span>
-                    </div>
-                  );
-                })}
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-sm">Security Checks</h3>
+                <span className="text-[10px] text-gray-500">{result.checks.length} checks · every flag shows its real signal</span>
               </div>
+              <div className="space-y-2.5">
+                {[...result.checks]
+                  .sort((a, b) => {
+                    const rank = { fail: 0, warn: 1, unavailable: 2, pass: 3 } as Record<string, number>;
+                    return (rank[a.status] ?? 4) - (rank[b.status] ?? 4);
+                  })
+                  .map((check) => {
+                    const Icon = check.status === 'pass' ? CheckCircle
+                      : check.status === 'fail' ? XCircle
+                      : check.status === 'unavailable' ? HelpCircle : Clock;
+                    const color = check.status === 'pass' ? '#10B981'
+                      : check.status === 'fail' ? '#EF4444'
+                      : check.status === 'unavailable' ? '#6B7280' : '#F59E0B';
+                    const badge = check.status === 'pass' ? 'Pass'
+                      : check.status === 'fail' ? 'Fail'
+                      : check.status === 'unavailable' ? 'Unverified' : 'Warning';
+                    return (
+                      <div key={check.id} className="flex items-start gap-3 py-1">
+                        <Icon className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color }} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-200 font-medium">{check.label}</span>
+                            <span className="text-[9px] font-semibold uppercase ms-auto flex-shrink-0" style={{ color }}>{badge}</span>
+                          </div>
+                          <p className="text-[10px] text-gray-500 leading-snug mt-0.5">{check.evidence}</p>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className="text-[8px] text-gray-600 uppercase tracking-wide">{check.category}</span>
+                            <span className="text-gray-700">·</span>
+                            <span className="text-[8px] text-[#0066FF]/60">{check.source}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+
+              {result.reconciliation?.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-white/5">
+                  <p className="text-[9px] uppercase tracking-wider text-gray-500 mb-1.5">Source Reconciliation</p>
+                  {result.reconciliation.map((r, i) => (
+                    <p key={i} className="text-[10px] text-amber-400/80 leading-snug flex gap-1.5"><span>⚖</span>{r}</p>
+                  ))}
+                </div>
+              )}
+
+              {result.lpAnalysis && (
+                <div className="mt-3 pt-3 border-t border-white/5 flex items-center gap-2">
+                  <span className="text-[10px] text-gray-500">Liquidity:</span>
+                  <span className="text-[10px] text-gray-300">{result.lpAnalysis.detail}</span>
+                  <span className="text-[8px] text-[#0066FF]/60 ms-auto">{result.lpAnalysis.source}</span>
+                </div>
+              )}
             </div>
 
             <div className="nl-glass rounded-2xl p-4 nl-fade-up" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
@@ -398,16 +503,11 @@ export default function TokenScannerPage() {
                   <Brain className="w-4 h-4 text-[#0066FF]" />
                 </div>
                 <span className="font-bold text-sm">AI Security Assessment</span>
-                <span className={`ms-auto text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${
-                  result.safetyLevel === 'SAFE'
-                    ? 'bg-[#10B981]/15 text-[#10B981] border-[#10B981]/30'
-                    : result.safetyLevel === 'CAUTION'
-                    ? 'bg-[#F59E0B]/15 text-[#F59E0B] border-[#F59E0B]/30'
-                    : result.safetyLevel === 'WARNING'
-                    ? 'bg-[#F97316]/15 text-[#F97316] border-[#F97316]/30'
-                    : 'bg-[#EF4444]/15 text-[#EF4444] border-[#EF4444]/30'
-                }`}>
-                  {result.safetyLevel === 'SAFE' ? 'LOW' : result.safetyLevel === 'CAUTION' ? 'MEDIUM' : result.safetyLevel === 'WARNING' ? 'HIGH' : 'CRITICAL'}
+                <span
+                  className="ms-auto text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider"
+                  style={{ color: result.tierColor, background: `${result.tierColor}26`, borderColor: `${result.tierColor}4D` }}
+                >
+                  {result.riskTier} Risk
                 </span>
               </div>
 
@@ -519,6 +619,12 @@ export default function TokenScannerPage() {
                 className="text-[10px] text-[#0066FF]/60 hover:text-[#0066FF] font-mono block mx-auto"
               >
                 USDT (BSC)
+              </button>
+              <button
+                onClick={() => { setScanInput('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'); setSelectedChain('solana'); }}
+                className="text-[10px] text-[#0066FF]/60 hover:text-[#0066FF] font-mono block mx-auto"
+              >
+                USDC (Solana)
               </button>
             </div>
           </div>

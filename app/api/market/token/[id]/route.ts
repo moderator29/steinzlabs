@@ -1,6 +1,7 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getBestPair } from '@/lib/services/dexscreener';
+import { COMMUNITY_TOKEN_CONTRACTS, SYMBOL_TO_SLUG } from '@/lib/market/tokenIdMaps';
 
 export const dynamic = 'force-dynamic';
 
@@ -86,54 +87,8 @@ async function dexscreenerFallback(contract: string) {
   };
 }
 
-// Bug §6.8 — community tokens that aren't indexed by CoinGecko (NAKA,
-// Pleasure Coin, etc.) need their slug routed to the on-chain contract
-// so the DexScreener fallback kicks in instead of returning a CoinGecko
-// 404. Slug → EVM contract. Keep this list short — only the tokens we
-// explicitly support deep-link routes for. Anything else either resolves
-// via CoinGecko (handled below) or via the contract directly.
-const COMMUNITY_TOKEN_CONTRACTS: Record<string, string> = {
-  // $NAKA — ETH-only, Uniswap-traded community token. Memory: ETH-only,
-  // 0x6967b9a8c0b14849CFE8f9E5732B401433fD2898, threshold 1,227,000.
-  'naka':    '0x6967b9a8c0b14849CFE8f9E5732B401433fD2898',
-  'naka-go': '0x6967b9a8c0b14849CFE8f9E5732B401433fD2898',
-  // Pleasure Coin — Polygon-traded. DexScreener auto-detects chain from
-  // the contract address so we don't have to plumb chain through.
-  'pleasure':      '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19',
-  'pleasure-coin': '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19',
-  // Round-2 deep-dive — wallet rows pass token.symbol when contractAddress
-  // is null at click time. Map the on-chain symbol so the same
-  // /api/market/token/NSFW lookup that powers price + chart resolves.
-  'nsfw':          '0x8f006d1e1d9dc6c98996f50a4c810f17a47fbf19',
-};
-
-// Common wallet-side symbols the user might URL-ify (eth/btc/sol/etc)
-// don't match CoinGecko slugs directly. Map the obvious ones so the
-// coin-detail page stops showing $0.00 for native assets when the
-// wallet links to /coin/<chain>/eth instead of /coin/<chain>/ethereum.
-const SYMBOL_TO_SLUG: Record<string, string> = {
-  eth: 'ethereum',
-  weth: 'weth',
-  btc: 'bitcoin',
-  wbtc: 'wrapped-bitcoin',
-  sol: 'solana',
-  bnb: 'binancecoin',
-  wbnb: 'wbnb',
-  matic: 'matic-network',
-  pol: 'polygon-ecosystem-token',
-  avax: 'avalanche-2',
-  arb: 'arbitrum',
-  op: 'optimism',
-  usdc: 'usd-coin',
-  usdt: 'tether',
-  dai: 'dai',
-  link: 'chainlink',
-  uni: 'uniswap',
-  ltc: 'litecoin',
-  trx: 'tron',
-  doge: 'dogecoin',
-  shib: 'shiba-inu',
-};
+// Bug §6.8 — community-token + wallet-symbol id maps now live in
+// lib/market/tokenIdMaps so the live /stats route resolves identically.
 
 export async function GET(
   _req: NextRequest,

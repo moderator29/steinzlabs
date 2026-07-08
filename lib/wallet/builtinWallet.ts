@@ -75,6 +75,57 @@ export function hasBuiltinWallet(): boolean {
 }
 
 /**
+ * Restore the user's built-in wallet(s) from their cloud backup into
+ * localStorage when this browser has none locally.
+ *
+ * Bug: the wallet PAGE cloud-hydrates from /api/wallet/sync when localStorage
+ * is empty, but the swap / sniper / trading surfaces only read localStorage via
+ * getBuiltinWalletAddress(). So on a fresh browser or a cleared session — where
+ * the wallet genuinely exists in the user's cloud backup but not yet in this
+ * browser — those surfaces wrongly re-prompt "create a wallet". This mirrors the
+ * wallet page's reconcile step so any trading surface can restore the REAL
+ * wallet without the user first having to open the wallet page.
+ *
+ * No-op (and cheap) when a wallet already exists locally. Returns the resolved
+ * built-in address, or null when the cloud has none either (truly fresh user).
+ */
+export async function hydrateBuiltinWalletFromCloud(): Promise<string | null> {
+  if (typeof window === 'undefined') return null;
+  // Already have it locally — nothing to restore.
+  const local = getBuiltinWalletAddress();
+  if (local) return local;
+  try {
+    const res = await fetch('/api/wallet/sync', { credentials: 'include' });
+    if (!res.ok) return null;
+    const cloud = (await res.json()) as { wallets?: StoredWalletLike[]; defaultAddress?: string | null };
+    const wallets = Array.isArray(cloud.wallets) ? cloud.wallets.filter((w) => w && typeof w.address === 'string' && w.address.trim()) : [];
+    if (wallets.length === 0) return null;
+
+    // Merge with anything already local (offline-create case) so we never drop
+    // a locally-created wallet that hasn't synced up yet.
+    const existing = readJson<StoredWalletLike[]>('steinz_wallets');
+    const byAddr = new Map<string, StoredWalletLike>();
+    for (const w of wallets) byAddr.set(w.address!.toLowerCase(), w);
+    if (Array.isArray(existing)) {
+      for (const w of existing) if (w?.address) byAddr.set(w.address.toLowerCase(), w);
+    }
+    const merged = Array.from(byAddr.values());
+    localStorage.setItem('steinz_wallets', JSON.stringify(merged));
+
+    const def = (cloud.defaultAddress && cloud.defaultAddress.trim()) || merged[0]?.address || '';
+    if (def) {
+      localStorage.setItem('steinz_default_wallet', def);
+      setActiveBuiltinWallet(def);
+    }
+    return getBuiltinWalletAddress();
+  } catch {
+    // Cloud unreachable — leave local state as-is; the surface keeps its
+    // honest "no wallet" prompt rather than inventing one.
+    return null;
+  }
+}
+
+/**
  * Mark an address as the active built-in wallet. Keeps
  * `steinz_active_wallet_address` (read by pendingSigner) in sync with whatever
  * the wallet page or a trading surface has selected, so signing never targets a

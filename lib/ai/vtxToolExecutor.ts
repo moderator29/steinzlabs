@@ -26,6 +26,7 @@ import { buildSolanaWalletIntelligence } from '@/lib/services/solana-intelligenc
 import { buildEvmWalletIntelligence } from '@/lib/services/evm-intelligence';
 import { getSocialScore } from '@/lib/services/lunarcrush';
 import { cmcConfigured, cmcQuoteBySymbol } from '@/lib/services/coinmarketcap';
+import { headlineMarketCap } from '@/lib/market/headline';
 import { twGatewayConfigured, twAssetInfo, twSearchAssets } from '@/lib/services/trustwallet';
 import { getEntityLabel, getAddressIntel } from '@/lib/services/arkham';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
@@ -77,7 +78,13 @@ async function executeTokenSecurityScan(input: Record<string, unknown>): Promise
 }
 
 async function executeTokenMarketData(input: Record<string, unknown>): Promise<string> {
-  const identifier = input.identifier as string;
+  // Guard: a malformed tool call with no identifier must return an honest
+  // "need an identifier" instead of throwing on identifier.toUpperCase() and
+  // aborting the whole turn.
+  const identifier = typeof input.identifier === 'string' ? input.identifier.trim() : '';
+  if (!identifier) {
+    return JSON.stringify({ unavailable: true, note: 'token_market_data needs an identifier (symbol, name, or contract address).' });
+  }
   // Only honor an EXPLICIT chain from the model. Defaulting to 'ethereum'
   // here made a chainless symbol query (e.g. "BONK") filter down to
   // ethereum-only pairs — i.e. bridged/fake ERC-20 clones — hiding the real
@@ -87,20 +94,45 @@ async function executeTokenMarketData(input: Record<string, unknown>): Promise<s
   const lines: string[] = [];
   // An address query is an exact lookup; a symbol/name query is a fuzzy search.
   const isAddress = detectTokenAddress(identifier) !== null;
+  const upper = identifier.toUpperCase().replace(/^\$/, '');
+  // Recognised major -> CoinGecko id. For these the AUTHORITATIVE price comes
+  // from CoinGecko/CMC and we SKIP the DexScreener symbol search entirely: a
+  // bare "SOL"/"BTC"/"ETH" search returns wrapped/derivative/same-ticker scam
+  // pairs whose price contradicts the real asset (and the inline token card,
+  // which also resolves majors via CoinGecko).
+  const majorCgId = !isAddress ? (MAJOR_CG_ID[upper] ?? null) : null;
+  // For an address or long-tail ticker the on-chain DexScreener pair is primary;
+  // for a listed major the CoinGecko/CMC listing is primary.
+  const primarySource = majorCgId ? 'CoinGecko/CoinMarketCap listing' : 'on-chain DexScreener pair';
 
   // DexScreener — address → exact token pairs, symbol → text search. Prefer
   // pairs on the requested chain (input.chain, e.g. "ethereum"/"solana") so a
   // same-ticker pair on the wrong chain doesn't shadow the one the caller asked
-  // about; fall back to all pairs when none match that chain.
-  try {
+  // about; fall back to all pairs when none match that chain. Skipped for
+  // recognised majors (priced authoritatively via CoinGecko/CMC below).
+  if (!majorCgId) try {
     const rawPairs = isAddress ? await getTokenPairs(identifier) : await searchPairs(identifier);
     // chainId is a chain name (not an address), so lowercasing for the
     // case-insensitive compare is safe here.
     const onChain = chain ? rawPairs.filter((p) => p.chainId?.toLowerCase() === chain.toLowerCase()) : [];
-    const pairs = onChain.length > 0 ? onChain : rawPairs;
+    let pairs = onChain.length > 0 ? onChain : rawPairs;
+    // Symbol search: a fuzzy "PEPE" query returns dozens of same-name clones.
+    // Collapse to the deepest-liquidity EXACT-symbol pair so the tool never
+    // quotes a wash-traded impostor as the real token.
+    if (!isAddress && pairs.length > 0) {
+      const exact = pairs.filter((p) => (p.baseToken?.symbol || '').toUpperCase() === upper);
+      pairs = exact.length ? exact : pairs;
+    }
+    // Always lead with the deepest-liquidity pool — this is the pair the inline
+    // token card picks (pickBestPair), so the headline price/MCap the model sees
+    // matches the card instead of an arbitrary shallow pool for the same token.
     if (pairs.length > 0) {
-      const top = pairs.slice(0, 3);
-      lines.push(`DexScreener data for "${identifier}"${onChain.length > 0 ? ` (chain: ${chain})` : ''}:`);
+      pairs = [...pairs].sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0));
+    }
+    if (pairs.length > 0) {
+      const best = pairs[0];
+      const top = isAddress ? pairs.slice(0, 3) : pairs.slice(0, 1);
+      lines.push(`PRIMARY SOURCE - on-chain DexScreener data for "${identifier}"${onChain.length > 0 ? ` (chain: ${chain})` : ''}:`);
       for (const p of top) {
         lines.push(`  ${p.baseToken.name} (${p.baseToken.symbol}) on ${p.chainId}/${p.dexId}`);
         lines.push(`  Price: $${p.priceUsd} | 24h: ${p.priceChange?.h24 ?? 0}%`);
@@ -112,7 +144,7 @@ async function executeTokenMarketData(input: Record<string, unknown>): Promise<s
         {
           const fdvN = Number(p.fdv) || 0;
           const mcN = Number(p.marketCap) || 0;
-          const headline = fdvN > mcN ? fdvN : (mcN || fdvN);
+          const headline = headlineMarketCap(fdvN, mcN);
           lines.push(`  Market Cap: $${headline.toLocaleString()}${fdvN > mcN && mcN > 0 ? ` (FDV; circulating ~$${mcN.toLocaleString()})` : ''}`);
         }
         lines.push(`  FDV: $${(p.fdv ?? 0).toLocaleString()}`);
@@ -120,6 +152,56 @@ async function executeTokenMarketData(input: Record<string, unknown>): Promise<s
         lines.push(`  Contract: ${p.baseToken.address}`);
         lines.push('');
       }
+
+      // Socials + website — real, straight from the DexScreener pair metadata.
+      // Emitted only when present so we never imply a project has channels it
+      // doesn't.
+      const sites = (best.info?.websites ?? []).filter((w) => w?.url);
+      const socials = (best.info?.socials ?? []).filter((s) => s?.url);
+      if (sites.length || socials.length) {
+        const parts = [
+          ...sites.map((w) => `${w.label || 'website'}: ${w.url}`),
+          ...socials.map((s) => `${s.type}: ${s.url}`),
+        ];
+        lines.push(`  Socials/links: ${parts.join(' | ')}`);
+      }
+
+      // Where else it trades — a real liquidity map (top other pools) so the
+      // model can speak to multi-chain / multi-DEX depth without inventing
+      // venues. Symbol queries only (an address query already lists 3 pairs).
+      if (!isAddress && pairs.length > 1) {
+        const others = pairs.slice(1, 4)
+          .map((p) => `${p.chainId}/${p.dexId} ($${Math.round(p.liquidity?.usd ?? 0).toLocaleString()} liq)`)
+          .join(', ');
+        if (others) lines.push(`  Also trades on: ${others}`);
+        lines.push('');
+      }
+
+      // Best-effort on-chain security + holder depth for the resolved contract,
+      // via the same GoPlus scanner the token card and swap gate use — so the
+      // agent can flag honeypots / taxes / concentration on a long-tail token
+      // instead of only quoting price. Gated + graceful: an unavailable scan is
+      // omitted, never fabricated, and never blocks the price answer.
+      try {
+        const secChain = best.chainId || chain || (best.baseToken.address.startsWith('0x') ? 'ethereum' : 'solana');
+        const sec = await getTokenSecurity(best.baseToken.address, secChain);
+        if (sec) {
+          lines.push(`ON-CHAIN SECURITY (scan of ${best.baseToken.symbol} on ${secChain}):`);
+          lines.push(`  Safety: ${sec.safetyLevel} (trust ${sec.trustScore}/100)`);
+          lines.push(`  Honeypot: ${sec.isHoneypot ? 'YES' : 'No'} | Buy tax: ${(sec.buyTax * 100).toFixed(1)}% | Sell tax: ${(sec.sellTax * 100).toFixed(1)}%`);
+          if (sec.holderCount > 0) lines.push(`  Holders: ${sec.holderCount.toLocaleString()}`);
+          if (sec.topHolderPct > 0) lines.push(`  Largest holder: ${(sec.topHolderPct * 100).toFixed(1)}% of supply`);
+          const flags: string[] = [];
+          if (sec.isMintable) flags.push('mintable');
+          if (sec.ownerCanChangeBalance) flags.push('owner can modify balances');
+          if (sec.hasHiddenOwner) flags.push('hidden owner');
+          if (sec.canTakeBackOwnership) flags.push('ownership reclaimable');
+          if (sec.cannotSellAll) flags.push('cannot sell all');
+          if (sec.freezable) flags.push('freeze authority active');
+          if (flags.length) lines.push(`  Flags: ${flags.join(', ')}`);
+          lines.push('');
+        }
+      } catch { /* security scan unavailable — omit honestly, keep the price data */ }
     }
   } catch { /* fall through */ }
 
@@ -130,17 +212,20 @@ async function executeTokenMarketData(input: Record<string, unknown>): Promise<s
   try {
     let coinId: string | null = null;
     if (!isAddress) {
-      const upper = identifier.toUpperCase();
-      coinId = MAJOR_CG_ID[upper] ?? null;
+      coinId = majorCgId;
       if (!coinId) {
         const { coins } = await searchTokens(identifier);
-        const match = coins.find((c) => c.symbol?.toUpperCase() === upper) ?? coins[0];
-        coinId = match?.id ?? null;
+        // Exact-ticker, best market-cap rank first — so a symbol resolves to the
+        // real listed token, not a same-ticker clone CoinGecko also indexes.
+        const exact = coins
+          .filter((c) => c.symbol?.toUpperCase() === upper)
+          .sort((a, b) => (a.market_cap_rank ?? Number.MAX_SAFE_INTEGER) - (b.market_cap_rank ?? Number.MAX_SAFE_INTEGER));
+        coinId = exact[0]?.id ?? coins[0]?.id ?? null;
       }
     }
     if (!coinId) throw new Error('no coingecko id');
     const detail = await getTokenDetail(coinId);
-    lines.push(`CoinGecko data for ${detail.name}:`);
+    lines.push(`${majorCgId ? 'PRIMARY SOURCE - ' : 'Cross-check - '}CoinGecko data for ${detail.name}:`);
     lines.push(`  Price: $${detail.market_data?.current_price?.usd}`);
     lines.push(`  Market Cap: $${(detail.market_data?.market_cap?.usd ?? 0).toLocaleString()}`);
     lines.push(`  Volume 24h: $${(detail.market_data?.total_volume?.usd ?? 0).toLocaleString()}`);
@@ -156,7 +241,7 @@ async function executeTokenMarketData(input: Record<string, unknown>): Promise<s
     try {
       const q = await cmcQuoteBySymbol(identifier);
       if (q && (q.price != null || q.marketCap != null)) {
-        lines.push(`CoinMarketCap data for ${q.name} (${q.symbol})${q.cmcRank ? `, rank #${q.cmcRank}` : ''}:`);
+        lines.push(`${majorCgId ? 'Confirmation - ' : 'Cross-check - '}CoinMarketCap data for ${q.name} (${q.symbol})${q.cmcRank ? `, rank #${q.cmcRank}` : ''}:`);
         if (q.price != null) lines.push(`  Price: $${q.price}`);
         if (q.marketCap != null) lines.push(`  Market Cap: $${q.marketCap.toLocaleString()}`);
         if (q.fdv != null) lines.push(`  FDV (fully diluted): $${q.fdv.toLocaleString()}`);
@@ -169,7 +254,14 @@ async function executeTokenMarketData(input: Record<string, unknown>): Promise<s
     } catch { /* CMC unlisted / unconfigured — fine, other sources cover it */ }
   }
 
-  return lines.length > 0 ? lines.join('\n') : `No market data found for "${identifier}".`;
+  if (lines.length === 0) return `No market data found for "${identifier}".`;
+  // Consistency directive: with multiple real feeds present, the model must
+  // quote ONE authoritative number (the PRIMARY source), not an average or a
+  // silently-picked alternate — that mismatch is what makes reported data look
+  // inconsistent vs the inline token card, which resolves the same way.
+  lines.push('');
+  lines.push(`PRICING GUIDANCE: Quote the ${primarySource} as THE price / market cap for this token — it is the same source the inline token card uses. Treat other listed sources as confirmation only. If two sources differ by more than ~2%, state the discrepancy explicitly; never average them or invent a number between them.`);
+  return lines.join('\n');
 }
 
 async function executeWalletProfile(input: Record<string, unknown>): Promise<string> {
@@ -671,6 +763,29 @@ export async function executeVTXTool(
   toolName: string,
   toolInput: Record<string, unknown>,
   userId: string | null = null,
+): Promise<string> {
+  try {
+    return await dispatchVTXTool(toolName, toolInput, userId);
+  } catch (err) {
+    // Central graceful-degradation backstop: no individual tool failure may
+    // bubble up and abort the whole VTX turn. Every executor is expected to
+    // handle its own errors, but this catch guarantees the invariant even for
+    // an unhandled rejection (bad input, provider 5xx, timeout). Returns an
+    // honest "unavailable" so the model answers with the other tools' real
+    // data and never fabricates a substitute.
+    return JSON.stringify({
+      unavailable: true,
+      tool: toolName,
+      error: err instanceof Error ? err.message : String(err),
+      note: "This data source could not be reached. Use the other tools' real results and state honestly that this one was unavailable.",
+    });
+  }
+}
+
+async function dispatchVTXTool(
+  toolName: string,
+  toolInput: Record<string, unknown>,
+  userId: string | null,
 ): Promise<string> {
   switch (toolName) {
     case 'token_security_scan':  return executeTokenSecurityScan(toolInput);

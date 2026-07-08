@@ -11,6 +11,19 @@ interface RouteComparisonProps {
   amountIn: string;
   onSelect?: (route: RouteQuote) => void;
   selectedProvider?: string;
+  // Buy-token decimals so raw aggregator output (base units) renders as a
+  // human amount. The aggregator (lib/services) returns amountOut in base
+  // units and can't be edited to add decimals, so the page passes them in.
+  toDecimals?: number;
+}
+
+// Format a base-unit output string as a human amount in the buy token.
+// Falls back to the raw string only if decimals are unknown / unparseable.
+function fmtOut(baseUnits: string, decimals: number | undefined): string {
+  if (decimals == null || !Number.isFinite(decimals)) return baseUnits;
+  const n = Number(baseUnits) / 10 ** decimals;
+  if (!Number.isFinite(n)) return baseUnits;
+  return n.toLocaleString(undefined, { maximumFractionDigits: n !== 0 && Math.abs(n) < 1 ? 6 : 4 });
 }
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -28,6 +41,7 @@ export function RouteComparison({
   amountIn,
   onSelect,
   selectedProvider,
+  toDecimals,
 }: RouteComparisonProps) {
   const [routes, setRoutes] = useState<RouteQuote[]>([]);
   const [open, setOpen] = useState(false);
@@ -61,7 +75,6 @@ export function RouteComparison({
   }, [chain, fromToken, toToken, amountIn]);
 
   const best = routes[0];
-  const bestNet = best?.netOutputUsd ?? Number(best?.amountOut ?? 0);
 
   return (
     <div className="rounded-xl nl-glass overflow-hidden">
@@ -77,7 +90,7 @@ export function RouteComparison({
         <div className="flex items-center gap-2">
           {best && (
             <span className="text-xs font-mono text-white">
-              {best.amountOut} <span className="text-slate-500 text-[10px]">{PROVIDER_LABELS[best.provider]}</span>
+              {fmtOut(best.amountOut, toDecimals)} <span className="text-slate-500 text-[10px]">{PROVIDER_LABELS[best.provider]}</span>
             </span>
           )}
           {open ? <ChevronUp size={14} className="text-slate-500" /> : <ChevronDown size={14} className="text-slate-500" />}
@@ -96,8 +109,11 @@ export function RouteComparison({
           )}
           {routes.map((r, i) => {
             const isBest = i === 0;
-            const net = r.netOutputUsd ?? Number(r.amountOut);
-            const diff = i === 0 ? 0 : net - bestNet;
+            // Difference vs the best route, in human buy-token units (every
+            // route quotes the identical toToken, so this is apples-to-apples).
+            const diffHuman = isBest || !best
+              ? 0
+              : (Number(r.amountOut) - Number(best.amountOut)) / 10 ** (toDecimals ?? 0);
             return (
               <button
                 key={r.provider}
@@ -115,10 +131,10 @@ export function RouteComparison({
                   )}
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-mono text-slate-300">{r.amountOut}</span>
-                  {!isBest && diff !== 0 && (
+                  <span className="text-xs font-mono text-slate-300">{fmtOut(r.amountOut, toDecimals)}</span>
+                  {!isBest && toDecimals != null && diffHuman < 0 && (
                     <span className="text-[10px] font-mono text-red-400">
-                      {diff.toFixed(4)}
+                      {diffHuman.toLocaleString(undefined, { maximumFractionDigits: Math.abs(diffHuman) < 1 ? 6 : 4 })}
                     </span>
                   )}
                 </div>
