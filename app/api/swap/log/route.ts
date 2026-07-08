@@ -2,12 +2,25 @@ import { logger } from '@/lib/logger';
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { getUserByWallet } from '@/lib/database/supabase';
 import { recordSwapLog, recordFeeRevenue, PLATFORM_FEE_BPS } from '@/lib/trading/swapLogging';
 
 export async function POST(request: NextRequest) {
   try {
+    // AUTHENTICATE. This route writes swap_logs + fee_revenue via the service
+    // role; leaving it open let anyone POST fabricated rows and attribute them
+    // to any wallet. The logged-in user is the authoritative owner now.
+    const cookieStore = await cookies();
+    const authClient = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { get: (n: string) => cookieStore.get(n)?.value, set() {}, remove() {} } },
+    );
+    const { data: { user: authUser } } = await authClient.auth.getUser();
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const body = await request.json();
     const {
       walletAddress,
@@ -19,6 +32,7 @@ export async function POST(request: NextRequest) {
       toAmount,
       platformFeeBps,
       status,
+      feeUsd: clientFeeUsdRaw,
     } = body as {
       walletAddress: string;
       txHash: string;
@@ -29,6 +43,7 @@ export async function POST(request: NextRequest) {
       toAmount: number;
       platformFeeBps?: number;
       status?: string;
+      feeUsd?: number;
     };
 
     if (!walletAddress || !txHash || !chain || !fromToken || !toToken) {
@@ -37,12 +52,16 @@ export async function POST(request: NextRequest) {
 
     const db = getSupabaseAdmin();
     const feeBps = platformFeeBps || PLATFORM_FEE_BPS;
-    const feeUsd = fromAmount * (feeBps / 10000);
-
-    // swap_logs.user_id is NOT NULL; resolve it from the wallet (the client
-    // only sends an address here). fee_revenue tolerates a null user_id.
-    const user = await getUserByWallet(walletAddress);
-    const userId = user?.id ?? null;
+    // Fee in FROM-token units (correct: feeBps of the input quantity).
+    const feeAmountToken = fromAmount * (feeBps / 10000);
+    // USD value: ONLY a real figure the client computed from the live quote is
+    // used. The old code set usd = fromAmount * feeBps/10000, i.e. it treated a
+    // raw token quantity as dollars (a 0.5 ETH fee logged as ~$0.0025). We never
+    // fabricate USD from a token count; unknown stays null (honest).
+    const feeUsd = typeof clientFeeUsdRaw === 'number' && Number.isFinite(clientFeeUsdRaw) && clientFeeUsdRaw >= 0
+      ? clientFeeUsdRaw
+      : null;
+    const userId = authUser.id;
 
     await recordSwapLog(db, {
       user_id: userId,
@@ -62,7 +81,7 @@ export async function POST(request: NextRequest) {
     await recordFeeRevenue(db, {
       user_id: userId,
       tx_hash: txHash,
-      fee_amount: fromAmount * (feeBps / 10000),
+      fee_amount: feeAmountToken,
       fee_token: fromToken,
       usd_value: feeUsd,
       chain,

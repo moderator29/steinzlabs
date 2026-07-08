@@ -1,6 +1,7 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 /**
  * Token Whale Lens — which tracked whales are in a given token, their net
@@ -45,16 +46,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ query: q, window, found: false, positions: [], summary: null });
   }
 
-  // Enrich with whale reputation.
-  const addresses = rows.map((r) => r.whale_address);
+  // Enrich with whale reputation. The RPC returns whale_address in the casing
+  // stored in whale_activity — MIXED case for legacy EVM rows — while
+  // whales.address is canonical (lowercase for EVM). Normalize on BOTH the query
+  // filter and the map key/lookup so checksummed positions still match and
+  // reputation (label / winRate / whaleScore / chain / verified) isn't lost.
+  const addresses = rows.map((r) => normalizeAddress(r.whale_address));
   const { data: whaleRows } = await admin
     .from('whales')
     .select('address, label, archetype, win_rate, whale_score, chain, verified, naka_number')
     .in('address', addresses);
-  const meta = new Map((whaleRows ?? []).map((w: { address: string; label: string | null; archetype: string | null; win_rate: number | null; whale_score: number | null; chain: string; verified: boolean | null; naka_number: number | null }) => [w.address, w]));
+  const meta = new Map((whaleRows ?? []).map((w: { address: string; label: string | null; archetype: string | null; win_rate: number | null; whale_score: number | null; chain: string; verified: boolean | null; naka_number: number | null }) => [normalizeAddress(w.address), w]));
 
   const positions = rows.map((r) => {
-    const m = meta.get(r.whale_address);
+    const m = meta.get(normalizeAddress(r.whale_address));
     const buyUsd = Number(r.buy_usd ?? 0);
     const sellUsd = Number(r.sell_usd ?? 0);
     const netUsd = Number(r.net_usd ?? buyUsd - sellUsd);
