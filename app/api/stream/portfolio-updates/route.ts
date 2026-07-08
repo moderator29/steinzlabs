@@ -1,7 +1,7 @@
 import 'server-only';
 import { NextRequest } from 'next/server';
 import { getUserWallets } from '@/lib/services/supabase';
-import { getTokenBalances, getEthBalance } from '@/lib/services/alchemy';
+import { getTokenBalances, getTokenMetadata, getEthBalance } from '@/lib/services/alchemy';
 import { getSolanaWalletTokens, getSolanaSOLBalance } from '@/lib/services/alchemy-solana';
 import { getTokenPrices } from '@/lib/services/jupiter';
 import { getContractPrice } from '@/lib/services/coingecko';
@@ -97,14 +97,21 @@ async function buildEvmPortfolio(address: string, chain: string): Promise<Portfo
     tokenBalances
       .filter(b => b.tokenBalance && b.tokenBalance !== '0')
       .map(async b => {
-        const decimals = b.decimals ?? 18;
+        // getTokenBalances does not return per-token decimals/symbol; without
+        // the real decimals a 6-decimal token (USDC) or 8-decimal token (WBTC)
+        // is scaled by 10**18, making balance and valueUsd wrong by many orders
+        // of magnitude and corrupting totalValueUsd. Read real metadata.
+        const [meta, priceUsd] = await Promise.all([
+          getTokenMetadata(b.contractAddress, chain).catch(() => null),
+          getContractPrice(b.contractAddress, chain).catch(() => 0),
+        ]);
+        const decimals = typeof meta?.decimals === 'number' ? meta.decimals : (b.decimals ?? 18);
         const rawBalance = BigInt(b.tokenBalance ?? '0');
         const balance = Number(rawBalance) / Math.pow(10, decimals);
-        const priceUsd = await getContractPrice(b.contractAddress, chain).catch(() => 0);
         return {
           mint: b.contractAddress,
-          symbol: b.symbol,
-          name: b.name,
+          symbol: meta?.symbol ?? b.symbol,
+          name: meta?.name ?? b.name,
           balance,
           decimals,
           priceUsd,

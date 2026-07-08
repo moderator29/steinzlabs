@@ -11,18 +11,12 @@ function persistSession(session: any) {
   if (!session?.access_token) return;
   if (typeof window === 'undefined') return;
   const maxAge = SESSION_HOURS * 60 * 60;
-  try {
-    const sessionData = {
-      access_token: session.access_token,
-      refresh_token: session.refresh_token,
-      token_type: 'bearer',
-      expires_in: session.expires_in || 14400,
-      expires_at: Math.floor(Date.now() / 1000) + (session.expires_in || 14400),
-      user: session.user,
-    };
-    localStorage.setItem('steinz-auth-token', JSON.stringify(sessionData));
-    localStorage.setItem('steinz_has_session', 'true');
-  } catch { /* localStorage unavailable — silently ignore */ }
+  // SECURITY: do NOT persist the Supabase session (access_token / refresh_token)
+  // in localStorage. The authoritative session already lives in the httpOnly-ish
+  // sb-* cookies written by @supabase/ssr; a JS-readable copy — especially the
+  // refresh_token — is a needless XSS-exfil target. We only set the short-lived
+  // `steinz_session` access-token cookie that lib/auth/apiAuth.ts honors as a
+  // legacy fallback for OAuth/magic-link callbacks.
   document.cookie = `steinz_session=${session.access_token}; path=/; SameSite=Lax; Secure; max-age=${maxAge}`;
 }
 

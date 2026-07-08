@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 import { verifyCron, logCronExecution } from '../_shared';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { getTokenBalances, isTransientUpstreamError } from '@/lib/services/alchemy';
+import { getTokenBalances, getTokenMetadata, isTransientUpstreamError } from '@/lib/services/alchemy';
 import { getSolanaWalletTokens } from '@/lib/services/alchemy-solana';
 import { getDexPrice } from '@/lib/services/dexscreener';
 
@@ -66,7 +66,12 @@ export async function GET(request: NextRequest) {
         b => b.contractAddress.toLowerCase() === tokenContract.toLowerCase(),
       );
       if (match?.tokenBalance) {
-        const decimals = match.decimals ?? 18;
+        // getTokenBalances does not return per-token decimals; read them from
+        // the $NAKA contract metadata. Assuming 18 for a non-18-decimal token
+        // would report a treasury balance (and USD value) off by orders of
+        // magnitude.
+        const meta = await getTokenMetadata(tokenContract, 'ethereum').catch(() => null);
+        const decimals = typeof meta?.decimals === 'number' ? meta.decimals : 18;
         balanceNaka = Number(BigInt(match.tokenBalance)) / 10 ** decimals;
       } else {
         balanceNaka = 0;

@@ -65,7 +65,7 @@ export default function FirstTradeRiskModal({ open, onConfirm, onCancel }: Props
       aria-labelledby="first-trade-risk-title"
       className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
     >
-      <div ref={trapRef} className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#0A0E1A] shadow-2xl">
+      <div ref={trapRef} className="relative w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-2xl border border-white/10 bg-[#0A0E1A] shadow-2xl">
         <button
           type="button"
           onClick={onCancel}

@@ -7,6 +7,7 @@ import { getAccount } from '@wagmi/core';
 import { Loader2, ShieldCheck, X, KeyRound, Wallet } from 'lucide-react';
 import { wagmiAdapter, getAppKit } from '@/lib/wallet/appkit';
 import { CHAIN_CONFIGS, SNIPER_CHAINS, type SniperChain } from '@/lib/sniper/chains';
+import { storeSessionPrivateKey } from '@/lib/sniper/sessionKeyStore';
 import { ChainLogo } from '@/components/common/ChainLogo';
 
 /**
@@ -69,10 +70,6 @@ async function getEvmProvider(): Promise<{ provider: Eip1193; address: string } 
   return null;
 }
 
-function sessionPkKey(userId: string, chain: string) {
-  return `naka_sniper_session_pk_${userId}_${chain}`;
-}
-
 export function SniperWalletModal({ userId, onClose, onConnected }: {
   userId: string;
   onClose: () => void;
@@ -129,8 +126,10 @@ export function SniperWalletModal({ userId, onClose, onConnected }: {
       })) as string;
 
       // 3. Persist session privkey locally (never sent), then register the
-      //    public authorization server-side.
-      try { localStorage.setItem(sessionPkKey(userId, chain), session.privateKey); } catch { /* storage blocked */ }
+      //    public authorization server-side. The key is encrypted at rest
+      //    (AES-256-GCM, per-user) before it touches localStorage; a failure
+      //    here never falls back to plaintext and never blocks registration.
+      try { await storeSessionPrivateKey(userId, chain, session.privateKey); } catch { /* storage/crypto blocked */ }
 
       const res = await fetch('/api/trading/session-key', {
         method: 'POST',
@@ -162,7 +161,7 @@ export function SniperWalletModal({ userId, onClose, onConnected }: {
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
-      <div className="nl-glass w-full max-w-lg rounded-2xl p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
+      <div className="nl-glass w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-[#0066FF]/15 border border-[#0066FF]/40 flex items-center justify-center">

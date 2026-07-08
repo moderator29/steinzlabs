@@ -335,19 +335,18 @@ export default function ProfileTab() {
   const [pwdSuccess, setPwdSuccess] = useState(false);
   const [pwdLoading, setPwdLoading] = useState(false);
   const [privacySaving, setPrivacySaving] = useState(false);
-  const [loginActivity, setLoginActivity] = useState<Array<{ device: string; time: string; location: string; current?: boolean }>>(() => {
-    const sessions = [];
-    try {
-      const token = localStorage.getItem('steinz-auth-token');
-      if (token) {
-        const parsed = JSON.parse(token);
-        if (parsed?.access_token) {
-          sessions.push({ device: 'Current Session', time: 'Now', location: 'Current Device', current: true });
-        }
-      }
-    } catch { /* Malformed JSON — return default */ }
-    return sessions;
-  });
+  const [loginActivity, setLoginActivity] = useState<Array<{ device: string; time: string; location: string; current?: boolean }>>([]);
+
+  useEffect(() => {
+    // Seed a "Current Session" placeholder from the authenticated user (the
+    // Supabase session, not a localStorage token copy) until the real login
+    // history resolves below. Cleared if the user is not signed in.
+    setLoginActivity((prev) => {
+      if (!user?.id) return prev;
+      if (prev.some((s) => s.current)) return prev;
+      return [{ device: 'Current Session', time: 'Now', location: 'Current Device', current: true }, ...prev];
+    });
+  }, [user?.id]);
 
   useEffect(() => {
     // Pull real login history from Supabase. Audit fix: previously had no
@@ -625,11 +624,18 @@ export default function ProfileTab() {
     }
   };
 
+  // Raster-only allowlist. The avatars bucket is public, so an image/svg+xml
+  // (or any HTML-ish payload) served inline from that origin is a stored-XSS
+  // vector — reject anything that isn't a bitmap image before it can be
+  // uploaded or fall through downscaleImage's passthrough branch.
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
   // Source cap is generous (phone photos are large) because we downscale +
   // compress client-side before upload; the stored file ends up a few hundred KB.
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) { setEditError('Image must be a JPEG, PNG, WebP or GIF'); return; }
     if (file.size > 15 * 1024 * 1024) { setEditError('Image must be under 15MB'); return; }
     void uploadProfileImage(file, 'avatar');
   };
@@ -637,6 +643,7 @@ export default function ProfileTab() {
   const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) { setEditError('Cover image must be a JPEG, PNG, WebP or GIF'); return; }
     if (file.size > 15 * 1024 * 1024) { setEditError('Cover image must be under 15MB'); return; }
     void uploadProfileImage(file, 'cover');
   };
@@ -689,7 +696,17 @@ export default function ProfileTab() {
       setEditSuccess('Profile updated successfully!');
       setTimeout(() => { setEditSuccess(''); setSubPage(null); }, 1500);
     } catch (e: any) {
-      setEditError(e.message || 'Failed to update profile');
+      // profiles has a case-insensitive unique index on lower(username). A
+      // collision that slipped past the case-sensitive pre-check above lands
+      // here as Postgres 23505; surface a clean message instead of leaking the
+      // raw constraint text (e.g. "duplicate key value violates unique
+      // constraint profiles_username_lower_key").
+      const code = e?.code ?? e?.details?.code;
+      if (code === '23505' || /duplicate key|already exists|unique constraint/i.test(e?.message ?? '')) {
+        setEditError('Username already taken');
+      } else {
+        setEditError(e.message || 'Failed to update profile');
+      }
     } finally {
       setEditLoading(false);
     }

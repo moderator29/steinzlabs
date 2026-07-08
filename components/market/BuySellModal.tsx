@@ -106,7 +106,7 @@ export function BuySellModal({ symbol, name, logo, priceUSD, chain, tokenAddress
   const trapRef = useFocusTrap<HTMLDivElement>(true, onClose);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="buysell-modal-title">
-      <div ref={trapRef} className="nl-glass rounded-xl p-5 w-full max-w-sm" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.35), 0 0 24px rgba(0,102,255,.2)' }}>
+      <div ref={trapRef} className="nl-glass rounded-xl p-5 w-full max-w-sm max-h-[90dvh] overflow-y-auto" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.35), 0 0 24px rgba(0,102,255,.2)' }}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <TokenLogo src={logo} symbol={symbol} size={28} />

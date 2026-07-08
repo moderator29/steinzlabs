@@ -166,7 +166,7 @@ export default function UnlockWalletModal({
     >
       <div
         ref={trapRef}
-        className="w-full max-w-[420px] bg-[#0a0f1a] border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200"
+        className="w-full max-w-[420px] max-h-[90dvh] overflow-y-auto bg-[#0a0f1a] border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">

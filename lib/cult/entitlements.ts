@@ -1,6 +1,6 @@
 import 'server-only';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { isHolderOfContract, getTokenBalances } from '@/lib/services/alchemy';
+import { isHolderOfContract, getTokenBalances, getTokenMetadata } from '@/lib/services/alchemy';
 import { normalizeTier } from '@/lib/subscriptions/tierCheck';
 
 /**
@@ -44,6 +44,22 @@ export interface WalletEntitlements {
 const isEvm = (a: string) => /^0x[a-fA-F0-9]{40}$/.test(a);
 
 /**
+ * Real on-chain decimals for the $NAKA contract. Hardcoding 1e18 mis-scales
+ * the balance (and the membership threshold + vote weight) by orders of
+ * magnitude if $NAKA is not an 18-decimal token. getTokenMetadata is cached,
+ * so this is effectively free after the first call. Degrades to 18 only when
+ * metadata is unreadable.
+ */
+async function nakaDecimals(): Promise<number> {
+  try {
+    const meta = await getTokenMetadata(NAKA_TOKEN, 'ethereum');
+    return typeof meta?.decimals === 'number' ? meta.decimals : 18;
+  } catch {
+    return 18;
+  }
+}
+
+/**
  * Pure on-chain read across one or more verified addresses. Never throws —
  * a chain error degrades to "not detected" rather than blocking login.
  */
@@ -54,6 +70,7 @@ export async function resolveWalletEntitlements(addresses: string[]): Promise<Wa
   let hasNippo = false;
   let hasFounder = false;
   let nakaBalance = 0;
+  const decimals = await nakaDecimals();
 
   for (const addr of evm) {
     const [nippo, founder] = await Promise.all([
@@ -67,7 +84,7 @@ export async function resolveWalletEntitlements(addresses: string[]): Promise<Wa
       const balances = await getTokenBalances(addr, 'ethereum');
       const match = balances.find((b) => b.contractAddress.toLowerCase() === NAKA_TOKEN);
       if (match?.tokenBalance) {
-        nakaBalance += Number(BigInt(match.tokenBalance)) / 1e18;
+        nakaBalance += Number(BigInt(match.tokenBalance)) / 10 ** decimals;
       }
     } catch {
       /* balance read failed for this address — ignore, sum the rest */
@@ -89,11 +106,12 @@ export async function resolveWalletEntitlements(addresses: string[]): Promise<Wa
 export async function resolveNakaBalance(addresses: string[]): Promise<number> {
   const evm = Array.from(new Set(addresses.filter(isEvm).map((a) => a.toLowerCase())));
   let nakaBalance = 0;
+  const decimals = await nakaDecimals();
   for (const addr of evm) {
     try {
       const balances = await getTokenBalances(addr, 'ethereum');
       const match = balances.find((b) => b.contractAddress.toLowerCase() === NAKA_TOKEN);
-      if (match?.tokenBalance) nakaBalance += Number(BigInt(match.tokenBalance)) / 1e18;
+      if (match?.tokenBalance) nakaBalance += Number(BigInt(match.tokenBalance)) / 10 ** decimals;
     } catch {
       /* per-address read failed — sum the rest */
     }

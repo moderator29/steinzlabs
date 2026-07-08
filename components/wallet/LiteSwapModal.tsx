@@ -156,7 +156,7 @@ export function LiteSwapModal({ open, onClose, tokenAddress, tokenSymbol, chain,
       aria-modal="true"
       aria-labelledby="lite-swap-title"
     >
-      <div ref={trapRef} className="nl-glass rounded-2xl p-5 w-full max-w-sm" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+      <div ref={trapRef} className="nl-glass rounded-2xl p-5 w-full max-w-sm max-h-[90dvh] overflow-y-auto" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Repeat className="w-4 h-4 text-[#0066FF]" aria-hidden />

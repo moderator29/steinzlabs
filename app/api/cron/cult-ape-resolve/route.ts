@@ -43,7 +43,8 @@ export async function GET(request: NextRequest) {
       if (!Number.isFinite(entry) || entry <= 0 || !r.pair_ref || !r.pair_chain) {
         await admin.from('cult_ape_rounds')
           .update({ status: 'resolved', outcome: 'flat', resolved_at: nowIso })
-          .eq('id', r.id);
+          .eq('id', r.id)
+          .eq('status', 'open');
         continue;
       }
       const cur = await currentPairPrice(String(r.pair_chain), String(r.pair_ref));
@@ -53,13 +54,18 @@ export async function GET(request: NextRequest) {
       const outcome = movePct > DEADBAND ? 'ape' : movePct < -DEADBAND ? 'nope' : 'flat';
       const moveRounded = Math.round(movePct * 10) / 10;
 
-      await admin.from('cult_ape_rounds').update({
+      // Atomically claim the round before grading. The status='open' guard
+      // makes this idempotent: if a concurrent/overlapping cron run (or a
+      // retry) already resolved this round, no row is returned and we skip,
+      // so points and streaks are never awarded twice for the same round.
+      const { data: claimed } = await admin.from('cult_ape_rounds').update({
         status: 'resolved',
         resolve_price_usd: cur,
         move_pct: moveRounded,
         outcome,
         resolved_at: nowIso,
-      }).eq('id', r.id);
+      }).eq('id', r.id).eq('status', 'open').select('id');
+      if (!claimed || claimed.length === 0) continue;
 
       const { data: votes } = await admin
         .from('cult_ape_votes')

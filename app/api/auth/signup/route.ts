@@ -31,11 +31,14 @@ export async function POST(request: Request) {
         // profiles_username_lower_key index on lower(username), so a stored
         // "Bob" must read as taken when probing "bob". `.eq` on the lowercased
         // value would miss any mixed-case row. cleanUsername is charset-validated
-        // above ([a-z0-9_]) so it can carry no ilike wildcards.
+        // above ([a-z0-9_]) but `_` is a legal char AND an ILIKE single-char
+        // wildcard, so `foo_bar` would spuriously match `fooXbar`. Escape the
+        // ILIKE metacharacters so the probe is an exact case-insensitive match.
+        const escapedUsername = cleanUsername.replace(/[\\%_]/g, '\\$&');
         const { data: existingProfile, error: profileError } = await admin
           .from('profiles')
           .select('id')
-          .ilike('username', cleanUsername)
+          .ilike('username', escapedUsername)
           .maybeSingle();
         if (!profileError) {
           return NextResponse.json({ available: !existingProfile });
