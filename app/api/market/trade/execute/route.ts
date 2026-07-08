@@ -85,14 +85,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Step 1: Security scan on output token
+    // Step 1: Security scan on output token.
+    // NOTE: TokenSecurityResult exposes `trustScore` (0..100, higher = safer)
+    // and hard honeypot/rug flags — there is NO `riskScore` field on it (that
+    // only exists on the address-scan type). The previous gate read the missing
+    // `riskScore`, so it was ALWAYS 0 and the honeypot block never fired. We now
+    // derive the real composite risk (100 - trustScore) and, like isHighRisk,
+    // block on any individual hard flag regardless of the composite. `security`
+    // is null only when the scan itself failed — fail OPEN there (never block a
+    // trade during a scanner outage), matching the isHighRisk contract.
     const security = await getTokenSecurity(resolvedOut, chain).catch(() => null);
-    const riskScore = (security as unknown as Record<string, unknown>)?.riskScore as number ?? 0;
+    const riskScore = security ? 100 - security.trustScore : 0;
+    const hardBlock = !!security && (
+      security.isHoneypot ||
+      security.cannotBuy ||
+      security.cannotSellAll ||
+      security.selfDestruct ||
+      security.canTakeBackOwnership ||
+      security.ownerCanChangeBalance ||
+      security.hasHiddenOwner ||
+      (security.sellTax ?? 0) > 0.30
+    );
 
-    if (riskScore > SWAP_RISK_THRESHOLD) {
+    if (hardBlock || riskScore > SWAP_RISK_THRESHOLD) {
       return NextResponse.json({
         blocked: true,
-        blockReason: `Token failed security scan (Risk Score: ${riskScore}/100)`,
+        blockReason: hardBlock
+          ? 'Token failed a hard security check (honeypot or rug risk detected)'
+          : `Token failed security scan (Risk Score: ${riskScore}/100)`,
         riskScore,
       }, { status: 200 });
     }

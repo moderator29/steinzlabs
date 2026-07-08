@@ -11,21 +11,21 @@
  * This cron calls GoPlus token_security per row via the shared
  * getTokenSecurity() (L1/L2 cached) and writes the real security columns back.
  *
- * Ordering matters. ~98% of the feed is Solana, and GoPlus token_security for
- * Solana lives at a plan-gated path on the current API key
- * (/solana/token_security/) — every Solana call currently throws. The previous
- * version ordered the WHOLE feed newest-first with a fixed batch, so the window
- * filled up with fresh Solana rows that all threw and enriched nothing, while
- * the ~75 EVM rows GoPlus DOES scan starved permanently behind hundreds of
- * fresher Solana rows (0 of 5313 enriched over 8 days).
+ * Ordering matters. ~98% of the feed is Solana. GoPlus token_security for
+ * Solana lives at a separate path (/solana/token_security/) which the plan now
+ * covers, so Solana calls land the same as EVM. Historically that path was
+ * plan-gated and every Solana call threw, so the WHOLE feed (ordered newest-
+ * first) filled with fresh Solana rows that enriched nothing while the ~75 EVM
+ * rows starved behind hundreds of fresher Solana rows (0 of 5313 enriched over
+ * 8 days).
  *
- * The fix: drain the OLDEST-unenriched EVM backlog first (chain != solana,
- * ORDER BY first_seen_at ASC) with the bulk of the budget, then spend a small
- * fixed remainder probing Solana. So EVM makes steady progress today, and the
- * moment the GoPlus plan covers Solana those probes start landing too — without
- * EVM ever being starved. A single bad token is skipped without aborting the
- * tick or wasting the rest of the budget; the update is idempotent, so running
- * every 2 min (even with an overlapping tick) only re-writes the same values.
+ * The fix: split the budget across BOTH chains, each draining its OLDEST-
+ * unenriched backlog first (ORDER BY first_seen_at ASC). Solana gets the larger
+ * share because it is the bulk of the feed and is now enrichable; EVM keeps a
+ * guaranteed slice so it is never starved behind the much larger Solana
+ * backlog. A single bad token is skipped without aborting the tick or wasting
+ * the rest of the budget; the update is idempotent, so running every 2 min
+ * (even with an overlapping tick) only re-writes the same values.
  */
 
 import { NextRequest } from 'next/server';
@@ -40,13 +40,13 @@ export const maxDuration = 120;
 
 const NAME = 'sniper-feed-enrich-security';
 // EVM rows drained per tick, OLDEST-unenriched first. GoPlus scans every EVM
-// chain we ingest (ethereum/base/arbitrum/optimism), so this is the enrichable
-// backlog and gets the bulk of the per-tick budget.
-const EVM_BATCH = 30;
-// Solana rows probed per tick (see file header). Currently plan-gated and
-// throwing; kept small so the tick stays cheap and never starves EVM, while
-// still resuming automatically if/when the GoPlus plan covers Solana.
-const SOLANA_PROBE = 10;
+// chain we ingest (ethereum/base/arbitrum/optimism). Kept as a guaranteed slice
+// so EVM is never starved behind the much larger Solana backlog.
+const EVM_BATCH = 20;
+// Solana rows drained per tick, OLDEST-unenriched first. Solana is now on the
+// plan and is ~98% of the feed, so it gets the larger share of the per-tick
+// budget. (Formerly a tiny "probe" because the path was plan-gated and threw.)
+const SOLANA_BATCH = 30;
 
 type SupabaseAdmin = ReturnType<typeof getSupabaseAdmin>;
 
@@ -65,10 +65,11 @@ interface EnrichOutcome {
 
 /**
  * Enrich a batch of feed rows in place. Skip-and-continue on a per-token throw
- * (one plan-gated / unindexed token must not abort the batch); a provider 429
- * stops the whole tick early since every remaining call would also throttle.
- * `failCaptureBase` offsets the "too many failures" Sentry threshold so the
- * Solana probe — expected to throw while plan-gated — doesn't page on its own.
+ * (one unindexed token must not abort the batch); a provider 429 stops the
+ * whole tick early since every remaining call would also throttle.
+ * `failCaptureBase` carries the EVM pass's failure count into the Solana pass so
+ * the combined "too many failures" Sentry threshold is evaluated once across the
+ * whole tick, not paged twice.
  */
 async function enrichBatch(
   admin: SupabaseAdmin,
@@ -149,8 +150,8 @@ async function enrichBatch(
         break;
       }
       // Don't poison Sentry with one bad token per tick — only capture when a
-      // meaningful fraction of the batch fails. failCaptureBase lets the Solana
-      // probe (expected to throw while plan-gated) stay silent.
+      // meaningful fraction of the tick's calls fail. failCaptureBase folds in
+      // the EVM pass's failures so the threshold spans the whole tick.
       if (failCaptureBase + failed > 5) {
         Sentry.captureException(err, { tags: { cron: NAME, token: row.token_address, chain: row.chain } });
       }
@@ -182,15 +183,15 @@ export async function GET(request: NextRequest) {
     return cronResponse(NAME, startedAt, { error: evmErr.message });
   }
 
-  // Small Solana probe, also oldest-first for deterministic progress if the
-  // plan gate lifts. A fetch error here is non-fatal — EVM work still counts.
+  // Solana backlog, oldest-first. Now on the plan, so this drains for real.
+  // A fetch error here is non-fatal — EVM work still counts.
   const { data: solRows, error: solErr } = await admin
     .from('sniper_feed_tokens')
     .select('id,chain,token_address')
     .is('security_score', null)
     .eq('chain', 'solana')
     .order('first_seen_at', { ascending: true })
-    .limit(SOLANA_PROBE);
+    .limit(SOLANA_BATCH);
 
   if (solErr) {
     Sentry.captureException(solErr, { tags: { cron: NAME, stage: 'solana-probe-fetch' } });
@@ -207,8 +208,8 @@ export async function GET(request: NextRequest) {
   // Drain the enrichable EVM backlog first.
   const evm = await enrichBatch(admin, evmFeed, 0);
 
-  // Then spend the small remaining budget probing Solana — unless the EVM pass
-  // already hit a provider 429 (in which case Solana would only throttle too).
+  // Then drain the Solana backlog — unless the EVM pass already hit a provider
+  // 429 (in which case Solana would only throttle too).
   const sol = evm.rateLimited
     ? { enriched: 0, failed: 0, skipped: solFeed.length, rateLimited: true }
     : await enrichBatch(admin, solFeed, evm.failed);
@@ -221,7 +222,7 @@ export async function GET(request: NextRequest) {
     scanned,
     enriched,
     evm: { scanned: evmFeed.length, enriched: evm.enriched, failed: evm.failed, skipped: evm.skipped },
-    solana: { scanned: solFeed.length, enriched: sol.enriched, failed: sol.failed, skipped: sol.skipped, probe: true },
+    solana: { scanned: solFeed.length, enriched: sol.enriched, failed: sol.failed, skipped: sol.skipped },
     rateLimited: evm.rateLimited || sol.rateLimited,
   });
 }

@@ -4,6 +4,7 @@ import { getMarketsByIds, getTokenDetail } from "@/lib/services/coingecko";
 import { resolveCoinId } from "./resolveSymbol";
 import { buildPriceChartUrl } from "./chartImage";
 import { fmtPct, fmtPctEmoji, fmtUSD, fmtNum, escapeMd } from "./format";
+import { goplusAuthHeaders } from "@/lib/security/goplusService";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://steinzlabs.vercel.app";
 
@@ -166,14 +167,16 @@ export async function handleSecurity(ctx: CmdContext): Promise<void> {
 
   await sendTelegramTyping(ctx.chatId);
   const isEvm = addr.startsWith("0x");
-  // GoPlus has free public endpoint — no key needed for basic checks.
+  // Route through the signed access token (shared, cached) so the request
+  // counts against the plan and gets full rate limits. A missing/legacy static
+  // key falls back to the public tier inside goplusAuthHeaders().
   const chainId = "1"; // default to Ethereum; user can override later
   const url = isEvm
     ? `https://api.gopluslabs.io/api/v1/token_security/${chainId}?contract_addresses=${addr}`
     : `https://api.gopluslabs.io/api/v1/solana/token_security?contract_addresses=${addr}`;
 
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    const res = await fetch(url, { headers: await goplusAuthHeaders(), signal: AbortSignal.timeout(8000) });
     const j = await res.json();
     const r = (j?.result?.[addr.toLowerCase()] ?? j?.result?.[addr]) as Record<string, unknown> | undefined;
     if (!r) {

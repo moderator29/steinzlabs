@@ -22,6 +22,7 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { sendWelcomeEmail } from '@/lib/email';
+import { safeCompareStrings } from '@/lib/security/webhookAuth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -44,9 +45,20 @@ interface SupabaseAuthWebhookBody {
 export async function POST(req: NextRequest) {
   // Verify webhook secret — Supabase supports a custom header you define.
   const expected = process.env.SUPABASE_WEBHOOK_SECRET;
-  const got = req.headers.get('x-supabase-webhook-secret') || req.headers.get('authorization');
-  if (expected && got !== expected && got !== `Bearer ${expected}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!expected) {
+    // Fail closed: an unconfigured secret must NOT leave this open. Otherwise
+    // anyone who knows the URL can POST a forged confirmation event and trigger
+    // welcome emails to arbitrary addresses (Resend quota abuse / spam). Only a
+    // non-production env may run without the secret set.
+    if ((process.env.NODE_ENV ?? 'production') === 'production') {
+      return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 401 });
+    }
+  } else {
+    const got = req.headers.get('x-supabase-webhook-secret') || req.headers.get('authorization') || '';
+    // Constant-time compare — plain `!==` leaks the secret via response timing.
+    if (!safeCompareStrings(got, expected) && !safeCompareStrings(got, `Bearer ${expected}`)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
   }
 
   let body: SupabaseAuthWebhookBody;

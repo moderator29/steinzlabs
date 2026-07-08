@@ -27,9 +27,11 @@ import { tryExecuteSnipeViaSessionKey, type SnipeExecResult } from '@/lib/tradin
 import { getEvmTokenDecimalsStrict } from '@/lib/sniper/priceFeed';
 import { isHighRisk } from '@/lib/services/goplus';
 
-// EVM chains GoPlus token-security covers. Solana/TON aren't scanned here, so
-// their snipes rely on the detection-time gate (no fresh recheck available).
-const GOPLUS_EVM_CHAINS = new Set(['ethereum', 'bsc', 'avalanche', 'base', 'polygon', 'arbitrum', 'optimism']);
+// Chains GoPlus token-security covers for the fresh pre-buy recheck. Solana is
+// now on the plan (scanned via the /solana/token_security path), so its snipes
+// get the same fresh recheck as EVM. Other chains (e.g. TON) aren't scanned and
+// rely on the detection-time gate (no fresh recheck available).
+const GOPLUS_SCANNABLE_CHAINS = new Set(['ethereum', 'bsc', 'avalanche', 'base', 'polygon', 'arbitrum', 'optimism', 'solana']);
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -188,10 +190,11 @@ export async function GET(request: NextRequest) {
     // FRESH GoPlus scan and skip the buy if the token now reports affirmative
     // danger. isHighRisk() fails OPEN (returns false) on scanner outage, so
     // this can only PREVENT a bad buy — never block a snipe during a GoPlus
-    // outage, and never cause one. EVM only (GoPlus token-security scope).
+    // outage, and never cause one. Covers EVM + Solana (GoPlus token-security
+    // scope now that Solana is on-plan).
     const wantsSecurityGate =
       criteria.block_honeypots === true || (criteria.min_security_score ?? 0) > 0;
-    if (wantsSecurityGate && GOPLUS_EVM_CHAINS.has((m.matched_chain || '').toLowerCase())) {
+    if (wantsSecurityGate && GOPLUS_SCANNABLE_CHAINS.has((m.matched_chain || '').toLowerCase())) {
       // min_security_score is "higher = safer"; isHighRisk takes a risk
       // threshold (higher = more permissive). Map one to the other, defaulting
       // to 70 (matches the sniper feed's live-stream gate).

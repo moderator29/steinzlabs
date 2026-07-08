@@ -6,6 +6,11 @@ import { isHighRisk } from '@/lib/services/goplus';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// Chains GoPlus token-security covers for the safeOnly gate. Solana is now
+// on-plan (scanned via /solana/token_security); other chains fall through
+// unscored rather than triggering a fail-open GoPlus call that can't resolve.
+const GOPLUS_SCANNABLE_CHAINS = new Set(['ethereum', 'bsc', 'avalanche', 'base', 'polygon', 'arbitrum', 'optimism', 'solana']);
+
 /**
  * SSE Sniper Event Feed
  * GET /api/stream/sniper-events?chain=solana&minLiquidity=5000&maxAge=3600
@@ -108,8 +113,11 @@ export async function GET(req: NextRequest) {
               riskChecked: false,
             };
 
-            // Optional GoPlus security check (EVM chains only)
-            if (safeOnly && pair.chainId !== 'solana') {
+            // Optional GoPlus security check. Covers EVM chains and Solana
+            // (now on-plan via the /solana/token_security path). isHighRisk
+            // fails open, so an unscannable chain or an outage just emits the
+            // token without a risk score rather than wrongly dropping it.
+            if (safeOnly && GOPLUS_SCANNABLE_CHAINS.has(pair.chainId)) {
               try {
                 const highRisk = await isHighRisk(pair.baseToken.address, pair.chainId, 70);
                 if (highRisk) continue; // Skip risky tokens when safeOnly
