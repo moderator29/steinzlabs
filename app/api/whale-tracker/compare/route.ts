@@ -1,6 +1,7 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 /**
  * Whale Compare — side-by-side comparison of 2–4 tracked wallets.
@@ -65,25 +66,31 @@ export async function GET(req: NextRequest) {
 
   // Pull recent activity for all compared wallets in one query and aggregate
   // each wallet's buy-side token mix in JS (Supabase JS has no GROUP BY).
+  // whale_activity stores legacy EVM rows in MIXED case, so an exact
+  // .in('whale_address', <canonical/lowercase>) under-counts them. Match
+  // case-insensitively via ilike (hex/base58 have no LIKE wildcards) and
+  // normalize the aggregation key + lookup on BOTH sides so the mixed-case
+  // rows actually land in each wallet's bucket.
   const { data: acts } = await admin
     .from('whale_activity')
     .select('whale_address, action, token_symbol, value_usd')
-    .in('whale_address', canonical)
+    .or(canonical.map((a) => `whale_address.ilike.${a}`).join(','))
     .order('timestamp', { ascending: false })
     .limit(2000);
 
-  // wallet -> (symbol -> summed buy value)
+  // wallet (normalized) -> (symbol -> summed buy value)
   const byWallet = new Map<string, Map<string, number>>();
   for (const a of (acts ?? []) as Array<{ whale_address: string; action: string | null; token_symbol: string | null; value_usd: number | null }>) {
     if (!a.token_symbol || !BUY_ACTIONS.has((a.action ?? '').toLowerCase())) continue;
+    const key = normalizeAddress(a.whale_address);
     const sym = a.token_symbol.toUpperCase();
-    const m = byWallet.get(a.whale_address) ?? new Map<string, number>();
+    const m = byWallet.get(key) ?? new Map<string, number>();
     m.set(sym, (m.get(sym) ?? 0) + Number(a.value_usd ?? 0));
-    byWallet.set(a.whale_address, m);
+    byWallet.set(key, m);
   }
 
   const wallets: ComparedWallet[] = whales.map((w) => {
-    const mix = byWallet.get(w.address) ?? new Map<string, number>();
+    const mix = byWallet.get(normalizeAddress(w.address)) ?? new Map<string, number>();
     const topTokens: TopToken[] = Array.from(mix.entries())
       .map(([symbol, valueUsd]) => ({ symbol, valueUsd }))
       .sort((a, b) => b.valueUsd - a.valueUsd)

@@ -35,7 +35,12 @@ interface Brief {
     community_label: string | null;
   }>;
   concentration: {
-    top_holder_value: number;
+    // NOTE: no `top_holder_value` field. There is no honest per-token holder
+    // USD figure available in this route — whale_activity.value_usd is trade
+    // notional (not a holdings balance) and whales.portfolio_value_usd is the
+    // whale's TOTAL net worth across all tokens, not their holding of THIS
+    // token. The old field was whale_score (0..100) × 1e6 presented as USD,
+    // i.e. a fabricated number; it is dropped rather than re-sourced wrongly.
     whale_count: number;
     avg_whale_score: number;
   };
@@ -211,7 +216,6 @@ export async function GET(
     }
 
     const concentration = {
-      top_holder_value: whale_holders.reduce((s, w) => s + ((w.whale_score ?? 0) * 1e6), 0),
       whale_count: whale_holders.length,
       avg_whale_score: whale_holders.length > 0
         ? whale_holders.reduce((s, w) => s + (w.whale_score ?? 0), 0) / whale_holders.length

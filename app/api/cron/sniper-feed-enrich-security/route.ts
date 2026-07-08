@@ -8,14 +8,24 @@
  * and the "exclude honeypots" audit filter (is_honeypot) is a no-op because the
  * column is never populated.
  *
- * This cron walks the newest feed rows with a null security_score, calls GoPlus
- * token_security per row via the shared getTokenSecurity() (L1/L2 cached), and
- * writes the real security columns back onto the row. Capped at a small batch
- * per tick — each GoPlus call costs ~1-2s and we stay well inside maxDuration.
+ * This cron calls GoPlus token_security per row via the shared
+ * getTokenSecurity() (L1/L2 cached) and writes the real security columns back.
  *
- * Non-EVM chains: Solana routes through GoPlus's Solana path inside
- * scanTokenSecurity, so SPL rows enrich too; a single bad token is skipped
- * without failing the tick.
+ * Ordering matters. ~98% of the feed is Solana, and GoPlus token_security for
+ * Solana lives at a plan-gated path on the current API key
+ * (/solana/token_security/) — every Solana call currently throws. The previous
+ * version ordered the WHOLE feed newest-first with a fixed batch, so the window
+ * filled up with fresh Solana rows that all threw and enriched nothing, while
+ * the ~75 EVM rows GoPlus DOES scan starved permanently behind hundreds of
+ * fresher Solana rows (0 of 5313 enriched over 8 days).
+ *
+ * The fix: drain the OLDEST-unenriched EVM backlog first (chain != solana,
+ * ORDER BY first_seen_at ASC) with the bulk of the budget, then spend a small
+ * fixed remainder probing Solana. So EVM makes steady progress today, and the
+ * moment the GoPlus plan covers Solana those probes start landing too — without
+ * EVM ever being starved. A single bad token is skipped without aborting the
+ * tick or wasting the rest of the budget; the update is idempotent, so running
+ * every 2 min (even with an overlapping tick) only re-writes the same values.
  */
 
 import { NextRequest } from 'next/server';
@@ -29,14 +39,16 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
 const NAME = 'sniper-feed-enrich-security';
-// Total GoPlus calls attempted per tick.
-const BATCH = 40;
-// Max Solana rows attempted per tick. GoPlus token_security for Solana is
-// plan-gated on the current API key (see the fetch block below) — every call
-// currently throws. Capping the Solana attempts keeps the tick cheap while
-// still probing, so enrichment resumes automatically the moment the plan
-// covers Solana. EVM rows (which GoPlus scans fine) are never starved by it.
+// EVM rows drained per tick, OLDEST-unenriched first. GoPlus scans every EVM
+// chain we ingest (ethereum/base/arbitrum/optimism), so this is the enrichable
+// backlog and gets the bulk of the per-tick budget.
+const EVM_BATCH = 30;
+// Solana rows probed per tick (see file header). Currently plan-gated and
+// throwing; kept small so the tick stays cheap and never starves EVM, while
+// still resuming automatically if/when the GoPlus plan covers Solana.
 const SOLANA_PROBE = 10;
+
+type SupabaseAdmin = ReturnType<typeof getSupabaseAdmin>;
 
 interface FeedRow {
   id: string;
@@ -44,40 +56,35 @@ interface FeedRow {
   token_address: string;
 }
 
-export async function GET(request: NextRequest) {
-  const startedAt = Date.now();
-  const auth = verifyCron(request);
-  if (!auth.ok) return auth.response!;
+interface EnrichOutcome {
+  enriched: number;
+  failed: number;
+  skipped: number;
+  rateLimited: boolean;
+}
 
-  const admin = getSupabaseAdmin();
-
-  // security_score is a real column, so filter the un-audited rows directly
-  // (no in-memory over-fetch needed). Newest first — the freshest listings are
-  // what the discover feed surfaces, so they benefit most from enrichment.
-  const { data: rows, error: fetchErr } = await admin
-    .from('sniper_feed_tokens')
-    .select('id,chain,token_address')
-    .is('security_score', null)
-    .order('first_seen_at', { ascending: false })
-    .limit(BATCH);
-
-  if (fetchErr) {
-    await logCronExecution(NAME, 'failed', Date.now() - startedAt, fetchErr.message, 0);
-    return cronResponse(NAME, startedAt, { error: fetchErr.message });
-  }
-
-  const feed = (rows ?? []) as FeedRow[];
-  if (feed.length === 0) {
-    await logCronExecution(NAME, 'success', Date.now() - startedAt, undefined, 0);
-    return cronResponse(NAME, startedAt, { scanned: 0, enriched: 0, noWork: true });
-  }
-
+/**
+ * Enrich a batch of feed rows in place. Skip-and-continue on a per-token throw
+ * (one plan-gated / unindexed token must not abort the batch); a provider 429
+ * stops the whole tick early since every remaining call would also throttle.
+ * `failCaptureBase` offsets the "too many failures" Sentry threshold so the
+ * Solana probe — expected to throw while plan-gated — doesn't page on its own.
+ */
+async function enrichBatch(
+  admin: SupabaseAdmin,
+  rows: FeedRow[],
+  failCaptureBase: number,
+): Promise<EnrichOutcome> {
   let enriched = 0;
   let failed = 0;
+  let skipped = 0;
   let rateLimited = false;
 
-  for (const row of feed) {
-    if (!row.token_address || !row.chain) continue;
+  for (const row of rows) {
+    if (!row.token_address || !row.chain) {
+      skipped++;
+      continue;
+    }
     try {
       const sec = await getTokenSecurity(row.token_address, row.chain);
       const raw = (sec.raw ?? {}) as Record<string, unknown>;
@@ -91,7 +98,10 @@ export async function GET(request: NextRequest) {
       // non_transferable, which GoPlus always returns, so it never skips.
       const honeypotKnown = row.chain === 'solana'
         || raw.is_honeypot === '0' || raw.is_honeypot === '1';
-      if (!honeypotKnown && sec.holderCount === 0) continue;
+      if (!honeypotKnown && sec.holderCount === 0) {
+        skipped++;
+        continue;
+      }
 
       // GoPlus buy/sell tax are decimal fractions (0.05 = 5%). The feed's
       // buy_tax / sell_tax / dev_holding_pct columns are stored as fractions
@@ -120,10 +130,14 @@ export async function GET(request: NextRequest) {
       // means "unavailable" for brand-new pools and would clobber a real value.
       if (sec.holderCount > 0) patch.holders = sec.holderCount;
 
+      // Idempotent: re-scoping to security_score IS NULL means a concurrent
+      // overlapping tick that already enriched this row is a no-op, not a
+      // double write of stale data.
       const { error: updErr } = await admin
         .from('sniper_feed_tokens')
         .update(patch)
-        .eq('id', row.id);
+        .eq('id', row.id)
+        .is('security_score', null);
       if (!updErr) enriched++;
       else failed++;
     } catch (err) {
@@ -135,18 +149,79 @@ export async function GET(request: NextRequest) {
         break;
       }
       // Don't poison Sentry with one bad token per tick — only capture when a
-      // meaningful fraction of the batch fails.
-      if (failed > 5) {
+      // meaningful fraction of the batch fails. failCaptureBase lets the Solana
+      // probe (expected to throw while plan-gated) stay silent.
+      if (failCaptureBase + failed > 5) {
         Sentry.captureException(err, { tags: { cron: NAME, token: row.token_address, chain: row.chain } });
       }
     }
   }
 
+  return { enriched, failed, skipped, rateLimited };
+}
+
+export async function GET(request: NextRequest) {
+  const startedAt = Date.now();
+  const auth = verifyCron(request);
+  if (!auth.ok) return auth.response!;
+
+  const admin = getSupabaseAdmin();
+
+  // EVM backlog first, OLDEST unenriched first, so the starved EVM rows behind
+  // the Solana wall actually drain instead of being perpetually skipped.
+  const { data: evmRows, error: evmErr } = await admin
+    .from('sniper_feed_tokens')
+    .select('id,chain,token_address')
+    .is('security_score', null)
+    .neq('chain', 'solana')
+    .order('first_seen_at', { ascending: true })
+    .limit(EVM_BATCH);
+
+  if (evmErr) {
+    await logCronExecution(NAME, 'failed', Date.now() - startedAt, evmErr.message, 0);
+    return cronResponse(NAME, startedAt, { error: evmErr.message });
+  }
+
+  // Small Solana probe, also oldest-first for deterministic progress if the
+  // plan gate lifts. A fetch error here is non-fatal — EVM work still counts.
+  const { data: solRows, error: solErr } = await admin
+    .from('sniper_feed_tokens')
+    .select('id,chain,token_address')
+    .is('security_score', null)
+    .eq('chain', 'solana')
+    .order('first_seen_at', { ascending: true })
+    .limit(SOLANA_PROBE);
+
+  if (solErr) {
+    Sentry.captureException(solErr, { tags: { cron: NAME, stage: 'solana-probe-fetch' } });
+  }
+
+  const evmFeed = (evmRows ?? []) as FeedRow[];
+  const solFeed = (solRows ?? []) as FeedRow[];
+
+  if (evmFeed.length === 0 && solFeed.length === 0) {
+    await logCronExecution(NAME, 'success', Date.now() - startedAt, undefined, 0);
+    return cronResponse(NAME, startedAt, { scanned: 0, enriched: 0, noWork: true });
+  }
+
+  // Drain the enrichable EVM backlog first.
+  const evm = await enrichBatch(admin, evmFeed, 0);
+
+  // Then spend the small remaining budget probing Solana — unless the EVM pass
+  // already hit a provider 429 (in which case Solana would only throttle too).
+  const sol = evm.rateLimited
+    ? { enriched: 0, failed: 0, skipped: solFeed.length, rateLimited: true }
+    : await enrichBatch(admin, solFeed, evm.failed);
+
+  const enriched = evm.enriched + sol.enriched;
+  const scanned = evmFeed.length + solFeed.length;
+
   await logCronExecution(NAME, 'success', Date.now() - startedAt, undefined, enriched);
   return cronResponse(NAME, startedAt, {
-    scanned: feed.length,
+    scanned,
     enriched,
-    failed,
-    rateLimited,
+    evm: { scanned: evmFeed.length, enriched: evm.enriched, failed: evm.failed, skipped: evm.skipped },
+    solana: { scanned: solFeed.length, enriched: sol.enriched, failed: sol.failed, skipped: sol.skipped, probe: true },
+    rateLimited: evm.rateLimited || sol.rateLimited,
   });
 }

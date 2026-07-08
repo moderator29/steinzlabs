@@ -10,17 +10,18 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
  * Health is driven ENTIRELY by real wallet-security posture — the things that
  * actually make a wallet safe or unsafe:
  *
- *   approvals   * 0.40   (dangerous token approvals — the #1 drain vector)
- *   threats     * 0.30   (recent WARN/CRITICAL security alerts, 30d)
+ *   approvals   * 0.45   (dangerous token approvals — the #1 drain vector)
+ *   threats     * 0.30   (recent actionable security alerts, 30d:
+ *                          critical/high/medium/warn — advisory 'low' excluded)
  *   honeypots   * 0.25   (honeypot / cannot-sell tokens held)
- *   reputation  * 0.05   (platform standing — a minor positive nudge only)
  *
  * Previously reputation (a platform-engagement / gamification metric) carried
  * 50% of the weight. That made a perfectly clean wallet with zero reputation
  * points score exactly 50% "for no reason" — reputation was 0 and the three
  * real security components summed to 50. A wallet's security has nothing to do
- * with how many platform points its owner earned, so reputation is demoted to a
- * tiny nudge and the score now reflects genuine risk. A clean, audited wallet
+ * with how many platform points its owner earned, so reputation is dropped from
+ * the composite entirely (still computed and returned in `breakdown` for
+ * display, but it no longer moves the score). A clean, audited wallet
  * reads ~95–100; each real issue visibly lowers it (see `counts` in the
  * response, surfaced in the UI so the number always has a stated reason).
  *
@@ -85,7 +86,16 @@ export async function GET(_req: NextRequest) {
     approvalDanger = count ?? 0;
   } catch { /* table absent on prod yet */ }
 
-  // Threats — security_alerts at WARN/CRITICAL severity in the last 30d.
+  // Threats — actionable security_alerts in the last 30d.
+  //
+  // The security_alerts.severity CHECK constraint permits five values:
+  // 'critical' | 'high' | 'medium' | 'low' | 'warn'. Counting only
+  // ['warn','critical'] silently DROPPED every 'high' and 'medium' alert —
+  // i.e. the second- and third-most-severe threats never dinged the health
+  // score, so a wallet with active high-severity alerts still read as clean.
+  // We now count every genuinely-actionable severity; only advisory 'low' is
+  // excluded so the score reflects real, exploitable risk.
+  const THREAT_SEVERITIES = ['critical', 'high', 'medium', 'warn'];
   let threatCount = 0;
   try {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -93,7 +103,7 @@ export async function GET(_req: NextRequest) {
       .from('security_alerts')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
-      .in('severity', ['warn', 'critical'])
+      .in('severity', THREAT_SEVERITIES)
       .gt('created_at', thirtyDaysAgo);
     threatCount = count ?? 0;
   } catch { /* table absent */ }

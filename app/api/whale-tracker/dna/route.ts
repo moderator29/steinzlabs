@@ -1,6 +1,7 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 /**
  * Whale DNA — a wallet's behavioral fingerprint + "wallets that trade like
@@ -59,17 +60,23 @@ function metricSim(t: WhaleRow, c: WhaleRow): number {
 async function tokenSets(admin: ReturnType<typeof getSupabaseAdmin>, addresses: string[]): Promise<Map<string, Set<string>>> {
   const out = new Map<string, Set<string>>();
   if (addresses.length === 0) return out;
+  // whale_activity holds legacy EVM rows in MIXED case, so an exact
+  // .in('whale_address', <canonical/lowercase>) under-counts them and
+  // undercounts token overlap. Match case-insensitively via ilike (hex/base58
+  // have no LIKE wildcards) and key the result map on the NORMALIZED address so
+  // callers can look up by their canonical whales.address on both sides.
   const { data } = await admin
     .from('whale_activity')
     .select('whale_address, action, token_symbol')
-    .in('whale_address', addresses)
+    .or(addresses.map((a) => `whale_address.ilike.${a}`).join(','))
     .order('timestamp', { ascending: false })
     .limit(4000);
   for (const a of (data ?? []) as Array<{ whale_address: string; action: string | null; token_symbol: string | null }>) {
     if (!a.token_symbol || !BUY_ACTIONS.has((a.action ?? '').toLowerCase())) continue;
-    const s = out.get(a.whale_address) ?? new Set<string>();
+    const key = normalizeAddress(a.whale_address);
+    const s = out.get(key) ?? new Set<string>();
     s.add(a.token_symbol.toUpperCase());
-    out.set(a.whale_address, s);
+    out.set(key, s);
   }
   return out;
 }
@@ -110,11 +117,11 @@ export async function GET(req: NextRequest) {
 
   // Pass 2 — token-overlap refinement on the shortlist only.
   const sets = await tokenSets(admin, [target.address, ...shortlist.map((s) => s.c.address)]);
-  const targetSet = sets.get(target.address) ?? new Set<string>();
+  const targetSet = sets.get(normalizeAddress(target.address)) ?? new Set<string>();
 
   const similar = shortlist
     .map(({ c, m }) => {
-      const cSet = sets.get(c.address) ?? new Set<string>();
+      const cSet = sets.get(normalizeAddress(c.address)) ?? new Set<string>();
       const overlap = jaccard(targetSet, cSet);
       const shared = Array.from(cSet).filter((x) => targetSet.has(x)).slice(0, 6);
       // Blend: metric shortlist score (0.7) + token overlap (0.3).
