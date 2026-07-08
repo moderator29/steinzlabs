@@ -9,7 +9,7 @@ import BackButton from '@/components/ui/BackButton';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { sectorRotationHowItWorks } from '@/lib/howItWorks/content/sector-rotation';
 
-interface Sector { id: string; name: string; marketCap: number; change24h: number; volume24h: number; topCoins: string[] }
+interface Sector { id: string; name: string; marketCap: number; change24h: number; volume24h: number; turnover?: number; topCoins: string[] }
 interface Data { rotatingIn: Sector[]; rotatingOut: Sector[]; total: number }
 
 function fmtUsd(n: number) { const a = Math.abs(n); if (a >= 1e12) return `$${(a / 1e12).toFixed(2)}T`; if (a >= 1e9) return `$${(a / 1e9).toFixed(1)}B`; if (a >= 1e6) return `$${(a / 1e6).toFixed(0)}M`; return `$${Math.round(a)}`; }
@@ -26,7 +26,12 @@ function Row({ s }: { s: Sector }) {
       </div>
       <div className="min-w-0 flex-1">
         <div className="text-sm font-semibold truncate">{s.name}</div>
-        <div className="text-[10px] text-slate-500">{fmtUsd(s.marketCap)} mcap · {fmtUsd(s.volume24h)} vol</div>
+        <div className="text-[10px] text-slate-500">
+          {fmtUsd(s.marketCap)} mcap · {fmtUsd(s.volume24h)} vol
+          {s.turnover != null && s.turnover > 0 && (
+            <> · <span title="24h volume ÷ market cap — how actively the sector is trading">{(s.turnover * 100).toFixed(1)}% turnover</span></>
+          )}
+        </div>
       </div>
       <div className="text-right shrink-0 inline-flex items-center gap-1" style={{ color: up ? '#10B981' : '#FF1744' }}>
         {up ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}

@@ -40,6 +40,30 @@ function Sparkline({ points, color, height = 36 }: { points: TrendSparkpoint[]; 
   );
 }
 
+// ─── Momentum badge ───────────────────────────────────────────────────────────
+// Colours a 0–100 real-signal composite. 50 = neutral; green = accelerating,
+// red = falling. Only shown when the API resolved at least one real signal.
+
+function momentumColor(score: number): string {
+  if (score >= 70) return '#10B981';
+  if (score >= 58) return '#34D399';
+  if (score >= 43) return '#9CA3AF';
+  if (score >= 30) return '#F59E0B';
+  return '#EF4444';
+}
+
+function MomentumBadge({ score, label }: { score: number; label?: string }) {
+  const c = momentumColor(score);
+  return (
+    <div className="inline-flex items-center gap-1.5" title="Composite of real signals: TVL, native-asset price, and social sentiment">
+      <div className="relative w-10 h-1.5 rounded-full bg-white/[0.08] overflow-hidden">
+        <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${score}%`, background: c }} />
+      </div>
+      <span className="text-[10px] font-bold" style={{ color: c }}>{label ?? score}</span>
+    </div>
+  );
+}
+
 // ─── VTX Insight Card ─────────────────────────────────────────────────────────
 
 function InsightCard({ card, onSelect }: { card: TrendCard; onSelect: (c: TrendCard) => void }) {
@@ -80,6 +104,26 @@ function InsightCard({ card, onSelect }: { card: TrendCard; onSelect: (c: TrendC
           {card.change7d > 0 ? '+' : ''}{card.change7d.toFixed(1)}% 7d
         </div>
       </div>
+
+      {/* Real-signal momentum + native-asset / social context */}
+      {(card.momentum != null || card.priceChange24h != null || card.social) && (
+        <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-2.5 pt-2.5 border-t border-white/[0.06]">
+          {card.momentum != null && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[9px] text-gray-600 uppercase tracking-wider">Momentum</span>
+              <MomentumBadge score={card.momentum} label={card.momentumLabel} />
+            </div>
+          )}
+          {card.priceChange24h != null && (
+            <span className={`text-[10px] font-medium ${card.priceChange24h >= 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+              {card.chain} {card.priceChange24h > 0 ? '+' : ''}{card.priceChange24h.toFixed(1)}%
+            </span>
+          )}
+          {card.social && (
+            <span className="text-[10px] text-[#00C8FF]" title="LunarCrush Galaxy Score">◈ {card.social.galaxyScore}</span>
+          )}
+        </div>
+      )}
 
       {card.alert && (
         <div className="mt-2 text-[10px] text-[#F59E0B] bg-[#F59E0B]/10 px-2 py-1 rounded-lg">{card.alert}</div>
@@ -183,6 +227,54 @@ function TrendDrawer({ card, onClose }: { card: TrendCard; onClose: () => void }
             <div className="bg-[#F59E0B]/10 border border-[#F59E0B]/20 rounded-xl p-3 mb-4 flex items-start gap-2">
               <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B] flex-shrink-0 mt-0.5" />
               <p className="text-xs text-[#F59E0B]">{card.alert}</p>
+            </div>
+          )}
+
+          {/* Momentum breakdown — every driver is a real metric with its live
+              value, so the composite score is fully traceable (no black box). */}
+          {card.momentum != null && card.factors && card.factors.length > 0 && (
+            <div className="nl-glass rounded-2xl p-4 mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] text-gray-500 uppercase tracking-wider">Momentum · real signals</span>
+                <MomentumBadge score={card.momentum} label={`${card.momentumLabel ?? ''} ${card.momentum}`.trim()} />
+              </div>
+              <div className="space-y-2">
+                {card.factors.map((f, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-[11px] text-gray-400 w-20 flex-shrink-0">{f.label}</span>
+                    <div className="relative flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                      <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${f.score}%`, background: momentumColor(f.score) }} />
+                    </div>
+                    <span className="text-[10px] text-gray-500 w-32 flex-shrink-0 text-right truncate">{f.detail}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Native asset + social read (real CoinGecko + LunarCrush data). */}
+          {(card.priceChange24h != null || card.social) && (
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {card.priceChange24h != null && (
+                <div className="nl-glass rounded-xl p-3">
+                  <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">{card.chain} price</div>
+                  <div className={`text-sm font-bold ${card.priceChange24h >= 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
+                    {card.priceChange24h > 0 ? '+' : ''}{card.priceChange24h.toFixed(2)}% <span className="text-[10px] text-gray-500 font-normal">24h</span>
+                  </div>
+                  {card.priceChange7d != null && (
+                    <div className="text-[10px] text-gray-500 mt-0.5">{card.priceChange7d > 0 ? '+' : ''}{card.priceChange7d.toFixed(1)}% 7d</div>
+                  )}
+                </div>
+              )}
+              {card.social && (
+                <div className="nl-glass rounded-xl p-3">
+                  <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Social · LunarCrush</div>
+                  <div className="text-sm font-bold text-[#00C8FF]">Galaxy {card.social.galaxyScore}</div>
+                  <div className="text-[10px] text-gray-500 mt-0.5">
+                    Sentiment {card.social.sentiment > 0 ? '+' : ''}{card.social.sentiment} · {card.social.socialVolume24h.toLocaleString()} posts
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

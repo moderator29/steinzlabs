@@ -2,7 +2,41 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSwapPrice, getChainId } from '@/lib/services/zerox';
 import { getJupiterQuote } from '@/lib/services';
+import { getDLCoinPrices } from '@/lib/services/defillama';
 import { resolveSwapToken, toBaseUnits, fromBaseUnits } from '@/lib/market/swapTokenMeta';
+
+// DeFiLlama chain slugs + native-gas coingecko ids, used ONLY to turn the
+// real quantities 0x already returns (buyAmount, gas, gasPrice) into a
+// value-based price impact and a USD network-fee figure. No price is
+// invented: when DeFiLlama has no confident quote for a token we return
+// null and the UI shows an honest "—".
+const DL_CHAIN_SLUG: Record<string, string> = {
+  ethereum: 'ethereum', base: 'base', arbitrum: 'arbitrum',
+  polygon: 'polygon', avalanche: 'avax', bsc: 'bsc', optimism: 'optimism',
+};
+const NATIVE_CG_ID: Record<string, string> = {
+  ethereum: 'ethereum', base: 'ethereum', arbitrum: 'ethereum', optimism: 'ethereum',
+  polygon: 'matic-network', avalanche: 'avalanche-2', bsc: 'binancecoin',
+};
+const NATIVE_SENTINELS = new Set([
+  '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+  '0x0000000000000000000000000000000000000000',
+]);
+
+/**
+ * DeFiLlama coins key for a token address on an EVM chain (native →
+ * coingecko). The address is lowercased so the request key matches the
+ * lowercased key DeFiLlama echoes back in its response.
+ */
+function dlKey(address: string, chain: string): string | null {
+  const a = address.toLowerCase();
+  if (NATIVE_SENTINELS.has(a)) {
+    const id = NATIVE_CG_ID[chain];
+    return id ? `coingecko:${id}` : null;
+  }
+  const slug = DL_CHAIN_SLUG[chain];
+  return slug ? `${slug}:${a}` : null;
+}
 
 // §swap-price — this route is the quote probe behind the swap cards. It
 // historically only accepted `sellToken/buyToken/sellAmount` as canonical
@@ -111,8 +145,64 @@ export async function GET(request: NextRequest) {
     const toAmountHuman = fromBaseUnits(buyAmountBase, buy.decimals);
     const fromAmountHuman = fromBaseUnits(baseAmount, sell.decimals);
     const rate = fromAmountHuman > 0 ? toAmountHuman / fromAmountHuman : 0;
-    const priceImpactPct = (raw.estimatedPriceImpact as string | undefined) ?? '0';
     const minReceived = toAmountHuman * (1 - slippageBps / 10_000);
+
+    // ── Real price impact + USD network fee ──────────────────────────────
+    // 0x's v2 Swap API does NOT return a price-impact figure (the old code
+    // defaulted it to "0", so every EVM swap fabricated a 0% impact). We
+    // derive a real value-based impact — the same method Jupiter/1inch use —
+    // from confident DeFiLlama mid-prices, and convert 0x's real gas estimate
+    // to USD. Anything we can't source confidently stays null → honest "—".
+    // Kept as a numeric STRING (or null) to match the shape every existing
+    // consumer parses (`typeof x === 'string' ? parseFloat(x) : …`) — the
+    // Solana path above and 0x's own field are strings too. null = unknown.
+    let priceImpactPct: string | null = null;
+    let gasEstimateUsd: number | null = null;
+
+    // Prefer a real impact field if 0x ever supplies one on this pair/chain.
+    const zxImpact = Number(raw.estimatedPriceImpact);
+    if (Number.isFinite(zxImpact) && raw.estimatedPriceImpact != null && raw.estimatedPriceImpact !== '') {
+      priceImpactPct = String(zxImpact);
+    }
+
+    try {
+      const sellKey = dlKey(sell.address, chain);
+      const buyKey = dlKey(buy.address, chain);
+      const nativeKey = NATIVE_CG_ID[chain] ? `coingecko:${NATIVE_CG_ID[chain]}` : null;
+      const wanted = Array.from(new Set([sellKey, buyKey, nativeKey].filter(Boolean) as string[]));
+      const prices = wanted.length ? await getDLCoinPrices(wanted) : {};
+
+      if (priceImpactPct === null && sellKey && buyKey) {
+        const sp = prices[sellKey];
+        const bp = prices[buyKey];
+        // Require confident quotes on BOTH legs — a stale/low-confidence
+        // oracle price would produce a misleading impact number.
+        if (sp && bp && sp.price > 0 && bp.price > 0
+          && (sp.confidence ?? 0) >= 0.9 && (bp.confidence ?? 0) >= 0.9
+          && fromAmountHuman > 0 && toAmountHuman > 0) {
+          const midRate = sp.price / bp.price;          // buy tokens per sell token at market mid
+          const execRate = toAmountHuman / fromAmountHuman; // buy tokens per sell token, as quoted
+          const impact = (1 - execRate / midRate) * 100;
+          // Clamp oracle noise (tiny negatives) to 0; ignore implausible
+          // outliers rather than surface a nonsense figure.
+          if (Number.isFinite(impact) && impact > -3 && impact < 99) {
+            priceImpactPct = String(Math.max(0, Number(impact.toFixed(2))));
+          }
+        }
+      }
+
+      const gasUnits = Number(raw.gas);
+      const gasPrice = Number(raw.gasPrice);
+      const np = nativeKey ? prices[nativeKey] : undefined;
+      if (Number.isFinite(gasUnits) && gasUnits > 0 && Number.isFinite(gasPrice) && gasPrice > 0
+        && np && np.price > 0) {
+        const gasNative = (gasUnits * gasPrice) / 1e18; // wei → native token
+        gasEstimateUsd = gasNative * np.price;
+      }
+    } catch {
+      /* DeFiLlama unavailable — leave impact/gas null, never fabricate. */
+    }
+
     return NextResponse.json({
       chain,
       provider: '0x',
@@ -121,6 +211,7 @@ export async function GET(request: NextRequest) {
       toAmount: toAmountHuman,
       rate,
       priceImpactPct,
+      gasEstimateUsd,
       minReceived,
       slippageBps,
       quoteData: {

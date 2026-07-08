@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 import dynamic from 'next/dynamic';
 // Naka Labs brand icons — broad swap. BarChart3 aliased to ChartBar.
 // Briefcase, Radio, Globe, Loader2, History stay on lucide.
@@ -66,6 +67,18 @@ const HISTORY_KEY = 'vtx_chat_history';
 const SETTINGS_KEY = 'vtx_settings';
 const TIER_KEY = 'steinz_user_tier';
 const USAGE_KEY = 'vtx-ai-daily-usage';
+const MODEL_KEY = 'naka_vtx_model';
+// Records which authenticated user these VTX localStorage caches belong to, so a
+// shared browser can detect an account switch and purge BEFORE loading cache into
+// React state — mirrors the guard in app/dashboard/vtx-ai/page.tsx. The global
+// syncCurrentUser() wipe also covers these keys, but it fires asynchronously from
+// the auth listener; this synchronous mount guard closes the window where this
+// tab could paint account A's history to account B before that wipe lands.
+const CACHE_OWNER_KEY = 'vtx_cache_owner';
+const VTX_LOCAL_KEYS = [STORAGE_KEY, HISTORY_KEY, SETTINGS_KEY, TIER_KEY, USAGE_KEY, MODEL_KEY];
+function purgeVtxLocalCache() {
+  for (const k of VTX_LOCAL_KEYS) { try { localStorage.removeItem(k); } catch { /* ignore */ } }
+}
 
 function loadChatHistory(): Message[] {
   try {
@@ -605,29 +618,42 @@ export default function VtxAiTab() {
     void import('@/components/trading/AdvancedChart');
   }, []);
 
-  // §model-picker — restore the persisted reasoning-depth choice on mount.
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('naka_vtx_model');
-      if (stored === 'fast' || stored === 'balanced' || stored === 'deepest') setVtxModel(stored);
-    } catch { /* storage disabled — keep the default */ }
-  }, []);
-
   const handleModelChange = (id: VtxModelId) => {
     setVtxModel(id);
-    try { localStorage.setItem('naka_vtx_model', id); } catch { /* storage disabled — session-only */ }
+    try { localStorage.setItem(MODEL_KEY, id); } catch { /* storage disabled — session-only */ }
   };
 
   useEffect(() => {
-    if (!initialized.current) {
-      initialized.current = true;
+    if (initialized.current) return;
+    initialized.current = true;
+    void (async () => {
+      // ── Cross-account isolation guard ──────────────────────────────────────
+      // Confirm the cached VTX state belongs to the CURRENT authenticated user
+      // before loading any of it. If this browser last cached a DIFFERENT user
+      // (or nobody), purge first so account B never sees account A's VTX
+      // conversations / history / settings / model choice on a shared device.
+      let uid: string | null = null;
+      try { const { data } = await supabase.auth.getUser(); uid = data?.user?.id ?? null; } catch { uid = null; }
+      let owner: string | null = null;
+      try { owner = localStorage.getItem(CACHE_OWNER_KEY); } catch { owner = null; }
+      if (owner !== uid) {
+        purgeVtxLocalCache();
+        try { if (uid) localStorage.setItem(CACHE_OWNER_KEY, uid); else localStorage.removeItem(CACHE_OWNER_KEY); } catch { /* ignore */ }
+      }
+
       const saved = loadChatHistory();
       if (saved.length > 0) setMessages(saved);
       setTier(getUserTier());
       setDailyUsage(getDailyUsage());
       setSettings(loadSettings());
       setAllHistory(loadAllHistory());
-    }
+
+      // §model-picker — restore the persisted reasoning-depth choice.
+      try {
+        const stored = localStorage.getItem(MODEL_KEY);
+        if (stored === 'fast' || stored === 'balanced' || stored === 'deepest') setVtxModel(stored);
+      } catch { /* storage disabled — keep the default */ }
+    })();
   }, []);
 
   useEffect(() => {

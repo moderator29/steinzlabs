@@ -15,6 +15,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Bot, Loader2, Plus, Play, Pause, Square, Copy, Check, AlertTriangle, ShieldCheck, RefreshCw,
+  ChevronDown, ChevronRight, ExternalLink, ArrowDownRight, ArrowUpRight,
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { ChainLogo } from '@/components/common/ChainLogo';
@@ -46,14 +47,89 @@ interface Strategy {
   status: 'active' | 'paused' | 'stopped';
   realized_pnl_usd: number | null;
   inventory_tokens: number | null;
+  inventory_cost_usd: number | null;
   spent_usd: number | null;
   gross_deployed_usd: number | null;
+  anchor_price: number | null;
+  // Live DexScreener price merged server-side (same source the engine fills
+  // against). null when the lookup was unavailable — never fabricated.
+  live_price: number | null;
+  created_at: string;
+}
+
+// One real executed fill (mm_fills row), as returned by /api/market-maker/fills.
+interface Fill {
+  id: string;
+  side: 'buy' | 'sell';
+  price: number | null;
+  amount_usd: number | null;
+  amount_tokens: number | null;
+  fee_usd: number | null;
+  pnl_usd: number | null;
+  tx_hash: string | null;
   created_at: string;
 }
 
 function fmtUsd(n: number | null | undefined): string {
   const v = Number(n ?? 0);
   return v.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: v >= 1 || v <= -1 || v === 0 ? 2 : 4 });
+}
+
+function fmtSignedUsd(n: number): string {
+  const s = fmtUsd(Math.abs(n));
+  return n > 0 ? `+${s}` : n < 0 ? `-${s}` : s;
+}
+
+// Per-chain tx explorer URL (mirrors the convention used across swap/vtx cards).
+function explorerTxUrl(chain: string, hash: string): string {
+  switch (chain.toLowerCase()) {
+    case 'solana':    return `https://solscan.io/tx/${hash}`;
+    case 'base':      return `https://basescan.org/tx/${hash}`;
+    case 'arbitrum':  return `https://arbiscan.io/tx/${hash}`;
+    case 'optimism':  return `https://optimistic.etherscan.io/tx/${hash}`;
+    case 'polygon':   return `https://polygonscan.com/tx/${hash}`;
+    case 'bsc':       return `https://bscscan.com/tx/${hash}`;
+    case 'avalanche': return `https://snowtrace.io/tx/${hash}`;
+    default:          return `https://etherscan.io/tx/${hash}`;
+  }
+}
+
+function relTime(iso: string): string {
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return '';
+  const s = Math.max(0, Math.floor((Date.now() - t) / 1000));
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+/**
+ * Derive live valuation + PnL for a strategy from REAL persisted state and the
+ * live market price. Inventory is valued at the live price when available,
+ * falling back to a manual reference only in manual mode. Unrealized PnL is only
+ * reported when inventory can actually be valued — otherwise it is `null`
+ * (honest "unavailable") and never guessed.
+ */
+function deriveStrategy(s: Strategy) {
+  const inventoryTokens = Number(s.inventory_tokens ?? 0);
+  const costBasis = Number(s.inventory_cost_usd ?? 0);
+  const realized = s.realized_pnl_usd != null ? Number(s.realized_pnl_usd) : 0;
+  // Price used to value inventory: live market first, manual reference as a
+  // faithful fallback when the user pinned one and live is unavailable.
+  const valuePrice = s.live_price != null && s.live_price > 0
+    ? s.live_price
+    : (s.reference_price_mode === 'manual' && s.manual_reference_price ? Number(s.manual_reference_price) : null);
+  const inventoryUsd = inventoryTokens > 0 && valuePrice != null ? inventoryTokens * valuePrice : (inventoryTokens === 0 ? 0 : null);
+  const avgCost = inventoryTokens > 0 ? costBasis / inventoryTokens : null;
+  // Unrealized = current inventory value − its cost basis. Known when we can
+  // value the inventory (or when flat, where it is exactly 0).
+  const unrealized = inventoryTokens === 0 ? 0 : (inventoryUsd != null ? inventoryUsd - costBasis : null);
+  const netKnown = unrealized != null;
+  const netPnl = netKnown ? realized + (unrealized as number) : null;
+  return { inventoryTokens, costBasis, realized, valuePrice, inventoryUsd, avgCost, unrealized, netPnl, netKnown };
 }
 
 export default function MarketMakerPage() {
@@ -110,6 +186,23 @@ export default function MarketMakerPage() {
 
   const activeCount = useMemo(() => strategies.filter((s) => s.status === 'active').length, [strategies]);
 
+  // Real portfolio roll-up. Net PnL sums realized across all strategies plus
+  // unrealized only where inventory could actually be valued; `netPartial`
+  // flags when some inventory lacked a live price so the figure is honestly
+  // marked as a partial (realized-only for those) rather than silently wrong.
+  const portfolio = useMemo(() => {
+    let realized = 0, unrealized = 0, deployed = 0, budget = 0, inventoryUsd = 0, netPartial = false;
+    for (const s of strategies) {
+      const d = deriveStrategy(s);
+      realized += d.realized;
+      deployed += Number(s.gross_deployed_usd ?? s.spent_usd ?? 0);
+      budget += Number(s.budget_usd ?? 0);
+      if (d.unrealized != null) unrealized += d.unrealized; else if (d.inventoryTokens > 0) netPartial = true;
+      if (d.inventoryUsd != null) inventoryUsd += d.inventoryUsd;
+    }
+    return { realized, unrealized, net: realized + unrealized, deployed, budget, inventoryUsd, netPartial };
+  }, [strategies]);
+
   if (authLoading || (loading && user)) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-400" /></div>;
   }
@@ -146,6 +239,21 @@ export default function MarketMakerPage() {
               <HowItWorksButton content={marketMakerHowItWorks} className="ms-auto shrink-0" />
             </div>
           </div>
+
+          {/* Real portfolio roll-up — only shown once strategies exist. */}
+          {strategies.length > 0 && (
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <Stat label="Active" value={`${activeCount} / ${strategies.length}`} />
+              <Stat
+                label={portfolio.netPartial ? 'Net PnL (partial)' : 'Net PnL'}
+                value={fmtSignedUsd(portfolio.net)}
+                tone={portfolio.net > 0 ? 'up' : portfolio.net < 0 ? 'down' : 'flat'}
+                hint={portfolio.netPartial ? 'Some inventory could not be priced live; unrealized PnL excluded for those.' : 'Realized + unrealized across all strategies.'}
+              />
+              <Stat label="Inventory" value={fmtUsd(portfolio.inventoryUsd)} hint="Live market value of tokens held." />
+              <Stat label="Deployed" value={`${fmtUsd(portfolio.deployed)} / ${fmtUsd(portfolio.budget)}`} hint="Lifetime capital deployed vs total budget cap." />
+            </div>
+          )}
 
           {/* Global kill-switch note */}
           <div className="mt-4 flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] px-4 py-2.5">
@@ -223,13 +331,12 @@ function StrategyCard({ s, busy, onSetStatus }: { s: Strategy; busy: boolean; on
   const spent = Number(s.gross_deployed_usd ?? s.spent_usd ?? 0);
   const budget = Number(s.budget_usd ?? 0);
   const spentPct = budget > 0 ? Math.min(100, (spent / budget) * 100) : 0;
-  const pnl = s.realized_pnl_usd != null ? Number(s.realized_pnl_usd) : null;
-  const inventoryTokens = Number(s.inventory_tokens ?? 0);
-  // Inventory ~USD: only a faithful estimate when a manual reference is set;
-  // otherwise the live market price lives server-side, so we show tokens only.
-  const inventoryUsd = s.reference_price_mode === 'manual' && s.manual_reference_price
-    ? inventoryTokens * Number(s.manual_reference_price)
-    : null;
+
+  // Real live valuation + PnL (see deriveStrategy). Inventory now values in USD
+  // for BOTH market and manual modes via the server-merged live_price.
+  const d = deriveStrategy(s);
+  const { inventoryTokens, inventoryUsd, avgCost, realized, unrealized, netPnl } = d;
+  const pnlTone = (n: number | null) => n != null && n > 0 ? 'text-emerald-300' : n != null && n < 0 ? 'text-red-300' : 'text-white/60';
 
   const shortAddr = `${s.token_address.slice(0, 6)}…${s.token_address.slice(-4)}`;
 
@@ -256,13 +363,17 @@ function StrategyCard({ s, busy, onSetStatus }: { s: Strategy; busy: boolean; on
         <Field label="Spread">{(s.spread_bps / 100).toFixed(2)}%</Field>
         <Field label="Levels">{s.num_levels} / side</Field>
         <Field label="Order size">{fmtUsd(s.order_size_usd)}</Field>
-        <Field label="Budget">{fmtUsd(s.budget_usd)}</Field>
+        <Field label={s.reference_price_mode === 'manual' ? 'Reference' : 'Market price'}>
+          {s.reference_price_mode === 'manual'
+            ? (s.manual_reference_price ? fmtUsd(s.manual_reference_price) : '—')
+            : (s.live_price != null ? fmtUsd(s.live_price) : <span className="text-white/40" title="Live price temporarily unavailable">unavailable</span>)}
+        </Field>
       </div>
 
       {/* Spent vs budget */}
       <div className="mb-3">
         <div className="flex items-center justify-between text-[11px] mb-1">
-          <span className="text-white/45 uppercase tracking-wider font-semibold">Spent</span>
+          <span className="text-white/45 uppercase tracking-wider font-semibold">Deployed (lifetime)</span>
           <span className="text-white/70 tabular-nums">{fmtUsd(spent)} / {fmtUsd(budget)}</span>
         </div>
         <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
@@ -271,18 +382,27 @@ function StrategyCard({ s, busy, onSetStatus }: { s: Strategy; busy: boolean; on
       </div>
 
       {/* Inventory + PnL */}
-      <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+      <div className="grid grid-cols-3 gap-3 text-sm mb-4">
         <Field label="Inventory">
           {inventoryTokens > 0
-            ? <>{inventoryTokens.toLocaleString(undefined, { maximumFractionDigits: 4 })} {s.token_symbol || ''}{inventoryUsd != null ? <span className="text-white/40"> · ~{fmtUsd(inventoryUsd)}</span> : ''}</>
+            ? <>{inventoryUsd != null ? fmtUsd(inventoryUsd) : `${inventoryTokens.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${s.token_symbol || ''}`}
+                {avgCost != null && <span className="block text-[10px] text-white/40 font-normal">{inventoryTokens.toLocaleString(undefined, { maximumFractionDigits: 4 })} · avg {fmtUsd(avgCost)}</span>}</>
             : <span className="text-white/40">—</span>}
         </Field>
-        <Field label="Realized PnL">
-          <span className={pnl != null && pnl > 0 ? 'text-emerald-300' : pnl != null && pnl < 0 ? 'text-red-300' : 'text-white/60'}>
-            {pnl != null ? fmtUsd(pnl) : '—'}
-          </span>
+        <Field label="Unrealized">
+          {unrealized != null
+            ? <span className={pnlTone(unrealized)}>{fmtSignedUsd(unrealized)}</span>
+            : <span className="text-white/40" title="Inventory could not be valued (no live price)">—</span>}
+        </Field>
+        <Field label="Net PnL">
+          {netPnl != null
+            ? <span className={pnlTone(netPnl)}>{fmtSignedUsd(netPnl)}</span>
+            : <span className={pnlTone(realized)}>{fmtSignedUsd(realized)}<span className="block text-[10px] text-white/40 font-normal">realized only</span></span>}
         </Field>
       </div>
+
+      {/* Real fill history (lazy-loaded from mm_fills) */}
+      <FillsPanel strategyId={s.id} chain={s.chain} symbol={s.token_symbol} />
 
       {/* Controls */}
       <div className="flex items-center gap-2">
@@ -312,6 +432,97 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div>
       <div className="text-[10px] uppercase tracking-wider text-white/40 font-semibold mb-0.5">{label}</div>
       <div className="text-white/90 font-medium truncate">{children}</div>
+    </div>
+  );
+}
+
+function Stat({ label, value, tone, hint }: { label: string; value: string; tone?: 'up' | 'down' | 'flat'; hint?: string }) {
+  const color = tone === 'up' ? 'text-emerald-300' : tone === 'down' ? 'text-red-300' : 'text-white/90';
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2" title={hint}>
+      <div className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">{label}</div>
+      <div className={`text-sm font-bold tabular-nums truncate ${color}`}>{value}</div>
+    </div>
+  );
+}
+
+// ─── Real fill history (lazy) ───────────────────────────────────────────────────
+// Loads the strategy's actual executed fills (mm_fills) only when expanded, so
+// the list stays cheap and always reflects real on-chain activity. Honest empty
+// state when nothing has filled yet.
+function FillsPanel({ strategyId, chain, symbol }: { strategyId: string; chain: string; symbol: string | null }) {
+  const [open, setOpen] = useState(false);
+  const [fills, setFills] = useState<Fill[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const toggle = useCallback(async () => {
+    const next = !open;
+    setOpen(next);
+    if (next && fills === null && !loading) {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/market-maker/fills?strategy_id=${strategyId}`, { cache: 'no-store' });
+        if (!res.ok) { setError('Could not load fills.'); return; }
+        const j = await res.json();
+        setFills(Array.isArray(j?.fills) ? j.fills : []);
+      } catch {
+        setError('Could not load fills.');
+      } finally {
+        setLoading(false);
+      }
+    }
+  }, [open, fills, loading, strategyId]);
+
+  return (
+    <div className="mb-4 rounded-lg border border-white/10 bg-white/[0.02]">
+      <button
+        onClick={toggle}
+        className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-white/55 hover:text-white/80 transition"
+      >
+        <span className="inline-flex items-center gap-1.5">
+          {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+          Fill history{fills != null ? ` (${fills.length})` : ''}
+        </span>
+      </button>
+      {open && (
+        <div className="px-3 pb-3">
+          {loading && <div className="py-3 text-center text-white/40 text-xs inline-flex items-center gap-2 justify-center w-full"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading fills…</div>}
+          {!loading && error && <div className="py-2 text-xs text-red-300">{error}</div>}
+          {!loading && !error && fills != null && fills.length === 0 && (
+            <div className="py-3 text-center text-white/40 text-xs">No fills yet — this strategy has not executed a trade.</div>
+          )}
+          {!loading && !error && fills != null && fills.length > 0 && (
+            <div className="space-y-1 max-h-56 overflow-y-auto">
+              {fills.map((f) => {
+                const isBuy = f.side === 'buy';
+                const pnl = f.pnl_usd != null ? Number(f.pnl_usd) : null;
+                return (
+                  <div key={f.id} className="flex items-center justify-between gap-2 text-[11px] rounded px-2 py-1.5 bg-white/[0.03]">
+                    <span className={`inline-flex items-center gap-1 font-bold uppercase tracking-wider ${isBuy ? 'text-emerald-300' : 'text-red-300'}`}>
+                      {isBuy ? <ArrowDownRight className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}{f.side}
+                    </span>
+                    <span className="text-white/70 tabular-nums flex-1 text-right truncate">
+                      {f.amount_tokens != null ? Number(f.amount_tokens).toLocaleString(undefined, { maximumFractionDigits: 4 }) : '—'} {symbol || ''}
+                      <span className="text-white/40"> · {f.amount_usd != null ? fmtUsd(f.amount_usd) : '—'}</span>
+                    </span>
+                    {pnl != null && !isBuy && (
+                      <span className={`tabular-nums font-semibold ${pnl > 0 ? 'text-emerald-300' : pnl < 0 ? 'text-red-300' : 'text-white/50'}`}>{fmtSignedUsd(pnl)}</span>
+                    )}
+                    <span className="text-white/35 tabular-nums shrink-0">{relTime(f.created_at)}</span>
+                    {f.tx_hash && (
+                      <a href={explorerTxUrl(chain, f.tx_hash)} target="_blank" rel="noopener noreferrer" title="View transaction" className="text-white/40 hover:text-blue-300 transition shrink-0">
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

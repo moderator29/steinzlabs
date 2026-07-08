@@ -113,7 +113,14 @@ export const POST = withTierGate('max', async (req: NextRequest) => {
 
   const raw = sec.raw as Record<string, unknown> | undefined;
   const holders = Array.isArray(raw?.holders) ? (raw!.holders as Array<Record<string, unknown>>) : [];
-  const top10Pct = holders.slice(0, 10).reduce((s, h) => s + parseFloat(String(h.percent ?? '0')), 0);
+  // GoPlus reports each holder's `percent` as a 0..1 FRACTION (0.05 = 5%) — the
+  // same convention token-detail's mapHolders multiplies by 100. Summing the raw
+  // fractions and comparing against 80 made this gate dead: a token whose top 10
+  // hold 90% summed to ~0.9, and 0.9 < 80 always "passed". Convert to a real
+  // percent so the concentration block actually fires. (Strengthens step 3 —
+  // does not weaken any existing check; empty holder lists still sum to 0 and
+  // defer to the other gates, never fabricating concentration.)
+  const top10Pct = holders.slice(0, 10).reduce((s, h) => s + (parseFloat(String(h.percent ?? '0')) || 0), 0) * 100;
   const concentrationOk = top10Pct < 80;
   steps.push({ step: 3, label: 'Holder Concentration (<80%)', passed: concentrationOk, detail: `Top 10 holders: ${top10Pct.toFixed(1)}%` });
   if (!concentrationOk) return NextResponse.json({ blocked: true, reason: `Top 10 holders control ${top10Pct.toFixed(0)}%`, steps });

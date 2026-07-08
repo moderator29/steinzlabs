@@ -2,56 +2,24 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 
 // ─── Service Layer Imports ────────────────────────────────────────────────────
-import { getTokenSecurity } from '@/lib/services/goplus';
-import { searchPairs } from '@/lib/services/dexscreener';
 import { getContractCode } from '@/lib/services/alchemy';
 import { vtxAnalyze } from '@/lib/services/anthropic';
-import { getBirdeyeTokenSecurity, getBirdeyeTokenOverview } from '@/lib/services/birdeye';
-import type { TokenSecurityResult } from '@/lib/security/goplusService';
+import { resolveTarget, runDeepScan, type ScanResult } from '@/lib/services/tokenScannerEngine';
 
 // ─── Chain Maps ───────────────────────────────────────────────────────────────
 
-// Symbolic name → numeric chainId string
-const CHAIN_MAP: Record<string, string> = {
-  ethereum: '1', eth: '1',
-  bsc: '56', bnb: '56',
-  polygon: '137', matic: '137',
-  solana: 'solana', sol: 'solana',
-  base: '8453',
-  avalanche: '43114', avax: '43114',
-  arbitrum: '42161', arb: '42161',
-  '1': '1', '56': '56', '137': '137',
-  '8453': '8453', '43114': '43114', '42161': '42161',
-};
-
-// Numeric chainId → symbolic chain name (used by service layer)
 const CHAIN_ID_TO_NAME: Record<string, string> = {
-  '1': 'ethereum',
-  '56': 'bsc',
-  '137': 'polygon',
-  '8453': 'base',
-  '42161': 'arbitrum',
-  '10': 'optimism',
-  '43114': 'avalanche',
+  '1': 'ethereum', '56': 'bsc', '137': 'polygon', '8453': 'base',
+  '42161': 'arbitrum', '10': 'optimism', '43114': 'avalanche',
 };
 
-const CHAIN_LABEL: Record<string, string> = {
-  '1': 'Ethereum', '56': 'BSC', '137': 'Polygon',
-  '8453': 'Base', '43114': 'Avalanche', '42161': 'Arbitrum',
-  solana: 'Solana',
-};
-
-// Public RPC fallbacks for chains Alchemy SDK does not support (e.g. Avalanche)
+// Public RPC fallbacks for chains the Alchemy SDK does not support (e.g. Avalanche)
 const FALLBACK_RPC: Record<string, string> = {
   avalanche: 'https://api.avax.network/ext/bc/C/rpc',
   '43114': 'https://api.avax.network/ext/bc/C/rpc',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function isSolanaAddress(address: string): boolean {
-  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address);
-}
 
 /**
  * Detect if an address is an EOA (non-contract) wallet.
@@ -60,16 +28,12 @@ function isSolanaAddress(address: string): boolean {
  */
 async function isEOAWallet(address: string, chainId: string): Promise<boolean> {
   const chainName = CHAIN_ID_TO_NAME[chainId] ?? 'ethereum';
-
-  // Try Alchemy service layer first
   try {
     const code = await getContractCode(address, chainName);
     return !code || code === '0x' || code === '0x0';
   } catch {
-    // Alchemy doesn't support this chain — try public RPC fallback
     const rpcUrl = FALLBACK_RPC[chainName] ?? FALLBACK_RPC[chainId];
-    if (!rpcUrl) return false; // Can't determine — treat as contract (permissive)
-
+    if (!rpcUrl) return false;
     try {
       const res = await fetch(rpcUrl, {
         method: 'POST',
@@ -86,238 +50,59 @@ async function isEOAWallet(address: string, chainId: string): Promise<boolean> {
   }
 }
 
-/** Fetch DEX market data via service layer and return a normalized dexData block. */
-async function fetchDexData(address: string): Promise<Record<string, unknown> | null> {
-  try {
-    const pairs = await searchPairs(address);
-    const top = pairs[0];
-    if (!top) return null;
-    return {
-      name: top.baseToken.name,
-      symbol: top.baseToken.symbol,
-      price: parseFloat(String(top.priceUsd ?? '0')),
-      priceChange24h: top.priceChange?.h24 ?? 0,
-      volume24h: top.volume?.h24 ?? 0,
-      liquidity: top.liquidity?.usd ?? 0,
-      fdv: top.fdv ?? 0,
-      marketCap: top.fdv ?? 0,          // DexPair has no marketCap field; use fdv
-      dexId: top.dexId,
-      pairAddress: top.pairAddress,
-      url: top.url ?? null,
-      image: top.info?.imageUrl ?? null,
-      websites: top.info?.websites ?? [],
-    };
-  } catch {
-    return null;
-  }
-}
-
-// ─── Solana Handler ───────────────────────────────────────────────────────────
-// GoPlus does not support Solana. We combine Birdeye token security + DexScreener.
-
-async function handleSolanaToken(address: string): Promise<Record<string, unknown>> {
-  // Parallel fetch: DEX market data + Birdeye security + token overview (holder count)
-  const [dexData, birdSec, birdOverview] = await Promise.all([
-    fetchDexData(address),
-    getBirdeyeTokenSecurity(address),
-    getBirdeyeTokenOverview(address, 'solana'),
-  ]);
-
-  if (!dexData) throw new Error('Token not found. Verify the Solana token address.');
-
-  const liquidity = (dexData.liquidity as number) ?? 0;
-  const volume24h = (dexData.volume24h as number) ?? 0;
-  const websites = (dexData.websites as Array<{ label: string; url: string }>) ?? [];
-
-  // ── Real Birdeye security flags ──────────────────────────────────────────
-  const isMintable = birdSec?.isMintable ?? false;
-  const freezeable = birdSec?.freezeable ?? false;
-  const lpBurned = birdSec?.lpBurned ?? false;
-  const top10HolderPercent = birdSec?.top10HolderPercent ?? null;
-  const creatorAddress = birdSec?.creatorAddress || birdSec?.ownerAddress || 'N/A';
-  const holderCount = birdOverview?.holder ?? 0;
-
-  // ── Deterministic trust score ─────────────────────────────────────────────
-  let score = 70;
-  // Market signals
-  if (liquidity > 100_000) score += 10;
-  else if (liquidity < 10_000) score -= 15;
-  if (volume24h > 50_000) score += 5;
-  if (websites.length > 0) score += 5;
-  // Real security flags from Birdeye
-  if (isMintable) score -= 10;
-  if (!lpBurned && birdSec !== null) score -= 10; // only penalize if we have real data
-  if (freezeable) score -= 10;
-  if (top10HolderPercent !== null && top10HolderPercent > 80) score -= 15;
-  else if (top10HolderPercent !== null && top10HolderPercent > 60) score -= 5;
-  score = Math.max(0, Math.min(100, score));
-
-  let safetyLevel: 'SAFE' | 'CAUTION' | 'WARNING' | 'DANGER' = 'SAFE';
-  let safetyColor = '#10B981';
-  if (score < 30) { safetyLevel = 'DANGER'; safetyColor = '#EF4444'; }
-  else if (score < 50) { safetyLevel = 'WARNING'; safetyColor = '#F59E0B'; }
-  else if (score < 70) { safetyLevel = 'CAUTION'; safetyColor = '#F59E0B'; }
-
-  // ── Security checks — all backed by real data ────────────────────────────
-  const checks = [
-    { label: 'Token Listed on DEX', status: 'pass' as const },
-    { label: 'Has Liquidity Pool', status: liquidity > 1_000 ? 'pass' as const : 'fail' as const },
-    { label: 'Active Trading Volume', status: volume24h > 1_000 ? 'pass' as const : volume24h > 0 ? 'warn' as const : 'fail' as const },
-    { label: 'Has Website / Social', status: websites.length > 0 ? 'pass' as const : 'warn' as const },
-    { label: 'Sufficient Liquidity (>$10k)', status: liquidity > 10_000 ? 'pass' as const : liquidity > 1_000 ? 'warn' as const : 'fail' as const },
-    // Real Birdeye flags — only shown when Birdeye returned data
-    ...(birdSec !== null ? [
-      { label: 'Mint Authority Disabled', status: isMintable ? 'fail' as const : 'pass' as const },
-      { label: 'Freeze Authority Disabled', status: freezeable ? 'fail' as const : 'pass' as const },
-      { label: 'LP Tokens Burned', status: lpBurned ? 'pass' as const : 'warn' as const },
-      {
-        label: `Top 10 Holder Concentration${top10HolderPercent !== null ? ` (${top10HolderPercent.toFixed(1)}%)` : ''}`,
-        status: top10HolderPercent === null ? 'warn' as const
-          : top10HolderPercent > 80 ? 'fail' as const
-          : top10HolderPercent > 60 ? 'warn' as const
-          : 'pass' as const,
-      },
-    ] : []),
-  ];
-
-  return {
-    contract: address,
-    chainId: 'solana',
-    name: (dexData.name as string) || birdOverview?.name || 'Unknown Token',
-    symbol: (dexData.symbol as string) || birdOverview?.symbol || '???',
-    totalSupply: 'N/A',
-    holderCount,
-    creatorAddress,
-    ownerAddress: birdSec?.ownerAddress || 'N/A',
-    trustScore: score,
-    safetyLevel,
-    safetyColor,
-    buyTax: '0.0%',
-    sellTax: '0.0%',
-    isHoneypot: false,
-    isOpenSource: true,
-    isMintable,
-    isProxy: freezeable,         // freezeable = can freeze accounts = closest proxy analogue
-    hasHiddenOwner: false,
-    canTakeBackOwnership: false,
-    ownerCanChangeBalance: freezeable,
-    lpHolders: [],
-    lpTotalSupply: 'N/A',
-    checks,
-    dexData,
-    timestamp: new Date().toISOString(),
-    solanaNote: birdSec
-      ? 'Security data from Birdeye on-chain analysis + DEX market signals.'
-      : 'Security data derived from DEX market signals only (Birdeye data unavailable). Always DYOR.',
-  };
-}
-
 // ─── AI Security Analysis ─────────────────────────────────────────────────────
+// The narrative is built ONLY from the real, already-computed checks. It never
+// invents a risk not present in the scorecard.
 
-async function buildAiAnalysis(response: Record<string, unknown>): Promise<string | null> {
-  const chainLabel = CHAIN_LABEL[(response.chainId as string)] ?? 'EVM';
-  const failedChecks = ((response.checks as Array<{ label: string; status: string }>) ?? [])
-    .filter(c => c.status === 'fail').map(c => c.label).join(', ') || 'None';
+async function buildAiAnalysis(r: ScanResult): Promise<string | null> {
+  const failed = r.checks.filter((c) => c.status === 'fail').map((c) => `${c.label} — ${c.evidence}`);
+  const warned = r.checks.filter((c) => c.status === 'warn').map((c) => `${c.label} — ${c.evidence}`);
+  const unavailable = r.checks.filter((c) => c.status === 'unavailable').map((c) => c.label);
 
-  // Market context from DexScreener — already fetched, previously ignored by
-  // the prompt. FDV-to-liquidity ratio is a strong rug signal (huge FDV on thin
-  // liquidity = exit-liquidity risk). Only real values are passed; 'N/A' else.
-  const dex = (response.dexData as {
-    liquidity?: number; volume24h?: number; fdv?: number; marketCap?: number; priceChange24h?: number;
-  } | null) ?? {};
+  const dex = r.dexData as {
+    liquidity?: number; volume24h?: number; fdv?: number; priceChange24h?: number;
+  } | null ?? {};
   const usd = (n: number | undefined) => (typeof n === 'number' && Number.isFinite(n) ? `$${Math.round(n).toLocaleString()}` : 'N/A');
   const fdvLiq = dex.fdv && dex.liquidity ? `${(dex.fdv / dex.liquidity).toFixed(1)}x` : 'N/A';
 
-  const prompt = `You are a crypto security expert. Analyze this token security scan and give a concise verdict. Use ONLY the data below — never invent prices, holder figures, or risks not supported here.
+  const prompt = `You are a crypto security expert. Write a concise verdict from ONLY the real scan signals below. Never invent prices, holder figures, or risks not listed. If a check is "unavailable", say it could not be verified — do NOT treat it as safe.
 
-Token: ${response.name} (${response.symbol}) on ${chainLabel}
-Trust Score: ${response.trustScore}/100 — ${response.safetyLevel}
-Honeypot: ${response.isHoneypot ? 'YES [WARNING]' : 'No'}
-Open Source: ${response.isOpenSource ? 'Yes' : 'NO [WARNING]'}
-Mintable: ${response.isMintable ? 'YES [WARNING]' : 'No'}
-Hidden Owner: ${response.hasHiddenOwner ? 'YES [WARNING]' : 'No'}
-Owner Can Change Balance: ${response.ownerCanChangeBalance ? 'YES [WARNING]' : 'No'}
-Buy Tax: ${response.buyTax} | Sell Tax: ${response.sellTax}
-Holders: ${response.holderCount}
+Token: ${r.name} (${r.symbol}) on ${r.chainLabel}
+Composite: ${r.riskScore}/100 — risk tier ${r.riskTier}
+FAILED checks (real signals):
+${failed.length ? failed.map((f) => `- ${f}`).join('\n') : '- None'}
+WARNING checks:
+${warned.length ? warned.map((w) => `- ${w}`).join('\n') : '- None'}
+Could NOT be verified: ${unavailable.length ? unavailable.join(', ') : 'None'}
+Buy Tax: ${r.buyTax} | Sell Tax: ${r.sellTax}
+Holders: ${r.holderCount}
 Liquidity: ${usd(dex.liquidity)} | 24h Volume: ${usd(dex.volume24h)} | FDV: ${usd(dex.fdv)} | FDV/Liquidity: ${fdvLiq}
-24h Price Change: ${typeof dex.priceChange24h === 'number' ? `${dex.priceChange24h.toFixed(1)}%` : 'N/A'}
-Failed Checks: ${failedChecks}
 
-Respond with 3 sections only:
+Respond with exactly 3 sections:
 SUMMARY: (2 sentences max — plain risk assessment)
-RISKS: (bullet list of top risks, or "No critical risks identified" if clean)
-VERDICT: (one word: SAFE / CAUTION / WARNING / DANGER) — (one sentence why)`;
+RISKS: (bullet list of the top real risks, or "No critical risks identified" if clean)
+VERDICT: (one word: SAFE / CAUTION / WARNING / DANGER) — (one sentence why, grounded in the signals above)`;
 
   try {
-    return await vtxAnalyze(prompt, 300);
+    return await vtxAnalyze(prompt, 320);
   } catch {
     return null;
   }
 }
 
-// ─── EVM Response Builder ─────────────────────────────────────────────────────
-// TokenSecurityResult from the service layer already has trust score, safety
-// level, color, and checks pre-computed. We just re-shape for the UI contract.
-
-function buildEvmResponse(
-  contractAddress: string,
-  chainId: string,
-  sec: TokenSecurityResult,
-  dexData: Record<string, unknown> | null
-): Record<string, unknown> {
-  const name = sec.raw?.token_name || sec.raw?.name || 'Unknown Token';
-  const symbol = sec.raw?.token_symbol || sec.raw?.symbol || '???';
-  const totalSupply = sec.raw?.total_supply || 'N/A';
-
-  return {
-    contract: contractAddress,
-    chainId,
-    name,
-    symbol,
-    totalSupply,
-    holderCount: sec.holderCount,
-    creatorAddress: sec.creatorAddress || 'N/A',
-    ownerAddress: sec.ownerAddress || 'N/A',
-    trustScore: sec.trustScore,
-    safetyLevel: sec.safetyLevel,
-    safetyColor: sec.safetyColor,
-    buyTax: (sec.buyTax * 100).toFixed(1) + '%',
-    sellTax: (sec.sellTax * 100).toFixed(1) + '%',
-    isHoneypot: sec.isHoneypot,
-    isOpenSource: sec.isOpenSource,
-    isMintable: sec.isMintable,
-    isProxy: sec.isProxy,
-    hasHiddenOwner: sec.hasHiddenOwner,
-    canTakeBackOwnership: sec.canTakeBackOwnership,
-    ownerCanChangeBalance: sec.ownerCanChangeBalance,
-    lpHolders: sec.lpHolders,
-    lpTotalSupply: sec.raw?.lp_total_supply || 'N/A',
-    checks: sec.checks,
-    dexData: dexData ?? undefined,
-    timestamp: new Date().toISOString(),
-  };
-}
-
 const SCAN_CACHE_HEADERS = { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' };
+const EVM_RE = /^0x[a-fA-F0-9]{40}$/i;
 
-// Single source of truth for a scan, shared by GET and POST so both return the
-// EXACT same response. Previously POST ran the EOA-wallet guard + AI analysis
-// while GET skipped both, so the same contract scanned via GET came back
-// without the wallet guard and without the AI summary — a silent divergence.
+// Single source of truth for a scan, shared by GET and POST.
 async function runTokenScan(contract: string, chain: string): Promise<{ status: number; body: unknown }> {
-  const chainId = CHAIN_MAP[chain.toLowerCase()] || '1';
-  const address = contract.trim();
-  const isSolana = chainId === 'solana' || isSolanaAddress(address);
+  const input = contract.trim();
+  if (!input) return { status: 400, body: { error: 'Contract address required' } };
 
-  if (isSolana) {
-    return { status: 200, body: await handleSolanaToken(address) };
-  }
-
-  const contractAddress = address.toLowerCase();
-
-  // EOA wallet guard — reject externally-owned accounts on both verbs.
-  if (/^0x[a-fA-F0-9]{40}$/i.test(contractAddress)) {
-    const isWallet = await isEOAWallet(contractAddress, chainId).catch(() => false);
+  // EOA wallet guard — reject externally-owned accounts (EVM only; a raw EVM
+  // address with no contract code is a wallet, not a token).
+  if (EVM_RE.test(input)) {
+    const chainId = ({ ethereum: '1', eth: '1', bsc: '56', bnb: '56', polygon: '137', matic: '137', base: '8453', avalanche: '43114', avax: '43114', arbitrum: '42161', arb: '42161', optimism: '10', op: '10' } as Record<string, string>)[chain.toLowerCase()] ?? chain;
+    const isWallet = await isEOAWallet(input.toLowerCase(), chainId).catch(() => false);
     if (isWallet) {
       return {
         status: 400,
@@ -332,30 +117,45 @@ async function runTokenScan(contract: string, chain: string): Promise<{ status: 
     }
   }
 
-  const [sec, dexData] = await Promise.all([
-    getTokenSecurity(contractAddress, chain),
-    fetchDexData(contractAddress),
-  ]);
+  // Robust resolution: accepts CA (EVM/Solana) or symbol, retargets to the chain
+  // the token actually trades on so long-tail tokens return real results.
+  let target;
+  try {
+    target = await resolveTarget(input, chain);
+  } catch (err) {
+    return { status: 404, body: { error: err instanceof Error ? err.message : 'Token could not be resolved' } };
+  }
 
-  const response = buildEvmResponse(contractAddress, chainId, sec, dexData);
-  const aiText = await buildAiAnalysis(response);
-  if (aiText) (response as any).aiAnalysis = aiText;
-  return { status: 200, body: response };
+  const result = await runDeepScan(target);
+
+  // Honest "could not verify" guard: if every security source came back empty
+  // AND there is no market data, we cannot claim any verdict.
+  const anySourceOk = result.sources.some((s) => s.ok);
+  if (!anySourceOk && !result.dexData) {
+    return {
+      status: 200,
+      body: {
+        error: 'Could not verify this token — no security or market source returned data.',
+        couldNotVerify: true,
+        contract: result.contract,
+        chainId: result.chainId,
+        sources: result.sources,
+      },
+    };
+  }
+
+  const aiText = await buildAiAnalysis(result);
+  const body: Record<string, unknown> = { ...result };
+  if (aiText) body.aiAnalysis = aiText;
+  return { status: 200, body };
 }
 
 // ─── POST Handler ─────────────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
   try {
-    const { contract, chain = 'ethereum' } = await request.json() as {
-      contract?: string;
-      chain?: string;
-    };
-
-    if (!contract) {
-      return NextResponse.json({ error: 'Contract address required' }, { status: 400 });
-    }
-
+    const { contract, chain = 'ethereum' } = await request.json() as { contract?: string; chain?: string };
+    if (!contract) return NextResponse.json({ error: 'Contract address required' }, { status: 400 });
     const { status, body } = await runTokenScan(contract, chain);
     return NextResponse.json(body, { status, headers: SCAN_CACHE_HEADERS });
   } catch (err: unknown) {
@@ -371,9 +171,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const contract = searchParams.get('contract');
     const chain = searchParams.get('chain') || 'ethereum';
-    if (!contract) {
-      return NextResponse.json({ error: 'Contract address required (use ?contract=0x...)' }, { status: 400 });
-    }
+    if (!contract) return NextResponse.json({ error: 'Contract address required (use ?contract=0x...)' }, { status: 400 });
     const { status, body } = await runTokenScan(contract, chain);
     return NextResponse.json(body, { status, headers: SCAN_CACHE_HEADERS });
   } catch (err: unknown) {

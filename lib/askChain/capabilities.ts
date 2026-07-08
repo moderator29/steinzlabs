@@ -1,5 +1,6 @@
 import 'server-only';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { getTokenSecurity } from '@/lib/services/goplus';
 
 // Ask the Chain — SAFE natural-language query engine.
 //
@@ -167,10 +168,15 @@ export async function runCapability(input: CapabilityInput): Promise<CapabilityR
       const since = new Date(Date.now() - hours * 3600_000).toISOString();
       const action = ['buy', 'sell', 'swap'].includes(input.action || '') ? input.action! : null;
       const minUsd = Math.max(0, Number(input.min_usd) || 0);
+      // "Biggest moves" must rank by a REAL dollar size. ~40% of whale_activity
+      // rows have a null value_usd (USD wasn't resolvable at ingest); Postgres
+      // sorts DESC as NULLS FIRST, so without this guard the top of the list was
+      // entirely $0/unknown rows. Require a non-null value and rank nulls last.
       let q = sb.from('whale_activity')
         .select('whale_address, token_symbol, action, value_usd, chain, timestamp')
         .gte('timestamp', since)
-        .order('value_usd', { ascending: false })
+        .not('value_usd', 'is', null)
+        .order('value_usd', { ascending: false, nullsFirst: false })
         .limit(limit);
       if (chain) q = q.eq('chain', chain);
       if (action) q = q.eq('action', action);
@@ -191,27 +197,44 @@ export async function runCapability(input: CapabilityInput): Promise<CapabilityR
       };
     }
     case 'token_safety': {
-      const token = (input.token || '').trim();
-      if (!token) return empty('token_safety', 'No token was specified.');
-      let q = sb.from('token_risk_scores')
-        .select('token_address, chain, risk_score, risk_level, risk_reasons, scanned_at')
-        .ilike('token_address', token)
-        .order('scanned_at', { ascending: false })
-        .limit(limit);
-      if (chain) q = q.eq('chain', chain);
-      const { data } = await q;
-      return {
-        capability: 'token_safety',
-        columns: ['token_address', 'chain', 'risk_score', 'risk_level'],
-        rows: (data ?? []).map((r) => ({
-          token_address: r.token_address,
-          chain: r.chain,
-          risk_score: r.risk_score,
-          risk_level: r.risk_level,
-          risk_reasons: Array.isArray(r.risk_reasons) ? r.risk_reasons.join(', ') : null,
-        })),
-        summaryHint: `Latest security scan for ${token}.`,
-      };
+      // The token_risk_scores table is not populated, so a stale DB read would
+      // always return an honest-but-useless empty. Instead run a LIVE security
+      // scan through the same GoPlus service the Context Feed's rug alerts use —
+      // real honeypot / tax / mint / concentration facts, on demand. Requires a
+      // contract address (a bare symbol can't be resolved to one chain safely).
+      const token = (input.token || input.address || '').trim();
+      if (!token) return empty('token_safety', 'Give me a token contract address (0x… or a Solana mint) to run a security scan.');
+      const isEvm = /^0x[a-fA-F0-9]{40}$/.test(token);
+      const isSol = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(token);
+      if (!isEvm && !isSol) {
+        return empty('token_safety', `"${token}" looks like a symbol — paste the token's contract address (0x… or a Solana mint) and I'll run a live security scan on it.`);
+      }
+      const scanChain = chain ?? (isSol ? 'solana' : 'ethereum');
+      const short = `${token.slice(0, 6)}…${token.slice(-4)}`;
+      try {
+        const sec = await getTokenSecurity(token, scanChain);
+        // All values kept as strings so the client's numeric USD formatter
+        // never mistakes a score/percent for a dollar figure.
+        const rows: CapabilityResultRow[] = [
+          { check: 'Safety rating', result: sec.safetyLevel },
+          { check: 'Trust score', result: `${Math.round(sec.trustScore)}/100` },
+          { check: 'Honeypot', result: sec.isHoneypot ? 'YES — cannot sell' : 'No' },
+          { check: 'Buy tax', result: `${(sec.buyTax * 100).toFixed(1)}%` },
+          { check: 'Sell tax', result: `${(sec.sellTax * 100).toFixed(1)}%` },
+          { check: 'Mintable supply', result: sec.isMintable ? 'Yes' : 'No' },
+          { check: 'Owner can change balances', result: sec.ownerCanChangeBalance ? 'Yes' : 'No' },
+          { check: 'Largest holder', result: sec.topHolderPct > 0 ? `${(sec.topHolderPct * 100).toFixed(1)}% of supply` : 'unknown' },
+          { check: 'Holders', result: sec.holderCount > 0 ? sec.holderCount.toLocaleString() : 'unknown' },
+        ];
+        return {
+          capability: 'token_safety',
+          columns: ['check', 'result'],
+          rows,
+          summaryHint: `Live security scan of ${short} on ${scanChain}: rated ${sec.safetyLevel}, trust ${Math.round(sec.trustScore)}/100${sec.isHoneypot ? ', flagged as a honeypot' : ''}. Buy/sell tax ${(sec.buyTax * 100).toFixed(1)}%/${(sec.sellTax * 100).toFixed(1)}%.`,
+        };
+      } catch {
+        return empty('token_safety', `The security provider could not scan ${short} right now — try again in a moment.`);
+      }
     }
     case 'smart_money_flows': {
       // Net accumulation/distribution per token over a window (default 7d).

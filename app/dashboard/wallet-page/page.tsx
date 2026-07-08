@@ -232,6 +232,24 @@ function resolveCoinGeckoId(symbol: string, chain: { coinGeckoId: string }): str
   return SYMBOL_TO_CG[symbol.toUpperCase()] || chain.coinGeckoId;
 }
 
+// Whole-portfolio net worth across every priced chain the multi-chain fan-out
+// fetched. Sums each chain's REAL total (never fabricated); if the active chain
+// wasn't covered by the fan-out (an opt-in L2 we can't price yet) its standalone
+// total is added so its balance still counts. Falls back to the active chain
+// alone until the fan-out resolves, so first paint is never blank.
+function computePortfolioTotal(
+  multiChainBalances: Record<string, WalletData | null>,
+  walletData: WalletData | null,
+  activeChainId: string,
+): { hasMulti: boolean; total: number } {
+  const vals = Object.values(multiChainBalances);
+  const hasMulti = vals.some((d) => d !== null);
+  const multiSum = vals.reduce((s, d) => s + (d ? parseFloat(d.totalBalanceUsd || '0') : 0), 0);
+  const activeCovered = multiChainBalances[activeChainId] != null;
+  const activeTotal = walletData ? parseFloat(walletData.totalBalanceUsd || '0') : 0;
+  return { hasMulti, total: hasMulti ? multiSum + (activeCovered ? 0 : activeTotal) : activeTotal };
+}
+
 // encryptPrivateKey + decryptPrivateKey were defined here as file-locals.
 // They now live in lib/wallet/encryption.ts; see the top-of-file import.
 
@@ -621,24 +639,64 @@ export default function WalletPage() {
     } finally { setLoading(false); }
   }, []);
 
-  const fetchMultiChainBalances = useCallback(async (address: string) => {
+  const fetchMultiChainBalances = useCallback(async (evmAddress: string, solanaAddress?: string) => {
     setMultiChainLoading(true);
+    // Only chains the intelligence pipeline can actually price (LIVE_CHAINS),
+    // intersected with the user's enabled set. Everything else stays a native-
+    // placeholder row below, so the aggregate total is only ever REAL priced
+    // data — never a fabricated or mislabeled figure.
+    const chainsToFetch = SUPPORTED_CHAINS.filter(
+      (c) => enabledChains.includes(c.id) && LIVE_CHAINS.includes(c.id),
+    );
+    if (chainsToFetch.length === 0) {
+      setMultiChainBalances({});
+      setMultiChainLoading(false);
+      return;
+    }
+    // Single lightweight fan-out (one request → all chains) via the wallet
+    // portfolio endpoint. Response is keyed by server `apiChain` (bnb → bsc,
+    // Solana under the derived base58 pubkey passed as `sol`); map each entry
+    // back to the client chain id so multiChainBalances stays id-keyed.
+    const apiChains = chainsToFetch.map((c) => c.apiChain).join(',');
+    const params = new URLSearchParams({ chains: apiChains });
+    if (evmAddress) params.set('evm', evmAddress);
+    if (solanaAddress) params.set('sol', solanaAddress);
     const results: Record<string, WalletData | null> = {};
-    const promises = LIVE_CHAINS.map(async (chainId) => {
-      try {
-        const res = await fetch(`/api/wallet-intelligence?address=${address}&chain=${chainId}`);
-        if (res.ok) { results[chainId] = await res.json(); }
-        else { results[chainId] = null; }
-      } catch { results[chainId] = null; }
-    });
-    await Promise.all(promises);
+    try {
+      const res = await fetch(`/api/wallet/portfolio?${params.toString()}`, {
+        signal: AbortSignal.timeout(15_000),
+        cache: 'no-store',
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { chains?: Record<string, { totalBalanceUsd: string; holdings: WalletData['holdings'] } | null> };
+        for (const c of chainsToFetch) {
+          const entry = data.chains?.[c.apiChain] ?? null;
+          results[c.id] = entry
+            ? ({ address: evmAddress, totalBalanceUsd: entry.totalBalanceUsd, holdings: entry.holdings ?? [], tokenCount: (entry.holdings ?? []).length, chain: c.id } as WalletData)
+            : null;
+        }
+      } else {
+        for (const c of chainsToFetch) results[c.id] = null;
+      }
+    } catch {
+      for (const c of chainsToFetch) results[c.id] = null;
+    }
     setMultiChainBalances(results);
     setMultiChainLoading(false);
-  }, []);
+  }, [enabledChains]);
 
   useEffect(() => {
     if (activeWallet) fetchBalances(activeWallet.address, activeChain);
   }, [activeWallet, activeChain, fetchBalances]);
+
+  // Multi-chain net-worth fan-out. Runs once per wallet (and whenever the
+  // enabled-chains set changes) rather than on every chain-pill switch, so
+  // the hero "Total Balance" and the holdings list reflect the REAL combined
+  // portfolio across every priced chain — EVM chains via the 0x address and
+  // Solana via the derived base58 pubkey — instead of only the active chain.
+  useEffect(() => {
+    if (activeWallet) fetchMultiChainBalances(activeWallet.address, activeWallet.solanaAddress);
+  }, [activeWallet, fetchMultiChainBalances]);
 
   // Deep-link hydration from the coin-detail page's Send / Receive
   // buttons. URL shape: ?action=send|receive[&chain=<id>]. If chain is
@@ -758,9 +816,11 @@ export default function WalletPage() {
     return () => { cancelled = true; };
   }, [customTokens]);
 
-  // CountUp animation: runs whenever walletData changes
+  // CountUp animation: animates to the whole-portfolio net worth (all priced
+  // chains), re-running when either the active-chain data or the multi-chain
+  // fan-out resolves so the headline lands on the combined total, not one chain.
   useEffect(() => {
-    const target = walletData ? parseFloat(walletData.totalBalanceUsd || '0') : 0;
+    const target = computePortfolioTotal(multiChainBalances, walletData, activeChain.id).total;
     if (target === 0) { setDisplayBalance(0); return; }
     const duration = 800;
     const steps = 40;
@@ -772,7 +832,7 @@ export default function WalletPage() {
       else setDisplayBalance(current);
     }, duration / steps);
     return () => clearInterval(interval);
-  }, [walletData]);
+  }, [walletData, multiChainBalances, activeChain.id]);
 
   // Load recent activity from localStorage swap history
   useEffect(() => {
@@ -979,14 +1039,29 @@ export default function WalletPage() {
     if (activeWallet?.address === addr) setActiveWallet(prev => prev ? { ...prev, name: newName } : null);
   };
 
-  const totalMultiChainUsd = Object.values(multiChainBalances).reduce((sum, data) => {
-    if (data) return sum + parseFloat(data.totalBalanceUsd || '0');
-    return sum;
-  }, 0);
+  // Whole-portfolio net worth (all priced chains) — the same figure the hero
+  // CountUp animates to. `hasMulti` gates the multi-chain 24h blend below.
+  const { hasMulti: hasMultiChain, total: currentBalance } =
+    computePortfolioTotal(multiChainBalances, walletData, activeChain.id);
 
-  const currentBalance = walletData ? parseFloat(walletData.totalBalanceUsd || '0') : 0;
-  const currentPrice = prices[activeChain.id];
-  const priceChange = currentPrice?.usd_24h_change || 0;
+  // Portfolio 24h change. Value-weights each priced chain's native-asset 24h%
+  // (real CoinGecko data already in `prices`) by that chain's balance, giving a
+  // blended figure across everything the wallet holds rather than applying one
+  // chain's move to the whole balance. Falls back to the active chain's native
+  // change until the multi-chain fan-out resolves. This is a native-asset proxy
+  // (per-ERC20 24h deltas aren't fetched), consistent across the portfolio.
+  let priceChange = prices[activeChain.id]?.usd_24h_change || 0;
+  if (hasMultiChain) {
+    let weighted = 0;
+    let weight = 0;
+    for (const [cid, data] of Object.entries(multiChainBalances)) {
+      if (!data) continue;
+      const tot = parseFloat(data.totalBalanceUsd || '0');
+      const chg = prices[cid]?.usd_24h_change;
+      if (tot > 0 && typeof chg === 'number') { weighted += tot * chg; weight += tot; }
+    }
+    if (weight > 0) priceChange = weighted / weight;
+  }
 
   if (view === 'create') return <CreateWalletView onBack={() => setView('main')} onCreated={handleWalletCreated} />;
   if (view === 'import') return <ImportWalletView onBack={() => setView('main')} onImported={handleWalletImported} />;
@@ -1084,15 +1159,32 @@ export default function WalletPage() {
     // hydrated custom token (Naka Go, Pleasure Coin, user adds).
     // Custom rows always appear even when balance is zero so the user
     // can see the price + click through to the coin-detail page.
-    const onChain = (walletData?.holdings || []).map((t) => ({
-      ...t,
-      chain: activeChain.id,
-    })) as Array<TokenBalance & { chain: string }>;
     // Identity key for a holding: chain + contract (chain-aware normalized so
     // Solana keeps its case) or, for native assets with no contract, the
     // lowercased symbol (matches the native-placeholder key below).
     const tokenKey = (chain: string, contractAddress: string | null | undefined, symbol: string) =>
       `${chain}:${contractAddress ? normalizeAddress(contractAddress, chain) : symbol.toLowerCase()}`;
+    // REAL holdings from every priced chain the multi-chain fan-out fetched,
+    // not just the active chain. This is what turns the list into a true
+    // cross-chain portfolio: SOL / MATIC / ARB / BNB balances all show at once
+    // with their real amounts + USD values, instead of $0 native placeholders.
+    // Active chain first (freshest, just re-fetched by fetchBalances), then the
+    // rest of the fan-out; de-duped so a chain never double-counts.
+    const onChain: Array<TokenBalance & { chain: string }> = [];
+    const onChainSeen = new Set<string>();
+    const pushHoldings = (chainId: string, holdings: TokenBalance[] | undefined) => {
+      for (const h of holdings || []) {
+        const k = tokenKey(chainId, h.contractAddress, h.symbol);
+        if (onChainSeen.has(k)) continue;
+        onChainSeen.add(k);
+        onChain.push({ ...h, chain: chainId });
+      }
+    };
+    pushHoldings(activeChain.id, walletData?.holdings);
+    for (const [cid, data] of Object.entries(multiChainBalances)) {
+      if (cid === activeChain.id || !data) continue;
+      pushHoldings(cid, data.holdings);
+    }
     const seen = new Set(onChain.map((t) => tokenKey(t.chain, t.contractAddress, t.symbol)));
     const customOnly = customTokenRows.filter((t) =>
       !seen.has(tokenKey(t.chain, t.contractAddress, t.symbol))
@@ -1392,7 +1484,7 @@ export default function WalletPage() {
                       {hideBalance ? '••••••' : `$${displayBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                     </span>
                   </div>
-                  {!hideBalance && LIVE_CHAINS.includes(activeChain.id) && (
+                  {!hideBalance && (hasMultiChain || LIVE_CHAINS.includes(activeChain.id)) && priceChange !== 0 && (
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm border ${
                       pnlPositive ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
                     }`}>
@@ -1407,7 +1499,7 @@ export default function WalletPage() {
                     {copiedAddress ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-slate-500" />}
                   </button>
                 </div>
-                <button onClick={() => { if (activeWallet) { fetchBalances(activeWallet.address, activeChain); fetchPrices(); } }} disabled={loading} className="p-2 hover:bg-white/5 rounded-xl transition-colors ms-2 mt-1">
+                <button onClick={() => { if (activeWallet) { fetchBalances(activeWallet.address, activeChain); fetchMultiChainBalances(activeWallet.address, activeWallet.solanaAddress); fetchPrices(); } }} disabled={loading} className="p-2 hover:bg-white/5 rounded-xl transition-colors ms-2 mt-1">
                   <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
                 </button>
               </div>

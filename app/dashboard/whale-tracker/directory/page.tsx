@@ -86,10 +86,12 @@ const ENTITY_PILLS: Array<{ id: string; label: string; Icon: typeof Users }> = [
   { id: 'influencer', label: 'Public Figures', Icon: Users },
 ];
 
+// Portfolio Value is the DEFAULT — biggest whales lead page one. The rest
+// remain selectable so the score / volume / PnL rosters still work.
 const SORT_OPTIONS = [
+  { id: 'portfolio', label: 'Portfolio Value' },
   { id: 'score', label: 'Whale Score' },
   { id: 'volume', label: 'DEX Volume 7d' },
-  { id: 'portfolio', label: 'Portfolio Value' },
   { id: 'pnl_30d', label: 'PnL 30d' },
   { id: 'win_rate', label: 'Win Rate' },
   { id: 'recent_activity', label: 'Recently Active' },
@@ -180,7 +182,7 @@ export default function WhaleDirectoryPage() {
   const [chain, setChain] = useState('');
   const [entityType, setEntityType] = useState('');
   const [q, setQ] = useState('');
-  const [sort, setSort] = useState<string>('score');
+  const [sort, setSort] = useState<string>('portfolio');
   const [minScore, setMinScore] = useState(0);
   const [timeframe, setTimeframe] = useState('30d');
   const [performance, setPerformance] = useState('');

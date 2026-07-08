@@ -78,7 +78,13 @@ async function executeTokenSecurityScan(input: Record<string, unknown>): Promise
 }
 
 async function executeTokenMarketData(input: Record<string, unknown>): Promise<string> {
-  const identifier = input.identifier as string;
+  // Guard: a malformed tool call with no identifier must return an honest
+  // "need an identifier" instead of throwing on identifier.toUpperCase() and
+  // aborting the whole turn.
+  const identifier = typeof input.identifier === 'string' ? input.identifier.trim() : '';
+  if (!identifier) {
+    return JSON.stringify({ unavailable: true, note: 'token_market_data needs an identifier (symbol, name, or contract address).' });
+  }
   // Only honor an EXPLICIT chain from the model. Defaulting to 'ethereum'
   // here made a chainless symbol query (e.g. "BONK") filter down to
   // ethereum-only pairs — i.e. bridged/fake ERC-20 clones — hiding the real
@@ -124,6 +130,7 @@ async function executeTokenMarketData(input: Record<string, unknown>): Promise<s
       pairs = [...pairs].sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0));
     }
     if (pairs.length > 0) {
+      const best = pairs[0];
       const top = isAddress ? pairs.slice(0, 3) : pairs.slice(0, 1);
       lines.push(`PRIMARY SOURCE - on-chain DexScreener data for "${identifier}"${onChain.length > 0 ? ` (chain: ${chain})` : ''}:`);
       for (const p of top) {
@@ -145,6 +152,56 @@ async function executeTokenMarketData(input: Record<string, unknown>): Promise<s
         lines.push(`  Contract: ${p.baseToken.address}`);
         lines.push('');
       }
+
+      // Socials + website — real, straight from the DexScreener pair metadata.
+      // Emitted only when present so we never imply a project has channels it
+      // doesn't.
+      const sites = (best.info?.websites ?? []).filter((w) => w?.url);
+      const socials = (best.info?.socials ?? []).filter((s) => s?.url);
+      if (sites.length || socials.length) {
+        const parts = [
+          ...sites.map((w) => `${w.label || 'website'}: ${w.url}`),
+          ...socials.map((s) => `${s.type}: ${s.url}`),
+        ];
+        lines.push(`  Socials/links: ${parts.join(' | ')}`);
+      }
+
+      // Where else it trades — a real liquidity map (top other pools) so the
+      // model can speak to multi-chain / multi-DEX depth without inventing
+      // venues. Symbol queries only (an address query already lists 3 pairs).
+      if (!isAddress && pairs.length > 1) {
+        const others = pairs.slice(1, 4)
+          .map((p) => `${p.chainId}/${p.dexId} ($${Math.round(p.liquidity?.usd ?? 0).toLocaleString()} liq)`)
+          .join(', ');
+        if (others) lines.push(`  Also trades on: ${others}`);
+        lines.push('');
+      }
+
+      // Best-effort on-chain security + holder depth for the resolved contract,
+      // via the same GoPlus scanner the token card and swap gate use — so the
+      // agent can flag honeypots / taxes / concentration on a long-tail token
+      // instead of only quoting price. Gated + graceful: an unavailable scan is
+      // omitted, never fabricated, and never blocks the price answer.
+      try {
+        const secChain = best.chainId || chain || (best.baseToken.address.startsWith('0x') ? 'ethereum' : 'solana');
+        const sec = await getTokenSecurity(best.baseToken.address, secChain);
+        if (sec) {
+          lines.push(`ON-CHAIN SECURITY (scan of ${best.baseToken.symbol} on ${secChain}):`);
+          lines.push(`  Safety: ${sec.safetyLevel} (trust ${sec.trustScore}/100)`);
+          lines.push(`  Honeypot: ${sec.isHoneypot ? 'YES' : 'No'} | Buy tax: ${(sec.buyTax * 100).toFixed(1)}% | Sell tax: ${(sec.sellTax * 100).toFixed(1)}%`);
+          if (sec.holderCount > 0) lines.push(`  Holders: ${sec.holderCount.toLocaleString()}`);
+          if (sec.topHolderPct > 0) lines.push(`  Largest holder: ${(sec.topHolderPct * 100).toFixed(1)}% of supply`);
+          const flags: string[] = [];
+          if (sec.isMintable) flags.push('mintable');
+          if (sec.ownerCanChangeBalance) flags.push('owner can modify balances');
+          if (sec.hasHiddenOwner) flags.push('hidden owner');
+          if (sec.canTakeBackOwnership) flags.push('ownership reclaimable');
+          if (sec.cannotSellAll) flags.push('cannot sell all');
+          if (sec.freezable) flags.push('freeze authority active');
+          if (flags.length) lines.push(`  Flags: ${flags.join(', ')}`);
+          lines.push('');
+        }
+      } catch { /* security scan unavailable — omit honestly, keep the price data */ }
     }
   } catch { /* fall through */ }
 
@@ -706,6 +763,29 @@ export async function executeVTXTool(
   toolName: string,
   toolInput: Record<string, unknown>,
   userId: string | null = null,
+): Promise<string> {
+  try {
+    return await dispatchVTXTool(toolName, toolInput, userId);
+  } catch (err) {
+    // Central graceful-degradation backstop: no individual tool failure may
+    // bubble up and abort the whole VTX turn. Every executor is expected to
+    // handle its own errors, but this catch guarantees the invariant even for
+    // an unhandled rejection (bad input, provider 5xx, timeout). Returns an
+    // honest "unavailable" so the model answers with the other tools' real
+    // data and never fabricates a substitute.
+    return JSON.stringify({
+      unavailable: true,
+      tool: toolName,
+      error: err instanceof Error ? err.message : String(err),
+      note: "This data source could not be reached. Use the other tools' real results and state honestly that this one was unavailable.",
+    });
+  }
+}
+
+async function dispatchVTXTool(
+  toolName: string,
+  toolInput: Record<string, unknown>,
+  userId: string | null,
 ): Promise<string> {
   switch (toolName) {
     case 'token_security_scan':  return executeTokenSecurityScan(toolInput);

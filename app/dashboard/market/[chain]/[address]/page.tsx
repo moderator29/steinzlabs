@@ -36,6 +36,7 @@ import { useTheme } from "@/lib/theme/ThemeProvider";
 import InlineBuySellForm from "@/components/market/InlineBuySellForm";
 import RecentTradesRail from "@/components/market/RecentTradesRail";
 import BuySellRatioBar from "@/components/market/BuySellRatioBar";
+import TokenStatsPanel from "@/components/market/TokenStatsPanel";
 import PortfolioHistoryPanel from "@/components/market/PortfolioHistoryPanel";
 import { BackButton } from "@/components/ui/BackButton";
 import { useTokenDetail } from "@/hooks/market/useTokenDetail";
@@ -242,6 +243,19 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
     });
   };
 
+  // Panel Buy/Sell actions scroll to the live trade form — the desktop right
+  // rail on lg+, or the mobile inline form below the chart otherwise.
+  const scrollToTrade = () => {
+    if (typeof document === 'undefined') return;
+    const desktop = document.getElementById('desktop-trade-form');
+    const mobile = document.getElementById('mobile-trade-form');
+    // Prefer whichever form is actually visible (offsetParent is null when the
+    // element is display:none, e.g. the desktop rail on a phone).
+    const visible = (el: HTMLElement | null) => (el && el.offsetParent !== null ? el : null);
+    const target = visible(desktop) ?? visible(mobile) ?? desktop ?? mobile;
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
   const md = detail?.market_data;
   const price = md?.current_price?.usd ?? 0;
   const change1h = (md as any)?.price_change_percentage_1h_in_currency?.usd ?? 0;
@@ -444,8 +458,27 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
         </div>
       </div>
 
-      {/* Body — checkprice-style 2-column on desktop, stacked on mobile */}
+      {/* Body — 3-column on lg (stats panel · chart · trade rail), 2-column on
+          md (chart · trade rail), stacked on mobile (stats panel on top). */}
       <div className="flex-1 min-h-0 flex flex-col md:flex-row">
+        {/* LEFT stats panel — OUR aurora take on the DEX token panel. Single
+            instance: shows on mobile (stacked, top) and lg+ (left column),
+            hidden at md where 3 columns would crowd. Real DexScreener /
+            GeckoTerminal / CoinGecko data, ~4s live refresh. */}
+        <aside className="flex md:hidden lg:flex w-full lg:w-[300px] shrink-0 flex-col p-3 lg:p-3 lg:border-r lg:border-slate-800/50">
+          <TokenStatsPanel
+            chain={chain}
+            address={address}
+            initialName={detail?.name}
+            initialSymbol={symbol}
+            initialLogo={logo}
+            watched={watched}
+            onToggleWatch={() => toggleWatchlist(address)}
+            onBuy={scrollToTrade}
+            onSell={scrollToTrade}
+          />
+        </aside>
+
         <div className="flex-1 min-w-0 flex flex-col">
           {/*
             Audit M3 — interval selector + fullscreen toggle. Restored
@@ -658,7 +691,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
         </div>
 
         {/* Desktop right rail — buy/sell + recent trades */}
-        <aside className="hidden md:block w-[320px] shrink-0 nl-glass rounded-none overflow-y-auto p-3 space-y-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+        <aside id="desktop-trade-form" className="hidden md:block w-[320px] shrink-0 nl-glass rounded-none overflow-y-auto p-3 space-y-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
           <InlineBuySellForm
             symbol={symbol}
             chain={chain}

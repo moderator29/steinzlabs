@@ -27,9 +27,30 @@ interface TokenHolding {
 interface PartnerWallet {
   address: string;
   txCount: number;
-  volume: string;
-  label: string;
+  inbound: number;
+  outbound: number;
+  volumeUsd: number;
+  label: string | null;
+  category: string | null;
+  parent: string | null;
 }
+
+interface WalletEntity {
+  name: string;
+  type: string;
+  parent: string | null;
+  verified: boolean;
+  source: 'registry' | 'arkham';
+}
+
+const CP_CATEGORY_STYLE: Record<string, { label: string; color: string }> = {
+  cex: { label: 'CEX', color: '#F0B90B' },
+  dex: { label: 'DEX', color: '#6F7EFF' },
+  bridge: { label: 'Bridge', color: '#28A0F0' },
+  mixer: { label: 'Mixer', color: '#EF4444' },
+  'market-maker': { label: 'Market Maker', color: '#10B981' },
+  lending: { label: 'Lending', color: '#8B7CFF' },
+};
 
 interface SectorBreakdown {
   memecoins: number;
@@ -111,6 +132,7 @@ interface DNAData {
   aiAnalysis: AIAnalysis | null;
   recentTransactions: RecentTx[];
   coinsWorthWatching?: CoinWorthWatching[];
+  entity?: WalletEntity | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -645,9 +667,22 @@ export default function DNAAnalyzerPage() {
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-mono text-sm text-gray-300">{shortAddr(dna.address)}</span>
                 <CopyButton text={dna.address} />
+                {dna.entity && (
+                  <span
+                    className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold border"
+                    style={{ color: '#F0B90B', borderColor: '#F0B90B40', backgroundColor: '#F0B90B14' }}
+                    title={`Identified entity${dna.entity.verified ? ' (verified)' : ''} · source: ${dna.entity.source}`}
+                  >
+                    <Award className="w-3 h-3" />
+                    {dna.entity.name}
+                    {dna.entity.parent && dna.entity.parent !== dna.entity.name && (
+                      <span className="opacity-70">· {dna.entity.parent}</span>
+                    )}
+                  </span>
+                )}
                 <span className="ms-auto text-[10px] px-2 py-0.5 rounded-full bg-[#0066FF]/20 text-[#0066FF] font-semibold">{dna.chain}</span>
               </div>
 
@@ -784,22 +819,32 @@ export default function DNAAnalyzerPage() {
                   <span className="font-bold text-sm">Partner Wallets</span>
                   <span className="text-[10px] text-gray-500 ms-1">Most frequent counterparties</span>
                 </div>
-                {dna.partnerWallets.slice(0, 5).map((pw, i) => (
+                {dna.partnerWallets.slice(0, 5).map((pw, i) => {
+                  const cat = pw.category ? CP_CATEGORY_STYLE[pw.category] : null;
+                  return (
                   <div key={i} className="bg-white/5 rounded-lg p-3 flex items-center gap-3">
                     <div className="w-7 h-7 bg-[#10B981]/10 rounded-full flex items-center justify-center text-xs font-bold text-[#10B981] flex-shrink-0">
                       {i + 1}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-mono text-white">{shortAddr(pw.address)}</span>
+                        <span className="text-xs font-mono text-white truncate">{pw.label || shortAddr(pw.address)}</span>
                         <CopyButton text={pw.address} />
+                        {cat && (
+                          <span className="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded font-bold flex-shrink-0"
+                            style={{ color: cat.color, backgroundColor: `${cat.color}20` }}>
+                            {cat.label}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 mt-0.5">
-                        <span className="text-[10px] text-gray-400">{pw.txCount} txs</span>
-                        {parseFloat(pw.volume) > 0 && (
-                          <span className="text-[10px] text-gray-400">{parseFloat(pw.volume).toFixed(4)} ETH</span>
+                        <span className="text-[10px] text-gray-400">{pw.txCount} {pw.txCount === 1 ? 'tx' : 'txs'}</span>
+                        <span className="text-[10px] font-mono">
+                          <span className="text-emerald-400">{pw.inbound}↓</span> <span className="text-red-400">{pw.outbound}↑</span>
+                        </span>
+                        {pw.volumeUsd > 0 && (
+                          <span className="text-[10px] text-gray-400">{fmtUsd(pw.volumeUsd)}</span>
                         )}
-                        <span className="text-[10px] px-1.5 py-0.5 bg-white/10 rounded text-gray-400">{pw.label}</span>
                       </div>
                     </div>
                     <button
@@ -813,7 +858,8 @@ export default function DNAAnalyzerPage() {
                       <Search className="w-3 h-3" /> Analyze
                     </button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
