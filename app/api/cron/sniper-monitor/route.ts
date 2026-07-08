@@ -238,12 +238,19 @@ export async function GET(request: NextRequest) {
         if (tickCapReached()) break;
         if (!a.token_address) continue;
 
+        // Normalize ONCE and use the same value for both the dedup probe and
+        // the insert. Events are stored with the normalized address, so a raw
+        // (checksummed EVM) probe never matches the stored lowercased row —
+        // that silently defeated dedup and let the same token re-fire every
+        // tick into a double snipe. Mirror matcher.ts, which computes the key once.
+        const normToken = normalizeAddress(a.token_address) ?? a.token_address;
+
         // Dedup: already matched this token+criteria in last 10 min
         const { count } = await admin
           .from("sniper_match_events")
           .select("id", { count: "exact", head: true })
           .eq("criteria_id", c.id)
-          .eq("matched_token_address", a.token_address)
+          .eq("matched_token_address", normToken)
           .gte("created_at", new Date(Date.now() - 10 * 60_000).toISOString());
         if ((count ?? 0) > 0) continue;
 
@@ -251,7 +258,7 @@ export async function GET(request: NextRequest) {
         const event = {
           criteria_id: c.id,
           user_id: c.user_id,
-          matched_token_address: normalizeAddress(a.token_address) ?? a.token_address,
+          matched_token_address: normToken,
           matched_chain: a.chain,
           trigger_reason: `Whale ${a.whale_address.slice(0, 8)}… bought $${(a.value_usd ?? 0).toLocaleString()}`,
           decision,
@@ -304,11 +311,15 @@ export async function GET(request: NextRequest) {
       for (const t of candidates) {
         if (tickCapReached()) break;
 
+        // Normalize ONCE — dedup must probe the same form we store, or a
+        // mixed-case DexScreener EVM address re-fires every tick (double snipe).
+        const normToken = normalizeAddress(t.token_address) ?? t.token_address;
+
         const { count } = await admin
           .from("sniper_match_events")
           .select("id", { count: "exact", head: true })
           .eq("criteria_id", c.id)
-          .eq("matched_token_address", t.token_address)
+          .eq("matched_token_address", normToken)
           .gte("created_at", new Date(Date.now() - 10 * 60_000).toISOString());
         if ((count ?? 0) > 0) continue;
 
@@ -316,7 +327,7 @@ export async function GET(request: NextRequest) {
         events.push({
           criteria_id: c.id,
           user_id: c.user_id,
-          matched_token_address: normalizeAddress(t.token_address) ?? t.token_address,
+          matched_token_address: normToken,
           matched_chain: t.chain,
           trigger_reason: `New token listed — liquidity $${(t.liquidity_usd ?? 0).toLocaleString()}, score ${t.security_score ?? "?"}`,
           decision,
@@ -354,11 +365,15 @@ export async function GET(request: NextRequest) {
         : price <= c.trigger_price_target;
       if (!hit) continue;
 
+      // Normalize ONCE — the "one fire per token per hour" probe must match the
+      // stored (normalized) address or a mixed-case EVM target re-fires hourly-cap-free.
+      const normToken = normalizeAddress(c.trigger_token_address) ?? c.trigger_token_address;
+
       const { count } = await admin
         .from("sniper_match_events")
         .select("id", { count: "exact", head: true })
         .eq("criteria_id", c.id)
-        .eq("matched_token_address", c.trigger_token_address)
+        .eq("matched_token_address", normToken)
         .gte("created_at", new Date(Date.now() - 60 * 60_000).toISOString());
       if ((count ?? 0) > 0) continue; // one fire per token per hour
 
@@ -366,7 +381,7 @@ export async function GET(request: NextRequest) {
       events.push({
         criteria_id: c.id,
         user_id: c.user_id,
-        matched_token_address: normalizeAddress(c.trigger_token_address) ?? c.trigger_token_address,
+        matched_token_address: normToken,
         matched_chain: targetChain,
         trigger_reason: `Price ${dir === "above" ? "≥" : "≤"} target — $${price} vs $${c.trigger_price_target}`,
         decision,
