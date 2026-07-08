@@ -136,6 +136,26 @@ const INDICATOR_OPTIONS: { key: keyof IndicatorConfig; label: string }[] = [
 const DEFAULT_INDICATORS: IndicatorConfig = { ema21: true, ema50: true, volume: true };
 const VALID_CHART_TYPES: ChartType[] = ['candlestick', 'line', 'area', 'bars'];
 
+// Volume-source routing — CoinGecko's /ohlc endpoint (used for slug-charted
+// coins) returns candles with NO volume, leaving the AdvancedChart volume
+// pane blank. When the detail payload exposes a real contract/pool we route
+// the OHLCV request to GeckoTerminal (real per-bar volume). These map a
+// coin's on-chain identity to a GeckoTerminal-supported network slug (mirrors
+// GT_NETWORK in lib/services/geckoterminal). Only nets that actually carry
+// pool OHLCV are listed; anything else leaves volume honestly empty.
+const CG_PLATFORM_TO_CHAIN: Record<string, string> = {
+  ethereum: 'ethereum',
+  'polygon-pos': 'polygon',
+  'binance-smart-chain': 'bsc',
+  solana: 'solana',
+  'arbitrum-one': 'arbitrum',
+  'optimistic-ethereum': 'optimism',
+  base: 'base',
+  avalanche: 'avalanche',
+};
+// DexScreener chainId values already line up with our GT network keys.
+const GT_SUPPORTED_NETS = new Set(['ethereum', 'polygon', 'bsc', 'solana', 'arbitrum', 'optimism', 'base', 'avalanche']);
+
 function readChartType(tokenKey: string): ChartType {
   if (typeof window === 'undefined') return 'candlestick';
   try {
@@ -243,6 +263,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
     change_h24?: number | null;
     // Audit P1 #20 — used by AdvancedChart fallback below
     pair_address?: string;
+    pair_chain_id?: string;
     liquidity_usd?: number | null;
   } | undefined;
   const vol5m = dex?.volume_m5;
@@ -267,6 +288,35 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
   // Wait for detail to load so we branch on the real ticker, not the
   // address slice — avoids a first-paint flip from Advanced → widget.
   const useWidget = !!detail && isKnownTradingViewSymbol(symbol);
+
+  // Real-volume routing for the AdvancedChart. The URL `address` is often a
+  // CoinGecko slug (e.g. "chainlink"), which the OHLCV route charts via
+  // CoinGecko /ohlc — candles only, NO volume. When the detail payload
+  // exposes the coin's real on-chain identity, hand it to the chart so the
+  // OHLCV route pulls REAL per-bar volume from GeckoTerminal instead.
+  //  1. DexScreener fallback payload already carries the deepest POOL address
+  //     + chain — best case, used directly.
+  //  2. Else pick a contract from CoinGecko `platforms`, preferring the one on
+  //     the page's chain, mapped to a GeckoTerminal-supported network.
+  // No on-chain identity → props stay undefined and the volume pane is left
+  // honestly empty (never synthesized).
+  const platforms = (detail as unknown as { platforms?: Record<string, string> } | null)?.platforms;
+  let volumeNetwork: string | undefined;
+  let volumeAddress: string | undefined;
+  let volumePair: string | undefined;
+  if (dex?.pair_address && dex.pair_chain_id && GT_SUPPORTED_NETS.has(dex.pair_chain_id)) {
+    volumeNetwork = dex.pair_chain_id;
+    volumePair = dex.pair_address;
+  } else if (platforms) {
+    const supported = Object.entries(platforms).filter(
+      ([plat, addr]) => !!addr && !!CG_PLATFORM_TO_CHAIN[plat],
+    );
+    const chosen = supported.find(([plat]) => CG_PLATFORM_TO_CHAIN[plat] === chain) ?? supported[0];
+    if (chosen) {
+      volumeNetwork = CG_PLATFORM_TO_CHAIN[chosen[0]];
+      volumeAddress = chosen[1];
+    }
+  }
 
   return (
     <div className="flex flex-col min-h-screen text-white pb-20 md:pb-0">
@@ -530,6 +580,9 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
                   chartType={chartType}
                   indicators={indicators}
                   height={chartFullscreen ? 0 : 560}
+                  volumeNetwork={volumeNetwork}
+                  volumeAddress={volumeAddress}
+                  volumePair={volumePair}
                 />
               )}
             </div>

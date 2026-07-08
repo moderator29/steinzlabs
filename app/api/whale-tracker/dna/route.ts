@@ -22,6 +22,8 @@ interface WhaleRow {
   pnl_30d_usd: number | null; portfolio_value_usd: number | null; volume_7d_usd: number | null;
   trade_count_30d: number | null; avg_hold_hours: number | null;
   archetype: string | null; verified: boolean | null; logo_url: string | null;
+  // Persisted unique Naka display number (whales.naka_number); null when absent.
+  naka_number: number | null;
 }
 
 const BUY_ACTIONS = new Set(['buy', 'transfer_in', 'swap']);
@@ -79,7 +81,7 @@ function jaccard(a: Set<string>, b: Set<string>): number {
   return inter / (a.size + b.size - inter);
 }
 
-const SELECT = 'address, chain, label, entity_type, win_rate, whale_score, pnl_30d_usd, portfolio_value_usd, volume_7d_usd, trade_count_30d, avg_hold_hours, archetype, verified, logo_url';
+const SELECT = 'address, chain, label, entity_type, win_rate, whale_score, pnl_30d_usd, portfolio_value_usd, volume_7d_usd, trade_count_30d, avg_hold_hours, archetype, verified, logo_url, naka_number';
 
 export async function GET(req: NextRequest) {
   const address = (req.nextUrl.searchParams.get('address') || '').trim();
@@ -118,7 +120,7 @@ export async function GET(req: NextRequest) {
       // Blend: metric shortlist score (0.7) + token overlap (0.3).
       const similarity = Math.round((m * 0.7 + overlap * 0.3) * 100);
       return {
-        address: c.address, label: c.label, chain: c.chain, archetype: c.archetype,
+        address: c.address, label: c.label, nakaNumber: c.naka_number ?? null, chain: c.chain, archetype: c.archetype,
         winRate: num(c.win_rate) != null ? Math.round(num(c.win_rate)!) : null,
         whaleScore: c.whale_score, verified: !!c.verified, logoUrl: c.logo_url,
         similarity, sharedTokens: shared,
@@ -130,7 +132,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     found: true,
     whale: {
-      address: target.address, label: target.label, chain: target.chain, entityType: target.entity_type,
+      address: target.address, label: target.label, nakaNumber: target.naka_number ?? null, chain: target.chain, entityType: target.entity_type,
       archetype: target.archetype, verified: !!target.verified, logoUrl: target.logo_url,
       winRate: num(target.win_rate) != null ? Math.round(num(target.win_rate)!) : null,
       whaleScore: target.whale_score, pnl30dUsd: num(target.pnl_30d_usd), portfolioUsd: num(target.portfolio_value_usd),

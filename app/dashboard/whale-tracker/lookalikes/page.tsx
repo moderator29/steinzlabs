@@ -10,6 +10,7 @@ import { Loader2, Dna, Search, BadgeCheck, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import BackButton from '@/components/ui/BackButton';
 import { WhaleAvatar } from '@/components/whales/WhaleAvatar';
+import { whaleDisplayName } from '@/lib/whales/naming';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { whaleLookalikesHowItWorks } from '@/lib/howItWorks/content/whale-lookalikes';
 
@@ -17,6 +18,8 @@ interface Whale {
   address: string; chain: string | null; label: string | null; archetype: string | null; verified: boolean;
   winRate: number | null; whaleScore: number | null; avgHoldHours: number | null;
   trades30d: number; volume7dUsd: number; similarity: number | null;
+  // Persisted unique Naka display number (whales.naka_number); null when absent.
+  nakaNumber: number | null;
 }
 interface Result { found: boolean; target: Whale; lookalikes: Whale[] }
 
@@ -87,7 +90,7 @@ export default function WhaleLookalikesPage() {
             <WhaleAvatar address={data.target.address} chain={data.target.chain} size={40} />
             <div className="min-w-0 flex-1">
               <div className="text-sm font-bold truncate inline-flex items-center gap-1">
-                {data.target.label || short(data.target.address)}
+                {whaleDisplayName({ label: data.target.label, nakaNumber: data.target.nakaNumber, address: data.target.address, chain: data.target.chain })}
                 {data.target.verified && <BadgeCheck className="w-3.5 h-3.5 text-[#00C8FF]" />}
               </div>
               <div className="text-[11px] text-slate-500">{data.target.archetype || 'whale'} · {data.target.chain?.toUpperCase() || '—'}</div>
@@ -106,7 +109,7 @@ export default function WhaleLookalikesPage() {
                 <WhaleAvatar address={w.address} chain={w.chain} size={34} />
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-semibold truncate inline-flex items-center gap-1">
-                    {w.label || short(w.address)}
+                    {whaleDisplayName({ label: w.label, nakaNumber: w.nakaNumber, address: w.address, chain: w.chain })}
                     {w.verified && <BadgeCheck className="w-3 h-3 text-[#00C8FF]" />}
                   </div>
                   <div className="text-[10px] text-slate-500">

@@ -4,6 +4,7 @@ import {
   getGlobalMarketData,
   getTrendingTokens,
   type GlobalMarketData,
+  type CoinGeckoMarketToken,
 } from '@/lib/services/coingecko';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { vtxAnalyze } from '@/lib/services/anthropic';
@@ -25,6 +26,14 @@ export interface BriefToken {
   image: string;
   price: number;
   changePct: number;
+  // Extra REAL fields carried from CoinGecko /coins/markets. Optional because
+  // trending coins (a lighter payload) do not include them; consumers render
+  // them only when present.
+  change1hPct?: number;
+  change7dPct?: number;
+  volume?: number;
+  marketCap?: number;
+  rank?: number;
 }
 
 export interface BriefWhaleMove {
@@ -58,6 +67,12 @@ export interface DailyBrief {
   trending: BriefToken[];
   whaleMoves: BriefWhaleMove[];
   vibe: MarketVibe;
+  // Extra REAL aggregates computed from the same top-100 snapshot.
+  majors: BriefToken[];
+  volumeLeaders: BriefToken[];
+  advancers: number;
+  decliners: number;
+  breadthUniverse: number;
 }
 
 // ─── Formatting (dash-free) ─────────────────────────────────────────────────
@@ -158,21 +173,34 @@ async function fetchWhaleMoves(): Promise<BriefWhaleMove[]> {
 
 // ─── HTML section builders (self-contained inline styles) ───────────────────
 
+function tokenCell(t: BriefToken): string {
+  const rank = typeof t.rank === 'number' ? `<span style="color:#475569;font-size:10px;font-weight:600">#${t.rank}</span> ` : '';
+  return `
+    <td style="padding:10px 8px;border-bottom:1px solid rgba(255,255,255,0.06)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <img src="${esc(t.image)}" alt="" width="24" height="24" style="border-radius:50%;background:#0b0f1e"/>
+        <div>
+          <div style="color:#f1f5f9;font-weight:700;font-size:13px">${esc(t.symbol.toUpperCase())}</div>
+          <div style="color:#64748b;font-size:11px">${rank}${esc(t.name)}</div>
+        </div>
+      </div>
+    </td>`;
+}
+
 function moverRow(t: BriefToken): string {
   const p = fmtPctArrow(t.changePct);
+  // 7d change is REAL (price_change_percentage_7d_in_currency); shown as a small
+  // secondary line only when CoinGecko returned it.
+  const has7d = typeof t.change7dPct === 'number';
+  const p7 = has7d ? fmtPctArrow(t.change7dPct as number) : null;
   return `
     <tr>
-      <td style="padding:10px 8px;border-bottom:1px solid rgba(255,255,255,0.06)">
-        <div style="display:flex;align-items:center;gap:10px">
-          <img src="${esc(t.image)}" alt="" width="24" height="24" style="border-radius:50%;background:#0b0f1e"/>
-          <div>
-            <div style="color:#f1f5f9;font-weight:700;font-size:13px">${esc(t.symbol.toUpperCase())}</div>
-            <div style="color:#64748b;font-size:11px">${esc(t.name)}</div>
-          </div>
-        </div>
-      </td>
+      ${tokenCell(t)}
       <td style="padding:10px 8px;text-align:right;border-bottom:1px solid rgba(255,255,255,0.06);color:#cbd5e1;font-size:13px;font-family:monospace">${fmtUsdCompact(t.price)}</td>
-      <td style="padding:10px 8px;text-align:right;border-bottom:1px solid rgba(255,255,255,0.06);font-weight:700;font-size:13px;color:${p.color};font-family:monospace">${p.arrow} ${p.text}</td>
+      <td style="padding:10px 8px;text-align:right;border-bottom:1px solid rgba(255,255,255,0.06);font-family:monospace">
+        <div style="font-weight:700;font-size:13px;color:${p.color}">${p.arrow} ${p.text}</div>
+        ${p7 ? `<div style="color:#64748b;font-size:10px;font-weight:600">7d ${p7.arrow} ${p7.text}</div>` : ''}
+      </td>
     </tr>`;
 }
 
@@ -185,6 +213,49 @@ function moversTable(title: string, accent: string, tokens: BriefToken[]): strin
     <table style="width:100%;border-collapse:collapse;background:rgba(255,255,255,0.02);border-radius:12px;overflow:hidden">
       ${tokens.map(moverRow).join('')}
     </table>`;
+}
+
+/** Most-traded assets by REAL 24h volume from the top-100 snapshot. */
+function volumeRow(t: BriefToken): string {
+  const p = fmtPctArrow(t.changePct);
+  return `
+    <tr>
+      ${tokenCell(t)}
+      <td style="padding:10px 8px;text-align:right;border-bottom:1px solid rgba(255,255,255,0.06);color:#cbd5e1;font-size:13px;font-family:monospace">${typeof t.volume === 'number' ? fmtUsdCompact(t.volume) : ''}</td>
+      <td style="padding:10px 8px;text-align:right;border-bottom:1px solid rgba(255,255,255,0.06);font-weight:700;font-size:13px;color:${p.color};font-family:monospace">${p.arrow} ${p.text}</td>
+    </tr>`;
+}
+
+function volumeTable(tokens: BriefToken[]): string {
+  if (tokens.length === 0) return '';
+  return `
+    <h3 style="color:#f1f5f9;font-size:16px;margin:28px 0 8px;display:flex;align-items:center;gap:8px">
+      <span>📊</span> Most Traded <span style="color:#64748b;font-size:12px;font-weight:400">24h volume</span>
+    </h3>
+    <table style="width:100%;border-collapse:collapse;background:rgba(255,255,255,0.02);border-radius:12px;overflow:hidden">
+      ${tokens.map(volumeRow).join('')}
+    </table>`;
+}
+
+/** Market breadth: REAL advancers vs decliners across the top-100 snapshot. */
+function breadthBlock(adv: number, dec: number, universe: number): string {
+  if (universe === 0) return '';
+  const flat = Math.max(0, universe - adv - dec);
+  const w = (n: number) => `${((n / universe) * 100).toFixed(1)}%`;
+  return `
+    <h3 style="color:#f1f5f9;font-size:16px;margin:28px 0 8px;display:flex;align-items:center;gap:8px">
+      <span>⚖️</span> Market Breadth <span style="color:#64748b;font-size:12px;font-weight:400">top ${universe} by market cap</span>
+    </h3>
+    <div style="display:flex;height:12px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,0.06);margin-bottom:10px">
+      <div style="width:${w(adv)};background:#10B981"></div>
+      <div style="width:${w(flat)};background:#475569"></div>
+      <div style="width:${w(dec)};background:#EF4444"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:12px">
+      <span style="color:#10B981;font-weight:700">${adv} advancing</span>
+      ${flat > 0 ? `<span style="color:#94a3b8">${flat} flat</span>` : ''}
+      <span style="color:#EF4444;font-weight:700">${dec} declining</span>
+    </div>`;
 }
 
 function whaleSection(moves: BriefWhaleMove[]): string {
@@ -315,9 +386,14 @@ export async function buildDailyBrief(now: Date): Promise<DailyBrief | null> {
   // Need at least the market movers OR whale moves to have a real story.
   if (top.length === 0 && moves.length === 0) return null;
 
-  const toBrief = (t: { symbol: string; name: string; image: string; current_price: number; price_change_percentage_24h: number }): BriefToken => ({
+  const toBrief = (t: CoinGeckoMarketToken): BriefToken => ({
     symbol: t.symbol, name: t.name, image: t.image,
     price: t.current_price ?? 0, changePct: t.price_change_percentage_24h ?? 0,
+    change1hPct: t.price_change_percentage_1h_in_currency,
+    change7dPct: t.price_change_percentage_7d_in_currency,
+    volume: typeof t.total_volume === 'number' ? t.total_volume : undefined,
+    marketCap: typeof t.market_cap === 'number' ? t.market_cap : undefined,
+    rank: typeof t.market_cap_rank === 'number' ? t.market_cap_rank : undefined,
   });
 
   const withChange = top.filter(t => typeof t.price_change_percentage_24h === 'number');
@@ -325,6 +401,26 @@ export async function buildDailyBrief(now: Date): Promise<DailyBrief | null> {
     .filter(t => t.price_change_percentage_24h > 0).slice(0, 5).map(toBrief);
   const losers = [...withChange].sort((a, b) => a.price_change_percentage_24h - b.price_change_percentage_24h)
     .filter(t => t.price_change_percentage_24h < 0).slice(0, 5).map(toBrief);
+
+  // ── Market breadth (REAL advancers vs decliners across the top-100 snapshot) ──
+  const advancers = withChange.filter(t => t.price_change_percentage_24h > 0).length;
+  const decliners = withChange.filter(t => t.price_change_percentage_24h < 0).length;
+  const breadthUniverse = withChange.length;
+
+  // ── Benchmark majors present in the snapshot, in market-cap order (REAL) ──
+  const MAJOR_SYMBOLS = ['btc', 'eth', 'sol', 'bnb', 'xrp', 'doge', 'ada', 'avax'];
+  const majors = MAJOR_SYMBOLS
+    .map(sym => top.find(t => (t.symbol || '').toLowerCase() === sym))
+    .filter((t): t is CoinGeckoMarketToken => Boolean(t))
+    .slice(0, 6)
+    .map(toBrief);
+
+  // ── Most traded by REAL 24h volume ──
+  const volumeLeaders = [...top]
+    .filter(t => typeof t.total_volume === 'number' && t.total_volume > 0)
+    .sort((a, b) => (b.total_volume ?? 0) - (a.total_volume ?? 0))
+    .slice(0, 5)
+    .map(toBrief);
 
   const trending: BriefToken[] = trendingRaw.slice(0, 5).map(c => ({
     symbol: c.symbol, name: c.name, image: c.thumb,
@@ -341,6 +437,7 @@ export async function buildDailyBrief(now: Date): Promise<DailyBrief | null> {
   const summaryBits: string[] = [`Market vibe is ${vibe.label.toLowerCase()} this ${edition.label.toLowerCase()}.`];
   if (global) summaryBits.push(`Total cap ${fmtUsdCompact(global.totalMarketCapUSD)} with BTC dominance ${global.btcDominancePercent.toFixed(1)}%.`);
   if (topGain) summaryBits.push(`${topGain.symbol.toUpperCase()} leads the gainers at ${fmtPctArrow(topGain.changePct).text} up.`);
+  if (breadthUniverse) summaryBits.push(`${advancers} of the top ${breadthUniverse} assets are green over 24h.`);
   if (moves.length) summaryBits.push(`${moves.length} major whale moves tracked on chain.`);
   const summary = summaryBits.join(' ');
 
@@ -362,7 +459,13 @@ export async function buildDailyBrief(now: Date): Promise<DailyBrief | null> {
         <div style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px">BTC Dominance</div>
         <div style="color:#f1f5f9;font-size:20px;font-weight:800;margin-top:4px;font-family:monospace">${global.btcDominancePercent.toFixed(1)}%</div>
         <div style="color:#94a3b8;font-size:12px;margin-top:4px">24h volume ${fmtUsdCompact(global.totalVolumeUSD)}</div>
-      </div>` : ''}
+      </div>
+      ${global.activeCryptocurrencies > 0 ? `
+      <div style="flex:1;min-width:140px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:16px">
+        <div style="color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:1px">Active Assets</div>
+        <div style="color:#f1f5f9;font-size:20px;font-weight:800;margin-top:4px;font-family:monospace">${global.activeCryptocurrencies.toLocaleString('en-US')}</div>
+        <div style="color:#94a3b8;font-size:12px;margin-top:4px">tracked across the market</div>
+      </div>` : ''}` : ''}
     </div>`;
 
   const trendingBlock = trending.length ? `
@@ -383,15 +486,18 @@ export async function buildDailyBrief(now: Date): Promise<DailyBrief | null> {
     </p>
     ${aiNarrative}
     ${vibeBlock}
+    ${breadthBlock(advancers, decliners, breadthUniverse)}
+    ${moversTable('Benchmark Majors', '#6F7EFF', majors)}
     ${moversTable('Top Gainers', '#10B981', gainers)}
     ${moversTable('Top Losers', '#EF4444', losers)}
+    ${volumeTable(volumeLeaders)}
     ${whaleSection(moves)}
     ${trendingBlock}
     <p style="color:#64748b;font-size:12px;line-height:1.7;margin:28px 0 0;border-top:1px solid rgba(255,255,255,0.07);padding-top:16px">
       Data sourced from CoinGecko and the Naka Labs whale tracker at publish time. Markets move fast; treat this as a starting point, not financial advice.
     </p>`;
 
-  const readTime = Math.max(2, Math.round((gainers.length + losers.length + moves.length + trending.length) / 4) + 1);
+  const readTime = Math.max(2, Math.round((majors.length + gainers.length + losers.length + volumeLeaders.length + moves.length + trending.length) / 4) + 1);
   const coverImage = buildCover(dateLabel, vibe, global?.totalMarketCapUSD ?? 0);
 
   const title = `Market Brief · ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })} ${edition.label}`;
@@ -401,6 +507,7 @@ export async function buildDailyBrief(now: Date): Promise<DailyBrief | null> {
     tags: ['Daily Brief', 'Market', vibe.label],
     coverImage, readTime, dateLabel,
     global, gainers, losers, trending, whaleMoves: moves, vibe,
+    majors, volumeLeaders, advancers, decliners, breadthUniverse,
   };
 }
 

@@ -11,11 +11,12 @@ import { Loader2, Plus, X, GitCompareArrows, Trophy, Target, Clock, Layers } fro
 import BackButton from '@/components/ui/BackButton';
 import { ChainLogo } from '@/components/common/ChainLogo';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { whaleDisplayName } from '@/lib/whales/naming';
 import { whaleCompareHowItWorks } from '@/lib/howItWorks/content/whale-compare';
 
 interface TopToken { symbol: string; valueUsd: number }
 interface ComparedWallet {
-  address: string; label: string | null; entityType: string | null; chain: string;
+  address: string; label: string | null; nakaNumber: number | null; entityType: string | null; chain: string;
   archetype: string | null; winRate: number | null; whaleScore: number | null;
   pnl30dUsd: number | null; pnl7dUsd: number | null; portfolioUsd: number | null;
   volume7dUsd: number | null; trades30d: number | null; avgHoldHours: number | null;
@@ -189,7 +190,7 @@ export default function WhaleComparePage() {
                     <div className="flex items-center gap-2 mb-3">
                       <ChainLogo chain={w.chain} className="w-5 h-5" />
                       <div className="min-w-0">
-                        <div className="text-sm font-bold truncate">{w.label || short(w.address)}</div>
+                        <div className="text-sm font-bold truncate">{whaleDisplayName({ label: w.label, nakaNumber: w.nakaNumber, address: w.address, chain: w.chain })}</div>
                         <div className="text-[10px] text-slate-500 font-mono truncate">{short(w.address)}</div>
                       </div>
                     </div>

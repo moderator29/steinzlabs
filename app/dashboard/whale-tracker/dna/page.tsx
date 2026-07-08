@@ -11,15 +11,16 @@ import { Loader2, Dna, Target, Trophy, Clock, Layers, ArrowRight, BadgeCheck } f
 import BackButton from '@/components/ui/BackButton';
 import { ChainLogo } from '@/components/common/ChainLogo';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { whaleDisplayName } from '@/lib/whales/naming';
 import { whaleDnaHowItWorks } from '@/lib/howItWorks/content/whale-dna';
 
 interface SimilarWhale {
-  address: string; label: string | null; chain: string; archetype: string | null;
+  address: string; label: string | null; nakaNumber: number | null; chain: string; archetype: string | null;
   winRate: number | null; whaleScore: number | null; verified: boolean; logoUrl: string | null;
   similarity: number; sharedTokens: string[];
 }
 interface Genome {
-  address: string; label: string | null; chain: string; entityType: string | null;
+  address: string; label: string | null; nakaNumber: number | null; chain: string; entityType: string | null;
   archetype: string | null; verified: boolean; logoUrl: string | null;
   winRate: number | null; whaleScore: number | null; pnl30dUsd: number | null;
   portfolioUsd: number | null; volume7dUsd: number | null; trades30d: number | null;
@@ -142,7 +143,7 @@ export default function WhaleDnaPage() {
               <ChainLogo chain={w.chain} className="w-6 h-6" />
               <div className="min-w-0">
                 <div className="text-base font-bold truncate inline-flex items-center gap-1.5">
-                  {w.label || short(w.address)}
+                  {whaleDisplayName({ label: w.label, nakaNumber: w.nakaNumber, address: w.address, chain: w.chain })}
                   {w.verified && <BadgeCheck className="w-4 h-4 text-[#00C8FF]" />}
                 </div>
                 <div className="text-[10px] text-slate-500 font-mono truncate">{short(w.address)}</div>
@@ -185,7 +186,7 @@ export default function WhaleDnaPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold truncate inline-flex items-center gap-1">
-                      {s.label || short(s.address)}
+                      {whaleDisplayName({ label: s.label, nakaNumber: s.nakaNumber, address: s.address, chain: s.chain })}
                       {s.verified && <BadgeCheck className="w-3.5 h-3.5 text-[#00C8FF]" />}
                     </div>
                     <div className="text-[10px] text-slate-500 flex items-center gap-2">

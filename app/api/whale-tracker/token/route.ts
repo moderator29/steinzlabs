@@ -49,9 +49,9 @@ export async function GET(req: NextRequest) {
   const addresses = rows.map((r) => r.whale_address);
   const { data: whaleRows } = await admin
     .from('whales')
-    .select('address, label, archetype, win_rate, whale_score, chain, verified')
+    .select('address, label, archetype, win_rate, whale_score, chain, verified, naka_number')
     .in('address', addresses);
-  const meta = new Map((whaleRows ?? []).map((w: { address: string; label: string | null; archetype: string | null; win_rate: number | null; whale_score: number | null; chain: string; verified: boolean | null }) => [w.address, w]));
+  const meta = new Map((whaleRows ?? []).map((w: { address: string; label: string | null; archetype: string | null; win_rate: number | null; whale_score: number | null; chain: string; verified: boolean | null; naka_number: number | null }) => [w.address, w]));
 
   const positions = rows.map((r) => {
     const m = meta.get(r.whale_address);
@@ -61,6 +61,7 @@ export async function GET(req: NextRequest) {
     return {
       address: r.whale_address,
       label: m?.label ?? null,
+      nakaNumber: m?.naka_number ?? null,
       archetype: m?.archetype ?? null,
       winRate: m?.win_rate != null ? Math.round(Number(m.win_rate)) : null,
       whaleScore: m?.whale_score ?? null,

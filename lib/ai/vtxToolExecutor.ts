@@ -26,6 +26,7 @@ import { buildSolanaWalletIntelligence } from '@/lib/services/solana-intelligenc
 import { buildEvmWalletIntelligence } from '@/lib/services/evm-intelligence';
 import { getSocialScore } from '@/lib/services/lunarcrush';
 import { cmcConfigured, cmcQuoteBySymbol } from '@/lib/services/coinmarketcap';
+import { headlineMarketCap } from '@/lib/market/headline';
 import { twGatewayConfigured, twAssetInfo, twSearchAssets } from '@/lib/services/trustwallet';
 import { getEntityLabel, getAddressIntel } from '@/lib/services/arkham';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
@@ -136,7 +137,7 @@ async function executeTokenMarketData(input: Record<string, unknown>): Promise<s
         {
           const fdvN = Number(p.fdv) || 0;
           const mcN = Number(p.marketCap) || 0;
-          const headline = fdvN > mcN ? fdvN : (mcN || fdvN);
+          const headline = headlineMarketCap(fdvN, mcN);
           lines.push(`  Market Cap: $${headline.toLocaleString()}${fdvN > mcN && mcN > 0 ? ` (FDV; circulating ~$${mcN.toLocaleString()})` : ''}`);
         }
         lines.push(`  FDV: $${(p.fdv ?? 0).toLocaleString()}`);

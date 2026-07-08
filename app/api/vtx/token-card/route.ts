@@ -5,6 +5,7 @@ import { getTokenSecurity } from '@/lib/services/goplus';
 import { twGatewayConfigured, twAssetInfo } from '@/lib/services/trustwallet';
 import { cmcConfigured, cmcQuoteBySymbol, cmcMetaBySymbol } from '@/lib/services/coinmarketcap';
 import { getGtOHLCV } from '@/lib/services/geckoterminal';
+import { headlineMarketCap, clampFdv } from '@/lib/market/headline';
 
 // VTX inline token card data — price, real 24h stats, chart series, logo.
 // Priority for ANY token: resolve to a real DexScreener pair (by address, or
@@ -135,8 +136,8 @@ async function buildPairCard(pair: any, opts: { address: string; symbol?: string
   // CoinGecko/CMC paths, which have accurate supply.
   const fdvVal = Number(pair.fdv) || 0;
   const circMcap = Number(pair.marketCap) || 0;
-  const marketCap = fdvVal > circMcap ? fdvVal : (circMcap || fdvVal);
-  const fdv = fdvVal || circMcap;
+  const marketCap = headlineMarketCap(fdvVal, circMcap);
+  const fdv = clampFdv(fdvVal || circMcap, marketCap);
   return {
     points: series, changePct, source: chartSource,
     price,
