@@ -125,14 +125,20 @@ export async function GET(_request: NextRequest) {
     // (USDC.eth vs USDC.sol) get their own queues — keying on symbol
     // alone merged them and produced wrong realized PnL across chains.
     const chainKey = (t.chain ?? 'unknown').toLowerCase();
-    const buySym = t.to_token_symbol ? `${chainKey}::${t.to_token_symbol.toUpperCase()}` : null;
-    const sellSym = t.from_token_symbol ? `${chainKey}::${t.from_token_symbol.toUpperCase()}` : null;
+    // Raw (un-prefixed) symbols are what the stablecoin filter must test —
+    // the FIFO keys below are chain-prefixed (`ethereum::USDC`), so comparing
+    // the prefixed key against the bare stable list never matched and let
+    // stablecoin legs create bogus cost-basis lots + realized-PnL "trades".
+    const buyRaw = t.to_token_symbol ? t.to_token_symbol.toUpperCase() : null;
+    const sellRaw = t.from_token_symbol ? t.from_token_symbol.toUpperCase() : null;
+    const buySym = buyRaw ? `${chainKey}::${buyRaw}` : null;
+    const sellSym = sellRaw ? `${chainKey}::${sellRaw}` : null;
     const usd = Number(t.usd_value ?? 0);
     if (usd <= 0) continue;
 
     const ts = new Date(t.timestamp).getTime();
 
-    if (buySym && !["USD", "USDC", "USDT", "DAI"].includes(buySym) && t.to_amount) {
+    if (buySym && buyRaw && !["USD", "USDC", "USDT", "DAI"].includes(buyRaw) && t.to_amount) {
       const amount = Number(t.to_amount);
       const q = lots.get(buySym) ?? [];
       q.push({ amount, costUsd: usd, timestampMs: ts });
@@ -149,7 +155,7 @@ export async function GET(_request: NextRequest) {
       }
     }
 
-    if (sellSym && !["USD", "USDC", "USDT", "DAI"].includes(sellSym) && t.from_amount) {
+    if (sellSym && sellRaw && !["USD", "USDC", "USDT", "DAI"].includes(sellRaw) && t.from_amount) {
       let remaining = Number(t.from_amount);
       const proceeds = usd;
       const q = lots.get(sellSym) ?? [];
