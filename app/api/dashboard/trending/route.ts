@@ -37,20 +37,29 @@ export async function GET() {
     const markets = await withDeadline<CoinGeckoMarketToken[]>(getMarketsByIds(ids, true), 8000, []);
     const byId = new Map(markets.map(m => [m.id, m]));
 
-    const enriched: EnrichedTrending[] = trending.map(t => {
-      const m = byId.get(t.id);
-      return {
-        id: t.id,
-        name: t.name,
-        symbol: t.symbol,
-        thumb: t.thumb,
-        market_cap_rank: t.market_cap_rank,
-        current_price: m?.current_price ?? 0,
-        price_change_percentage_24h: m?.price_change_percentage_24h ?? 0,
-        market_cap: m?.market_cap ?? 0,
-        sparkline_in_7d: m?.sparkline_in_7d,
-      };
-    });
+    // Only surface a trending coin once its REAL market data (price, 24h
+    // change, market cap) resolved from the CoinGecko markets join. Previously
+    // a missing/timed-out join fell back to `?? 0`, so a coin rendered as a
+    // real "$0.00 / +0.0%" — a fabricated flat reading. If the markets fetch
+    // fails entirely the list is empty and the UI shows its honest "nothing
+    // trending" state instead of a wall of $0 coins.
+    const enriched: EnrichedTrending[] = trending
+      .map((t): EnrichedTrending | null => {
+        const m = byId.get(t.id);
+        if (!m || typeof m.current_price !== 'number') return null;
+        return {
+          id: t.id,
+          name: t.name,
+          symbol: t.symbol,
+          thumb: t.thumb,
+          market_cap_rank: t.market_cap_rank,
+          current_price: m.current_price,
+          price_change_percentage_24h: m.price_change_percentage_24h ?? 0,
+          market_cap: m.market_cap ?? 0,
+          sparkline_in_7d: m.sparkline_in_7d,
+        };
+      })
+      .filter((c): c is EnrichedTrending => c !== null);
 
     return NextResponse.json({ coins: enriched }, {
       headers: { 'Cache-Control': 'public, max-age=120, s-maxage=300' },

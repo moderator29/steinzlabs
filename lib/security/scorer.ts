@@ -28,12 +28,16 @@ export function scoreTokenSecurity(raw: Record<string, unknown>): RiskAssessment
   // Tax
   const buyTax = Number(raw.buyTax ?? raw.buy_tax ?? 0);
   const sellTax = Number(raw.sellTax ?? raw.sell_tax ?? 0);
+  // buyTax/sellTax are 0..1 FRACTIONS (0.10 = 10%) — the detail line below
+  // multiplies by 100 to render a percent. Comparing the fraction against `10`
+  // meant "1000%", so both the `ok` flag and the penalties were dead: every
+  // token read as tax-safe regardless of a real 50%+ tax. Compare against 0.10.
   sections.tax = {
-    ok: buyTax <= 10 && sellTax <= 10,
+    ok: buyTax <= 0.10 && sellTax <= 0.10,
     detail: `Buy ${(buyTax * 100).toFixed(1)}% / Sell ${(sellTax * 100).toFixed(1)}%`,
   };
-  if (buyTax > 10) { score -= 15; reasons.push(`buy_tax_${buyTax}`); }
-  if (sellTax > 10) { score -= 15; reasons.push(`sell_tax_${sellTax}`); }
+  if (buyTax > 0.10) { score -= 15; reasons.push(`buy_tax_${buyTax}`); }
+  if (sellTax > 0.10) { score -= 15; reasons.push(`sell_tax_${sellTax}`); }
 
   // Ownership
   const isMintable = raw.isMintable === true || raw.is_mintable === "1";
@@ -119,13 +123,19 @@ export function scoreAddressSecurity(raw: Record<string, unknown>): RiskAssessme
   const isBlacklisted = raw.isBlacklisted === true || raw.blacklist_doubt === "1";
   const isSanctioned = raw.sanctioned === true || raw.is_sanctioned === "1";
   const isPhishing = raw.phishing_activities === "1" || raw.isPhishing === true;
+  // AddressScanResult / enrichAddress expose `isMalicious` (phishing / stealing /
+  // cybercrime). scan/route feeds it in, but the scorer used to drop it — so a
+  // malicious-but-not-scam/blacklisted address scored clean. Read it too.
+  const isMalicious = raw.isMalicious === true || raw.stealing_attack === "1" || raw.cybercrime === "1";
 
   sections.scam = { ok: !isScam, detail: isScam ? "Flagged as scam source" : "No scam reports" };
   sections.blacklist = { ok: !isBlacklisted, detail: isBlacklisted ? "Blacklisted by registries" : "Not blacklisted" };
   sections.sanctions = { ok: !isSanctioned, detail: isSanctioned ? "Subject to sanctions" : "No sanctions hit" };
   sections.phishing = { ok: !isPhishing, detail: isPhishing ? "Linked to phishing activity" : "No phishing history" };
+  sections.malicious = { ok: !isMalicious, detail: isMalicious ? "Flagged for malicious activity" : "No malicious activity" };
 
   if (isScam) { score -= 80; reasons.push("scam_address"); }
+  if (isMalicious) { score -= 80; reasons.push("malicious_address"); }
   if (isBlacklisted) { score -= 60; reasons.push("blacklisted"); }
   if (isSanctioned) { score -= 80; reasons.push("sanctioned"); }
   if (isPhishing) { score -= 50; reasons.push("phishing"); }

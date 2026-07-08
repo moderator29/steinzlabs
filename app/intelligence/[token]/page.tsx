@@ -33,10 +33,19 @@ export default function ViewProofPage() {
     try {
       setLoading(true);
       const response = await fetch(`/api/intelligence/holders/${tokenAddress}`);
-      const data = await response.json();
-      setIntelligence(data);
+      const data = await response.json().catch(() => null);
+      // The route returns { error } with a 500 on failure. Only accept a
+      // well-formed payload — otherwise leave intelligence null so the
+      // "Failed to Load" state renders instead of the report crashing on
+      // data.safetyAnalysis.overallScore / data.bubbleMapData.metadata.
+      if (response.ok && data && data.safetyAnalysis && data.bubbleMapData?.metadata) {
+        setIntelligence(data);
+      } else {
+        setIntelligence(null);
+      }
     } catch (error) {
       console.error('Failed to load intelligence:', error);
+      setIntelligence(null);
     } finally {
       setLoading(false);
     }
@@ -102,7 +111,7 @@ export default function ViewProofPage() {
               <div className="text-end">
                 <div className="text-sm text-gray-400">Safety Score</div>
                 <div className="text-2xl font-bold text-green-500">
-                  {intelligence.safetyAnalysis.overallScore.toFixed(1)}/10
+                  {Number(intelligence.safetyAnalysis.overallScore ?? 0).toFixed(1)}/10
                 </div>
               </div>
             </div>
@@ -151,13 +160,13 @@ export default function ViewProofPage() {
             <ShadowGuardianScan tokenAddress={tokenAddress} />
 
             <div className="mt-4 space-y-2">
-              {intelligence.safetyAnalysis.greenFlags.map((flag: string, i: number) => (
+              {(intelligence.safetyAnalysis.greenFlags ?? []).map((flag: string, i: number) => (
                 <div key={i} className="flex items-start gap-2 text-sm">
                   <span className="text-green-500 font-bold text-xs">OK</span>
                   <span className="text-gray-300">{flag}</span>
                 </div>
               ))}
-              {intelligence.safetyAnalysis.warnings.map((warning: string, i: number) => (
+              {(intelligence.safetyAnalysis.warnings ?? []).map((warning: string, i: number) => (
                 <div key={i} className="flex items-start gap-2 text-sm">
                   <span className="text-yellow-500 font-bold text-xs">!</span>
                   <span className="text-gray-300">{warning}</span>
@@ -173,7 +182,7 @@ export default function ViewProofPage() {
             Holder Distribution &amp; Network
           </h3>
           <Bubblemaps
-            nodes={intelligence.bubbleMapData.nodes}
+            nodes={intelligence.bubbleMapData.nodes ?? []}
             width={1200}
             height={600}
           />
@@ -214,7 +223,7 @@ export default function ViewProofPage() {
               <div>
                 <div className="text-gray-400">Top 10 Concentration</div>
                 <div className="text-white font-medium">
-                  {intelligence.bubbleMapData.metadata.concentration.toFixed(1)}%
+                  {Number(intelligence.bubbleMapData.metadata.concentration ?? 0).toFixed(1)}%
                 </div>
               </div>
             </div>
