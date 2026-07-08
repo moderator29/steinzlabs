@@ -26,6 +26,12 @@ export async function GET(req: NextRequest) {
   }
   const before = req.nextUrl.searchParams.get('before');
   const beforeId = req.nextUrl.searchParams.get('before_id');
+  // `before` is interpolated into a PostgREST .or() filter string below, so it
+  // must be a real timestamp — reject anything else rather than let a crafted
+  // value manipulate the filter tree or throw a 500 on a malformed cursor.
+  if (before !== null && Number.isNaN(Date.parse(before))) {
+    return NextResponse.json({ error: 'Invalid before cursor' }, { status: 400 });
+  }
   const limitParam = Number(req.nextUrl.searchParams.get('limit') ?? '50');
   const limit = Math.min(200, Math.max(1, Number.isFinite(limitParam) ? limitParam : 50));
 

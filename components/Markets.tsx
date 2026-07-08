@@ -52,6 +52,9 @@ export default function Markets() {
   const [totalMcap, setTotalMcap] = useState('$2.41T');
   const [totalChange, setTotalChange] = useState('+2.4%');
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Monotonic id for the latest search — lets in-flight responses that arrive
+  // out of order be discarded so a stale query never overwrites newer results.
+  const searchSeq = useRef(0);
 
   const fetchTopCoins = useCallback(async () => {
     setLoading(true);
@@ -95,6 +98,7 @@ export default function Markets() {
       return;
     }
 
+    const seq = ++searchSeq.current;
     searchTimer.current = setTimeout(async () => {
       setSearching(true);
       try {
@@ -104,13 +108,16 @@ export default function Markets() {
         );
 
         if (localMatch.length > 0) {
-          setSearchResults(localMatch.slice(0, 20));
-          setSearching(false);
+          if (seq === searchSeq.current) {
+            setSearchResults(localMatch.slice(0, 20));
+            setSearching(false);
+          }
           return;
         }
 
         const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
         const data = await res.json();
+        if (seq !== searchSeq.current) return; // a newer query superseded this one
         const rows: CoinRow[] = (data.results || []).map((r: any) => ({
           id: r.pairAddress || r.address || r.symbol,
           symbol: r.symbol,
@@ -127,9 +134,9 @@ export default function Markets() {
         }));
         setSearchResults(rows);
       } catch {
-        setSearchResults([]);
+        if (seq === searchSeq.current) setSearchResults([]);
       } finally {
-        setSearching(false);
+        if (seq === searchSeq.current) setSearching(false);
       }
     }, 350);
   };

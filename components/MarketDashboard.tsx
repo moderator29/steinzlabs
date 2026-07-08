@@ -190,11 +190,15 @@ export default function MarketDashboard() {
   useEffect(() => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
     if (search.length < 2) { setSearchResults([]); return; }
+    // Drop out-of-order responses so a slow earlier query can't overwrite the
+    // results of the query the user is actually looking at now.
+    let cancelled = false;
     searchTimer.current = setTimeout(async () => {
       setSearching(true);
       try {
         const res = await fetch(`/api/market/search?q=${encodeURIComponent(search)}`);
         const data = await res.json() as Record<string, unknown>[];
+        if (cancelled) return;
         const mapped: CoinRow[] = (Array.isArray(data) ? data : []).map(r => ({
           id:        String(r.id ?? ''),
           symbol:    String(r.symbol ?? ''),
@@ -211,10 +215,10 @@ export default function MarketDashboard() {
           pairAddress: r.pairAddress ? String(r.pairAddress) : undefined,
         }));
         setSearchResults(mapped);
-      } catch { setSearchResults([]); }
-      finally { setSearching(false); }
+      } catch { if (!cancelled) setSearchResults([]); }
+      finally { if (!cancelled) setSearching(false); }
     }, 350);
-    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+    return () => { cancelled = true; if (searchTimer.current) clearTimeout(searchTimer.current); };
   }, [search]);
 
   const watchlistCoins = useMemo<CoinRow[]>(() => {

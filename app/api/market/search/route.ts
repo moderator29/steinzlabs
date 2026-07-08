@@ -56,6 +56,8 @@ async function searchDexScreener(q: string): Promise<SearchResult[]> {
       priceChange?: { h24?: number };
       liquidity?: { usd?: number };
       volume?: { h24?: number };
+      marketCap?: number;
+      fdv?: number;
     }[];
   };
   const pairs = data.pairs ?? [];
@@ -65,7 +67,11 @@ async function searchDexScreener(q: string): Promise<SearchResult[]> {
     symbol: p.baseToken.symbol?.toUpperCase() ?? '',
     price: parseFloat(p.priceUsd ?? '0') || 0,
     change24h: p.priceChange?.h24 ?? 0,
-    marketCap: p.liquidity?.usd ?? 0,
+    // Real market cap (or FDV as the standard long tail fallback). Never
+    // substitute pooled liquidity here: liquidity is not market cap, and
+    // surfacing it under this field showed a wrong figure. Unknown stays
+    // undefined so the UI can render a dash instead of a fabricated number.
+    marketCap: p.marketCap ?? p.fdv ?? undefined,
     chain: p.chainId,
     source: 'dexscreener' as const,
     pairAddress: p.pairAddress,

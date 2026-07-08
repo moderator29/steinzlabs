@@ -67,10 +67,16 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser();
     const userId = user?.id ?? null;
 
+    // Every write must be attributable to a real authenticated user. Allowing
+    // null user_id inserts let anyone inflate view/like/share counts unbounded,
+    // because the (event_id, user_id, action) unique index never dedupes NULLs
+    // (NULL != NULL in Postgres). Counts stay honest only if each row is one
+    // real user's action, so require auth for all actions (not just unlike).
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     if (action === 'unlike') {
-      if (!userId) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
       const { error } = await supabase
         .from('context_feed_engagement')
         .delete()
