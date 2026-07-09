@@ -463,7 +463,7 @@ function dedupe(items: NewsItem[]): NewsItem[] {
   return out;
 }
 
-async function aggregate(): Promise<NewsItem[]> {
+export async function aggregate(): Promise<NewsItem[]> {
   const results = await Promise.allSettled([
     ...RSS_SOURCES.map((s) => fetchRssSource(s)),
     fetchCryptoCompare(),

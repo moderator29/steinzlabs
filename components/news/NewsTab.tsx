@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ExternalLink, RefreshCw, Newspaper, AlertCircle, TrendingUp, TrendingDown } from 'lucide-react';
+import { ExternalLink, RefreshCw, Newspaper, AlertCircle, TrendingUp, TrendingDown, Bell, BellRing, Loader2 } from 'lucide-react';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { useNotificationSettings } from '@/lib/preferences/notificationSettings';
 
 /**
  * NewsTab — clean, premium crypto news feed for the dashboard.
@@ -327,6 +329,98 @@ function SkeletonRow() {
 }
 
 // ── main ──────────────────────────────────────────────────────────────────
+/**
+ * NewsAlertToggle — opt in/out of the twice-daily news digest (email/Telegram).
+ * Writes notification_settings.news_alerts via the shared hook. Only renders for
+ * signed-in users; a short popover explains where the digest is delivered and
+ * links to full settings. The digest itself is dispatched by the news-digest
+ * cron to users whose telegram_enabled / email_enabled channel is on.
+ */
+function NewsAlertToggle() {
+  const { user } = useAuth();
+  const { settings, loading, hasExtendedSchema, update } = useNotificationSettings(user?.id ?? null);
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  if (!user) return null;
+
+  const on = Boolean(settings?.news_alerts);
+  const disabled = loading || saving || !hasExtendedSchema;
+
+  const toggle = async () => {
+    if (disabled) return;
+    setSaving(true);
+    try {
+      await update({ news_alerts: !on });
+    } catch {
+      /* hook rolls back + logs on failure */
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={`inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-[13px] font-medium ring-1 ring-inset transition-colors ${
+          on
+            ? 'bg-[#0066FF]/15 text-[#4d94ff] ring-[#0066FF]/30'
+            : 'bg-white/5 text-slate-300 ring-white/10 hover:bg-white/10 hover:text-white'
+        }`}
+        aria-expanded={open}
+        title="News alerts"
+      >
+        {on ? <BellRing className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
+        <span className="hidden sm:inline">Alerts</span>
+      </button>
+
+      {open ? (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-11 z-50 w-64 rounded-2xl border border-white/10 bg-[#0d1120] p-3.5 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <span className="text-[13px] font-semibold text-white">News alerts</span>
+              <button
+                type="button"
+                onClick={toggle}
+                disabled={disabled}
+                role="switch"
+                aria-checked={on}
+                className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+                  on ? 'bg-[#0066FF]' : 'bg-white/15'
+                }`}
+              >
+                <span
+                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                    on ? 'translate-x-[18px]' : 'translate-x-[3px]'
+                  }`}
+                />
+                {saving ? <Loader2 className="absolute -right-5 h-3.5 w-3.5 animate-spin text-slate-400" /> : null}
+              </button>
+            </div>
+            <p className="mt-1.5 text-[11.5px] leading-relaxed text-slate-400">
+              A twice-daily roundup of top crypto headlines, sent to your enabled channels
+              (Telegram / email).
+            </p>
+            {!hasExtendedSchema ? (
+              <p className="mt-2 text-[11px] text-amber-400/80">Syncing your settings — try again in a moment.</p>
+            ) : (
+              <a
+                href="/dashboard/settings"
+                className="mt-2 inline-block text-[11.5px] font-medium text-[#4d94ff] hover:underline"
+              >
+                Manage channels in settings →
+              </a>
+            )}
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 export default function NewsTab() {
   const [items, setItems] = useState<NewsItem[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -394,6 +488,7 @@ export default function NewsTab() {
         </div>
         <div className="flex items-center gap-2">
           {status === 'ready' && items.length > 0 ? <LivePill stale={stale} /> : null}
+          <NewsAlertToggle />
           <button
             type="button"
             onClick={() => load(true)}
