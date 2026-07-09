@@ -129,7 +129,7 @@ export default function SupportPage() {
         <div className="flex gap-1.5">
           {(['all', 'open', 'in_progress', 'resolved', 'closed'] as const).map(s => (
             <button key={s} onClick={() => setFilter(s)}
-              className={`text-xs px-2.5 py-1.5 rounded-lg transition-colors ${filter === s ? 'bg-[#0066FF] text-white' : 'text-gray-400 hover:text-white border border-[#1E2433] hover:border-[#2E3443]'}`}>
+              className={`text-xs px-2.5 py-1.5 rounded-lg transition-colors ${filter === s ? 'bg-[#0066FF]/15 text-[#0066FF] font-semibold border border-[#0066FF]/30' : 'text-gray-400 hover:text-white border border-white/[0.08] hover:border-white/[0.15]'}`}>
               {s.replace('_', ' ')}
             </button>
           ))}
@@ -149,7 +149,7 @@ export default function SupportPage() {
             </div>
           ) : filtered.map(t => (
             <div key={t.id} onClick={() => setSelected(t)}
-              className={`bg-[#141824] border rounded-xl p-3 cursor-pointer transition-all ${selected?.id === t.id ? 'border-[#0066FF]/40' : 'border-[#1E2433] hover:border-[#2E3443]'}`}>
+              className={`nl-glass nl-glass--interactive rounded-2xl p-3 cursor-pointer transition-all ${selected?.id === t.id ? 'ring-1 ring-[#0066FF]/50' : ''}`}>
               <div className="flex items-start justify-between gap-2 mb-1.5">
                 <span className="text-xs font-semibold text-white line-clamp-1">{t.subject}</span>
                 <ChevronRight className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
@@ -164,10 +164,10 @@ export default function SupportPage() {
           ))}
         </div>
 
-        <div className="col-span-3 bg-[#141824] border border-[#1E2433] rounded-xl flex flex-col overflow-hidden">
+        <div className="col-span-3 nl-glass rounded-2xl flex flex-col overflow-hidden">
           {selected ? (
             <>
-              <div className="p-4 border-b border-[#1E2433]">
+              <div className="p-4 border-b border-white/10">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-semibold text-white mb-1">{selected.subject}</h3>
@@ -182,7 +182,7 @@ export default function SupportPage() {
                   <select
                     value={selected.status}
                     onChange={e => updateStatus(selected.id, e.target.value as TicketStatus)}
-                    className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-2 py-1 text-xs text-white focus:outline-none"
+                    className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-2 py-1 text-xs text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors"
                   >
                     {(['open', 'in_progress', 'resolved', 'closed'] as TicketStatus[]).map(s => (
                       <option key={s} value={s}>{s.replace('_', ' ')}</option>
@@ -191,7 +191,7 @@ export default function SupportPage() {
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                <div className="bg-[#0A0E1A] rounded-xl p-3">
+                <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3">
                   <div className="flex items-center gap-2 mb-1.5">
                     <span className="text-[10px] font-semibold text-gray-400">{selected.user_email}</span>
                     <Clock className="w-3 h-3 text-gray-600" />
@@ -200,7 +200,7 @@ export default function SupportPage() {
                   <p className="text-xs text-gray-300">{ticketBody(selected)}</p>
                 </div>
                 {selected.replies.map((r, i) => (
-                  <div key={i} className={`rounded-xl p-3 ${r.from === 'admin' ? 'bg-[#0066FF]/10 border border-[#0066FF]/20 ms-6' : 'bg-[#0A0E1A]'}`}>
+                  <div key={i} className={`rounded-xl p-3 ${r.from === 'admin' ? 'bg-[#0066FF]/10 border border-[#0066FF]/20 ms-6' : 'bg-white/[0.02] border border-white/[0.06]'}`}>
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className={`text-[10px] font-semibold ${r.from === 'admin' ? 'text-[#0066FF]' : 'text-gray-400'}`}>
                         {r.from === 'admin' ? 'Support Team' : r.from}
@@ -211,18 +211,18 @@ export default function SupportPage() {
                   </div>
                 ))}
               </div>
-              <div className="p-3 border-t border-[#1E2433] flex gap-2">
+              <div className="p-3 border-t border-white/10 flex gap-2">
                 <textarea
                   value={reply}
                   onChange={e => setReply(e.target.value)}
                   rows={2}
                   placeholder="Write a reply..."
-                  className="flex-1 bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40 resize-none"
+                  className="flex-1 bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors resize-none"
                 />
                 <button
                   onClick={sendReply}
                   disabled={!reply.trim() || sendingReply}
-                  className="bg-[#0066FF] hover:bg-[#0818CC] disabled:opacity-50 text-white px-3 py-2 rounded-lg transition-colors flex-shrink-0"
+                  className="naka-button-primary disabled:opacity-50 flex-shrink-0"
                 >
                   {sendingReply ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 </button>

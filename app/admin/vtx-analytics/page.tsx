@@ -64,7 +64,7 @@ export default function VtxAnalyticsPage() {
           <h1 className="text-xl font-bold text-white">VTX Analytics</h1>
           <p className="text-xs text-gray-500 mt-0.5">VTX AI conversation volume and top users</p>
         </div>
-        <button onClick={load} disabled={loading} className="p-2 text-gray-400 hover:text-white border border-[#1E2433] rounded-lg hover:border-[#2E3443] transition-colors">
+        <button onClick={load} disabled={loading} className="nl-button nl-button--ghost">
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
@@ -92,14 +92,14 @@ export default function VtxAnalyticsPage() {
               { label: 'Queries Today', value: formatLargeNumber(data.queriesToday) },
               { label: 'Queries This Week', value: formatLargeNumber(data.queriesWeek) },
             ].map(k => (
-              <div key={k.label} className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
+              <div key={k.label} className="nl-glass rounded-2xl p-4">
                 <div className="text-xs text-gray-400 mb-2">{k.label}</div>
                 <div className="text-xl font-bold text-white">{k.value}</div>
               </div>
             ))}
           </div>
 
-          <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 mb-6">
+          <div className="nl-glass rounded-2xl p-4 mb-6">
             <h3 className="text-sm font-semibold text-white mb-4">Top Users by Query Count (30d)</h3>
             {chartData.length > 0 ? (
               <MicroBar data={chartData} xKey="user" yKey="count" color="#0066FF" height={240} formatY={(v) => formatLargeNumber(v)} />
@@ -108,20 +108,20 @@ export default function VtxAnalyticsPage() {
             )}
           </div>
 
-          <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden overflow-x-auto">
-            <div className="px-4 py-3 border-b border-[#1E2433] flex items-center gap-2">
+          <div className="nl-glass rounded-2xl overflow-hidden overflow-x-auto">
+            <div className="px-4 py-3 border-b border-white/10 flex items-center gap-2">
               <Users className="w-3.5 h-3.5 text-[#0066FF]" />
               <h3 className="text-sm font-semibold text-white">Top Users (30d)</h3>
             </div>
             <table className="w-full text-xs min-w-[500px]">
-              <thead className="border-b border-[#1E2433]">
+              <thead className="border-b border-white/10">
                 <tr>{['#', 'User ID', 'Query Count'].map(h => (
                   <th key={h} className="px-4 py-2.5 text-start text-gray-500 font-medium">{h}</th>
                 ))}</tr>
               </thead>
               <tbody>
                 {data.topUsers.map((u, i) => (
-                  <tr key={u.user_id} className="border-b border-[#1E2433] last:border-0 hover:bg-[#1E2433]/30">
+                  <tr key={u.user_id} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors last:border-0">
                     <td className="px-4 py-3 text-gray-500 font-mono">{i + 1}</td>
                     <td className="px-4 py-3 text-white font-mono">{u.user_id}</td>
                     <td className="px-4 py-3 text-white font-semibold">{u.count.toLocaleString()}</td>

@@ -132,7 +132,7 @@ export default function AdminDocsPage() {
   const filtered = q ? TOC.filter((t) => t.label.toLowerCase().includes(q)) : TOC;
 
   return (
-    <div className="min-h-screen bg-[#060A14] text-white">
+    <div className="min-h-screen nl-aurora-bg text-white">
       {/* Hero */}
       <div className="border-b border-white/[0.06] bg-gradient-to-br from-[#0066FF]/5 via-transparent to-[#10B981]/5">
         <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8 sm:py-12">

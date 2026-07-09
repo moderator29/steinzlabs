@@ -73,10 +73,10 @@ export default function SocialReportsAdminPage() {
         <h1 className="text-xl sm:text-2xl font-bold text-white">Social Reports</h1>
       </div>
       <div className="flex gap-2 mb-4">
-        <select value={status} onChange={(e) => setStatus(e.target.value as typeof STATUSES[number])} className="bg-white/[0.04] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white">
+        <select value={status} onChange={(e) => setStatus(e.target.value as typeof STATUSES[number])} className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors">
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
-        <select value={category} onChange={(e) => setCategory(e.target.value as typeof CATS[number])} className="bg-white/[0.04] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white">
+        <select value={category} onChange={(e) => setCategory(e.target.value as typeof CATS[number])} className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors">
           {CATS.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
@@ -88,7 +88,7 @@ export default function SocialReportsAdminPage() {
       ) : rows.length === 0 ? (
         <div className="text-sm text-slate-400 italic">No reports match this filter.</div>
       ) : (
-        <div className="rounded-xl nl-glass divide-y divide-white/[0.05]">
+        <div className="nl-glass rounded-2xl divide-y divide-white/[0.05]">
           {rows.map((r) => (
             <div key={r.id} className="p-4 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3">
               <div className="space-y-1.5 min-w-0">

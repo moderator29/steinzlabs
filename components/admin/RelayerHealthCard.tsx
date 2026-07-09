@@ -40,7 +40,7 @@ interface RelayerHealth {
 
 function StatusBlock({ title, data }: { title: string; data: StatusCount[] }) {
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
       <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
         {title}
       </div>
@@ -86,11 +86,11 @@ export default function RelayerHealthCard() {
 
   if (loading && !data) {
     return (
-      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-        <div className="h-6 w-48 animate-pulse rounded bg-slate-800" />
+      <div className="nl-glass rounded-2xl p-4">
+        <div className="h-6 w-48 animate-pulse rounded bg-white/[0.05]" />
         <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-5">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-24 animate-pulse rounded-lg bg-slate-800/60" />
+            <div key={i} className="h-24 animate-pulse rounded-lg bg-white/[0.04]" />
           ))}
         </div>
       </div>
@@ -99,12 +99,12 @@ export default function RelayerHealthCard() {
 
   if (error) {
     return (
-      <div className="rounded-xl border border-rose-500/40 bg-rose-500/5 p-4">
+      <div className="rounded-2xl border border-rose-500/40 bg-rose-500/5 p-4">
         <div className="text-sm text-rose-300">Relayer health unavailable: {error}</div>
         <button
           type="button"
           onClick={load}
-          className="mt-2 rounded-md border border-rose-500/40 px-3 py-1 text-xs text-rose-300 hover:bg-rose-500/10"
+          className="mt-2 rounded-xl border border-rose-500/40 px-3 py-1 text-xs text-rose-300 hover:bg-rose-500/10"
         >
           Retry
         </button>
@@ -121,7 +121,7 @@ export default function RelayerHealthCard() {
     data.reconciliation_backlog.user_copy_trades;
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur">
+    <div className="nl-glass rounded-2xl p-4">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h2 className="text-base font-semibold text-white">Relayer Health</h2>
@@ -132,7 +132,7 @@ export default function RelayerHealthCard() {
         <button
           type="button"
           onClick={load}
-          className="rounded-md border border-slate-700 px-3 py-1 text-xs text-slate-300 hover:bg-slate-800"
+          className="nl-button nl-button--ghost"
         >
           Refresh
         </button>
@@ -147,7 +147,7 @@ export default function RelayerHealthCard() {
       </div>
 
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
-        <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
               Cron Stats (24h)
@@ -180,7 +180,7 @@ export default function RelayerHealthCard() {
           </div>
         </div>
 
-        <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
               Reconciliation Backlog
@@ -215,7 +215,7 @@ export default function RelayerHealthCard() {
       </div>
 
       {data.recent_reverts.length > 0 && (
-        <div className="mt-4 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+        <div className="mt-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
           <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
             Recent reverts (24h)
           </div>

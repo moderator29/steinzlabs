@@ -97,7 +97,7 @@ export default function AdminRevenuePage() {
           </p>
         </div>
         <button onClick={() => exportCSV(data.trades)}
-          className="flex items-center gap-2 text-xs border border-[#1E2433] text-gray-300 hover:text-white px-3 py-2 rounded-lg">
+          className="nl-button nl-button--ghost flex items-center gap-2 text-xs">
           <Download className="w-3.5 h-3.5" /> Export CSV
         </button>
       </div>
@@ -110,7 +110,7 @@ export default function AdminRevenuePage() {
           { label: 'Today', value: fmtUsd(data.revenue.feesToday) },
           { label: 'Projected Monthly', value: fmtUsd(data.revenue.projectedMonthly) },
         ].map(k => (
-          <div key={k.label} className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
+          <div key={k.label} className="nl-glass rounded-2xl p-4">
             <div className="text-xs text-gray-400 mb-1">{k.label}</div>
             <div className="text-lg font-bold text-white">{k.value}</div>
           </div>
@@ -118,7 +118,7 @@ export default function AdminRevenuePage() {
       </div>
 
       {/* Daily Fees Chart */}
-      <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 mb-6">
+      <div className="nl-glass rounded-2xl p-4 mb-6">
         <h3 className="text-sm font-semibold text-white mb-4">Daily Fee Revenue (30d)</h3>
         <MicroArea
           data={data.revenue.dailyFeesChart}
@@ -132,15 +132,15 @@ export default function AdminRevenuePage() {
 
       {/* Volume Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6">
-        <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
+        <div className="nl-glass rounded-2xl p-4">
           <div className="text-xs text-gray-400">Total Trades</div>
           <div className="text-lg font-bold text-white">{data.volume.totalTrades}</div>
         </div>
-        <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
+        <div className="nl-glass rounded-2xl p-4">
           <div className="text-xs text-gray-400">Gasless Trades</div>
           <div className="text-lg font-bold text-white">{data.volume.gaslessCount}</div>
         </div>
-        <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
+        <div className="nl-glass rounded-2xl p-4">
           <div className="text-xs text-gray-400">Gasless Adoption</div>
           <div className="text-lg font-bold text-white">
             {(data.volume.gaslessRatio * 100).toFixed(1)}%
@@ -149,13 +149,13 @@ export default function AdminRevenuePage() {
       </div>
 
       {/* Recent Trades Table */}
-      <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-[#1E2433]">
+      <div className="nl-glass rounded-2xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-white/10">
           <h3 className="text-sm font-semibold text-white">Trade History</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
-            <thead className="border-b border-[#1E2433]">
+            <thead className="border-b border-white/10">
               <tr>
                 {['Pair', 'Chain', 'Amount', 'Fee', 'Trader', 'Time'].map(h => (
                   <th key={h} className="px-4 py-2.5 text-start text-gray-500 font-medium">{h}</th>
@@ -164,7 +164,7 @@ export default function AdminRevenuePage() {
             </thead>
             <tbody>
               {data.trades.slice(0, 50).map((t, i) => (
-                <tr key={i} className="border-b border-[#1E2433] last:border-0">
+                <tr key={i} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors last:border-0">
                   <td className="px-4 py-2 text-white">{t.sellToken}/{t.buyToken}</td>
                   <td className="px-4 py-2 text-gray-400">{CHAIN_NAMES[t.chainId] || t.chainId}</td>
                   <td className="px-4 py-2 text-gray-300">${parseFloat(t.sellAmountUsd || '0').toFixed(2)}</td>

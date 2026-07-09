@@ -141,7 +141,7 @@ export default function WalletLabelsPage() {
       </div>
 
       {showForm && (
-        <div className="nl-glass rounded-xl p-4 mb-4 space-y-3">
+        <div className="nl-glass rounded-2xl p-4 mb-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-white">{editing ? 'Edit Label' : 'New Wallet Label'}</h3>
             <button onClick={() => { setShowForm(false); setEditing(null); }} className="text-gray-500 hover:text-white">
@@ -153,25 +153,25 @@ export default function WalletLabelsPage() {
               value={form.address}
               onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
               placeholder="Wallet address"
-              className="nl-glass rounded-lg px-3 py-2.5 text-sm text-white font-mono placeholder-gray-500 outline-none focus:border-[#0066FF]/50"
+              className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white font-mono placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors"
             />
             <input
               value={form.label}
               onChange={e => setForm(f => ({ ...f, label: e.target.value }))}
               placeholder="Entity label (e.g. Binance Hot Wallet)"
-              className="nl-glass rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:border-[#0066FF]/50"
+              className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors"
             />
             <select
               value={form.chain}
               onChange={e => setForm(f => ({ ...f, chain: e.target.value }))}
-              className="nl-glass rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#0066FF]/50"
+              className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors"
             >
               {['ETH', 'SOL', 'BASE', 'ARB', 'BSC'].map(c => <option key={c}>{c}</option>)}
             </select>
             <select
               value={form.category}
               onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-              className="nl-glass rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#0066FF]/50"
+              className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors"
             >
               {CATEGORIES.map(c => <option key={c}>{c}</option>)}
             </select>
@@ -180,7 +180,7 @@ export default function WalletLabelsPage() {
             value={form.notes ?? ''}
             onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
             placeholder="Notes (optional)"
-            className="w-full nl-glass rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:border-[#0066FF]/50"
+            className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors"
           />
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -205,15 +205,15 @@ export default function WalletLabelsPage() {
         </div>
       )}
 
-      <div className="nl-glass rounded-xl overflow-hidden overflow-x-auto">
-        <div className="p-3 border-b border-[#1E2433]">
+      <div className="nl-glass rounded-2xl overflow-hidden overflow-x-auto">
+        <div className="p-3 border-b border-white/10">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search by address, label, or category..."
-              className="w-full nl-glass rounded-lg ps-9 pe-4 py-2 text-xs text-white placeholder-gray-500 outline-none focus:border-[#0066FF]/50"
+              className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl ps-9 pe-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors"
             />
           </div>
         </div>
@@ -229,16 +229,16 @@ export default function WalletLabelsPage() {
           </div>
         ) : (
           <table className="w-full text-xs min-w-[700px]">
-            <thead className="border-b border-[#1E2433]">
+            <thead className="border-b border-white/10">
               <tr>
                 {['Address', 'Chain', 'Label', 'Category', 'Verified', 'Notes', 'Actions'].map(h => (
-                  <th key={h} className="px-4 py-2.5 text-start text-gray-500 font-medium">{h}</th>
+                  <th key={h} className="px-4 py-2.5 text-start text-gray-400 font-medium">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.map(l => (
-                <tr key={l.id} className="border-b border-[#1E2433] last:border-0 hover:bg-white/[0.04]">
+                <tr key={l.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.03] transition-colors">
                   <td className="px-4 py-3 font-mono text-gray-300">{l.address}</td>
                   <td className="px-4 py-3">
                     <span className="px-2 py-0.5 bg-[#1E2433] rounded text-[10px] font-mono text-gray-300">{l.chain}</span>

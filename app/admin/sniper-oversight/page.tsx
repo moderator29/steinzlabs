@@ -121,7 +121,7 @@ export default function SniperOversightPage() {
           { label: 'Total PnL (30d)', value: formatUSD(jobs.reduce((s, j) => s + (j.pnl ?? 0), 0)), icon: TrendingUp },
           { label: 'Failed Jobs', value: jobs.filter(j => j.status === 'failed').length, icon: AlertTriangle },
         ].map(k => (
-          <div key={k.label} className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 flex items-center gap-3">
+          <div key={k.label} className="nl-glass rounded-2xl p-4 flex items-center gap-3">
             <div className="w-9 h-9 bg-[#0066FF]/10 rounded-xl flex items-center justify-center flex-shrink-0">
               <k.icon className="w-4 h-4 text-[#0066FF]" />
             </div>
@@ -133,18 +133,18 @@ export default function SniperOversightPage() {
         ))}
       </div>
 
-      <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden overflow-x-auto">
+      <div className="nl-glass rounded-2xl overflow-hidden overflow-x-auto">
         <table className="w-full text-xs min-w-[800px]">
-          <thead className="border-b border-[#1E2433]">
+          <thead className="border-b border-white/10">
             <tr>{['Token', 'Chain', 'Target', 'Current', 'Wallet', 'Created', 'Status', 'PnL', 'Action'].map(h => (
-              <th key={h} className="px-4 py-2.5 text-start text-gray-500 font-medium">{h}</th>
+              <th key={h} className="px-4 py-2.5 text-start text-gray-400 font-medium">{h}</th>
             ))}</tr>
           </thead>
           <tbody>
             {jobs.map(job => {
               const priceDiff = ((job.currentPrice - job.targetPrice) / job.targetPrice * 100);
               return (
-                <tr key={job.id} className="border-b border-[#1E2433] last:border-0 hover:bg-[#1E2433]/30">
+                <tr key={job.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.03] transition-colors">
                   <td className="px-4 py-3 text-white font-bold">{job.token}</td>
                   <td className="px-4 py-3"><span className="px-2 py-0.5 bg-[#0066FF]/10 text-[#0066FF] rounded text-[10px] font-mono">{job.chain}</span></td>
                   <td className="px-4 py-3 font-mono text-gray-300">${job.targetPrice.toFixed(8)}</td>

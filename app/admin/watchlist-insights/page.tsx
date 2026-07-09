@@ -63,7 +63,7 @@ export default function WatchlistInsightsPage() {
           <h1 className="text-xl font-bold text-white">Watchlist Insights</h1>
           <p className="text-xs text-gray-500 mt-0.5">Most watched tokens across the platform</p>
         </div>
-        <button onClick={load} disabled={loading} className="p-2 text-gray-400 hover:text-white border border-[#1E2433] rounded-lg hover:border-[#2E3443] transition-colors">
+        <button onClick={load} disabled={loading} className="nl-button nl-button--ghost">
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
@@ -91,7 +91,7 @@ export default function WatchlistInsightsPage() {
               { icon: Users, label: 'Users with Watchlists', value: formatLargeNumber(data.uniqueUsers) },
               { icon: TrendingUp, label: 'Avg Items / User', value: avgPerUser },
             ].map(k => (
-              <div key={k.label} className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 flex items-center gap-3">
+              <div key={k.label} className="nl-glass rounded-2xl p-4 flex items-center gap-3">
                 <div className="w-9 h-9 bg-[#0066FF]/10 rounded-xl flex items-center justify-center">
                   <k.icon className="w-4 h-4 text-[#0066FF]" />
                 </div>
@@ -103,24 +103,24 @@ export default function WatchlistInsightsPage() {
             ))}
           </div>
 
-          <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 mb-4">
+          <div className="nl-glass rounded-2xl p-4 mb-4">
             <h3 className="text-sm font-semibold text-white mb-4">Top 10 Watched Tokens</h3>
             <MicroBar data={chartData} xKey="symbol" yKey="count" color="#0066FF" height={220} formatY={(v) => formatLargeNumber(v)} />
           </div>
 
-          <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden overflow-x-auto">
-            <div className="px-4 py-3 border-b border-[#1E2433]">
+          <div className="nl-glass rounded-2xl overflow-hidden overflow-x-auto">
+            <div className="px-4 py-3 border-b border-white/10">
               <h3 className="text-sm font-semibold text-white">Top Watched Tokens</h3>
             </div>
             <table className="w-full text-xs min-w-[600px]">
-              <thead className="border-b border-[#1E2433]">
+              <thead className="border-b border-white/10">
                 <tr>{['#', 'Symbol', 'Token ID', 'Watcher Count'].map(h => (
                   <th key={h} className="px-4 py-2.5 text-start text-gray-500 font-medium">{h}</th>
                 ))}</tr>
               </thead>
               <tbody>
                 {data.tokens.map((t, i) => (
-                  <tr key={`${t.token_id}-${i}`} className="border-b border-[#1E2433] last:border-0 hover:bg-[#1E2433]/30">
+                  <tr key={`${t.token_id}-${i}`} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors last:border-0">
                     <td className="px-4 py-3 text-gray-500 font-mono">{i + 1}</td>
                     <td className="px-4 py-3 text-white font-bold">{t.token_symbol}</td>
                     <td className="px-4 py-3 text-gray-400 font-mono text-[10px] truncate max-w-[280px]">{t.token_id}</td>

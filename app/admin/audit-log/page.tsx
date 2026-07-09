@@ -81,7 +81,7 @@ export default function AdminAuditLogPage() {
         <button
           onClick={load}
           disabled={loading}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] border border-white/10 px-3 py-1.5 text-xs font-semibold text-slate-100"
+          className="ml-auto inline-flex items-center gap-1.5 nl-button nl-button--ghost text-xs"
           aria-label="Refresh audit log"
         >
           {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden /> : <RefreshCw className="w-3.5 h-3.5" aria-hidden />}
@@ -98,20 +98,20 @@ export default function AdminAuditLogPage() {
           value={actor}
           onChange={(e) => setActor(e.target.value)}
           placeholder="actor uuid"
-          className="bg-[#0A0E1A] border border-white/10 rounded-md px-2 py-1 text-[11px] text-slate-100 font-mono w-44"
+          className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-2 py-1 text-[11px] text-slate-100 font-mono w-44 focus:outline-none focus:border-[#0066FF]/50 transition-colors"
           aria-label="Filter by actor uuid"
         />
         <input
           value={target}
           onChange={(e) => setTarget(e.target.value)}
           placeholder="target uuid"
-          className="bg-[#0A0E1A] border border-white/10 rounded-md px-2 py-1 text-[11px] text-slate-100 font-mono w-44"
+          className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-2 py-1 text-[11px] text-slate-100 font-mono w-44 focus:outline-none focus:border-[#0066FF]/50 transition-colors"
           aria-label="Filter by target uuid"
         />
         <select
           value={action}
           onChange={(e) => setAction(e.target.value)}
-          className="bg-[#0A0E1A] border border-white/10 rounded-md px-2 py-1 text-[11px] text-slate-100"
+          className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-2 py-1 text-[11px] text-slate-100 focus:outline-none focus:border-[#0066FF]/50 transition-colors"
           aria-label="Filter by action"
         >
           {ACTION_OPTIONS.map((a) => (
@@ -123,7 +123,7 @@ export default function AdminAuditLogPage() {
             type="datetime-local"
             value={since}
             onChange={(e) => setSince(e.target.value)}
-            className="ml-1 bg-[#0A0E1A] border border-white/10 rounded-md px-2 py-1 text-[11px] text-slate-100"
+            className="ml-1 bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-2 py-1 text-[11px] text-slate-100 focus:outline-none focus:border-[#0066FF]/50 transition-colors"
           />
         </label>
         <label className="text-[10px] text-slate-300">To
@@ -131,7 +131,7 @@ export default function AdminAuditLogPage() {
             type="datetime-local"
             value={until}
             onChange={(e) => setUntil(e.target.value)}
-            className="ml-1 bg-[#0A0E1A] border border-white/10 rounded-md px-2 py-1 text-[11px] text-slate-100"
+            className="ml-1 bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-2 py-1 text-[11px] text-slate-100 focus:outline-none focus:border-[#0066FF]/50 transition-colors"
           />
         </label>
         <button

@@ -137,8 +137,8 @@ function UserDrawer({ user, onClose, onBan, onTier }: {
     <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true" aria-label="User details">
       <div className="flex-1 bg-black/50" onClick={onClose} aria-hidden="true" />
       {/* w-full on mobile (375px-safe), w-96 from sm: up. Audit flagged hardcoded w-96 overflowing iPhone SE. */}
-      <div className="w-full sm:w-96 bg-[#141824] border-l border-[#1E2433] h-full overflow-y-auto">
-        <div className="flex items-center justify-between p-4 border-b border-[#1E2433]">
+      <div className="w-full sm:w-96 nl-glass h-full overflow-y-auto">
+        <div className="flex items-center justify-between p-4 border-b border-white/10">
           <h3 className="text-sm font-bold text-white">User Details</h3>
           <button onClick={onClose} className="text-gray-500 hover:text-white" aria-label="Close user details">
             <X className="w-4 h-4" />
@@ -164,21 +164,21 @@ function UserDrawer({ user, onClose, onBan, onTier }: {
             ['Status', banned ? `Banned until ${new Date(user.banned_until!).toLocaleDateString()}` : 'Active'],
             ['Role', user.role ?? 'user'],
           ].map(([label, val]) => (
-            <div key={label} className="flex justify-between items-center py-2 border-b border-[#1E2433] gap-3">
+            <div key={label} className="flex justify-between items-center py-2 border-b border-white/5 gap-3">
               <span className="text-xs text-gray-400 flex-shrink-0">{label}</span>
               <span className="text-xs text-white font-medium truncate text-end">{val}</span>
             </div>
           ))}
 
           {/* Tier management */}
-          <div className="pt-2 space-y-2 border border-[#1E2433] rounded-xl p-3 bg-[#0d1120]">
+          <div className="pt-2 space-y-2 border border-white/[0.06] rounded-xl p-3 bg-white/[0.02]">
             <div className="text-[11px] uppercase tracking-wide text-gray-300 font-semibold">Tier override</div>
             <label className="block">
               <span className="sr-only">Tier</span>
               <select
                 value={tier}
                 onChange={(e) => setTier(e.target.value as Tier)}
-                className="w-full bg-[#1E2433] border border-[#2E3443] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors"
               >
                 <option value="free">Free — $0</option>
                 <option value="mini">Mini — $5/mo</option>
@@ -195,7 +195,7 @@ function UserDrawer({ user, onClose, onBan, onTier }: {
                   max={60}
                   value={months}
                   onChange={(e) => setMonths(parseInt(e.target.value) || 1)}
-                  className="flex-1 bg-[#1E2433] border border-[#2E3443] rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                  className="flex-1 bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors"
                   aria-label="Months of tier override"
                 />
               </label>
@@ -207,13 +207,13 @@ function UserDrawer({ user, onClose, onBan, onTier }: {
                 placeholder="Reason (optional — audit trail)"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                className="w-full bg-[#1E2433] border border-[#2E3443] rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-2 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors"
               />
             </label>
             <button
               onClick={applyTier}
               disabled={saving}
-              className="w-full py-2 rounded-lg text-xs font-bold bg-[#0066FF] hover:bg-[#0818CC] text-white disabled:opacity-50 transition-colors focus:outline-none focus:ring-2 focus:ring-[#0066FF] focus:ring-offset-2 focus:ring-offset-[#0d1120]"
+              className="w-full naka-button-primary disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#0066FF] focus:ring-offset-2 focus:ring-offset-[#0d1120]"
             >
               {saving ? 'Saving…' : 'Apply tier'}
             </button>
@@ -229,7 +229,7 @@ function UserDrawer({ user, onClose, onBan, onTier }: {
             {user.email && (
               <a href={`mailto:${user.email}`}
                 aria-label={`Email ${user.email}`}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-[#1E2433] hover:bg-[#2E3443] text-gray-200 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-[#0066FF]">
+                className="w-full flex items-center justify-center gap-2 nl-button nl-button--ghost focus:outline-none focus:ring-2 focus:ring-[#0066FF]">
                 <Mail className="w-4 h-4" aria-hidden="true" /> Email User
               </a>
             )}
@@ -325,15 +325,15 @@ export default function AdminUsersPage() {
 
       {error && <div role="alert" className="mb-4 p-3 bg-red-500/15 border border-red-500/40 rounded-xl text-xs text-red-200">{error}</div>}
 
-      <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden">
-        <div className="p-4 border-b border-[#1E2433] space-y-3">
+      <div className="nl-glass rounded-2xl overflow-hidden">
+        <div className="p-4 border-b border-white/10 space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
             <label className="block">
               <span className="sr-only">Search users</span>
               <input value={query} onChange={e => setQuery(e.target.value)}
                 placeholder="Search by name, email, or username..."
-                className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-9 pe-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF]/40 transition-colors" />
+                className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl ps-9 pe-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors" />
             </label>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -341,7 +341,7 @@ export default function AdminUsersPage() {
             <label>
               <span className="sr-only">Tier filter</span>
               <select value={tierFilter} onChange={e => setTierFilter(e.target.value as TierFilter)}
-                className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-2 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-[#0066FF]">
+                className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-2 py-1.5 text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors">
                 <option value="all">All tiers</option>
                 <option value="free">Free</option>
                 <option value="mini">Mini</option>
@@ -352,7 +352,7 @@ export default function AdminUsersPage() {
             <label>
               <span className="sr-only">Signup window filter</span>
               <select value={signupFilter} onChange={e => setSignupFilter(e.target.value as SignupFilter)}
-                className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-2 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-[#0066FF]">
+                className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-2 py-1.5 text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors">
                 <option value="all">All signups</option>
                 <option value="24h">Joined &lt;24h</option>
                 <option value="7d">Joined &lt;7d</option>
@@ -363,7 +363,7 @@ export default function AdminUsersPage() {
             <label>
               <span className="sr-only">Activity filter</span>
               <select value={activityFilter} onChange={e => setActivityFilter(e.target.value as ActivityFilter)}
-                className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-2 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-[#0066FF]">
+                className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-2 py-1.5 text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors">
                 <option value="all">Any activity</option>
                 <option value="active7d">Active &lt;7d</option>
                 <option value="active30d">Active &lt;30d</option>
@@ -376,7 +376,7 @@ export default function AdminUsersPage() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
-            <thead className="border-b border-[#1E2433]">
+            <thead className="border-b border-white/10">
               <tr>{['User', 'Email', 'Tier', 'Created', 'Last Active', 'Status', ''].map(h => (
                 <th key={h || 'actions'} scope="col" className="px-4 py-2.5 text-start text-gray-300 font-medium">{h || <span className="sr-only">Open user</span>}</th>
               ))}</tr>
@@ -392,7 +392,7 @@ export default function AdminUsersPage() {
                 const eff = effectiveTierOf(user);
                 const banned = isBannedNow(user);
                 return (
-                  <tr key={user.id} className="border-b border-[#1E2433] last:border-0 hover:bg-[#1E2433]/30 cursor-pointer focus-within:bg-[#1E2433]/30" onClick={() => setSelected(user)}>
+                  <tr key={user.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.03] transition-colors cursor-pointer focus-within:bg-white/[0.03]" onClick={() => setSelected(user)}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         {user.avatar_url ? (

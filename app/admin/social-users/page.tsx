@@ -47,7 +47,7 @@ function Inner() {
         value={id}
         onChange={(e) => setId(e.target.value)}
         placeholder="Paste a profile UUID…"
-        className="w-full mb-4 bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-500 font-mono"
+        className="w-full mb-4 bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors font-mono"
       />
       {error ? <div className="text-sm text-red-400">{error}</div>
         : data === null ? (id ? <div className="text-sm text-slate-400 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Loading…</div> : null)
@@ -74,7 +74,7 @@ function Inner() {
             <h2 className="text-sm font-bold text-white mb-2">Counts</h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[12px]">
               {Object.entries(data.counts).map(([k, v]) => (
-                <div key={k} className="rounded-lg nl-glass px-3 py-2">
+                <div key={k} className="bg-white/[0.02] border border-white/[0.06] rounded-xl px-3 py-2">
                   <div className="text-[10px] uppercase text-slate-400">{k.replace(/_/g, ' ')}</div>
                   <div className="text-base font-bold text-white tabular-nums">{v}</div>
                 </div>

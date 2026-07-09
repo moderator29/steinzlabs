@@ -67,7 +67,7 @@ export default function SearchLogsPage() {
           { label: 'Unique Queries', value: data.uniqueQueries.toLocaleString() },
           { label: 'No-Result Rate', value: `${data.noResultRatePct}%` },
         ].map((k) => (
-          <div key={k.label} className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
+          <div key={k.label} className="nl-glass rounded-2xl p-4">
             <div className="text-xs text-gray-400 mb-2">{k.label}</div>
             <div className="text-2xl font-bold text-white">{loading ? '—' : k.value}</div>
           </div>
@@ -75,7 +75,7 @@ export default function SearchLogsPage() {
       </div>
 
       {!hasData && !loading ? (
-        <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-10 text-center">
+        <div className="nl-glass rounded-2xl p-10 text-center">
           <Inbox className="w-8 h-8 text-gray-600 mx-auto mb-3" />
           <p className="text-sm font-semibold text-white">No search activity yet</p>
           <p className="text-xs text-gray-500 mt-1">Search logs will populate here as users query tokens and wallets.</p>
@@ -83,11 +83,11 @@ export default function SearchLogsPage() {
       ) : (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-            <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
+            <div className="nl-glass rounded-2xl p-4">
               <h3 className="text-sm font-semibold text-white mb-4">Searches by Hour (Today)</h3>
               <MicroBar data={data.hourly} xKey="hour" yKey="searches" color="#0066FF" height={160} />
             </div>
-            <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
+            <div className="nl-glass rounded-2xl p-4">
               <h3 className="text-sm font-semibold text-white mb-4">Top Search Queries</h3>
               {data.top.length === 0 ? (
                 <p className="text-xs text-gray-500 py-8 text-center">No queries logged yet.</p>
@@ -107,8 +107,8 @@ export default function SearchLogsPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-[#1E2433] flex items-center gap-2">
+            <div className="nl-glass rounded-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-white/10 flex items-center gap-2">
                 <TrendingUp className="w-3.5 h-3.5 text-[#0066FF]" />
                 <h3 className="text-sm font-semibold text-white">Trending Searches</h3>
               </div>
@@ -125,16 +125,16 @@ export default function SearchLogsPage() {
                 ))}
               </div>
             </div>
-            <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-[#1E2433] flex items-center gap-2">
+            <div className="nl-glass rounded-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-white/10 flex items-center gap-2">
                 <Search className="w-3.5 h-3.5 text-[#0066FF]" />
                 <h3 className="text-sm font-semibold text-white">Recent Searches</h3>
               </div>
-              <div className="divide-y divide-[#1E2433] overflow-x-auto">
+              <div className="divide-y divide-white/5 overflow-x-auto">
                 {data.recent.length === 0 ? (
                   <p className="text-xs text-gray-500 p-4">No recent searches.</p>
                 ) : data.recent.map((s, i) => (
-                  <div key={i} className="px-4 py-2.5 flex items-center gap-3 text-xs hover:bg-[#1E2433]/30">
+                  <div key={i} className="px-4 py-2.5 flex items-center gap-3 text-xs hover:bg-white/[0.03] transition-colors">
                     <span className={`font-mono font-medium truncate ${s.found ? 'text-white' : 'text-red-400'}`}>{s.query}</span>
                     <span className="flex-1 text-gray-500 truncate">{s.userId}</span>
                     {!s.found && <span className="text-[9px] text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded-full">No results</span>}

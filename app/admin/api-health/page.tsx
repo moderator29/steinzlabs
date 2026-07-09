@@ -124,7 +124,7 @@ export default function ApiHealthPage() {
           <h1 className="text-xl font-bold text-white">API Health Monitor</h1>
           <p className="text-xs text-gray-500 mt-0.5">Monitoring {apis.length} endpoints — Last check: {formatTimeAgo(lastRefresh)}</p>
         </div>
-        <button onClick={refresh} disabled={loading} className="flex items-center gap-2 text-xs border border-[#1E2433] text-gray-300 hover:text-white px-3 py-2 rounded-lg hover:border-[#2E3443] transition-colors">
+        <button onClick={refresh} disabled={loading} className="nl-button nl-button--ghost flex items-center gap-2 text-xs">
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
         </button>
       </div>
@@ -135,7 +135,7 @@ export default function ApiHealthPage() {
           { label: 'Degraded', count: degraded, status: 'warning' as const },
           { label: 'Down', count: down, status: 'error' as const },
         ].map(s => (
-          <div key={s.label} className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 flex items-center gap-3">
+          <div key={s.label} className="nl-glass rounded-2xl p-4 flex items-center gap-3">
             <StatusDot status={s.status} size="lg" pulse={s.status !== 'error'} />
             <div>
               <div className="text-2xl font-bold text-white">{s.count}</div>
@@ -145,16 +145,16 @@ export default function ApiHealthPage() {
         ))}
       </div>
 
-      <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden overflow-x-auto">
+      <div className="nl-glass rounded-2xl overflow-hidden overflow-x-auto">
         <table className="w-full text-xs min-w-[700px]">
-          <thead className="border-b border-[#1E2433]">
+          <thead className="border-b border-white/10">
             <tr>{['API / Service', 'Category', 'Status', 'Latency', 'Uptime (30d)', 'Last Check', ''].map(h => (
               <th key={h} className="px-4 py-2.5 text-start text-gray-500 font-medium">{h}</th>
             ))}</tr>
           </thead>
           <tbody>
             {apis.map(api => (
-              <tr key={api.name} className="border-b border-[#1E2433] last:border-0 hover:bg-[#1E2433]/30">
+              <tr key={api.name} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors last:border-0">
                 <td className="px-4 py-3">
                   <div className="text-white font-medium">{api.name}</div>
                   {api.errorMsg && <div className="text-yellow-400 text-[10px] mt-0.5">{api.errorMsg}</div>}

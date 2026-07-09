@@ -248,10 +248,10 @@ export default function AdminResearchPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={load} disabled={loading} aria-label="Refresh post list" className="p-2 text-gray-300 hover:text-white border border-[#1E2433] rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#0066FF]">
+          <button onClick={load} disabled={loading} aria-label="Refresh post list" className="nl-button nl-button--ghost focus:outline-none focus:ring-2 focus:ring-[#0066FF]">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
           </button>
-          <button onClick={openNew} className="flex items-center gap-2 text-xs font-semibold text-white bg-[#0066FF] hover:bg-[#0818CC] rounded-lg px-4 py-2 transition-colors">
+          <button onClick={openNew} className="flex items-center gap-2 naka-button-primary">
             <Plus className="w-3.5 h-3.5" /> New Post
           </button>
         </div>
@@ -263,7 +263,7 @@ export default function AdminResearchPage() {
       <div className="relative mb-5">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
         <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search posts…"
-          className="w-full bg-[#141824] border border-[#1E2433] rounded-xl ps-9 pe-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50" />
+          className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl ps-9 pe-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors" />
       </div>
 
       {/* Post list */}
@@ -277,7 +277,7 @@ export default function AdminResearchPage() {
       ) : (
         <div className="space-y-2">
           {filtered.map(post => (
-            <div key={post.id} className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 flex items-center gap-4 hover:border-[#2E3443] transition-colors">
+            <div key={post.id} className="nl-glass rounded-2xl p-4 flex items-center gap-4">
               <div className={`w-2 h-2 rounded-full flex-shrink-0 ${post.published ? 'bg-emerald-400' : 'bg-gray-600'}`} />
               {post.image_url && <img src={post.image_url} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-white/10" />}
               <div className="flex-1 min-w-0">
@@ -323,10 +323,10 @@ export default function AdminResearchPage() {
       {/* ── Create / Edit modal ─────────────────────────────────────────────── */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
-          <div className="w-full max-w-5xl bg-[#0D1120] border border-[#1E2433] rounded-2xl flex flex-col h-[92vh]">
+          <div className="w-full max-w-5xl nl-glass rounded-2xl flex flex-col h-[92vh]">
 
             {/* Modal header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#1E2433] flex-shrink-0">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 flex-shrink-0">
               <h2 className="text-sm font-bold text-white">{editing ? 'Edit Post' : 'New Post'}</h2>
               <button onClick={() => setShowForm(false)} aria-label="Close editor" className="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-[#0066FF]">
                 <X className="w-4 h-4" aria-hidden="true" />
@@ -337,14 +337,14 @@ export default function AdminResearchPage() {
             <div className="flex-1 overflow-hidden flex flex-col lg:flex-row gap-0 min-h-0">
 
               {/* Left column — metadata fields (stacks above editor on mobile) */}
-              <div className="w-full lg:w-72 flex-shrink-0 border-b lg:border-b-0 lg:border-r border-[#1E2433] overflow-y-auto p-5 space-y-4">
+              <div className="w-full lg:w-72 flex-shrink-0 border-b lg:border-b-0 lg:border-r border-white/10 overflow-y-auto p-5 space-y-4">
 
                 {/* Title */}
                 <div>
                   <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Title *</label>
                   <input type="text" value={form.title}
                     onChange={e => setForm(f => ({ ...f, title: e.target.value, slug: slugify(e.target.value) }))}
-                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]/50"
+                    className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors"
                     placeholder="Post title" />
                 </div>
 
@@ -352,7 +352,7 @@ export default function AdminResearchPage() {
                 <div>
                   <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Slug</label>
                   <input type="text" value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))}
-                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-[#0066FF]/50"
+                    className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-[#0066FF]/50 transition-colors"
                     placeholder="auto-generated" />
                 </div>
 
@@ -360,7 +360,7 @@ export default function AdminResearchPage() {
                 <div>
                   <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Category</label>
                   <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]/50">
+                    className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors">
                     {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
@@ -369,7 +369,7 @@ export default function AdminResearchPage() {
                 <div>
                   <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Summary</label>
                   <textarea value={form.summary} onChange={e => setForm(f => ({ ...f, summary: e.target.value }))} rows={3}
-                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]/50 resize-none"
+                    className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]/50 resize-none transition-colors"
                     placeholder="Short description shown in feed" />
                 </div>
 
@@ -380,13 +380,13 @@ export default function AdminResearchPage() {
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
                     onChange={e => { const f = e.target.files?.[0]; if (f) handleImageFile(f); e.target.value = ''; }} />
                   <button type="button" onClick={() => fileInputRef.current?.click()} disabled={imageUploading}
-                    className="w-full flex items-center justify-center gap-2 border border-dashed border-[#1E2433] hover:border-[#0066FF]/50 rounded-xl py-3 text-xs text-gray-400 hover:text-white transition-colors disabled:opacity-50 mb-2">
+                    className="w-full flex items-center justify-center gap-2 border border-dashed border-white/[0.08] hover:border-[#0066FF]/50 rounded-xl py-3 text-xs text-gray-400 hover:text-white transition-colors disabled:opacity-50 mb-2">
                     {imageUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                     {imageUploading ? 'Uploading…' : 'Upload image'}
                   </button>
                   {/* OR paste URL */}
                   <input type="url" value={form.image_url ?? ''} onChange={e => setForm(f => ({ ...f, image_url: e.target.value || null }))}
-                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0066FF]/50"
+                    className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors"
                     placeholder="…or paste URL" />
                   {form.image_url && (
                     <div className="mt-2 relative">
@@ -404,7 +404,7 @@ export default function AdminResearchPage() {
                   <label className="block text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">Tags (comma separated)</label>
                   <input type="text" value={form.tags.join(', ')}
                     onChange={e => setForm(f => ({ ...f, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) }))}
-                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]/50"
+                    className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors"
                     placeholder="DeFi, Solana, Analysis" />
                 </div>
 
@@ -415,7 +415,7 @@ export default function AdminResearchPage() {
                     type="datetime-local"
                     value={form.scheduled_at ?? ''}
                     onChange={e => setForm(f => ({ ...f, scheduled_at: e.target.value || null }))}
-                    className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0066FF]/50"
+                    className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors"
                   />
                   {form.scheduled_at && (
                     <p className="text-[10px] text-amber-300/80 mt-1">
@@ -437,7 +437,7 @@ export default function AdminResearchPage() {
               {/* Right column — markdown editor */}
               <div className="flex-1 flex flex-col min-w-0">
                 {/* Write / Preview tabs */}
-                <div className="flex border-b border-[#1E2433] flex-shrink-0">
+                <div className="flex border-b border-white/10 flex-shrink-0">
                   {(['write', 'preview'] as EditorTab[]).map(tab => (
                     <button key={tab} onClick={() => setEditorTab(tab)}
                       className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold capitalize transition-colors border-b-2 ${
@@ -468,7 +468,7 @@ export default function AdminResearchPage() {
             </div>
 
             {/* Modal footer */}
-            <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-[#1E2433] flex-shrink-0">
+            <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-white/10 flex-shrink-0">
               <div className="flex-1 min-w-0">
                 {formError && (
                   <div className="px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400 truncate" title={formError}>
@@ -477,11 +477,11 @@ export default function AdminResearchPage() {
                 )}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <button onClick={() => { setShowForm(false); setFormError(null); }} className="text-xs text-gray-400 hover:text-white px-4 py-2 rounded-lg border border-[#1E2433] hover:border-[#2E3443] transition-colors">
+                <button onClick={() => { setShowForm(false); setFormError(null); }} className="text-xs nl-button nl-button--ghost">
                   Cancel
                 </button>
                 <button onClick={save} disabled={saving}
-                  className="flex items-center gap-2 text-xs font-semibold text-white bg-[#0066FF] hover:bg-[#0818CC] disabled:opacity-50 px-5 py-2 rounded-lg transition-colors">
+                  className="flex items-center gap-2 naka-button-primary disabled:opacity-50">
                   {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                   {saving ? 'Saving…' : editing ? 'Save Changes' : 'Create Post'}
                 </button>
@@ -515,7 +515,7 @@ function EmojiPickerButton({ onPick }: { onPick: (e: string) => void }) {
         😀
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-56 bg-[#0e1220] border border-white/[0.08] rounded-xl p-2 shadow-2xl z-50 grid grid-cols-6 gap-1">
+        <div className="absolute right-0 top-full mt-1 w-56 nl-glass rounded-xl p-2 shadow-2xl z-50 grid grid-cols-6 gap-1">
           {EMOJIS.map((e) => (
             <button
               key={e}

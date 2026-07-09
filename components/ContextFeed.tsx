@@ -478,16 +478,20 @@ export default function ContextFeed() {
   const fetchedRef = useRef<Set<string>>(new Set());
   const viewedRef = useRef<Set<string>>(new Set());
 
+  // Load real like/view counts for EVERY card on screen, not just the first
+  // five. The old `.slice(0, 5)` cap meant every card past the fifth rendered a
+  // static 0 because its counts were never fetched. fetchedRef dedupes so each
+  // event is fetched once per session.
   useEffect(() => {
-    const unfetched = events.filter(e => !fetchedRef.current.has(e.id)).slice(0, 5);
+    const unfetched = events.filter(e => !fetchedRef.current.has(e.id));
     unfetched.forEach(event => {
       fetchedRef.current.add(event.id);
       fetchEngagement(event.id);
     });
-  }, [events]);
+  }, [events, fetchEngagement]);
 
   useEffect(() => {
-    const unviewed = events.filter(e => !viewedRef.current.has(e.id)).slice(0, 5);
+    const unviewed = events.filter(e => !viewedRef.current.has(e.id));
     if (unviewed.length === 0) return;
     unviewed.forEach(e => viewedRef.current.add(e.id));
     const timer = setTimeout(() => {
@@ -496,7 +500,24 @@ export default function ContextFeed() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ eventId: event.id, action: 'view' })
-        }).catch(() => {});
+        })
+          // Reflect the just-recorded view on the card instead of leaving it
+          // frozen: the route returns the fresh aggregate counts.
+          .then(r => (r.ok ? r.json() : null))
+          .then(counts => {
+            if (!counts) return;
+            setEngagement(prev => ({
+              ...prev,
+              [event.id]: {
+                ...(prev[event.id] ?? { liked: false, shared: false }),
+                views: counts.views ?? 0,
+                comments: counts.comments ?? 0,
+                shares: counts.shares ?? 0,
+                likes: counts.likes ?? 0,
+              },
+            }));
+          })
+          .catch(() => {});
       });
     }, 2000);
     return () => clearTimeout(timer);
