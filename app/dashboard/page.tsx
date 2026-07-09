@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense, lazy, memo, useCallback, Component, ReactNode } from 'react';
+import { useState, useEffect, useRef, Suspense, lazy, memo, useCallback, Component, ReactNode } from 'react';
 import type { GiftSuccessData } from '@/components/wire/GiftSuccessCard';
 import { motion, AnimatePresence } from 'framer-motion';
 // Brand icon library — gradient-glowing platform icons. Missing specialty
@@ -10,7 +10,9 @@ import {
 } from '@/components/icons/brand';
 import {
   Home, MessageSquare, Zap, ArrowUpRight, ArrowDownRight, Search, Menu, X,
+  LayoutGrid, Rss, Radio, Newspaper, LineChart, Sparkles,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useFeatureUsageLog } from '@/lib/hooks/useFeatureUsageLog';
@@ -51,6 +53,19 @@ type HomeSubtab = (typeof HOME_SUBTABS)[number];
 function isHomeSubtab(v: unknown): v is HomeSubtab {
   return typeof v === 'string' && (HOME_SUBTABS as readonly string[]).includes(v);
 }
+
+// Display metadata for the segmented home nav. `id` stays the internal union
+// value (never rename — deep-links + localStorage key off it); `label` is the
+// visible copy. Note 'wire' intentionally shows as "Feed". Order mirrors
+// HOME_SUBTABS so the union, deep-link parser and the nav can never drift.
+const HOME_TABS: { id: HomeSubtab; label: string; Icon: LucideIcon }[] = [
+  { id: 'overview',   label: 'Overview',     Icon: LayoutGrid },
+  { id: 'wire',       label: 'Feed',         Icon: Rss },
+  { id: 'context',    label: 'Context Feed', Icon: Radio },
+  { id: 'news',       label: 'News',         Icon: Newspaper },
+  { id: 'markets',    label: 'Markets',      Icon: LineChart },
+  { id: 'prediction', label: 'Prediction',   Icon: Sparkles },
+];
 
 function TabSpinner() {
   return (
@@ -473,6 +488,28 @@ export default function Dashboard() {
       // Malformed JSON — return default
     }
   }, []);
+
+  // Segmented home-nav: the active indicator is a single glass pill that slides
+  // between tabs. Rather than hard-code widths (tabs are variable-width + the
+  // strip scrolls on mobile) we measure the active button and drive the pill's
+  // transform off its live offsetLeft / offsetWidth. Re-measures on tab change
+  // and on resize; also nudges the active tab into view on narrow screens.
+  const homeNavRef = useRef<HTMLDivElement | null>(null);
+  const tabRefs = useRef<Partial<Record<HomeSubtab, HTMLButtonElement | null>>>({});
+  const [pill, setPill] = useState<{ left: number; width: number }>({ left: 0, width: 0 });
+  useEffect(() => {
+    if (activeNav !== 'home') return;
+    const measure = () => {
+      const el = tabRefs.current[activeTab];
+      if (el) setPill({ left: el.offsetLeft, width: el.offsetWidth });
+    };
+    measure();
+    const el = tabRefs.current[activeTab];
+    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [activeTab, activeNav]);
+
   const [menuOpen, setMenuOpen] = useState(false);
   // The Wire → Gift: the wire card's Gift button sets the target (recipient +
   // the wire being gifted on); GiftSheet handles the non-custodial transfer and
@@ -716,32 +753,53 @@ export default function Dashboard() {
       <div className="pt-14 lg:pt-[80px] px-3 lg:px-6 max-w-7xl mx-auto">
         {showHomeTabs && (
           <>
-            {/* Home sub-tab toggle — six surfaces. Horizontally scrollable on
-                mobile so the six labels never wrap or crush. The global
-                market-stats bar + gainers cards moved into the Markets tab. */}
+            {/* Home segmented nav — prime top slot, first thing under the
+                header (the old market-stats bar lived here; it moved into the
+                Markets tab). A single nl-glass pill holds all six surfaces with
+                one brand-blue glass indicator that slides between them (its
+                left/width is measured off the active button, see the effect
+                above). Horizontally scrollable on mobile so all six fit without
+                wrapping. Data logic + render switch are untouched. */}
             <div
-              className="flex gap-1 p-1 nl-glass rounded-xl mb-4 overflow-x-auto no-scrollbar"
-              style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.3), 0 0 16px rgba(0,102,255,.12)' }}
+              ref={homeNavRef}
+              className="relative flex items-center gap-0.5 p-1 nl-glass rounded-full mb-5 overflow-x-auto no-scrollbar"
+              style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25), 0 0 24px rgba(0,102,255,.14), inset 0 1px 0 rgba(255,255,255,.06)' }}
+              role="tablist"
+              aria-label="Home views"
             >
-              {([
-                { id: 'overview', label: 'Overview' },
-                { id: 'wire', label: 'The Wire' },
-                { id: 'context', label: 'Context Feed' },
-                { id: 'news', label: 'News' },
-                { id: 'markets', label: 'Markets' },
-                { id: 'prediction', label: 'Prediction' },
-              ] as const).map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  style={activeTab === tab.id ? { background: 'linear-gradient(135deg, #1E90FF 0%, #0066FF 55%, #1233AE 100%)', boxShadow: '0 0 18px rgba(0,102,255,.55), inset 0 1px 0 rgba(255,255,255,.22)' } : undefined}
-                  className={`flex-1 whitespace-nowrap px-3 py-2 text-sm font-semibold rounded-lg transition-all ${
-                    activeTab === tab.id ? 'text-white' : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+              {/* Sliding active indicator — a brand-blue glass pill. Absolutely
+                  positioned; transform + width animate so it glides between
+                  tabs. Sits behind the labels (z-0). */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute top-1 bottom-1 left-0 z-0 rounded-full will-change-transform"
+                style={{
+                  transform: `translateX(${pill.left}px)`,
+                  width: pill.width ? `${pill.width}px` : 0,
+                  opacity: pill.width ? 1 : 0,
+                  transition: 'transform .38s cubic-bezier(.22,1,.36,1), width .38s cubic-bezier(.22,1,.36,1), opacity .2s ease',
+                  background: 'linear-gradient(135deg, #1E90FF 0%, #0066FF 55%, #1233AE 100%)',
+                  boxShadow: '0 0 20px rgba(0,102,255,.5), inset 0 1px 0 rgba(255,255,255,.25)',
+                }}
+              />
+              {HOME_TABS.map(({ id, label, Icon }) => {
+                const isActive = activeTab === id;
+                return (
+                  <button
+                    key={id}
+                    ref={(el) => { tabRefs.current[id] = el; }}
+                    onClick={() => setActiveTab(id)}
+                    role="tab"
+                    aria-selected={isActive}
+                    className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 whitespace-nowrap px-3.5 py-2 text-sm font-semibold rounded-full transition-colors duration-200 ${
+                      isActive ? 'text-white' : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 shrink-0 transition-opacity ${isActive ? 'opacity-100' : 'opacity-60'}`} />
+                    <span>{label}</span>
+                  </button>
+                );
+              })}
             </div>
           </>
         )}

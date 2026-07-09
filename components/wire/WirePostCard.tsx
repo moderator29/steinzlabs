@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Heart, Repeat2, Gift, Trash2, Repeat } from 'lucide-react';
+import { Heart, Repeat2, Gift, Trash2, Repeat, MessageCircle } from 'lucide-react';
 import { VerifiedGoldBadge } from '@/components/ui/VerifiedGoldBadge';
+import { wireTopicLabel } from '@/lib/wire/topics';
 
 /**
  * WirePostCard — a single wire.
@@ -36,6 +37,7 @@ export interface WirePost {
   reply_count: number | null;
   gift_count: number | null;
   gift_total_usd: number | null;
+  tags?: string[] | null;
   created_at: string;
   deleted_at?: string | null;
   author?: WireAuthor | null;
@@ -52,6 +54,12 @@ export interface WirePostCardProps {
   onRepost: (post: WirePost) => void;
   onGift: (post: WirePost) => void;
   onDelete?: (post: WirePost) => void;
+  /** Opens the reply thread for this wire. Omit to hide the Comment button. */
+  onComment?: (post: WirePost) => void;
+  /** Marks the thread as currently open (highlights the Comment button). */
+  threadOpen?: boolean;
+  /** Compact rendering for replies inside a thread (tighter, smaller avatar). */
+  compact?: boolean;
 }
 
 function relativeTime(iso: string): string {
@@ -102,7 +110,17 @@ function Avatar({ author, size = 44 }: { author?: WireAuthor | null; size?: numb
   );
 }
 
-export function WirePostCard({ post, currentUserId, onLike, onRepost, onGift, onDelete }: WirePostCardProps) {
+export function WirePostCard({
+  post,
+  currentUserId,
+  onLike,
+  onRepost,
+  onGift,
+  onDelete,
+  onComment,
+  threadOpen,
+  compact,
+}: WirePostCardProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const isRepost = !!post.repost_of;
@@ -112,9 +130,12 @@ export function WirePostCard({ post, currentUserId, onLike, onRepost, onGift, on
   const display = isRepost ? original : post;
   const reposter = post.author;
 
+  const pad = compact ? 'p-3' : 'p-4';
+  const avatarSize = compact ? 34 : 44;
+
   if (isRepost && !display) {
     return (
-      <article className="nl-glass rounded-2xl p-4">
+      <article className={`nl-glass rounded-2xl ${pad}`}>
         <div className="flex items-center gap-1.5 text-xs text-white/40 mb-1">
           <Repeat className="w-3.5 h-3.5" />
           <span>{reposter?.username ? `@${reposter.username}` : 'Someone'} reposted</span>
@@ -129,9 +150,10 @@ export function WirePostCard({ post, currentUserId, onLike, onRepost, onGift, on
   const name = author?.display_name || author?.username || 'Unknown';
   const handle = author?.username ? `@${author.username}` : '';
   const isOwn = !!currentUserId && shown.author_id === currentUserId;
+  const tags = Array.isArray(shown.tags) ? shown.tags.filter(Boolean) : [];
 
   return (
-    <article className="nl-glass rounded-2xl p-4">
+    <article className={`nl-glass rounded-2xl ${pad}`}>
       {isRepost && (
         <div className="flex items-center gap-1.5 text-xs text-white/45 mb-2 ps-1">
           <Repeat className="w-3.5 h-3.5" />
@@ -140,7 +162,7 @@ export function WirePostCard({ post, currentUserId, onLike, onRepost, onGift, on
       )}
 
       <div className="flex gap-3">
-        <Avatar author={author} />
+        <Avatar author={author} size={avatarSize} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="font-semibold text-white truncate max-w-[12rem]">{name}</span>
@@ -174,7 +196,20 @@ export function WirePostCard({ post, currentUserId, onLike, onRepost, onGift, on
             </div>
           ) : null}
 
-          {/* Action row */}
+          {tags.length > 0 ? (
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+              {tags.map((t) => (
+                <span
+                  key={t}
+                  className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#0066FF]/12 text-[#4d94ff] border border-[#0066FF]/25"
+                >
+                  {wireTopicLabel(t)}
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          {/* Action row — Like · Comment · Repost · Gift */}
           <div className="mt-3 flex items-center gap-1 text-white/50 text-sm">
             <button
               type="button"
@@ -186,6 +221,19 @@ export function WirePostCard({ post, currentUserId, onLike, onRepost, onGift, on
               <Heart className={`w-[18px] h-[18px] ${shown.liked ? 'fill-current' : ''}`} />
               <span className="tabular-nums">{fmtCount(shown.like_count)}</span>
             </button>
+
+            {onComment ? (
+              <button
+                type="button"
+                onClick={() => onComment(shown)}
+                className={`group inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition hover:bg-[#0066FF]/12 ${threadOpen ? 'text-[#4d94ff]' : 'hover:text-[#4d94ff]'}`}
+                aria-expanded={!!threadOpen}
+                aria-label="Comment"
+              >
+                <MessageCircle className="w-[18px] h-[18px]" />
+                <span className="tabular-nums">{fmtCount(shown.reply_count)}</span>
+              </button>
+            ) : null}
 
             <button
               type="button"
