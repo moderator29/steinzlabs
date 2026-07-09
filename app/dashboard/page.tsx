@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense, lazy, memo, useCallback, Component, ReactNode } from 'react';
+import type { GiftSuccessData } from '@/components/wire/GiftSuccessCard';
 import { motion, AnimatePresence } from 'framer-motion';
 // Brand icon library — gradient-glowing platform icons. Missing specialty
 // icons fall back to lucide-react (hybrid pattern used elsewhere on main).
@@ -33,6 +34,23 @@ const ContextFeed    = lazy(() => import('@/components/ContextFeed'));
 const MarketDashboard = lazy(() => import('@/components/MarketDashboard'));
 const WalletTab   = lazy(() => import('@/components/WalletTab'));
 const ProfileTab  = lazy(() => import('@/components/ProfileTab'));
+// New home sub-tab surfaces. These live at exact agreed paths and are owned
+// by sibling agents; the lead resolves any missing module at integration time.
+const WireTab  = lazy(() => import('@/components/wire/WireTab'));
+// The Wire gift flow (non-custodial). Lazy so the wallet-signing deps only load
+// when a user actually opens the gift sheet.
+const GiftSheet = lazy(() => import('@/components/wire/GiftSheet').then(m => ({ default: m.GiftSheet })));
+const GiftSuccessCard = lazy(() => import('@/components/wire/GiftSuccessCard').then(m => ({ default: m.GiftSuccessCard })));
+const NewsTab  = lazy(() => import('@/components/news/NewsTab'));
+const RwaBoard = lazy(() => import('@/components/markets/RwaBoard'));
+
+// Sub-tab ordering + typing for the home feed. Kept as a const tuple so the
+// union type, the deep-link parser and the tab-bar UI can never drift apart.
+const HOME_SUBTABS = ['overview', 'wire', 'context', 'news', 'markets', 'prediction'] as const;
+type HomeSubtab = (typeof HOME_SUBTABS)[number];
+function isHomeSubtab(v: unknown): v is HomeSubtab {
+  return typeof v === 'string' && (HOME_SUBTABS as readonly string[]).includes(v);
+}
 
 function TabSpinner() {
   return (
@@ -233,6 +251,130 @@ const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNa
   );
 });
 
+// Overview hero — a calm, branded greeting surface that opens the redesigned
+// home Overview. Purely presentational: a time-aware greeting, the user's
+// name, and a soft aurora glass panel. No data fetching of its own.
+const OverviewHero = memo(function OverviewHero({ name }: { name: string }) {
+  const greeting = (() => {
+    const h = new Date().getHours();
+    if (h < 5) return 'Still up';
+    if (h < 12) return 'Good morning';
+    if (h < 18) return 'Good afternoon';
+    return 'Good evening';
+  })();
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+      className="relative overflow-hidden nl-glass rounded-2xl px-5 py-6 sm:px-7 sm:py-8 mb-5"
+      style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.28), 0 0 30px rgba(0,102,255,.14)' }}
+    >
+      {/* aurora bloom */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-16 -right-10 w-56 h-56 rounded-full blur-3xl opacity-50"
+        style={{ background: 'radial-gradient(circle, rgba(30,144,255,.5) 0%, rgba(18,51,174,0) 70%)' }}
+      />
+      <div className="relative">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold tracking-wide text-[#9FD0FF] bg-[#0066FF]/[0.14] border border-[#0066FF]/25 rounded-full px-2.5 py-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
+            LIVE MARKETS
+          </span>
+        </div>
+        <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+          {greeting}{name ? ', ' : ''}
+          {name && (
+            <span
+              className="bg-clip-text text-transparent"
+              style={{ backgroundImage: 'linear-gradient(90deg, #6FB4FF 0%, #1E90FF 60%, #0066FF 100%)' }}
+            >
+              {name}
+            </span>
+          )}
+        </h1>
+        <p className="text-sm text-[#B4C0E0] mt-1.5 max-w-md">
+          Here is what is moving across your signals, feeds and markets today.
+        </p>
+      </div>
+    </motion.div>
+  );
+});
+
+// Prediction Markets teaser — a visual only, Polymarket style preview. No
+// live data or ordering yet; the "Notify me" control is presentational.
+function PredictionTeaser() {
+  const previews = [
+    { q: 'Will BTC close above $150k this year?', yes: 62 },
+    { q: 'Will the Fed cut rates at the next meeting?', yes: 44 },
+    { q: 'Will ETH flip its prior all time high in 2026?', yes: 71 },
+  ];
+  return (
+    <div className="space-y-5">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        className="relative overflow-hidden nl-glass rounded-2xl px-5 py-7 text-center"
+        style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.28), 0 0 30px rgba(0,102,255,.14)' }}
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-20 left-1/2 -translate-x-1/2 w-72 h-72 rounded-full blur-3xl opacity-40"
+          style={{ background: 'radial-gradient(circle, rgba(30,144,255,.5) 0%, rgba(18,51,174,0) 70%)' }}
+        />
+        <div className="relative">
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold tracking-wide text-[#9FD0FF] bg-[#0066FF]/[0.14] border border-[#0066FF]/25 rounded-full px-2.5 py-1 mb-3">
+            Coming soon
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Prediction Markets</h2>
+          <p className="text-sm text-[#B4C0E0] mt-2 max-w-md mx-auto">
+            Trade on the outcome of crypto and world events. Coming soon.
+          </p>
+          <div className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/[0.08] p-1 pl-3">
+            <span className="text-xs text-gray-400">Get notified at launch</span>
+            <span
+              className="px-3 py-1.5 rounded-lg text-white text-xs font-semibold cursor-default select-none"
+              style={{ background: 'linear-gradient(135deg, #1E90FF 0%, #0066FF 55%, #1233AE 100%)' }}
+            >
+              Notify me
+            </span>
+          </div>
+        </div>
+      </motion.div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {previews.map((m, i) => (
+          <motion.div
+            key={m.q}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2, delay: 0.05 + i * 0.05 }}
+            className="cult-card p-4 flex flex-col justify-between min-h-[140px]"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-semibold text-white leading-snug">{m.q}</p>
+              <span className="shrink-0 text-[9px] font-semibold tracking-wide text-[#9FD0FF] bg-[#0066FF]/[0.14] border border-[#0066FF]/25 rounded-full px-2 py-0.5">
+                Soon
+              </span>
+            </div>
+            <div className="mt-4">
+              <div className="flex items-center justify-between text-[11px] mb-1">
+                <span className="text-emerald-400 font-medium">Yes {m.yes}%</span>
+                <span className="text-gray-500">No {100 - m.yes}%</span>
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
+                <div className="h-full rounded-full bg-emerald-400/70" style={{ width: `${m.yes}%` }} />
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Bug §2 — /dashboard (and by extension /dashboard/profile via redirect)
 // showed an infinite spinner when useAuth() never resolved (Supabase hiccup,
 // stale session cookie, network drop). The user was trapped with no escape.
@@ -307,28 +449,39 @@ export default function Dashboard() {
   useEffect(() => {
     if (activeNav === 'vtxai') router.replace('/dashboard/vtx-ai');
   }, [activeNav, router]);
-  // ?subtab=overview|context|markets restores the home sub-tab — used by
-  // /dashboard/proof's "Back to Feed" button (§6.3) so the user lands on
-  // the Context Feed instead of the overview after explaining a signal.
-  const initialSubtab = (() => {
+  // ?subtab=overview|wire|context|news|markets|prediction restores the home
+  // sub-tab — used by /dashboard/proof's "Back to Feed" button (§6.3) so the
+  // user lands on the Context Feed instead of the overview after explaining a
+  // signal. Any unknown value falls back to the Overview tab.
+  const initialSubtab: HomeSubtab = (() => {
     const s = searchParams?.get('subtab');
-    return s === 'context' || s === 'markets' || s === 'overview' ? s : 'overview';
+    return isHomeSubtab(s) ? s : 'overview';
   })();
-  const [activeTab, setActiveTab] = useState<'overview' | 'context' | 'markets'>(initialSubtab);
+  const [activeTab, setActiveTab] = useState<HomeSubtab>(initialSubtab);
 
-  // Restore market tab when navigating back from a coin detail page
+  // Restore last sub-tab when navigating back from a coin detail page (which
+  // stashes 'steinz_last_tab' before routing away). Accepts any of the six
+  // valid sub-tabs, not just markets, so future deep entries keep working.
   useEffect(() => {
     try {
       const saved = localStorage.getItem('steinz_last_tab');
-      if (saved === 'markets') {
+      if (isHomeSubtab(saved)) {
         localStorage.removeItem('steinz_last_tab');
-        setActiveTab('markets');
+        setActiveTab(saved);
       }
     } catch {
       // Malformed JSON — return default
     }
   }, []);
   const [menuOpen, setMenuOpen] = useState(false);
+  // The Wire → Gift: the wire card's Gift button sets the target (recipient +
+  // the wire being gifted on); GiftSheet handles the non-custodial transfer and
+  // GiftSuccessCard shows the congrats card on success.
+  const [giftTarget, setGiftTarget] = useState<{
+    recipient: { id: string; username: string; display_name?: string | null; avatar_url?: string | null };
+    postId?: string | null;
+  } | null>(null);
+  const [giftSuccess, setGiftSuccess] = useState<GiftSuccessData | null>(null);
   const [marketStats, setMarketStats] = useState<{
     totalMarketCap: string; totalVolume: string; btcDominance: string;
     marketCapChange: string; volumeChange: string; dominanceChange: string;
@@ -421,25 +574,6 @@ export default function Dashboard() {
 
   const showHomeTabs = activeNav === 'home';
 
-  const renderContent = () => {
-    if (activeNav === 'home') {
-      if (activeTab === 'markets') return <MarketDashboard />;
-      if (activeTab === 'context') return <ContextFeed />;
-      return (
-        // OV3: widget order honours the user's saved preference from
-        // /api/dashboard/widgets. Each widget retains its own self-hide
-        // logic (PortfolioHeroCard returns null for no-wallets users,
-        // SinceLastLoginDigest hides on first-ever visit, etc.) so the
-        // dashboard stays clean for fresh accounts.
-        <RenderWidgets />
-      );
-    }
-    if (activeNav === 'vtxai') return null; // redirects to /dashboard/vtx-ai (see effect above)
-    if (activeNav === 'wallet') return <WalletTab />;
-    if (activeNav === 'profile') return <ProfileTab />;
-    return null;
-  };
-
   const stats = marketStats ? [
     { label: 'Total Market Cap', value: marketStats.totalMarketCap, change: marketStats.marketCapChange, icon: BarChart3, trend: (parseFloat(marketStats.marketCapChange) >= 0 ? 'up' : 'down') as 'up' | 'down' | 'neutral' },
     { label: '24h Volume', value: marketStats.totalVolume, change: '', icon: Activity, trend: 'neutral' as const },
@@ -451,6 +585,87 @@ export default function Dashboard() {
     { label: 'BTC Dominance', value: '...', change: '', icon: TrendingDown, trend: 'neutral' as const },
     { label: 'Active Coins', value: '…', change: '', icon: Zap, trend: 'neutral' as const },
   ];
+
+  // Global market-stats bar — MOVED here out of the always-on home header so
+  // it now lives only at the top of the Markets tab, not on Overview.
+  const marketStatsBar = (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-5">
+      {stats.map((stat, i) => (
+        <motion.div
+          key={stat.label}
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.2, delay: i * 0.06 }}
+        >
+          <StatCard {...stat} />
+        </motion.div>
+      ))}
+    </div>
+  );
+
+  const heroName = user.first_name || user.username || (user.email ? user.email.split('@')[0] : '');
+
+  const renderContent = () => {
+    if (activeNav === 'home') {
+      if (activeTab === 'markets') {
+        return (
+          <div className="space-y-5">
+            {/* Global market-stats bar now lives at the top of Markets. */}
+            {marketStatsBar}
+            {/* Top Gainers (60%) + Heating Up (40%) — CoinGecko-grade market
+                overview. Stacks single-column on mobile, splits on lg. */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
+              <div className="lg:col-span-3">
+                <TopGainersCard />
+              </div>
+              <div className="lg:col-span-2">
+                <HeatingUpCard />
+              </div>
+            </div>
+            <MarketDashboard />
+            {/* RWA / TradFi section beneath the crypto markets. Owned by a
+                sibling agent at components/markets/RwaBoard.tsx. */}
+            <RwaBoard />
+          </div>
+        );
+      }
+      if (activeTab === 'context') return <ContextFeed />;
+      if (activeTab === 'wire') return (
+        <WireTab
+          onGift={(post) => {
+            // A repost forwards the ORIGINAL wire, so post.author is the wallet
+            // that should receive the gift. Need a real username to target.
+            const a = post.author;
+            if (a?.id && a.username) {
+              setGiftTarget({
+                recipient: { id: a.id, username: a.username, display_name: a.display_name, avatar_url: a.avatar_url },
+                postId: post.id,
+              });
+            }
+          }}
+        />
+      );
+      if (activeTab === 'news') return <NewsTab />;
+      if (activeTab === 'prediction') return <PredictionTeaser />;
+      return (
+        // OV3: widget order honours the user's saved preference from
+        // /api/dashboard/widgets. Each widget retains its own self-hide
+        // logic (PortfolioHeroCard returns null for no-wallets users,
+        // SinceLastLoginDigest hides on first-ever visit, etc.) so the
+        // dashboard stays clean for fresh accounts. The redesigned Overview
+        // opens with a branded hero and no longer carries the global
+        // market-stats bar (that moved to the Markets tab).
+        <>
+          <OverviewHero name={heroName} />
+          <RenderWidgets />
+        </>
+      );
+    }
+    if (activeNav === 'vtxai') return null; // redirects to /dashboard/vtx-ai (see effect above)
+    if (activeNav === 'wallet') return <WalletTab />;
+    if (activeNav === 'profile') return <ProfileTab />;
+    return null;
+  };
 
   return (
     <div className="min-h-screen text-white pb-28 sm:pb-24">
@@ -501,42 +716,26 @@ export default function Dashboard() {
       <div className="pt-14 lg:pt-[80px] px-3 lg:px-6 max-w-7xl mx-auto">
         {showHomeTabs && (
           <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-5">
-              {stats.map((stat, i) => (
-                <motion.div
-                  key={stat.label}
-                  initial={{ opacity: 0, scale: 0.96 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.2, delay: i * 0.06 }}
-                >
-                  <StatCard {...stat} />
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Top Gainers (60%) + Heating Up (40%) — CoinGecko-grade market
-                overview. Stacks single-column on mobile, splits on lg. */}
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 mb-5">
-              <div className="lg:col-span-3">
-                <TopGainersCard />
-              </div>
-              <div className="lg:col-span-2">
-                <HeatingUpCard />
-              </div>
-            </div>
-
-            {/* Overview / Context Feed / Market tab toggle */}
-            <div className="flex gap-1 p-1 nl-glass rounded-xl mb-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.3), 0 0 16px rgba(0,102,255,.12)' }}>
+            {/* Home sub-tab toggle — six surfaces. Horizontally scrollable on
+                mobile so the six labels never wrap or crush. The global
+                market-stats bar + gainers cards moved into the Markets tab. */}
+            <div
+              className="flex gap-1 p-1 nl-glass rounded-xl mb-4 overflow-x-auto no-scrollbar"
+              style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.3), 0 0 16px rgba(0,102,255,.12)' }}
+            >
               {([
                 { id: 'overview', label: 'Overview' },
+                { id: 'wire', label: 'The Wire' },
                 { id: 'context', label: 'Context Feed' },
-                { id: 'markets', label: 'Market' },
+                { id: 'news', label: 'News' },
+                { id: 'markets', label: 'Markets' },
+                { id: 'prediction', label: 'Prediction' },
               ] as const).map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   style={activeTab === tab.id ? { background: 'linear-gradient(135deg, #1E90FF 0%, #0066FF 55%, #1233AE 100%)', boxShadow: '0 0 18px rgba(0,102,255,.55), inset 0 1px 0 rgba(255,255,255,.22)' } : undefined}
-                  className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
+                  className={`flex-1 whitespace-nowrap px-3 py-2 text-sm font-semibold rounded-lg transition-all ${
                     activeTab === tab.id ? 'text-white' : 'text-gray-400 hover:text-white'
                   }`}
                 >
@@ -566,6 +765,26 @@ export default function Dashboard() {
 
       <BottomNav activeNav={activeNav} onNavChange={handleNavChange} />
       {menuOpen && <SidebarMenu onClose={() => setMenuOpen(false)} />}
+      {giftTarget && (
+        <Suspense fallback={null}>
+          <GiftSheet
+            recipient={giftTarget.recipient}
+            postId={giftTarget.postId}
+            onClose={() => setGiftTarget(null)}
+            onSuccess={(data) => { setGiftTarget(null); setGiftSuccess(data); }}
+          />
+        </Suspense>
+      )}
+      {giftSuccess && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setGiftSuccess(null)} />
+          <div className="relative">
+            <Suspense fallback={null}>
+              <GiftSuccessCard data={giftSuccess} onClose={() => setGiftSuccess(null)} />
+            </Suspense>
+          </div>
+        </div>
+      )}
       {onboardedAt === null && <OnboardingGate profileOnboardedAt={onboardedAt} />}
     </div>
   );

@@ -1,0 +1,149 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { guardRoute } from '@/lib/api/guardRoute';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { resolveReceiveAddress } from '@/lib/wire/resolveReceiveAddress';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 15;
+
+// Record a Wire gift AFTER the client has broadcast the on-chain transfer.
+// This route never moves funds — the transfer already happened peer-to-peer
+// from the sender's own wallet. RLS forbids clients from writing wire_gifts
+// directly, so we insert with the service-role client here, having verified
+// the caller is the sender.
+
+const GIFT_CHAINS = new Set(['ethereum', 'base', 'bsc', 'solana']);
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const EVM_TX_RE = /^0x[0-9a-fA-F]{64}$/;
+const SOL_TX_RE = /^[1-9A-HJ-NP-Za-km-z]{43,90}$/;
+const EVM_ADDR_RE = /^0x[a-fA-F0-9]{40}$/;
+const SOL_ADDR_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+
+function validTxHash(chain: string, hash: string): boolean {
+  return chain === 'solana' ? SOL_TX_RE.test(hash) : EVM_TX_RE.test(hash);
+}
+function validAddress(chain: string, addr: string): boolean {
+  return chain === 'solana' ? SOL_ADDR_RE.test(addr) : EVM_ADDR_RE.test(addr);
+}
+function sameAddress(chain: string, a: string, b: string): boolean {
+  return chain === 'solana' ? a === b : a.toLowerCase() === b.toLowerCase();
+}
+
+export async function POST(req: NextRequest) {
+  const guard = await guardRoute(req, { rate: 'high' });
+  if (!guard.ok) return guard.response;
+  const user = guard.user;
+  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+  const body = (await req.json().catch(() => ({}))) as {
+    recipientId?: string;
+    postId?: string | null;
+    chain?: string;
+    tokenSymbol?: string;
+    tokenAddress?: string | null;
+    amount?: string | number;
+    amountUsd?: string | number | null;
+    txHash?: string;
+    senderAddress?: string;
+    recipientAddress?: string;
+  };
+
+  const chain = (body.chain ?? '').toLowerCase();
+  const recipientId = (body.recipientId ?? '').trim();
+  const txHash = (body.txHash ?? '').trim();
+  const tokenSymbol = (body.tokenSymbol ?? '').trim();
+  const senderAddress = (body.senderAddress ?? '').trim();
+  const recipientAddress = (body.recipientAddress ?? '').trim();
+  const postId = body.postId ? String(body.postId).trim() : null;
+
+  // ── Validation ──────────────────────────────────────────────────────
+  if (!GIFT_CHAINS.has(chain)) return NextResponse.json({ error: 'Unsupported chain' }, { status: 400 });
+  if (!UUID_RE.test(recipientId)) return NextResponse.json({ error: 'Invalid recipientId' }, { status: 400 });
+  if (recipientId === user.id) return NextResponse.json({ error: 'You cannot gift yourself' }, { status: 400 });
+  if (!tokenSymbol || tokenSymbol.length > 24) return NextResponse.json({ error: 'Invalid tokenSymbol' }, { status: 400 });
+  if (!validTxHash(chain, txHash)) return NextResponse.json({ error: 'Invalid txHash' }, { status: 400 });
+  if (!validAddress(chain, senderAddress)) return NextResponse.json({ error: 'Invalid senderAddress' }, { status: 400 });
+  if (!validAddress(chain, recipientAddress)) return NextResponse.json({ error: 'Invalid recipientAddress' }, { status: 400 });
+  if (postId && !UUID_RE.test(postId)) return NextResponse.json({ error: 'Invalid postId' }, { status: 400 });
+
+  const amount = typeof body.amount === 'number' ? body.amount : parseFloat(String(body.amount ?? ''));
+  if (!Number.isFinite(amount) || amount <= 0) return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
+
+  // amount_usd is stored ONLY when the client passed a real numeric quote.
+  // Never fabricate it.
+  let amountUsd: number | null = null;
+  if (body.amountUsd != null && body.amountUsd !== '') {
+    const parsed = typeof body.amountUsd === 'number' ? body.amountUsd : parseFloat(String(body.amountUsd));
+    if (Number.isFinite(parsed) && parsed >= 0) amountUsd = parsed;
+  }
+
+  const tokenAddress = body.tokenAddress ? String(body.tokenAddress).trim() : null;
+
+  const supabase = getSupabaseAdmin();
+
+  // Recipient must exist.
+  const { data: recipient } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('id', recipientId)
+    .maybeSingle<{ id: string }>();
+  if (!recipient) return NextResponse.json({ error: 'Recipient not found' }, { status: 404 });
+
+  // Integrity: the recorded recipient address must match the address we would
+  // independently resolve for that user on that chain. Prevents recording a
+  // transfer to an attacker-chosen address under someone else's name. If the
+  // user has no resolvable receive address we skip this (nothing to compare).
+  const resolved = await resolveReceiveAddress(recipientId, chain);
+  if (resolved && !sameAddress(chain, resolved, recipientAddress)) {
+    return NextResponse.json({ error: 'Recipient address does not match their receive wallet' }, { status: 409 });
+  }
+
+  const { data: inserted, error: insErr } = await supabase
+    .from('wire_gifts')
+    .insert({
+      sender_id: user.id,
+      recipient_id: recipientId,
+      post_id: postId,
+      chain,
+      token_symbol: tokenSymbol,
+      token_address: tokenAddress,
+      amount,
+      amount_usd: amountUsd,
+      tx_hash: txHash,
+      status: 'pending',
+      sender_address: senderAddress,
+      recipient_address: recipientAddress,
+    })
+    .select('id')
+    .single<{ id: string }>();
+
+  if (insErr) {
+    return NextResponse.json({ error: insErr.message || 'Failed to record gift' }, { status: 500 });
+  }
+
+  // Best-effort denormalized counters on the post. Non-fatal on failure —
+  // the gift is already recorded.
+  if (postId) {
+    try {
+      const { data: post } = await supabase
+        .from('wire_posts')
+        .select('gift_count, gift_total_usd')
+        .eq('id', postId)
+        .maybeSingle<{ gift_count: number; gift_total_usd: number }>();
+      if (post) {
+        await supabase
+          .from('wire_posts')
+          .update({
+            gift_count: (post.gift_count ?? 0) + 1,
+            gift_total_usd: Number(post.gift_total_usd ?? 0) + (amountUsd ?? 0),
+          })
+          .eq('id', postId);
+      }
+    } catch {
+      /* counter bump is best-effort */
+    }
+  }
+
+  return NextResponse.json({ ok: true, id: inserted.id, status: 'pending' });
+}

@@ -1,0 +1,5 @@
+-- THE WIRE: native social feed (posts, likes, reposts, non-custodial gifts).
+-- Applied live via MCP; mirrored here for version control. See the migration
+-- named the_wire_social_feed_foundation for the authoritative body (wire_posts,
+-- wire_post_likes, wire_reposts, wire_gifts + count triggers + RLS). Gifts are
+-- inserted server-side only, after an on-chain transfer is verified.
