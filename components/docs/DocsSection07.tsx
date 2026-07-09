@@ -4,12 +4,12 @@ const MM_STEPS = [
   { n: '1', title: 'Pick a token & strategy', desc: 'Choose the token, chain, and a strategy (Grid or Range). Set your spread, levels, order size, budget, max inventory and slippage.' },
   { n: '2', title: 'Reference price', desc: 'The bot tracks a live market reference (DexScreener) or a manual price you set, and builds buy rungs below it and sell rungs above it.' },
   { n: '3', title: 'Fund & activate', desc: 'Fund your non-custodial kernel account and flip the strategy to Active. Until then it stays paused and trades nothing.' },
-  { n: '4', title: 'Work the spread', desc: 'Every cycle the engine places at most one capped swap through your session key — buying at/below a buy rung, selling at/above a sell rung — recording each fill and net PnL.' },
+  { n: '4', title: 'Work the spread', desc: 'Every cycle the engine places at most one capped swap through your session key, buying at or below a buy rung and selling at or above a sell rung, recording each fill and net PnL.' },
 ];
 
 const MM_STRATEGIES = [
-  { title: 'Grid', desc: 'A symmetric ladder of buy rungs below and sell rungs above the reference — accumulate on dips, distribute on rips, capturing the oscillation.' },
-  { title: 'Range', desc: 'Accumulate at/below a lower bound and distribute at/above an upper bound you set — for tokens you expect to trade in a band.' },
+  { title: 'Grid', desc: 'A symmetric ladder of buy rungs below and sell rungs above the reference, accumulating on dips, distribute on rips, capturing the oscillation.' },
+  { title: 'Range', desc: 'Accumulate at/below a lower bound and distribute at/above an upper bound you set, for tokens you expect to trade in a band.' },
 ];
 
 const SWAP_CHAINS = [
@@ -24,7 +24,7 @@ const SWAP_CHAINS = [
 const SNIPER_STEPS = [
   { n: '1', title: 'Discovery',   desc: 'Watches freshly-created liquidity pools and trending launches the moment they appear. The live Discover feed browses EVM chains (GeckoTerminal new-pools); armed auto-snipers run across all supported chains including Solana.' },
   { n: '2', title: 'Shadow Guardian scan', desc: 'Each candidate is run through a multi-layer GoPlus security gate: honeypot simulation, buy/sell tax, liquidity lock, ownership/mint authority, and holder concentration. Failing tokens are routed to a separate Blocked tab.' },
-  { n: '3', title: 'You sign',    desc: 'When a launch matches your criteria the trade is prepared and you approve it with your own wallet (EIP-712). Non-custodial — keys and funds never leave your wallet.' },
+  { n: '3', title: 'You sign',    desc: 'When a launch matches your criteria the trade is prepared and you approve it with your own wallet (EIP-712). Non-custodial, so keys and funds never leave your wallet.' },
   { n: '4', title: 'Auto-manage', desc: 'Open positions are tracked live and auto-sold at your take-profit, stop-loss, or trailing-stop threshold, with PnL recorded.' },
 ];
 
@@ -36,14 +36,14 @@ const SNIPER_FEATURES = [
   { title: 'Criteria builder', desc: 'Arm snipers on new-token launch, whale-buy, or price-target triggers with min-liquidity, max-tax, slippage, and per-snipe spend.' },
   { title: 'Auto-sell engine', desc: 'Take-profit, stop-loss and trailing-stop exits monitored by cron and executed at base-unit precision.' },
   { title: 'Alerts', desc: 'Market-cap, price, migration and +% alerts with sound, delivered in real time.' },
-  { title: 'Positions, PnL & history', desc: 'Open/realized positions, chain-aware USD PnL, full execution history and stats — plus a one-tap kill switch that pauses every sniper.' },
+  { title: 'Positions, PnL & history', desc: 'Open/realized positions, chain-aware USD PnL, full execution history and stats, plus a one-tap kill switch that pauses every sniper.' },
 ];
 
 // Firehose / discovery-feed upgrades.
 const FIREHOSE_FEATURES = [
-  { icon: Filter, title: 'Launchpad source filter', desc: 'Filter the feed by where a token launched — Pump.fun, Let’s Bonk, Believe, Bags, Moonshot, Heaven, Jup Studio, Raydium and more on Solana; Uniswap, Aerodrome, PancakeSwap and Trader Joe on EVM — each with its real logo.' },
+  { icon: Filter, title: 'Launchpad source filter', desc: 'Filter the feed by where a token launched, from Pump.fun, Let’s Bonk, Believe, Bags, Moonshot, Heaven, Jup Studio, Raydium and more on Solana; Uniswap, Aerodrome, PancakeSwap and Trader Joe on EVM, each with its real logo.' },
   { icon: Shield, title: 'Audit filters', desc: 'Tighten the feed to hide honeypots and show only tokens with real social presence, with a minimum security-score threshold available on armed criteria.' },
-  { icon: Clock, title: 'OG mode', desc: 'Show only the earliest token Naka has seen per (chain, symbol) — an honest “first seen on Naka” filter (not a claim of first-ever).' },
+  { icon: Clock, title: 'OG mode', desc: 'Show only the earliest token Naka has seen per (chain, symbol), an honest “first seen on Naka” filter (not a claim of first-ever).' },
   { icon: Volume2, title: 'Sound alerts', desc: 'Optional chimes for new tokens and bonding-curve graduations, with a volume control, so you hear a launch without watching the screen.' },
   { icon: Dna, title: 'Per-card DNA / contract analyzer', desc: 'Each card carries lazy-loaded Shadow Guardian audit badges and a DNA button that opens the token in the Contract Analyzer.' },
   { icon: Crosshair, title: 'Multi-chain detection', desc: 'New-token detection runs across Ethereum, Solana (Helius + Jito), BNB Chain, TON and Avalanche, each with its own mempool / priority-fee semantics.' },
@@ -53,7 +53,7 @@ const FIREHOSE_FEATURES = [
 const AA_BOUNDS = [
   { title: 'Per-trade USD cap', desc: 'A signed ceiling on the USD value of any single background buy.' },
   { title: 'Daily USD cap', desc: 'A signed ceiling on total background spend per day.' },
-  { title: 'Trades per day', desc: 'A rate limit enforced on-chain — at most N background trades in any rolling 24 hours.' },
+  { title: 'Trades per day', desc: 'A rate limit enforced on-chain, at most N background trades in any rolling 24 hours.' },
   { title: 'Expiry', desc: 'The grant carries an on-chain timestamp and stops working automatically when it lapses.' },
 ];
 
@@ -187,7 +187,7 @@ export function DocsSection07() {
           <Crosshair className="w-4 h-4 text-[#EF4444]" />Sniper Bot
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-4">
-          An <span className="text-white font-semibold">EVM-only, non-custodial</span> sniper: detect new launches the instant liquidity is added, gate every one through Shadow Guardian, and buy with your own wallet — nothing is bought blindly and we never hold your keys or funds.
+          An <span className="text-white font-semibold">EVM-only, non-custodial</span> sniper: detect new launches the instant liquidity is added, gate every one through Shadow Guardian, and buy with your own wallet. Nothing is bought blindly and we never hold your keys or funds.
         </p>
         <div className="space-y-2 mb-4">
           {SNIPER_STEPS.map((s) => (
@@ -210,7 +210,7 @@ export function DocsSection07() {
             <span className="text-sm font-semibold text-white">Non-Custodial by Design</span>
           </div>
           <p className="text-xs text-gray-400 leading-relaxed">
-            The sniper authorizes trades with an <span className="text-white font-semibold">EIP-712 session key</span> signed by your own wallet — Naka Labs never takes custody of your keys or funds, and every buy is one you approve. Auto-execution runs across the major EVM chains (Ethereum, Base, Arbitrum, Optimism, BSC, Polygon, Avalanche) plus <span className="text-white font-semibold">Solana</span> (Helius + Jito) and TON. The browse-able Discover feed currently lists EVM new-pools; Solana and TON tokens flow through armed criteria and auto-execution.
+            The sniper authorizes trades with an <span className="text-white font-semibold">EIP-712 session key</span> signed by your own wallet. Naka Labs never takes custody of your keys or funds, and every buy is one you approve. Auto-execution runs across the major EVM chains (Ethereum, Base, Arbitrum, Optimism, BSC, Polygon, Avalanche) plus <span className="text-white font-semibold">Solana</span> (Helius + Jito) and TON. The browse-able Discover feed currently lists EVM new-pools; Solana and TON tokens flow through armed criteria and auto-execution.
           </p>
         </div>
 
@@ -238,7 +238,7 @@ export function DocsSection07() {
             <Clock className="w-3.5 h-3.5 text-[#0066FF]" />Background (AA) sniping
           </h4>
           <p className="text-xs text-gray-400 leading-relaxed mb-3">
-            Background sniping lets the sniper execute buys <span className="text-white font-semibold">while your tab is closed</span> — without ever holding your main key. It uses account-abstraction (ZeroDev) smart-account session keys: your main wallet signs a one-time approval that authorizes a <span className="text-white font-semibold">separate, limited session key</span> to act on a smart account you fund with your snipe budget. Only that session key is held server-side (encrypted); your main key never leaves the browser.
+            Background sniping lets the sniper execute buys <span className="text-white font-semibold">while your tab is closed</span>, without ever holding your main key. It uses account-abstraction (ZeroDev) smart-account session keys: your main wallet signs a one-time approval that authorizes a <span className="text-white font-semibold">separate, limited session key</span> to act on a smart account you fund with your snipe budget. Only that session key is held server-side (encrypted); your main key never leaves the browser.
           </p>
           <div className="grid sm:grid-cols-2 gap-2 mb-3">
             {AA_BOUNDS.map((b) => (
@@ -254,13 +254,13 @@ export function DocsSection07() {
               <li className="flex gap-2.5"><span className="w-4 h-4 rounded-full bg-white/[0.06] text-[10px] text-gray-400 flex items-center justify-center font-semibold shrink-0">1</span><span>Open the <span className="text-white font-semibold">Background Sniping</span> card on the Sniper page.</span></li>
               <li className="flex gap-2.5"><span className="w-4 h-4 rounded-full bg-white/[0.06] text-[10px] text-gray-400 flex items-center justify-center font-semibold shrink-0">2</span><span>Pick the chain and set your caps: per-trade USD, daily USD, trades/day, and how many hours the grant stays valid.</span></li>
               <li className="flex gap-2.5"><span className="w-4 h-4 rounded-full bg-white/[0.06] text-[10px] text-gray-400 flex items-center justify-center font-semibold shrink-0">3</span><span>Sign the one-time approval with your wallet password and fund the smart account with your snipe budget.</span></li>
-              <li className="flex gap-2.5"><span className="w-4 h-4 rounded-full bg-white/[0.06] text-[10px] text-gray-400 flex items-center justify-center font-semibold shrink-0">4</span><span>Background buys now run within those bounds until the grant expires — and you can revoke it at any time.</span></li>
+              <li className="flex gap-2.5"><span className="w-4 h-4 rounded-full bg-white/[0.06] text-[10px] text-gray-400 flex items-center justify-center font-semibold shrink-0">4</span><span>Background buys now run within those bounds until the grant expires, and you can revoke it at any time.</span></li>
             </ol>
           </div>
           <div className="flex items-start gap-2 p-3 nl-glass rounded-xl">
             <Shield className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0 mt-0.5" />
             <p className="text-xs text-gray-400 leading-relaxed">
-              Non-custodial: the only funds at risk are what you put in the smart account — never your main wallet. The grant is bounded on-chain (expiry + rate limit) and by your signed USD caps, and it is revocable. EVM only; requires the operator to have configured the AA backend.
+              Non-custodial: the only funds at risk are what you put in the smart account, never your main wallet. The grant is bounded on-chain (expiry + rate limit) and by your signed USD caps, and it is revocable. EVM only; requires the operator to have configured the AA backend.
             </p>
           </div>
         </div>
@@ -290,7 +290,7 @@ export function DocsSection07() {
           <LineChart className="w-4 h-4 text-[#0066FF]" />Market Maker Bot
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-4">
-          An <span className="text-white font-semibold">EVM-only, non-custodial</span> automated market maker. It places two-sided swaps around a reference price to work a spread on a token you choose — buying dips, selling rips — entirely within caps you sign for. It is a trading tool, not a yield product.
+          An <span className="text-white font-semibold">EVM-only, non-custodial</span> automated market maker. It places two-sided swaps around a reference price to work a spread on a token you choose, buying dips and selling rips, entirely within caps you sign for. It is a trading tool, not a yield product.
         </p>
 
         {/* How it works */}
@@ -325,13 +325,13 @@ export function DocsSection07() {
             <span className="text-sm font-semibold text-white">Non-Custodial &amp; Bounded</span>
           </div>
           <p className="text-xs text-gray-400 leading-relaxed">
-            The bot trades through the same <span className="text-white font-semibold">EIP-712 session key</span> you sign for the sniper — Naka Labs never holds your keys or funds, and execution is bounded on every side: a per-strategy <span className="text-white font-semibold">budget</span> (a true lifetime spend ceiling), a <span className="text-white font-semibold">max inventory</span> cap, a server-side <span className="text-white font-semibold">slippage</span> clamp, and your signed <span className="text-white font-semibold">per-trade + daily USD caps</span> (shared across the sniper and market maker). New strategies are created <span className="text-white font-semibold">paused</span> — nothing trades until you fund the kernel and activate, and Pause/Stop halts it before the next fill.
+            The bot trades through the same <span className="text-white font-semibold">EIP-712 session key</span> you sign for the sniper. Naka Labs never holds your keys or funds, and execution is bounded on every side: a per-strategy <span className="text-white font-semibold">budget</span> (a true lifetime spend ceiling), a <span className="text-white font-semibold">max inventory</span> cap, a server-side <span className="text-white font-semibold">slippage</span> clamp, and your signed <span className="text-white font-semibold">per-trade + daily USD caps</span> (shared across the sniper and market maker). New strategies are created <span className="text-white font-semibold">paused</span>, so nothing trades until you fund the kernel and activate, and Pause/Stop halts it before the next fill.
         </p>
         </div>
 
         <div className="flex items-start gap-2 p-3 bg-[#F59E0B]/[0.05] border border-[#F59E0B]/20 rounded-xl">
           <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B] flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-gray-400">Market making can lose money — impermanent loss, adverse selection, and gas all eat into a spread. PnL shown is net of cost basis, and there are no guaranteed returns. Start small. (CLMM/LP-range and volume strategies are intentionally not offered.)</p>
+          <p className="text-xs text-gray-400">Market making can lose money: impermanent loss, adverse selection, and gas all eat into a spread. PnL shown is net of cost basis, and there are no guaranteed returns. Start small. (CLMM/LP-range and volume strategies are intentionally not offered.)</p>
         </div>
       </div>
     </section>

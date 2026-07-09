@@ -133,6 +133,10 @@ const SUPPORTED_CHAINS: ChainInfo[] = [
   { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC', color: '#F7931A', explorerUrl: 'https://blockchair.com/bitcoin', explorerName: 'Blockchair', apiChain: 'bitcoin', logoUrl: COIN_LOGOS.BTC, coinGeckoId: 'bitcoin' },
   { id: 'arbitrum', name: 'Arbitrum', symbol: 'ETH', color: '#28A0F0', explorerUrl: 'https://arbiscan.io', explorerName: 'Arbiscan', apiChain: 'arbitrum', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/arbitrum.png', coinGeckoId: 'ethereum' },
   { id: 'optimism', name: 'Optimism', symbol: 'ETH', color: '#FF0420', explorerUrl: 'https://optimistic.etherscan.io', explorerName: 'OpScan', apiChain: 'optimism', logoUrl: 'https://dd.dexscreener.com/ds-data/chains/optimism.png', coinGeckoId: 'ethereum' },
+  // Robinhood Chain — Arbitrum-Orbit L2, native gas ETH (chain id 4663), priced
+  // as ethereum by the EVM intelligence pipeline. Live for holding / receiving /
+  // native ETH send; DEX swap routing is not wired yet (see swap page).
+  { id: 'robinhood', name: 'Robinhood Chain', symbol: 'ETH', color: '#00C805', explorerUrl: 'https://explorer.chain.robinhood.com', explorerName: 'Robinhood Explorer', apiChain: 'robinhood', logoUrl: '/chains/robinhood.png', coinGeckoId: 'ethereum' },
   // FIX 5A.1 / Phase 4: apiChain was 'bnb' but server (EVM_CHAIN_CONFIG) keys it as 'bsc' — the mismatch
   // meant BSC pill fetched nothing and the UI showed stale prior-chain data (e.g. Solana after clicking BSC).
   { id: 'bnb', name: 'BNB Chain', symbol: 'BNB', color: '#F0B90B', explorerUrl: 'https://bscscan.com', explorerName: 'BscScan', apiChain: 'bsc', logoUrl: COIN_LOGOS.BNB, coinGeckoId: 'binancecoin' },
@@ -166,8 +170,8 @@ const SUPPORTED_CHAINS: ChainInfo[] = [
 // full universe — the home list below further filters this by the
 // user's enabled-chains preference (see DEFAULT_ENABLED_CHAINS and
 // NAKA_ENABLED_CHAINS_KEY).
-const LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche', 'solana', 'arbitrum', 'bnb'];
-const EVM_LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche', 'arbitrum', 'bnb'];
+const LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche', 'solana', 'arbitrum', 'bnb', 'robinhood'];
+const EVM_LIVE_CHAINS = ['ethereum', 'base', 'polygon', 'avalanche', 'arbitrum', 'bnb', 'robinhood'];
 
 // Test networks — opt-in via the "Show test networks" toggle on the Networks
 // screen (persisted to naka_testnet_mode). These are real public testnets with
@@ -192,7 +196,7 @@ function chainById(id: string): ChainInfo | undefined {
 
 // Default chains to show on the wallet home — in display order.
 // Everything else is toggled on by the user via Add Network.
-const DEFAULT_ENABLED_CHAINS = ['ethereum', 'solana', 'polygon', 'arbitrum', 'bnb', 'base'];
+const DEFAULT_ENABLED_CHAINS = ['ethereum', 'solana', 'polygon', 'arbitrum', 'bnb', 'base', 'robinhood'];
 const NAKA_ENABLED_CHAINS_KEY = 'naka_enabled_chains';
 // Display priority: native chains first (ETH/BNB/Polygon/SOL), then the
 // two seeded platform tokens, then anything else the user has added.
@@ -2322,6 +2326,10 @@ const CHAIN_RPC: Record<string, string> = {
   arbitrum: 'https://arb1.arbitrum.io/rpc',
   optimism: 'https://mainnet.optimism.io',
   bnb: 'https://bsc-dataseed.binance.org',
+  // Robinhood Chain — native ETH send + balance read via the chain's own RPC.
+  robinhood: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
+    ? `https://robinhood-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`
+    : 'https://rpc.mainnet.chain.robinhood.com',
   fantom: 'https://rpc.ftm.tools',
   // #53 — additional EVM networks (public RPCs).
   linea: 'https://rpc.linea.build',
@@ -2357,7 +2365,7 @@ function isValidAddressForChain(addr: string, chainId: string): boolean {
 const NATIVE_CG_ID: Record<string, string> = {
   ethereum: 'ethereum', base: 'ethereum', arbitrum: 'ethereum', optimism: 'ethereum',
   polygon: 'matic-network', avalanche: 'avalanche-2', bnb: 'binancecoin', fantom: 'fantom',
-  solana: 'solana',
+  solana: 'solana', robinhood: 'ethereum',
 };
 
 const SOLANA_RPC = process.env.NEXT_PUBLIC_ALCHEMY_SOLANA_RPC || 'https://api.mainnet-beta.solana.com';

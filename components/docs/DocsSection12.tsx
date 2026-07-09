@@ -17,7 +17,7 @@ const GROUPS: RoadmapGroup[] = [
     icon: Wallet,
     title: 'Naka Wallet upgrades',
     items: [
-      { name: 'Bitcoin send & receive', desc: 'Native BTC send/receive (BIP-84 bech32). The wallet already derives the address path; full broadcast support is in progress — see the Naka Wallet section for what ships today.' },
+      { name: 'Bitcoin send & receive', desc: 'Native BTC send/receive (BIP-84 bech32). The wallet already derives the address path; full broadcast support is in progress. See the Naka Wallet section for what ships today.' },
       { name: 'Solana name (.sol) sending', desc: 'Resolve SNS .sol domains when sending on Solana, matching the ENS support that already works on EVM.' },
       { name: 'WalletConnect Discover feed for Solana', desc: 'Browse new Solana launches in the Sniper Discover feed directly (Solana already flows through armed auto-snipers today).' },
     ],
@@ -49,7 +49,7 @@ export function DocsSection12() {
   return (
     <section id="coming-soon" className="mb-16 scroll-mt-20">
       <div className="flex items-baseline gap-3 mb-1">
-        <span className="text-5xl font-black text-white/[0.04] font-mono select-none leading-none">13</span>
+        <span className="text-5xl font-black text-white/[0.04] font-mono select-none leading-none">14</span>
         <h2 className="text-xl sm:text-2xl font-bold text-white">Coming Soon</h2>
       </div>
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">

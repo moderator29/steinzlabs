@@ -57,21 +57,29 @@ export const DOC_SECTIONS: DocSection[] = [
     { id: 'portfolio-tracker', label: 'Portfolio Tracker' },
     { id: 'predictions', label: 'Predictions' },
   ]},
-  { id: 'alerts-notifications', number: '11', label: 'Alerts & Notifications', subsections: [
+  { id: 'social-markets', number: '11', label: 'Feed, Gifting & Markets', subsections: [
+    { id: 'feed-social', label: 'The Feed' },
+    { id: 'crypto-gifting', label: 'Gifting' },
+    { id: 'news-alerts', label: 'News & Alerts' },
+    { id: 'markets-board', label: 'Markets & Real-World Assets' },
+    { id: 'robinhood-chain', label: 'Robinhood Chain' },
+    { id: 'prediction-markets', label: 'Prediction' },
+  ]},
+  { id: 'alerts-notifications', number: '12', label: 'Alerts & Notifications', subsections: [
     { id: 'price-alerts', label: 'Price Alerts' },
     { id: 'push-notifications', label: 'Push Notifications' },
   ]},
-  { id: 'telegram-bot', number: '12', label: 'Telegram Bot', subsections: [
+  { id: 'telegram-bot', number: '13', label: 'Telegram Bot', subsections: [
     { id: 'bot-connect', label: 'Connecting Your Account' },
     { id: 'bot-commands', label: 'Commands by Tier' },
     { id: 'bot-notifications', label: 'Automatic Notifications' },
   ]},
-  { id: 'coming-soon', number: '13', label: 'Coming Soon', subsections: [
+  { id: 'coming-soon', number: '14', label: 'Coming Soon', subsections: [
     { id: 'roadmap-wallet', label: 'Naka Wallet upgrades' },
     { id: 'roadmap-trading', label: 'Advanced trading' },
     { id: 'roadmap-social', label: 'Social & sharing' },
   ]},
-  { id: 'about', number: '14', label: 'About & Support', subsections: [
+  { id: 'about', number: '15', label: 'About & Support', subsections: [
     { id: 'about-mission', label: 'Our mission' },
     { id: 'about-what-we-do', label: 'What Naka Labs does' },
     { id: 'about-wallet', label: 'Naka Wallet' },

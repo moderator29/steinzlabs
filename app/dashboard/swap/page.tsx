@@ -26,6 +26,8 @@ import { RouteComparison } from '@/components/swap/RouteComparison';
 import SwapDuneStrip from '@/components/trading/SwapDuneStrip';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { swapHowItWorks } from '@/lib/howItWorks/content/swap';
+import { CHAIN_META } from '@/lib/chains/chainMeta';
+import { isDexRoutingSupported } from '@/lib/chains/evmRpc';
 
 // §12 — Safari private mode and some locked-down enterprise browsers
 // throw SecurityError on every localStorage read. The swap signing path
@@ -73,6 +75,11 @@ const CHAINS = [
   { id: 'polygon', label: 'Polygon', symbol: 'MATIC', color: '#8247E5', dex: 'QuickSwap' },
   { id: 'avalanche', label: 'AVAX', symbol: 'AVAX', color: '#E84142', dex: 'TraderJoe' },
   { id: 'arbitrum', label: 'Arbitrum', symbol: 'ETH', color: '#28A0F0', dex: 'Camelot' },
+  // Robinhood Chain — Arbitrum-Orbit L2, native gas ETH. Live for holding /
+  // receiving / native ETH send; DEX routing is not wired yet, so the swap
+  // surface degrades honestly (see isDexRoutingSupported gate below) instead
+  // of attempting a quote that would fail.
+  { id: 'robinhood', label: CHAIN_META.robinhood.label, symbol: 'ETH', color: CHAIN_META.robinhood.color, dex: 'Native ETH' },
 ];
 
 interface TokenInfo {
@@ -1421,6 +1428,11 @@ export default function SwapPage() {
   const priceImpact = quoteData?.priceImpact ?? null;
   const hasQuote = fromAmount && toAmount && parseFloat(fromAmount) > 0;
   const rate = hasQuote ? (parseFloat(toAmount) / parseFloat(fromAmount)) : 0;
+  // Honest capability gate — some chains are live for native ETH send but have
+  // no DEX aggregator coverage yet (Robinhood Chain). When routing isn't
+  // supported we don't quote or render a broken swap; we show the degraded
+  // panel below and point the user at the wallet's native send/receive.
+  const dexSupported = isDexRoutingSupported(chain);
   // Honest route attribution — the venue is whatever aggregator actually
   // quoted (0x on EVM, Jupiter on Solana), not a hardcoded per-chain DEX name.
   const routeLabel = quoteData?.provider === 'jupiter' ? 'Jupiter' : quoteData?.provider === '0x' ? '0x' : chain === 'solana' ? 'Jupiter' : '0x';
@@ -1580,11 +1592,46 @@ export default function SwapPage() {
                 if (!c) return;
                 setChain(c.id);
                 setFromToken(c.symbol);
+                // A chain with no DEX routing (Robinhood Chain) has nothing to
+                // quote — clear the trade fields and let the degraded panel
+                // explain the honest state rather than firing a doomed request.
+                if (!isDexRoutingSupported(c.id)) {
+                  setToAmount('');
+                  setQuoteData(null);
+                  setQuoteError('');
+                  return;
+                }
                 simulateQuote(fromAmount, c.symbol, toToken, c.id);
               }}
             />
           </div>
 
+          {!dexSupported ? (
+            <div
+              className="nl-glass rounded-2xl p-6 text-center shadow-2xl"
+              style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 26px rgba(0,102,255,.18), 0 18px 50px rgba(0,0,0,.45)' }}
+            >
+              <div
+                className="w-12 h-12 mx-auto rounded-full flex items-center justify-center mb-4"
+                style={{ backgroundColor: CHAIN_META.robinhood.color + '1A', border: `1px solid ${CHAIN_META.robinhood.color}55` }}
+              >
+                <Info className="w-5 h-5" style={{ color: CHAIN_META.robinhood.color }} aria-hidden="true" />
+              </div>
+              <h3 className="text-base font-bold text-white mb-2">
+                DEX routing on {CHAIN_META.robinhood.label} is coming
+              </h3>
+              <p className="text-sm text-gray-400 leading-relaxed max-w-sm mx-auto">
+                You can hold, receive, and send ETH on {CHAIN_META.robinhood.label} today from your wallet.
+              </p>
+              <button
+                onClick={() => router.push('/dashboard/wallet-page')}
+                className="nl-button mt-5 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold"
+              >
+                <Wallet className="w-4 h-4" aria-hidden="true" /> Open Wallet
+              </button>
+            </div>
+          ) : (
+          <>
           <SettingsPanel
             slippage={slippage}
             setSlippage={setSlippage}
@@ -1975,6 +2022,8 @@ export default function SwapPage() {
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: activeChain.color }} />
             <span className="text-[11px]">Routed via {routeLabel} aggregation</span>
           </div>
+          </>
+          )}
         </div>
       </div>
 

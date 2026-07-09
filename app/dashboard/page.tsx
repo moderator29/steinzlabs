@@ -17,6 +17,11 @@ import { useFeatureUsageLog } from '@/lib/hooks/useFeatureUsageLog';
 import SidebarMenu from '@/components/SidebarMenu';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { dashboardHowItWorks } from '@/lib/howItWorks/content/dashboard';
+import { feedHowItWorks } from '@/lib/howItWorks/content/feed';
+import { newsHowItWorks } from '@/lib/howItWorks/content/news';
+import { rwaHowItWorks } from '@/lib/howItWorks/content/rwa';
+import { predictionHowItWorks } from '@/lib/howItWorks/content/prediction';
+import type { HowItWorksContent } from '@/lib/howItWorks/types';
 import { OnboardingGate } from '@/components/onboarding/OnboardingFlow';
 
 import { maybeNotifyWelcome } from '@/lib/notifications';
@@ -315,6 +320,18 @@ const OverviewHero = memo(function OverviewHero({ name }: { name: string }) {
   );
 });
 
+// A small right-aligned header row that carries a sub-tab title and its
+// in-app "How it works" button. Kept intentionally light so it sits above a
+// sub-tab's own content without competing with it.
+function SubTabHelpHeader({ label, content }: { label: string; content: HowItWorksContent }) {
+  return (
+    <div className="flex items-center justify-between gap-2 mb-1">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500">{label}</span>
+      <HowItWorksButton content={content} iconOnly />
+    </div>
+  );
+}
+
 // Prediction Markets teaser — a visual only, Polymarket style preview. No
 // live data or ordering yet; the "Notify me" control is presentational.
 function PredictionTeaser() {
@@ -325,6 +342,7 @@ function PredictionTeaser() {
   ];
   return (
     <div className="space-y-5">
+      <SubTabHelpHeader label="Prediction" content={predictionHowItWorks} />
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -645,6 +663,7 @@ export default function Dashboard() {
       if (activeTab === 'markets') {
         return (
           <div className="space-y-5">
+            <SubTabHelpHeader label="Markets" content={rwaHowItWorks} />
             {/* Global market-stats bar now lives at the top of Markets. */}
             {marketStatsBar}
             {/* Top Gainers (60%) + Heating Up (40%) — CoinGecko-grade market
@@ -666,6 +685,8 @@ export default function Dashboard() {
       }
       if (activeTab === 'context') return <ContextFeed />;
       if (activeTab === 'wire') return (
+        <div className="space-y-3">
+          <SubTabHelpHeader label="Feed" content={feedHowItWorks} />
         <WireTab
           onGift={(post) => {
             // A repost forwards the ORIGINAL wire, so post.author is the wallet
@@ -679,8 +700,14 @@ export default function Dashboard() {
             }
           }}
         />
+        </div>
       );
-      if (activeTab === 'news') return <NewsTab />;
+      if (activeTab === 'news') return (
+        <div className="space-y-3">
+          <SubTabHelpHeader label="News" content={newsHowItWorks} />
+          <NewsTab />
+        </div>
+      );
       if (activeTab === 'prediction') return <PredictionTeaser />;
       return (
         // OV3: widget order honours the user's saved preference from

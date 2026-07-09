@@ -122,7 +122,7 @@ export default function ApiHealthPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-white">API Health Monitor</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Monitoring {apis.length} endpoints — Last check: {formatTimeAgo(lastRefresh)}</p>
+          <p className="text-xs text-gray-500 mt-0.5">Monitoring {apis.length} endpoints - Last check: {formatTimeAgo(lastRefresh)}</p>
         </div>
         <button onClick={refresh} disabled={loading} className="nl-button nl-button--ghost flex items-center gap-2 text-xs">
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh

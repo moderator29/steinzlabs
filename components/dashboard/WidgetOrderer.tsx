@@ -120,7 +120,7 @@ export function WidgetOrderer({ open, onClose, onSaved }: Props) {
       <div
         ref={containerRef}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-[480px] bg-[#0a0f1a] border border-white/10 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4"
+        className="w-full max-w-[480px] nl-glass rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4"
       >
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-[#0066FF]/15 flex items-center justify-center">

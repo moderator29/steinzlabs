@@ -131,18 +131,18 @@ export function DocsSection04() {
       </div>
 
       <div id="vtx-triggers" className="scroll-mt-20 mb-8">
-        <h3 className="text-sm font-semibold text-white mb-2">Inline cards — what to type</h3>
+        <h3 className="text-sm font-semibold text-white mb-2">Inline cards: what to type</h3>
         <p className="text-xs text-gray-400 leading-relaxed mb-4">
           VTX renders two kinds of rich cards inline in the chat: a Token Card (logo, price, 24h change, market cap, volume, mini chart) and a Swap Card (from / to / rate / slippage / price impact + Sign &amp; Swap button). Here's how to trigger each.
         </p>
 
         <div className="mb-4">
-          <p className="text-[10px] uppercase tracking-[0.14em] text-[#4D6BFF] font-semibold mb-2">Token Card — price &amp; chart</p>
+          <p className="text-[10px] uppercase tracking-[0.14em] text-[#4D6BFF] font-semibold mb-2">Token Card: price &amp; chart</p>
           <div className="nl-glass rounded-xl divide-y divide-white/[0.04]">
             {[
-              { cmd: 'Show me BTC', desc: 'By ticker — any top-30 symbol works (BTC, ETH, SOL, BNB, XRP, DOGE, PEPE, SHIB, AVAX, MATIC, ARB, SUI, LINK, UNI, AAVE, BONK, WIF, JUP, USDC, USDT).' },
-              { cmd: 'Tell me about Ethereum', desc: 'By full name — VTX recognises Bitcoin, Ethereum, Solana, Polygon, Arbitrum, Avalanche, etc.' },
-              { cmd: 'Analyze $SOL', desc: 'Dollar-sign cashtags resolve the same way — $BTC, $ETH, $SOL, $PEPE…' },
+              { cmd: 'Show me BTC', desc: 'By ticker, any top-30 symbol works (BTC, ETH, SOL, BNB, XRP, DOGE, PEPE, SHIB, AVAX, MATIC, ARB, SUI, LINK, UNI, AAVE, BONK, WIF, JUP, USDC, USDT).' },
+              { cmd: 'Tell me about Ethereum', desc: 'By full name, VTX recognises Bitcoin, Ethereum, Solana, Polygon, Arbitrum, Avalanche, etc.' },
+              { cmd: 'Analyze $SOL', desc: 'Dollar-sign cashtags resolve the same way, like $BTC, $ETH, $SOL, $PEPE…' },
               { cmd: "What's PEPE doing?", desc: 'Natural-language questions about a token trigger the card too.' },
               { cmd: 'Paste any contract: 0xA0b8…eB48', desc: 'Full ERC-20 / SPL address → card resolves via the highest-liquidity pair (no scam forks).' },
             ].map((c) => (
@@ -157,13 +157,13 @@ export function DocsSection04() {
         </div>
 
         <div className="mb-4">
-          <p className="text-[10px] uppercase tracking-[0.14em] text-[#4D6BFF] font-semibold mb-2">Swap Card — inline swap preview</p>
+          <p className="text-[10px] uppercase tracking-[0.14em] text-[#4D6BFF] font-semibold mb-2">Swap Card: inline swap preview</p>
           <div className="nl-glass rounded-xl divide-y divide-white/[0.04]">
             {[
               { cmd: 'Swap 0.1 ETH for USDC', desc: 'Primary pattern: [swap] [amount] [FROM] [for] [TO].' },
               { cmd: 'Convert 100 USDC to SOL', desc: '"Convert" works the same. Cross-chain pairs route to the right venue (0x on EVM, Jupiter on Solana).' },
               { cmd: 'Trade 0.05 ETH to BONK', desc: '"Trade" and "Exchange" are accepted too.' },
-              { cmd: 'Exchange 50 USDT for ETH', desc: 'Use "for", "to", or "into" — all four work.' },
+              { cmd: 'Exchange 50 USDT for ETH', desc: 'Use "for", "to", or "into", all four work.' },
             ].map((c) => (
               <div key={c.cmd} className="px-4 py-3 flex items-start gap-3">
                 <div className="w-28 sm:w-60 shrink-0">
@@ -174,7 +174,7 @@ export function DocsSection04() {
             ))}
           </div>
           <p className="text-[11px] text-gray-500 leading-relaxed mt-3">
-            Exact pattern: <span className="font-mono text-[#4D6BFF]">(swap | convert | trade | exchange) &lt;amount&gt; &lt;FROM&gt; (for | to | into) &lt;TO&gt;</span>. No wallet connected? The card still renders — it shows a "Connect wallet, deposit first for insufficient balance" hint and blocks execution until a wallet signs.
+            Exact pattern: <span className="font-mono text-[#4D6BFF]">(swap | convert | trade | exchange) &lt;amount&gt; &lt;FROM&gt; (for | to | into) &lt;TO&gt;</span>. No wallet connected? The card still renders, it shows a "Connect wallet, deposit first for insufficient balance" hint and blocks execution until a wallet signs.
           </p>
         </div>
 

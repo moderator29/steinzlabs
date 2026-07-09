@@ -7,7 +7,7 @@ import {
 // Section 08 · Naka Wallet
 // The built-in, fully non-custodial wallet. Every claim here is verified
 // against lib/wallet/** and app/dashboard/wallet-page/**. No SNS (.sol name)
-// resolution — only ENS is implemented, so it is NOT documented. Bitcoin is
+// resolution, only ENS is implemented, so it is NOT documented. Bitcoin is
 // derivation-aware but send/receive is deferred, so it is framed honestly.
 
 const CORE_FEATURES = [
@@ -19,7 +19,7 @@ const CORE_FEATURES = [
   {
     icon: Layers, color: '#0066FF',
     title: 'Multi-account from one seed',
-    desc: 'One seed phrase derives many accounts via BIP-44 — EVM at m/44’/60’/0’/0/i (MetaMask/Rabby-compatible) and Solana at m/44’/501’/i’/0’ (Phantom-compatible). Add accounts without a new backup; index 0 reproduces your original addresses exactly.',
+    desc: 'One seed phrase derives many accounts via BIP-44, EVM at m/44’/60’/0’/0/i (MetaMask/Rabby-compatible) and Solana at m/44’/501’/i’/0’ (Phantom-compatible). Add accounts without a new backup; index 0 reproduces your original addresses exactly.',
   },
   {
     icon: Send, color: '#4D6BFF',
@@ -34,7 +34,7 @@ const CORE_FEATURES = [
   {
     icon: Repeat, color: '#F59E0B',
     title: 'In-wallet swap',
-    desc: 'Quote and start a swap without leaving the wallet — real routing via the 0x aggregator on EVM and Jupiter on Solana. You always confirm and sign the final transaction yourself.',
+    desc: 'Quote and start a swap without leaving the wallet, real routing via the 0x aggregator on EVM and Jupiter on Solana. You always confirm and sign the final transaction yourself.',
   },
   {
     icon: BookUser, color: '#0066FF',
@@ -44,7 +44,7 @@ const CORE_FEATURES = [
   {
     icon: ShieldCheck, color: '#10B981',
     title: 'Approvals manager',
-    desc: 'Scan your EVM token approvals (via Alchemy logs), see which contracts hold unlimited spend access, and revoke risky allowances in one click — approve(spender, 0) signed by you. EVM only; Solana has no ERC-20 allowance model.',
+    desc: 'Scan your EVM token approvals (via Alchemy logs), see which contracts hold unlimited spend access, and revoke risky allowances in one click, approve(spender, 0) signed by you. EVM only; Solana has no ERC-20 allowance model.',
   },
   {
     icon: ImageIcon, color: '#8B5CF6',
@@ -54,7 +54,7 @@ const CORE_FEATURES = [
   {
     icon: History, color: '#6B7280',
     title: 'Transaction history',
-    desc: 'A per-wallet activity view of your sends, receives, swaps and approvals with status, value and gas — backed by the database, not fabricated.',
+    desc: 'A per-wallet activity view of your sends, receives, swaps and approvals with status, value and gas, backed by the database, not fabricated.',
   },
 ];
 
@@ -67,7 +67,7 @@ const SECURITY_FEATURES = [
   {
     icon: KeyRound, color: '#0066FF',
     title: 'Passkey unlock',
-    desc: 'On supported devices you can unlock with a passkey (Face ID / Touch ID / Windows Hello). It uses WebAuthn with a PRF-derived key to unwrap your password locally — it never uploads your key, and it stays optional.',
+    desc: 'On supported devices you can unlock with a passkey (Face ID / Touch ID / Windows Hello). It uses WebAuthn with a PRF-derived key to unwrap your password locally, it never uploads your key, and it stays optional.',
   },
   {
     icon: EyeOff, color: '#F59E0B',
@@ -86,7 +86,7 @@ const ADVANCED = [
     id: 'wallet-onramp',
     icon: CreditCard, color: '#10B981',
     title: 'Buy crypto with a card',
-    desc: 'When the operator has configured a fiat on-ramp provider (Transak or MoonPay), you can buy crypto with a card and have it delivered straight to your wallet on the correct network — KYC and payment happen on the provider’s hosted widget. If no provider is configured the wallet shows an honest “not yet available” state rather than a fake flow.',
+    desc: 'When the operator has configured a fiat on-ramp provider (Transak or MoonPay), you can buy crypto with a card and have it delivered straight to your wallet on the correct network, KYC and payment happen on the provider’s hosted widget. If no provider is configured the wallet shows an honest “not yet available” state rather than a fake flow.',
   },
   {
     id: 'wallet-ledger',
@@ -98,7 +98,7 @@ const ADVANCED = [
     id: 'wallet-dapp',
     icon: Plug, color: '#8B5CF6',
     title: 'Use Naka as a wallet for any dApp',
-    desc: 'Connect external dApps to your Naka wallet over WalletConnect and let Naka sign their requests — the reverse of plugging MetaMask into Naka. Supports personal_sign, typed-data (v4) and sendTransaction across the major EVM chains, with per-request approval that decrypts your key in the browser only. The blind-signing eth_sign method is blocked outright.',
+    desc: 'Connect external dApps to your Naka wallet over WalletConnect and let Naka sign their requests, the reverse of plugging MetaMask into Naka. Supports personal_sign, typed-data (v4) and sendTransaction across the major EVM chains, with per-request approval that decrypts your key in the browser only. The blind-signing eth_sign method is blocked outright.',
   },
 ];
 
@@ -110,7 +110,7 @@ export function DocsSectionWallet() {
         <h2 className="text-xl sm:text-2xl font-bold text-white">Naka Wallet</h2>
       </div>
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
-        A full non-custodial wallet built into Naka Labs — create or import a seed, hold and move funds across EVM chains and Solana, and connect hardware or external dApps · all without handing your keys to anyone. <span className="text-white font-semibold">You hold the keys. We never do.</span>
+        A full non-custodial wallet built into Naka Labs, create or import a seed, hold and move funds across EVM chains and Solana, and connect hardware or external dApps · all without handing your keys to anyone. <span className="text-white font-semibold">You hold the keys. We never do.</span>
       </p>
 
       {/* Non-custodial framing */}
@@ -119,10 +119,10 @@ export function DocsSectionWallet() {
           <Lock className="w-4 h-4 text-[#10B981]" />
           <span className="text-sm font-semibold text-white">Non-custodial by design</span>
         </div>
-        <ul className="space-y-2 text-xs text-gray-400 leading-relaxed">
-          <li>— Your private key is generated and stored on your device, encrypted with your password using AES-256-GCM (PBKDF2, 100,000 rounds). Naka Labs has no copy.</li>
-          <li>— There is no keyserver and no recovery by us. The <span className="text-white font-semibold">only</span> way to restore your wallet is the seed phrase shown at creation — write it down and store it offline before you fund anything.</li>
-          <li>— Every transaction is signed locally and broadcast only after you approve it. The AI assistant can prepare a swap card but can never sign, move, or withdraw funds.</li>
+        <ul className="space-y-2 text-xs text-gray-400 leading-relaxed list-disc ps-5 marker:text-[#4D6BFF]">
+          <li>Your private key is generated and stored on your device, encrypted with your password using AES-256-GCM (PBKDF2, 100,000 rounds). Naka Labs has no copy.</li>
+          <li>There is no keyserver and no recovery by us. The <span className="text-white font-semibold">only</span> way to restore your wallet is the seed phrase shown at creation, write it down and store it offline before you fund anything.</li>
+          <li>Every transaction is signed locally and broadcast only after you approve it. The AI assistant can prepare a swap card but can never sign, move, or withdraw funds.</li>
         </ul>
       </div>
 
@@ -191,7 +191,7 @@ export function DocsSectionWallet() {
           <span className="text-sm font-semibold text-white">Supported chains</span>
         </div>
         <p className="text-xs text-gray-400 leading-relaxed">
-          Ethereum, Base, Polygon, Arbitrum, Optimism, BNB Chain, Avalanche and Solana ship enabled, with many more EVM networks addable from <span className="text-white font-semibold">Add Network</span>. Bitcoin appears in the network list but send/receive is not live yet — the Receive panel shows an honest “coming&nbsp;soon” state rather than a wrong address.
+          Ethereum, Base, Polygon, Arbitrum, Optimism, BNB Chain, Avalanche and Solana ship enabled, with many more EVM networks addable from <span className="text-white font-semibold">Add Network</span>. Bitcoin appears in the network list but send/receive is not live yet, the Receive panel shows an honest “coming&nbsp;soon” state rather than a wrong address.
         </p>
       </div>
 
@@ -199,7 +199,7 @@ export function DocsSectionWallet() {
       <div className="flex items-start gap-2 p-3 bg-[#F59E0B]/[0.05] border border-[#F59E0B]/20 rounded-xl">
         <AlertTriangle className="w-3.5 h-3.5 text-[#F59E0B] flex-shrink-0 mt-0.5" />
         <p className="text-xs text-gray-400 leading-relaxed">
-          A self-custody wallet puts you in full control — which also means there is no support line that can reverse a transaction or recover a lost seed phrase. Back up your seed offline, double-check every address before you send, and only keep what you are prepared to manage yourself.
+          A self-custody wallet puts you in full control, which also means there is no support line that can reverse a transaction or recover a lost seed phrase. Back up your seed offline, double-check every address before you send, and only keep what you are prepared to manage yourself.
         </p>
       </div>
     </section>

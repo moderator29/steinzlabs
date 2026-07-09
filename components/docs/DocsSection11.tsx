@@ -65,7 +65,7 @@ export function DocsSection11() {
   return (
     <section id="telegram-bot" className="mb-16 scroll-mt-20">
       <div className="flex items-baseline gap-3 mb-1">
-        <span className="text-5xl font-black text-white/[0.04] font-mono select-none leading-none">12</span>
+        <span className="text-5xl font-black text-white/[0.04] font-mono select-none leading-none">13</span>
         <h2 className="text-xl sm:text-2xl font-bold text-white">Telegram Bot</h2>
       </div>
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">

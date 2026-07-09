@@ -58,7 +58,7 @@ export default function SearchLogsPage() {
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
       <div className="mb-6">
         <h1 className="text-xl font-bold text-white">Search Logs</h1>
-        <p className="text-xs text-gray-500 mt-0.5">Token and wallet search analytics — top queries and empty results</p>
+        <p className="text-xs text-gray-500 mt-0.5">Token and wallet search analytics - top queries and empty results</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">

@@ -180,10 +180,10 @@ function UserDrawer({ user, onClose, onBan, onTier }: {
                 onChange={(e) => setTier(e.target.value as Tier)}
                 className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors"
               >
-                <option value="free">Free — $0</option>
-                <option value="mini">Mini — $5/mo</option>
-                <option value="pro">Pro — $9/mo</option>
-                <option value="max">Max — $15/mo</option>
+                <option value="free">Free - $0</option>
+                <option value="mini">Mini - $5/mo</option>
+                <option value="pro">Pro - $9/mo</option>
+                <option value="max">Max - $15/mo</option>
               </select>
             </label>
             {tier !== 'free' && (
@@ -204,7 +204,7 @@ function UserDrawer({ user, onClose, onBan, onTier }: {
               <span className="sr-only">Reason for tier override</span>
               <input
                 type="text"
-                placeholder="Reason (optional — audit trail)"
+                placeholder="Reason (optional - audit trail)"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-2 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors"

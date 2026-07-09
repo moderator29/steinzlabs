@@ -379,7 +379,7 @@ export default function AdminPanel() {
               </a>
             </div>
           </div>
-          <p className="text-center text-[10px] text-gray-700 mt-4">Protected access — authorized personnel only</p>
+          <p className="text-center text-[10px] text-gray-700 mt-4">Protected access - authorized personnel only</p>
         </div>
       </div>
     );

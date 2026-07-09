@@ -9,6 +9,7 @@ import {
   Settings, LifeBuoy, Zap, Search, Tag, Star,
   Mail, LogOut, Menu, X, ChevronRight, Lock, FileText,
   Flag, UserMinus, UserCog, ClipboardList, LineChart,
+  MessageSquare, Gift, Newspaper, CandlestickChart, Coins,
 } from 'lucide-react';
 import SteinzLogo from '@/components/SteinzLogo';
 import { HealthBadge } from '@/components/admin/HealthBadge';
@@ -41,6 +42,14 @@ const NAV_ITEMS = [
   { href: '/admin/social-users',           icon: UserCog,        label: 'Social User View' },
   { href: '/admin/onboarding-analytics',   icon: LineChart,      label: 'Onboarding Analytics' },
   { href: '/admin/audit-tracker',          icon: ClipboardList,  label: 'Audit Tracker' },
+  // Social feed / Wire layer (Session P additions).
+  { href: '/admin/feed',                   icon: MessageSquare,  label: 'Feed / Wire' },
+  { href: '/admin/gifts',                  icon: Gift,           label: 'Gifts' },
+  // Comms.
+  { href: '/admin/news-alerts',            icon: Newspaper,      label: 'News Alerts' },
+  // Markets.
+  { href: '/admin/rwa-markets',            icon: CandlestickChart, label: 'RWA Markets' },
+  { href: '/admin/robinhood-chain',        icon: Coins,          label: 'Robinhood Chain' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

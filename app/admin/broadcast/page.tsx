@@ -94,7 +94,7 @@ export default function BroadcastPage() {
                   <Users className={`w-4 h-4 mt-0.5 flex-shrink-0 ${audience === key ? 'text-[#0066FF]' : 'text-gray-500'}`} />
                   <div>
                     <div className={`text-xs font-semibold ${audience === key ? 'text-white' : 'text-gray-300'}`}>{val.label}</div>
-                    <div className="text-[10px] text-gray-500">{c === null ? '—' : c.toLocaleString()} recipients — {val.desc}</div>
+                    <div className="text-[10px] text-gray-500">{c === null ? '—' : c.toLocaleString()} recipients - {val.desc}</div>
                   </div>
                 </button>
               );

@@ -120,7 +120,7 @@ export default function SecurityAnalyticsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-white">Security Analytics</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Flagged token registry — blocks display in security scans</p>
+          <p className="text-xs text-gray-500 mt-0.5">Flagged token registry - blocks display in security scans</p>
         </div>
         <button
           onClick={() => setShowAdd(prev => !prev)}

@@ -93,7 +93,7 @@ export default function AdminRevenuePage() {
         <div>
           <h1 className="text-xl font-bold text-white">Revenue Analytics</h1>
           <p className="text-xs text-gray-500 mt-0.5">
-            Powered by 0x Trade Analytics — real fee data
+            Powered by 0x Trade Analytics - real fee data
           </p>
         </div>
         <button onClick={() => exportCSV(data.trades)}

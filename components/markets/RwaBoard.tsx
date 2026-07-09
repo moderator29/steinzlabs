@@ -21,14 +21,16 @@ interface RwaRow {
   symbol: string;
   name: string;
   price: number;
-  changeAbs: number;
-  changePct: number;
+  // Null when the source (keyless Pyth spot) has no daily change — shown as '--',
+  // never a fabricated 0.00%.
+  changeAbs: number | null;
+  changePct: number | null;
   spark: number[];
   asOf: string | null;
 }
 
 type ApiResponse =
-  | { available: true; asOf: string; rows: RwaRow[] }
+  | { available: true; source: 'twelvedata' | 'pyth'; asOf: string; rows: RwaRow[] }
   | { available: false; reason: string };
 
 const UP = '#10B981';
@@ -101,8 +103,11 @@ function Sparkline({ data, up }: { data: number[]; up: boolean }) {
 // ─── Row ──────────────────────────────────────────────────────────────────────
 
 function Row({ row }: { row: RwaRow }) {
+  // A null change means the source gave a spot price only (keyless Pyth): render
+  // a neutral chip with '--' rather than a colored, misleading direction.
+  const hasChange = row.changePct != null && Number.isFinite(row.changePct);
   const up = (row.changePct ?? 0) >= 0;
-  const chipColor = up ? UP : DOWN;
+  const chipColor = !hasChange ? 'rgba(255,255,255,0.10)' : up ? UP : DOWN;
   return (
     <div className="flex items-center gap-3 py-3 px-1 border-b border-white/[0.05] last:border-b-0">
       <div className="min-w-0 flex-1">
@@ -118,7 +123,7 @@ function Row({ row }: { row: RwaRow }) {
         <div className="text-[15px] font-semibold text-white tabular-nums">{fmtPrice(row.price)}</div>
         <div
           className="mt-0.5 rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums"
-          style={{ color: '#fff', backgroundColor: chipColor }}
+          style={{ color: hasChange ? '#fff' : 'rgba(255,255,255,0.55)', backgroundColor: chipColor }}
         >
           {fmtChangePct(row.changePct)}
         </div>
@@ -174,6 +179,10 @@ export default function RwaBoard() {
   }, [load]);
 
   const asOf = data && data.available ? fmtDate(data.asOf) : fmtDate(new Date().toISOString());
+  // Honest attribution of which real feed is powering the board right now.
+  const sourceLabel = data && data.available
+    ? data.source === 'pyth' ? 'Pyth' : 'Twelve Data'
+    : null;
 
   const bySection = (section: Section): RwaRow[] =>
     data && data.available ? data.rows.filter((r) => r.section === section) : [];
@@ -185,7 +194,10 @@ export default function RwaBoard() {
       {/* Header */}
       <div className="flex items-baseline justify-between mb-3">
         <h2 className="text-xl font-bold text-white">Markets</h2>
-        {asOf && <span className="text-xs text-white/45">{asOf}</span>}
+        <div className="flex items-center gap-2">
+          {sourceLabel && <span className="text-[10px] font-semibold uppercase tracking-wider text-white/35">{sourceLabel}</span>}
+          {asOf && <span className="text-xs text-white/45">{asOf}</span>}
+        </div>
       </div>
 
       {/* Scroll container so the board keeps its own height on mobile */}

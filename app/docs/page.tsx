@@ -17,6 +17,7 @@ import { DocsSection07 } from '@/components/docs/DocsSection07';
 import { DocsSectionWallet } from '@/components/docs/DocsSectionWallet';
 import { DocsSection08 } from '@/components/docs/DocsSection08';
 import { DocsSection09 } from '@/components/docs/DocsSection09';
+import { DocsSectionFeed } from '@/components/docs/DocsSectionFeed';
 import { DocsSection10 } from '@/components/docs/DocsSection10';
 import { DocsSection11 } from '@/components/docs/DocsSection11';
 import { DocsSection12 } from '@/components/docs/DocsSection12';
@@ -153,6 +154,7 @@ export default function DocsPage() {
           <DocsSectionWallet />
           <DocsSection08 />
           <DocsSection09 />
+          <DocsSectionFeed />
           <DocsSection10 />
           <DocsSection11 />
           <DocsSection12 />

@@ -211,9 +211,9 @@ export default function AdminResearchPage() {
         const d = await res.json().catch(() => ({})) as { error?: string };
         // Translate common backend errors into user-friendly copy.
         const raw = d.error ?? `Upload failed (HTTP ${res.status})`;
-        const friendly = raw.includes('exceeds 5 MB') ? 'Image is too large — keep it under 5 MB.'
+        const friendly = raw.includes('exceeds 5 MB') ? 'Image is too large - keep it under 5 MB.'
           : raw.includes('Unsupported file type') ? 'Unsupported file type. Use JPG, PNG, WebP, GIF, or SVG.'
-          : res.status === 401 ? 'Your admin session has expired — sign in again.'
+          : res.status === 401 ? 'Your admin session has expired - sign in again.'
           : raw;
         throw new Error(friendly);
       }
@@ -222,7 +222,7 @@ export default function AdminResearchPage() {
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Image upload failed';
       // TypeError: Failed to fetch → network/offline
-      const friendly = msg.toLowerCase().includes('failed to fetch') ? 'Network error — check your connection and try again.' : msg;
+      const friendly = msg.toLowerCase().includes('failed to fetch') ? 'Network error - check your connection and try again.' : msg;
       setFormError(friendly);
     } finally {
       setImageUploading(false);
@@ -272,7 +272,7 @@ export default function AdminResearchPage() {
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <BookOpen className="w-10 h-10 text-gray-700" />
-          <p className="text-sm text-gray-500">{search ? 'No posts match your search' : 'No posts yet — create your first one'}</p>
+          <p className="text-sm text-gray-500">{search ? 'No posts match your search' : 'No posts yet - create your first one'}</p>
         </div>
       ) : (
         <div className="space-y-2">

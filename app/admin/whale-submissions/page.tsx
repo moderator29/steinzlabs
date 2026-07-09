@@ -86,7 +86,7 @@ export default function WhaleSubmissionsAdminPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
-      setFlash(action === 'approve' ? `Approved — whale added to directory` : 'Rejected');
+      setFlash(action === 'approve' ? `Approved - whale added to directory` : 'Rejected');
       await load();
     } catch (err: any) {
       setFlash(`${action} failed: ${err?.message ?? 'unknown'}`);

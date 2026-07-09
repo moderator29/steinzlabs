@@ -92,7 +92,7 @@ export default function AdminSettingsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-white">Platform Settings</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Feature flags — polled by frontend every 30 seconds</p>
+          <p className="text-xs text-gray-500 mt-0.5">Feature flags - polled by frontend every 30 seconds</p>
         </div>
         <div className="flex items-center gap-3">
           {maintenanceOn && (

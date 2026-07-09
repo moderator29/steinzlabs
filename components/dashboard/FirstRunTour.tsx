@@ -78,7 +78,7 @@ export function FirstRunTour() {
       aria-modal="true"
       aria-labelledby="naka-tour-title"
     >
-      <div className="w-full max-w-md rounded-2xl bg-[#0F1320] border border-white/10 shadow-2xl">
+      <div className="w-full max-w-md rounded-2xl nl-glass shadow-2xl">
         <div className="flex items-center justify-between p-4 border-b border-white/10">
           <span className="text-[11px] uppercase tracking-wide text-slate-400 font-semibold">
             Quick start {step + 1} / {STEPS.length}

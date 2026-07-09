@@ -59,7 +59,7 @@ export function HeatingUpCard({ limit = 4, href = '/dashboard/trending' }: Props
   }, [limit]);
 
   return (
-    <div className="bg-[#111827] border border-white/[0.06] rounded-xl overflow-hidden h-full flex flex-col">
+    <div className="nl-glass rounded-xl overflow-hidden h-full flex flex-col">
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.04]">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-orange-500/10 flex items-center justify-center">
