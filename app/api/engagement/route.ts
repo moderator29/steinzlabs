@@ -67,12 +67,11 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser();
     const userId = user?.id ?? null;
 
-    // Every write must be attributable to a real authenticated user. Allowing
-    // null user_id inserts let anyone inflate view/like/share counts unbounded,
-    // because the (event_id, user_id, action) unique index never dedupes NULLs
-    // (NULL != NULL in Postgres). Counts stay honest only if each row is one
-    // real user's action, so require auth for all actions (not just unlike).
-    if (!userId) {
+    // VIEWS are a low-stakes liveness counter and may be recorded anonymously
+    // (the RLS insert policy already permits a null user_id). LIKES / SHARES /
+    // UNLIKE stay authenticated so they cannot be inflated and dedupe per user
+    // via the (event_id, user_id, action) unique index (NULL never dedupes).
+    if (action !== 'view' && !userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
