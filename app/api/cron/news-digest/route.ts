@@ -16,9 +16,10 @@ import { aggregate, type NewsItem } from "../../news/route";
  * CoinDesk, CryptoCompare, CoinGecko). If aggregation yields nothing, the cron
  * exits without sending — it never fabricates a digest.
  *
- * De-dupe: notification_settings.news_alerts_last_url stores the lead story URL
- * we last sent per user. If the current lead is unchanged, that user is skipped
- * so the same edition never lands twice.
+ * De-dupe: notification_settings.news_alerts_last_url stores a signature of the
+ * whole headline set we last sent per user. If the set is unchanged, that user
+ * is skipped so the same edition never lands twice — and a refreshed edition
+ * still goes out even when the #1 story is "sticky" but the rest rotated.
  */
 
 interface DigestPrefs extends QuietHoursPrefs {
@@ -77,7 +78,10 @@ export async function GET(request: NextRequest) {
       await logCronExecution(NAME, "success", duration, "no_news", 0);
       return NextResponse.json({ ok: true, durationMs: duration, sent: 0, reason: "no_news" });
     }
-    const leadUrl = top[0].url;
+    // Signature over the WHOLE headline set (not just the lead) so a refreshed
+    // edition still sends when the #1 story is sticky but the rest rotated, and
+    // an identical set is never re-sent.
+    const editionSig = top.map((t) => t.url).join("|");
 
     const userIds = optedIn.map((p) => p.user_id);
     const [{ data: tgLinks }] = await Promise.all([
@@ -98,8 +102,8 @@ export async function GET(request: NextRequest) {
     const deliveredUsers: string[] = [];
 
     for (const p of optedIn) {
-      // Skip if this user already got this exact edition (lead unchanged).
-      if (p.news_alerts_last_url && p.news_alerts_last_url === leadUrl) continue;
+      // Skip if this user already got this exact edition (same headline set).
+      if (p.news_alerts_last_url && p.news_alerts_last_url === editionSig) continue;
       // Respect quiet hours.
       if (inQuietHours(p, now)) continue;
 
@@ -127,8 +131,10 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Email — only when explicitly enabled (default false in the panel, so no
-      // surprise mail). Resolve the address from auth on demand.
+      // Email — only when the user's email channel is enabled. The News "Alerts"
+      // bell popover discloses that the digest goes to enabled channels
+      // (Telegram / email) and links to settings to manage them, so this honors
+      // the user's existing email preference rather than surprising them.
       if (p.email_enabled === true) {
         const { data: authUser } = await supabase.auth.admin.getUserById(p.user_id);
         const email = authUser?.user?.email ?? null;
@@ -149,12 +155,21 @@ export async function GET(request: NextRequest) {
       if (deliveredToUser) deliveredUsers.push(p.user_id);
     }
 
-    // Mark the edition as delivered so it never repeats for these users.
+    // Mark the edition as delivered so it never repeats for these users. If this
+    // write fails after messages already went out, the next run would re-send;
+    // surface it so that's observable rather than silent.
     if (deliveredUsers.length > 0) {
-      await supabase
+      const { error: markErr } = await supabase
         .from("notification_settings")
-        .update({ news_alerts_last_url: leadUrl })
+        .update({ news_alerts_last_url: editionSig })
         .in("user_id", deliveredUsers);
+      if (markErr) {
+        Sentry.captureMessage("[news-digest] de-dupe marker write failed", {
+          level: "warning",
+          tags: { cron: NAME },
+          extra: { error: markErr.message, users: deliveredUsers.length },
+        });
+      }
     }
 
     const duration = Date.now() - startedAt;

@@ -1,25 +1,25 @@
 'use client';
 
-import { useEffect, useState, memo } from 'react';
-import { usePathname } from 'next/navigation';
+import { useEffect, useRef, useState, memo } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import SteinzLogo from '@/components/ui/SteinzLogo';
-// Brand icon library — gradient-glowing platform icons. Missing specialty
-// icons fall back to lucide-react until they land in the brand library
-// (mirrors the hybrid-import pattern used elsewhere on main).
+// Flat lucide-react icon set only — the brand gradient-glow icons were swapped
+// out here for their clean lucide equivalents (see mapping in the PR): brand
+// `Whale`→`Fish`, `ChartBar`→`BarChart3`, `ChartCandle`→`CandlestickChart`,
+// brand `X/Search/TrendingUp/Bell/Shield/Wallet`→same-named lucide icons. No
+// `variant` prop (lucide has none).
 import {
-  X, ChartBar as BarChart3, Search, TrendingUp, Whale as Fish, Bell, Shield,
-  Wallet, ChartCandle as CandlestickChart,
-} from '@/components/icons/brand';
-import {
-  Dna, Link2, Trophy, Radio, ArrowLeftRight, Bot, Target, PieChart, DollarSign,
-  Archive, Circle, FileCode, FlaskConical, BookOpen, FileSearch, CheckSquare,
-  Crosshair, Network, Globe, History, MessageCircle, Compass, Gem,
-  LineChart,
-  Sparkles,
-  ScanSearch,
+  X, BarChart3, Search, TrendingUp, Fish, Bell, Shield, Wallet,
+  CandlestickChart, Dna, Link2, Trophy, Radio, ArrowLeftRight, Bot, Target,
+  PieChart, DollarSign, Archive, Circle, FileCode, FlaskConical, FileSearch,
+  CheckSquare, Crosshair, Network, Globe, History, MessageCircle, Compass, Gem,
+  LineChart, Sparkles, ScanSearch, Settings, ShieldCheck, Copy, LayoutGrid, Rss,
+  Newspaper, LogIn, LogOut, UserCircle2, Twitter, Send, LifeBuoy, FileText,
+  ChevronRight,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { GlobalWhatsNewButton } from '@/components/common/GlobalWhatsNew';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 interface SidebarMenuProps {
   onClose: () => void;
@@ -37,7 +37,22 @@ interface NavItem {
   badge?: string;
 }
 
+// Single source of truth for the platform's navigable surfaces. Every path here
+// resolves to a real app/**/page.tsx route (the Home sub-tabs use the
+// /dashboard `?subtab=` param the home page reads). Token-gated Vault + the
+// admin panel are appended conditionally at render time (see below).
 const NAV_CATEGORIES: NavCategory[] = [
+  {
+    title: 'Home',
+    items: [
+      { icon: LayoutGrid, label: 'Overview', path: '/dashboard' },
+      { icon: Rss, label: 'Feed', path: '/dashboard?subtab=wire' },
+      { icon: Radio, label: 'Context', path: '/dashboard?subtab=context' },
+      { icon: Newspaper, label: 'News', path: '/dashboard?subtab=news' },
+      { icon: LineChart, label: 'Markets', path: '/dashboard?subtab=markets' },
+      { icon: Sparkles, label: 'Prediction', path: '/dashboard?subtab=prediction' },
+    ],
+  },
   {
     title: 'Overview',
     items: [
@@ -62,6 +77,7 @@ const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { icon: CandlestickChart, label: 'Market', path: '/dashboard/market' },
       { icon: ArrowLeftRight, label: 'Swap', path: '/dashboard/swap' },
+      { icon: Copy, label: 'Copy Trading', path: '/dashboard/copy-trading', badge: 'BETA' },
       { icon: History, label: 'Transactions', path: '/dashboard/transactions' },
     ],
   },
@@ -102,17 +118,11 @@ const NAV_CATEGORIES: NavCategory[] = [
       { icon: Archive, label: 'Archive', path: '/dashboard/archive' },
     ],
   },
-  // §12 — NakaCult / The Vault remain a standalone token-gated surface; the
-  // sidebar links into them ONLY for confirmed cult members (rendered
-  // conditionally below, not in this static list). Non-members never see it and
-  // still reach NakaCult solely via the /naka-cult landing. This gives a
-  // logged-in member (e.g. an email/Google account that holds the entitlement)
-  // a direct in-app door to /vault — the /naka-cult landing is wallet-connect
-  // only and has no email/password field.
   {
     title: 'Account',
     items: [
       { icon: DollarSign, label: 'Pricing', path: '/dashboard/pricing' },
+      { icon: Settings, label: 'Settings', path: '/settings' },
     ],
   },
 ];
@@ -120,9 +130,15 @@ const NAV_CATEGORIES: NavCategory[] = [
 export default function SidebarMenu({ onClose }: SidebarMenuProps) {
   const router = useRouter();
   const pathname = usePathname();
-  // Only confirmed cult members get the in-app Vault link (see §12). Resolved
-  // server-side via /api/cult/me so we never trust client state; defaults
-  // hidden for anonymous/non-members.
+  const { user, signOut } = useAuth();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  const isAdmin = user?.role === 'admin';
+
+  // Only confirmed cult members get the in-app Vault link. Resolved server-side
+  // via /api/cult/me so we never trust client state; defaults hidden for
+  // anonymous/non-members.
   const [isCultMember, setIsCultMember] = useState(false);
   useEffect(() => {
     let cancelled = false;
@@ -151,77 +167,197 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
     return () => { cancelled = true; clearInterval(interval); window.removeEventListener('focus', onFocus); };
   }, []);
 
+  // Escape-to-close + background scroll lock + initial focus for the dialog.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    closeRef.current?.focus();
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
   const handleNavigation = (path: string) => {
     router.push(path);
     onClose();
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+    onClose();
+    router.push('/login');
+  };
+
+  // Build the render order: static categories, then the token-gated Vault and
+  // the admin panel as conditional groups so they only surface to who should
+  // see them.
+  const groups: NavCategory[] = [...NAV_CATEGORIES];
+  if (isCultMember) {
+    groups.push({ title: 'NakaCult', items: [{ icon: Gem, label: 'Enter the Vault', path: '/vault' }] });
+  }
+  if (isAdmin) {
+    groups.push({ title: 'Admin', items: [{ icon: ShieldCheck, label: 'Admin Panel', path: '/admin' }] });
+  }
+
   return (
-    <>
-      <div className="fixed inset-0 z-[var(--z-modal)] bg-black/60 backdrop-blur-sm" onClick={onClose} />
-
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Main menu"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      className="fixed inset-0 z-[60] overflow-y-auto no-scrollbar bg-[#070A1E] animate-slide-up"
+    >
+      {/* Subtle aurora wash so the full-page surface reads as brand, not a flat black sheet. */}
       <div
-        className="fixed top-0 left-0 h-full w-[260px] max-w-[80vw] bg-[#0A0E27] border-r border-white/[0.06] z-[calc(var(--z-modal)+1)] flex flex-col overflow-hidden animate-slide-in-left"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-5 h-16 border-b border-white/[0.06] flex-shrink-0">
-          <div className="flex items-center gap-2.5">
-            <SteinzLogo size={28} animated={false} />
-            <span className="text-sm font-heading font-bold tracking-tight text-white">NAKA LABS</span>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-md hover:bg-white/[0.06] transition-colors text-gray-400 hover:text-white"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        className="pointer-events-none absolute inset-0 opacity-70"
+        aria-hidden="true"
+        style={{
+          background:
+            'radial-gradient(ellipse 90% 55% at 50% -10%, rgba(0,102,255,0.16), transparent 60%), radial-gradient(ellipse 70% 50% at 100% 100%, rgba(16,185,129,0.08), transparent 55%)',
+        }}
+      />
 
-        <div className="flex-1 overflow-y-auto py-4 px-3 space-y-5 scrollbar-hide">
-          {isCultMember && (
-            <div>
-              <h3 className="text-[10px] font-semibold text-gray-500 uppercase tracking-[0.1em] px-3 mb-1.5">
-                NakaCult
-              </h3>
-              <div className="space-y-0.5">
-                <SidebarNavItem
-                  icon={Gem}
-                  label="Enter the Vault"
-                  isActive={pathname.startsWith('/vault')}
-                  onClick={() => handleNavigation('/vault')}
-                  onHover={() => router.prefetch('/vault')}
-                />
-              </div>
-            </div>
-          )}
-          {NAV_CATEGORIES.map((category) => (
-            <div key={category.title}>
-              <h3 className="text-[10px] font-semibold text-gray-500 uppercase tracking-[0.1em] px-3 mb-1.5">
+      <div className="relative mx-auto flex min-h-full w-full max-w-3xl flex-col px-5 pb-10 pt-5 sm:px-8">
+        {/* ── Brand header ──────────────────────────────────────────────── */}
+        <header className="flex items-center justify-between">
+          <button
+            onClick={() => handleNavigation('/dashboard')}
+            className="flex items-center gap-3 rounded-xl px-1 py-1 -mx-1 transition-opacity hover:opacity-80"
+          >
+            <SteinzLogo size={34} animated={false} />
+            <span className="font-heading text-base font-bold tracking-tight text-white">NAKA LABS</span>
+          </button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              ref={closeRef}
+              onClick={onClose}
+              aria-label="Close menu"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-gray-300 transition-colors hover:bg-white/[0.08] hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </header>
+
+        {/* ── Grouped nav ───────────────────────────────────────────────── */}
+        <nav className="mt-8 grid grid-cols-1 gap-x-10 gap-y-7 sm:grid-cols-2">
+          {groups.map((category) => (
+            <section key={category.title}>
+              <h3 className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-500">
                 {category.title}
               </h3>
               <div className="space-y-0.5">
                 {category.items.map((item) => (
                   <SidebarNavItem
-                    key={item.path}
+                    key={`${category.title}-${item.path}`}
                     icon={item.icon}
                     label={item.label}
                     badge={item.path === '/dashboard/messages' && unreadDms > 0 ? (unreadDms > 99 ? '99+' : String(unreadDms)) : item.badge}
                     isActive={pathname === item.path}
                     onClick={() => handleNavigation(item.path)}
-                    onHover={() => router.prefetch(item.path)}
+                    onHover={() => { if (!item.path.includes('?')) router.prefetch(item.path); }}
                   />
                 ))}
               </div>
-            </div>
+            </section>
           ))}
-        </div>
+        </nav>
 
-        <div className="px-3 py-3 border-t border-white/[0.06] flex-shrink-0 space-y-2">
-          <GlobalWhatsNewButton />
-          <div className="text-[10px] text-gray-600 font-mono px-1">NAKA LABS v1.0.0-beta</div>
-        </div>
+        {/* ── Divider ───────────────────────────────────────────────────── */}
+        <div className="my-8 h-px w-full bg-white/[0.07]" />
+
+        {/* ── Auth actions ──────────────────────────────────────────────── */}
+        <section>
+          {user ? (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <button
+                onClick={() => handleNavigation('/dashboard/profile')}
+                className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5 text-start transition-colors hover:border-white/[0.12] hover:bg-white/[0.06]"
+              >
+                <UserCircle2 className="h-8 w-8 flex-shrink-0 text-[#6F8BFF]" />
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-medium text-white">
+                    {user.username ? `@${user.username}` : (user.first_name || 'Account')}
+                  </span>
+                  <span className="block truncate text-[11px] text-gray-500">{user.email ?? 'View profile'}</span>
+                </span>
+                <ChevronRight className="ms-2 h-4 w-4 flex-shrink-0 text-gray-600" />
+              </button>
+              <button
+                onClick={handleSignOut}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-gray-300 transition-colors hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                onClick={() => handleNavigation('/login')}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/[0.08]"
+              >
+                <LogIn className="h-4 w-4" />
+                Sign in
+              </button>
+              <button
+                onClick={() => handleNavigation('/signup')}
+                className="naka-button-primary flex-1 justify-center text-sm"
+              >
+                Create account
+              </button>
+            </div>
+          )}
+
+          <div className="mt-4">
+            <GlobalWhatsNewButton />
+          </div>
+        </section>
+
+        {/* ── Footer: social + support/legal ────────────────────────────── */}
+        <footer className="mt-auto pt-8">
+          <div className="flex flex-col gap-4 border-t border-white/[0.06] pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <a
+                href="https://x.com/nakalabs"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Naka Labs on X"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-gray-400 transition-colors hover:text-white"
+              >
+                <Twitter className="h-4 w-4" />
+              </a>
+              <a
+                href="https://t.me/nakalabs"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Naka Labs on Telegram"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-gray-400 transition-colors hover:text-white"
+              >
+                <Send className="h-4 w-4" />
+              </a>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-gray-500">
+              <button onClick={() => handleNavigation('/dashboard/support')} className="inline-flex items-center gap-1.5 transition-colors hover:text-white">
+                <LifeBuoy className="h-3.5 w-3.5" /> Support
+              </button>
+              <button onClick={() => handleNavigation('/docs')} className="inline-flex items-center gap-1.5 transition-colors hover:text-white">
+                <FileText className="h-3.5 w-3.5" /> Docs
+              </button>
+              <button onClick={() => handleNavigation('/terms')} className="transition-colors hover:text-white">Terms</button>
+              <button onClick={() => handleNavigation('/privacy')} className="transition-colors hover:text-white">Privacy</button>
+            </div>
+          </div>
+          <div className="mt-4 px-1 font-mono text-[10px] text-gray-600">NAKA LABS v1.0.0-beta</div>
+        </footer>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -244,24 +380,37 @@ const SidebarNavItem = memo(function SidebarNavItem({
     <button
       onClick={onClick}
       onMouseEnter={onHover}
-      className={`w-full text-start px-3 py-2 rounded-lg transition-all duration-150 flex items-center gap-2.5 text-[12px] group relative ${
+      className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-start text-[13px] transition-all duration-150 ${
         isActive
-          ? 'bg-[#0066FF]/[0.08] text-white font-medium'
-          : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
+          ? 'bg-[#0066FF]/[0.10] font-medium text-white'
+          : 'text-gray-400 hover:bg-white/[0.04] hover:text-white'
       }`}
     >
       {isActive && (
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-[#0066FF]" />
+        <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-[#0066FF]" />
       )}
-      <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-[#0066FF]' : 'text-gray-500 group-hover:text-gray-300'}`} />
+      <span
+        className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-colors ${
+          isActive ? 'bg-[#0066FF]/[0.14] text-[#0066FF]' : 'bg-white/[0.03] text-gray-400 group-hover:text-gray-200'
+        }`}
+      >
+        <Icon className="h-4 w-4" />
+      </span>
       <span className="truncate">{label}</span>
       {badge && (
-        <span className={`ms-auto px-1.5 py-0.5 rounded text-[10px] font-semibold flex-shrink-0 ${
-          badge === 'AI' ? 'bg-purple-500/15 text-purple-400' :
-          badge === 'BETA' ? 'bg-[#10B981]/15 text-[#10B981]' :
-          badge === 'PRO' ? 'bg-amber-500/15 text-amber-400' :
-          'bg-[#0066FF]/15 text-blue-300'
-        }`}>{badge}</span>
+        <span
+          className={`ms-auto flex-shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+            badge === 'AI'
+              ? 'bg-purple-500/15 text-purple-400'
+              : badge === 'BETA'
+              ? 'bg-[#10B981]/15 text-[#10B981]'
+              : badge === 'PRO'
+              ? 'bg-amber-500/15 text-amber-400'
+              : 'bg-[#0066FF]/15 text-blue-300'
+          }`}
+        >
+          {badge}
+        </span>
       )}
     </button>
   );

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * OnboardingMention — three-step "how to start" strip on the landing
+ * OnboardingMention: three-step "how to start" strip on the landing
  * page. Added per master prompt §7.1.
  */
 
@@ -17,7 +17,7 @@ const STEPS = [
   {
     icon: Sparkles,
     title: 'Meet VTX Agent',
-    body: 'Your AI co-pilot. Ask for token analysis, whale moves, swap quotes — it has full on-chain context.',
+    body: 'Your AI co-pilot. Ask for token analysis, whale moves, swap quotes: it has full on-chain context.',
   },
   {
     icon: TrendingUp,

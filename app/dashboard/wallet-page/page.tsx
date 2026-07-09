@@ -8,9 +8,7 @@ import { useFeatureUsageLog } from '@/lib/hooks/useFeatureUsageLog';
 import {
   Plus, Download, Send, Copy, Eye, EyeOff, Trash2, ChevronRight, Wallet,
   Shield, CheckCircle as Check, AlertTriangle, ExternalLink, Settings, Search,
-  X, RefreshCw, ChevronDown, Share as Share2, TrendingUp, TrendingDown,
-} from '@/components/icons/brand';
-import {
+  X, RefreshCw, ChevronDown, Share2, TrendingUp, TrendingDown,
   ArrowLeft, RotateCcw, Key, Globe, Layers, ArrowUpRight, ArrowDownLeft,
   Repeat, DollarSign, QrCode, ShoppingCart, Zap, Loader2, BarChart3, Info,
 } from 'lucide-react';

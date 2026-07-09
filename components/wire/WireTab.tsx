@@ -118,7 +118,15 @@ export default function WireTab({ onGift, author, reposts }: WireTabProps) {
       if (res.ok) {
         const j = await res.json();
         const list: WirePost[] = Array.isArray(j.posts) ? j.posts : [];
-        setPosts((prev) => [...prev, ...list]);
+        // The Signal feed re-ranks a live 48h window on every request, so an
+        // offset page can re-return a post that shifted rank between requests.
+        // Dedupe against what's already loaded to avoid duplicate React keys
+        // and repeated cards.
+        setPosts((prev) => {
+          const seen = new Set(prev.map((p) => p.id));
+          const fresh = list.filter((p) => !seen.has(p.id));
+          return [...prev, ...fresh];
+        });
         setCursor(j.nextCursor ?? null);
         setDone(!j.nextCursor);
       }

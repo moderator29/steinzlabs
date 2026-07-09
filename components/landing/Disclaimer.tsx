@@ -13,7 +13,7 @@ export function Disclaimer() {
         </div>
         <div className="space-y-3 text-[13px] sm:text-sm text-white/55 leading-relaxed">
           <p>
-            <strong className="text-white/70">Nothing here is financial, legal, or investment advice.</strong> Naka Labs is an information and tooling platform — scores, signals, and AI responses are for research only, and every trading decision is yours alone.
+            <strong className="text-white/70">Nothing here is financial, legal, or investment advice.</strong> Naka Labs is an information and tooling platform: scores, signals, and AI responses are for research only, and every trading decision is yours alone.
           </p>
           <p>
             <strong className="text-white/70">Crypto is volatile; you can lose everything.</strong> Only risk what you can afford to lose. Security tools reduce but never eliminate risk, past performance doesn&apos;t predict results, and Naka Labs is unavailable where prohibited by law.

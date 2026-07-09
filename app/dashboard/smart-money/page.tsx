@@ -9,9 +9,9 @@
 import {
   Star, TrendingUp, Eye, Bell, Plus, Copy, Activity, Clock, ChevronRight, Search,
   RefreshCw, TrendingDown, AlertTriangle, X, Shield,
-  Whale as Fish,
-} from '@/components/icons/brand';
-import { Trophy, DollarSign, Target, Users, Zap, Loader2, Flame, ArrowUpRight, SortAsc, Award, Building2, Settings2, Radio } from 'lucide-react';
+  Fish,
+  Trophy, DollarSign, Target, Users, Zap, Loader2, Flame, ArrowUpRight, SortAsc, Award, Building2, Settings2, Radio,
+} from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { smartMoneyHowItWorks } from '@/lib/howItWorks/content/smart-money';

@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 // Resolve a recipient's receive address for a chain so the Gift sheet can
 // show where funds will land (and send there). Read-only; auth-gated so we
 // don't expose an open address-lookup for arbitrary user ids.
-const GIFT_CHAINS = new Set(['ethereum', 'base', 'bsc', 'solana']);
+const GIFT_CHAINS = new Set(['ethereum', 'base', 'bsc', 'robinhood', 'solana']);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(req: NextRequest) {

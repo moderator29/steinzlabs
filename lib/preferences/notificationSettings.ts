@@ -118,10 +118,14 @@ export function useNotificationSettings(userId: string | null | undefined): Hook
         extendedAvailable = true;
         row = (tryExtended.data as NotificationSettings | null) ?? null;
       } else {
-        // Any error (missing columns pre-migration, or a transient failure):
-        // fall back to the always-present legacy columns so the panel loads.
-        // The extended toggles render in a 'coming soon' state until a later
-        // reload confirms the schema.
+        // Distinguish "columns genuinely missing" (Postgres 42703 undefined_column)
+        // from a transient failure (RLS hiccup, network). Only the former means
+        // the extended schema is unavailable — a transient error must NOT latch
+        // hasExtendedSchema=false, which would disable the news-alerts toggle
+        // even though the columns exist. On a transient error, assume the schema
+        // is present (it is, in prod) so the toggle stays usable.
+        const code = (tryExtended.error as { code?: string })?.code;
+        if (code !== '42703') extendedAvailable = true;
         const fallback = await supabase
           .from('notification_settings')
           .select('user_id, push_enabled, whale_alerts, smart_money, price_alerts, security_alerts, weekly_digest, updated_at')

@@ -1,11 +1,11 @@
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
-import * as BrandIcons from '@/components/icons/brand';
+import * as BrandIcons from 'lucide-react';
 
 export const metadata = { title: 'Brand · Naka Labs', robots: { index: false } };
 
 const ICONS = [
   // Starter (Phase 2)
-  ['Dashboard', BrandIcons.Dashboard],
+  ['Dashboard', BrandIcons.LayoutDashboard],
   ['Search',    BrandIcons.Search],
   ['Bell',      BrandIcons.Bell],
   ['User',      BrandIcons.User],
@@ -13,12 +13,12 @@ const ICONS = [
   ['Menu',      BrandIcons.Menu],
   ['X',         BrandIcons.X],
   ['Wallet',    BrandIcons.Wallet],
-  ['Coin',      BrandIcons.Coin],
+  ['Coin',      BrandIcons.Coins],
   ['TrendingUp',   BrandIcons.TrendingUp],
   ['TrendingDown', BrandIcons.TrendingDown],
-  ['ChartBar',     BrandIcons.ChartBar],
-  ['ChartCandle',  BrandIcons.ChartCandle],
-  ['Sigil',     BrandIcons.Sigil],
+  ['ChartBar',     BrandIcons.BarChart3],
+  ['ChartCandle',  BrandIcons.CandlestickChart],
+  ['Sigil',     BrandIcons.Hexagon],
   ['Vault',     BrandIcons.Vault],
   ['Crown',     BrandIcons.Crown],
   ['Shield',    BrandIcons.Shield],
@@ -27,7 +27,7 @@ const ICONS = [
   ['Loader',    BrandIcons.Loader],
   ['Eye',       BrandIcons.Eye],
   ['Activity',  BrandIcons.Activity],
-  ['Whale',     BrandIcons.Whale],
+  ['Whale',     BrandIcons.Fish],
   ['Sparkle',   BrandIcons.Sparkle],
   // Phase C — navigation chevrons + arrows
   ['ChevronRight', BrandIcons.ChevronRight],
@@ -179,7 +179,7 @@ export default function BrandPage() {
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             {(['blue', 'crimson', 'rocket', 'pentagon', 'gold'] as const).map(v => (
               <div key={v} className="nl-card p-4 flex flex-col items-center gap-2">
-                <BrandIcons.Sigil size={48} variant={v} />
+                <BrandIcons.Hexagon size={48} />
                 <code className="text-[11px] text-[#B4C0E0]">variant=&quot;{v}&quot;</code>
               </div>
             ))}

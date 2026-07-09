@@ -12,8 +12,6 @@ import { whaleDisplayName } from "@/lib/whales/naming";
 // other lucide icons elsewhere on the page until a follow-up wave adds them.
 import {
   Search, Plus, Bell, Trash2, ChevronRight, X,
-} from "@/components/icons/brand";
-import {
   Loader2,
   BellOff,
   ArrowUpRight,

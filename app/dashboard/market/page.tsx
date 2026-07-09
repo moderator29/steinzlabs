@@ -1,11 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-// Naka Labs brand icon library — Search swapped to glowing-geometric. The
-// other two icons remain on lucide for now (SlidersHorizontal not yet in the
-// brand library, Loader2 kept until cinematic-style spinner is wired here).
-import { Search } from "@/components/icons/brand";
-import { SlidersHorizontal, Loader2 } from "lucide-react";
+import { Search, SlidersHorizontal, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useMarketData } from "@/hooks/market/useMarketData";

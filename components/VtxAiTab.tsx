@@ -6,11 +6,11 @@ import dynamic from 'next/dynamic';
 // Naka Labs brand icons — broad swap. BarChart3 aliased to ChartBar.
 // Briefcase, Radio, Globe, Loader2, History stay on lucide.
 import {
-  ChartBar as BarChart3, AlertTriangle, Send, User, Crown, Lock, Plus, Settings,
+  BarChart3, AlertTriangle, Send, User, Crown, Lock, Plus, Settings,
   X, Clock, TrendingUp, TrendingDown, Shield, ExternalLink, RefreshCw, Copy,
   CheckCircle as Check,
-} from '@/components/icons/brand';
-import { Briefcase, Radio, Loader2, Globe, History } from 'lucide-react';
+  Briefcase, Radio, Loader2, Globe, History,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import SteinzLogo from '@/components/ui/SteinzLogo';
 import { useNakaWallet } from '@/lib/hooks/useNakaWallet';

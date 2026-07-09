@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
-/*  Tilt card — pure CSS 3D, no deps                                   */
+/*  Tilt card: pure CSS 3D, no deps                                    */
 /* ------------------------------------------------------------------ */
 
 function TiltCard({ children, tint, className = '' }: {
@@ -67,7 +67,7 @@ function TiltCard({ children, tint, className = '' }: {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Floating 3D icon — layered perspective + pulse                     */
+/*  Floating 3D icon: layered perspective + pulse                      */
 /* ------------------------------------------------------------------ */
 
 function Floating3DIcon({ icon: Icon, color, delay = 0 }: {
@@ -134,7 +134,7 @@ const FEATURES: Feature[] = [
     icon: Brain,
     kicker: 'VTX AI Agent',
     title: 'Claude-powered copilot that executes.',
-    desc: 'Ask in plain English. Get answers grounded in live on-chain data. Complete swaps inside the chat. Not a demo — production.',
+    desc: 'Ask in plain English. Get answers grounded in live on-chain data. Complete swaps inside the chat. Not a demo, production.',
     color: '#4D6BFF',
     bullets: ['30+ slash commands', 'Tool-using Claude', 'Inline TokenCard + SwapCard', 'Personalised wallet context (opt-in)'],
     badge: 'live',
@@ -144,9 +144,9 @@ const FEATURES: Feature[] = [
     icon: Send,
     kicker: 'Telegram Bot',
     title: 'The platform, in your DMs.',
-    desc: 'Link your account in 10 seconds. Run /price, /whale, /portfolio, /copy, /snipe — all tier-gated, all instant.',
+    desc: 'Link your account in 10 seconds. Run /price, /whale, /portfolio, /copy, /snipe: all tier-gated, all instant.',
     color: '#06B6D4',
-    bullets: ['10 slash commands', 'Tier gating enforced', 'Secure 6-digit link code', 'Outbound alerts — coming soon'],
+    bullets: ['10 slash commands', 'Tier gating enforced', 'Secure 6-digit link code', 'Outbound alerts: coming soon'],
     badge: 'live',
     cta: { label: 'Open @Nakalabsbot', href: 'https://t.me/Nakalabsbot' },
   },
@@ -154,7 +154,7 @@ const FEATURES: Feature[] = [
     icon: Shield,
     kicker: 'Security Stack',
     title: 'GoPlus + Shadow Guardian on every trade.',
-    desc: 'Eight protection layers run automatically — before every swap, snipe, and contract interaction. You cannot accidentally skip the scan.',
+    desc: 'Eight protection layers run automatically: before every swap, snipe, and contract interaction. You cannot accidentally skip the scan.',
     color: '#10B981',
     bullets: ['GoPlus token audit', 'Honeypot pre-simulation', 'Signature Insight decoder', 'Domain Shield phishing check'],
     badge: 'live',
@@ -251,7 +251,7 @@ export function FeatureShowcase() {
             </span>
           </h2>
           <p className="text-white/50 text-base sm:text-lg max-w-2xl leading-relaxed">
-            Intelligence, security, execution and analytics — built around a single real-time data pipeline. No silos. No upsells. No $2,000 institutional tier.
+            Intelligence, security, execution and analytics, built around a single real-time data pipeline. No silos. No upsells. No $2,000 institutional tier.
           </p>
 
           {/* Floating 3D icon row */}
@@ -343,7 +343,7 @@ export function FeatureShowcase() {
         </div>
       </div>
 
-      {/* Animations keyframes — scoped */}
+      {/* Animations keyframes: scoped */}
       <style jsx global>{`
         @keyframes floaty {
           0%, 100% { transform: translateY(0) rotateZ(0); }

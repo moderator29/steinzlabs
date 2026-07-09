@@ -1,8 +1,6 @@
 'use client';
 
-// Naka Labs brand icons — broad swap. ArrowDownUp, Zap stay on lucide (not yet in brand).
-import { ChevronDown, Settings, Search, X, AlertTriangle, RefreshCw, ExternalLink, Info, Wallet, CheckCircle } from '@/components/icons/brand';
-import { ArrowDownUp, Zap, Loader2 } from 'lucide-react';
+import { ChevronDown, Settings, Search, X, AlertTriangle, RefreshCw, ExternalLink, Info, Wallet, CheckCircle, ArrowDownUp, Zap, Loader2 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';

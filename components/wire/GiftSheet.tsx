@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { X } from '@/components/icons/brand';
-import { Gift, Loader2, Wallet } from 'lucide-react';
+import { X, Gift, Loader2, Wallet } from 'lucide-react';
 import {
   GIFT_CHAINS,
   getGiftChain,

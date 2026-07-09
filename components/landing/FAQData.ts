@@ -3,15 +3,15 @@ export interface FAQ { q: string; a: string; }
 export const FAQS: FAQ[] = [
   {
     q: 'What is Naka Labs?',
-    a: 'Naka Labs is an institutional-grade crypto intelligence platform. We combine on-chain data, AI analysis, and real-time market intelligence to give traders and researchers the same tools that professional trading firms use — but accessible to everyone. Analyze tokens, track whale wallets, detect rugs, and execute trades across 8 blockchains from one dashboard.',
+    a: 'Naka Labs is an institutional-grade crypto intelligence platform. We combine on-chain data, AI analysis, and real-time market intelligence to give traders and researchers the same tools that professional trading firms use, but accessible to everyone. Analyze tokens, track whale wallets, detect rugs, and execute trades across 8 blockchains from one dashboard.',
   },
   {
     q: 'How does the VTX Intelligence Engine work?',
-    a: 'VTX is Naka Labs\' AI analysis layer, powered by Anthropic\'s Claude. When you submit a token address or wallet, VTX pulls real-time data from multiple sources simultaneously — on-chain transaction data, security scores, social sentiment, and liquidity analysis — then synthesizes everything into a structured intelligence report with a risk score and clear recommendation.',
+    a: 'VTX is Naka Labs\' AI analysis layer, powered by Anthropic\'s Claude. When you submit a token address or wallet, VTX pulls real-time data from multiple sources simultaneously (on-chain transaction data, security scores, social sentiment, and liquidity analysis) then synthesizes everything into a structured intelligence report with a risk score and clear recommendation.',
   },
   {
     q: 'Is my wallet data private and secure?',
-    a: 'Naka Labs is non-custodial. We never ask for your private keys, seed phrase, or signing permissions for read-only analysis. When you connect a wallet for trading, transactions are signed client-side — your keys never leave your device. We only read publicly available on-chain data to generate intelligence reports.',
+    a: 'Naka Labs is non-custodial. We never ask for your private keys, seed phrase, or signing permissions for read-only analysis. When you connect a wallet for trading, transactions are signed client-side, so your keys never leave your device. We only read publicly available on-chain data to generate intelligence reports.',
   },
   {
     q: 'How does the Security Center detect rug pulls?',
@@ -19,7 +19,7 @@ export const FAQS: FAQ[] = [
   },
   {
     q: 'What is the Sniper Bot and how does it protect users?',
-    a: 'The Sniper Bot monitors new token launches in real time and automatically executes buys on tokens that pass all safety checks. Before any execution, it runs a security pre-screen, full security analysis, transaction simulation, and economic evaluation. It will NEVER execute on a token that fails any of these layers — your capital is protected by design.',
+    a: 'The Sniper Bot monitors new token launches in real time and automatically executes buys on tokens that pass all safety checks. Before any execution, it runs a security pre-screen, full security analysis, transaction simulation, and economic evaluation. It will NEVER execute on a token that fails any of these layers: your capital is protected by design.',
   },
   {
     q: 'How does Naka Labs make money?',
@@ -27,7 +27,7 @@ export const FAQS: FAQ[] = [
   },
   {
     q: 'What makes Naka Labs different from other crypto platforms?',
-    a: 'Most platforms show you data. Naka Labs gives you intelligence. The difference is synthesis — instead of showing raw numbers, our VTX engine combines on-chain data, security analysis, social sentiment, and entity intelligence into a single, actionable report. Our entity labeling tells you exactly WHO owns the wallets you are analyzing.',
+    a: 'Most platforms show you data. Naka Labs gives you intelligence. The difference is synthesis: instead of showing raw numbers, our VTX engine combines on-chain data, security analysis, social sentiment, and entity intelligence into a single, actionable report. Our entity labeling tells you exactly WHO owns the wallets you are analyzing.',
   },
   {
     q: 'What blockchains does Naka Labs support?',
@@ -35,7 +35,7 @@ export const FAQS: FAQ[] = [
   },
   {
     q: 'How does the Bubble Map work?',
-    a: 'The Bubble Map pulls holder data for any token and renders a visual network graph showing wallet distribution. Each node represents a wallet cluster, sized by holdings. Entity labels are overlaid where available — so you can instantly see if exchanges, funds, or known whales hold large positions. Connections show transfer relationships between clusters.',
+    a: 'The Bubble Map pulls holder data for any token and renders a visual network graph showing wallet distribution. Each node represents a wallet cluster, sized by holdings. Entity labels are overlaid where available, so you can instantly see if exchanges, funds, or known whales hold large positions. Connections show transfer relationships between clusters.',
   },
   {
     q: 'What is the DNA Analyzer?',
@@ -43,11 +43,11 @@ export const FAQS: FAQ[] = [
   },
   {
     q: 'What is smart money tracking and how does it work?',
-    a: 'Smart money wallets are identified by sustained >65% win rate on token trades over 90+ days with meaningful volume. Our system monitors these wallets in real time and fires a high-conviction signal when 3 or more smart money wallets enter the same token within a 24-hour window — a historically reliable indicator of upcoming price action.',
+    a: 'Smart money wallets are identified by sustained >65% win rate on token trades over 90+ days with meaningful volume. Our system monitors these wallets in real time and fires a high-conviction signal when 3 or more smart money wallets enter the same token within a 24-hour window, a historically reliable indicator of upcoming price action.',
   },
   {
     q: 'How does the Whale Tracker know who the whales are?',
-    a: 'Whale identification uses two layers: transaction size threshold (>$50k single swap triggers a flag) and Naka Intelligence entity labeling. Our labeling covers thousands of known wallets — exchanges, VC funds, market makers, and notable traders. When a labeled wallet makes a large move, you see the entity name, not just an address.',
+    a: 'Whale identification uses two layers: transaction size threshold (>$50k single swap triggers a flag) and Naka Intelligence entity labeling. Our labeling covers thousands of known wallets: exchanges, VC funds, market makers, and notable traders. When a labeled wallet makes a large move, you see the entity name, not just an address.',
   },
   {
     q: 'What chains does the swap engine support and how does routing work?',
@@ -59,10 +59,10 @@ export const FAQS: FAQ[] = [
   },
   {
     q: 'Can I use Naka Labs without connecting a wallet?',
-    a: 'Yes — the majority of features are fully read-only. You can use the Context Feed, Security Center scanner, Whale Tracker, Smart Money Feed, DNA Analyzer, Bubble Map, VTX AI, and Research pages without connecting any wallet. A wallet connection is only required for: executing swaps, running the Sniper Bot, and tracking your own portfolio.',
+    a: 'Yes, the majority of features are fully read-only. You can use the Context Feed, Security Center scanner, Whale Tracker, Smart Money Feed, DNA Analyzer, Bubble Map, VTX AI, and Research pages without connecting any wallet. A wallet connection is only required for: executing swaps, running the Sniper Bot, and tracking your own portfolio.',
   },
   {
     q: 'How do I set up and configure the Sniper Bot?',
-    a: 'Navigate to Dashboard → Sniper Bot → Settings. Configure your max buy amount per token, maximum risk score threshold (0–100), chains to monitor (Solana, ETH, Base), and optional stop-loss percentage. The bot will only execute on tokens scoring below your risk threshold. All 6 safety layers run automatically — you cannot disable them. Start/stop the bot from the Sniper Oversight panel.',
+    a: 'Navigate to Dashboard → Sniper Bot → Settings. Configure your max buy amount per token, maximum risk score threshold (0–100), chains to monitor (Solana, ETH, Base), and optional stop-loss percentage. The bot will only execute on tokens scoring below your risk threshold. All 6 safety layers run automatically, and you cannot disable them. Start/stop the bot from the Sniper Oversight panel.',
   },
 ];

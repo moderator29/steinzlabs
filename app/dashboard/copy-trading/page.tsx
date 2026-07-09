@@ -4,9 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 // Naka Labs brand icons — Pause, Play, Plus, Shield, Trash2 swapped.
-// Loader2 + Power stay on lucide (no brand equivalent yet).
-import { Pause, Play, Plus, Shield, Trash2 } from "@/components/icons/brand";
-import { Loader2, Power } from "lucide-react";
+import { Pause, Play, Plus, Shield, Trash2, Loader2, Power } from "lucide-react";
 import { SecurityBadge } from "@/components/security/SecurityBadge";
 import { toast } from "sonner";
 import NewCopyRuleModal from "./NewCopyRuleModal";

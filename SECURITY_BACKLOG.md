@@ -1,4 +1,4 @@
-# Security Backlog — 2026-05-02
+# Security Backlog: 2026-05-02
 
 Security findings deferred from the `chore/repo-cleanup` round. The
 Critical and High items below were left because either:
@@ -12,7 +12,7 @@ For the full set of medium/low operational findings, see
 
 ---
 
-## Critical — Owner action required
+## Critical: Owner action required
 
 ### 1. Rotate every secret in `.env.local`
 The repository's `.gitignore` blocks `.env*` and the file has not been
@@ -21,13 +21,13 @@ However, the on-disk secrets live in plaintext, so any process or backup
 that reads the file holds production credentials.
 
 Rotate in this order:
-1. `SUPABASE_SERVICE_ROLE_KEY` — full RLS bypass, highest blast radius.
+1. `SUPABASE_SERVICE_ROLE_KEY`: full RLS bypass, highest blast radius.
    Supabase Dashboard → Project Settings → API → Reset.
-2. `ANTHROPIC_API_KEY` — VTX agent cost vector.
+2. `ANTHROPIC_API_KEY`: VTX agent cost vector.
    console.anthropic.com → API Keys → Rotate.
 3. `ALCHEMY_API_KEY` and any chain-specific Alchemy keys.
 4. `HELIUS_API_KEY` and `HELIUS_WEBHOOK_SECRET`.
-5. `JWT_SECRET` — must be regenerated as cryptographically random
+5. `JWT_SECRET`: must be regenerated as cryptographically random
    (`openssl rand -base64 32`). All issued sessions and reset tokens
    become invalid; users sign in again.
 6. Everything else: `RESEND_API_KEY`, `TELEGRAM_BOT_TOKEN`,
@@ -38,7 +38,7 @@ Rotate in this order:
 
 After rotating, update Vercel project env vars and trigger a redeploy.
 The on-disk `.env.local` should then be regenerated from the new values
-or deleted entirely (preferred — local dev can run against a separate
+or deleted entirely (preferred, since local dev can run against a separate
 "dev" Supabase project).
 
 ### 2. `NEXT_PUBLIC_ALCHEMY_API_KEY` is bundled into the client
@@ -48,7 +48,7 @@ endpoint and remove the `NEXT_PUBLIC_` variant.
 
 ---
 
-## High — Architectural
+## High: Architectural
 
 ### 3. Supabase Auth: enable Leaked Password Protection
 Supabase advisor flagged this. Cannot be set via SQL.
@@ -60,7 +60,7 @@ Supabase advisor (`extension_in_public`). Deferred from the
 RLS migration round because moving it requires:
 1. `CREATE SCHEMA extensions;`
 2. `ALTER EXTENSION pg_trgm SET SCHEMA extensions;`
-3. Audit every caller — full-text search uses GIN/GiST indexes that
+3. Audit every caller: full-text search uses GIN/GiST indexes that
    reference `pg_trgm` operators by schema-qualified name. Existing
    indexes need to be dropped and recreated against the new schema.
 4. Update `search_path` in any function that uses `%` similarity ops.
@@ -110,7 +110,7 @@ scrub:
   is captured. A data-export and account-deletion flow exists at
   `/api/account/delete`. Verify it cascades to all user-scoped tables
   (search_logs, vtx_query_logs, feature_usage, whale_tracking,
-  copy_trades, etc. — most have ON DELETE CASCADE on the user_id FK).
+  copy_trades, etc.; most have ON DELETE CASCADE on the user_id FK).
 - **Financial regulations:** Steinz Labs facilitates self-custodial swaps
   via 0x and Jupiter and is non-custodial throughout. Treasury, voting,
   and tier-gated paid features are the surfaces that intersect financial

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * SocialSection — landing-page surface introducing the social layer.
+ * SocialSection: landing-page surface introducing the social layer.
  * Added per master prompt §7.1 (landing must mention social + onboarding).
  *
  * Renders four pillars (follow / encrypted DMs / leaderboards /

@@ -2,8 +2,7 @@
 
 // Naka Labs brand icons — Check via CheckCircle, Star (gold).
 import { useState } from 'react';
-import { CheckCircle as Check, Star } from '@/components/icons/brand';
-import { Zap } from 'lucide-react';
+import { CheckCircle as Check, Star, Zap } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { toast } from 'sonner';
 import { useAuth, effectiveTier } from '@/lib/hooks/useAuth';

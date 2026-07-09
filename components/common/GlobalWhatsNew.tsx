@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * GlobalWhatsNew — the platform-wide changelog button that lives in the side
+ * GlobalWhatsNew: the platform-wide changelog button that lives in the side
  * navigation footer. Opens a branded glass panel on the aurora canvas that
  * lists recent platform updates grouped by period, in the same visual language
  * as the per-feature How it works panels.

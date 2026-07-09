@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, type ComponentType } from 'react';
-import { ChevronDown, CheckCircle } from '@/components/icons/brand';
+import { ChevronDown, CheckCircle } from 'lucide-react';
 import { ChainLogo } from '@/components/common/ChainLogo';
 
 export interface SelectOption {

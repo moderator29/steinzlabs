@@ -9,11 +9,11 @@ export const launchRadarHowItWorks: HowItWorksContent = {
     'For every token that qualifies you see the metrics that actually matter for a fresh launch: its liquidity, twenty-four-hour volume, transaction count, price change, age, launchpad, and whether it has any socials.',
     'A HOT badge marks tokens that have traded through their entire liquidity or more in a day, which is a real velocity read on how much attention a pool is getting relative to its depth.',
     'You can sort by top volume, newest, or most liquid, and filter by chain, and every token links straight into the Token X-Ray so you can run full diligence before touching it.',
-    'The radar deliberately shows only the data that is actually populated for these fresh pairs — liquidity, volume, activity, price, socials — and does not display a security or safety score, because that enrichment is not available for brand-new tokens and inventing one would be dishonest.',
+    'The radar deliberately shows only the data that is actually populated for these fresh pairs (liquidity, volume, activity, price, socials) and does not display a security or safety score, because that enrichment is not available for brand-new tokens and inventing one would be dishonest.',
   ],
   howToUse: [
     'Open Launch Radar from the sidebar or the Sniper area.',
-    'Pick a window — 6h for the very freshest, up to 3d for a wider net.',
+    'Pick a window: 6h for the very freshest, up to 3d for a wider net.',
     'Sort by top volume to see where the attention is, newest for the latest pairs, or most liquid for the deepest pools.',
     'Scan for the HOT badge and a social globe as quick signs of momentum and legitimacy.',
     'Tap the X-Ray icon on any token to run full smart-money and authenticity diligence before you act.',
@@ -21,7 +21,7 @@ export const launchRadarHowItWorks: HowItWorksContent = {
   why: [
     'Being early to a real launch is one of the highest-upside moves on-chain, but it is buried under a flood of dead and scam pairs, and a quality-filtered shortlist is the difference between hunting and drowning.',
     'Filtering on genuine liquidity and real trading removes the vast majority of junk automatically, so what remains is actually worth a look.',
-    'Showing only real, populated metrics — and honestly refusing to show a fake safety score for tokens too new to have one — means you can trust what you see and go do the diligence yourself.',
+    'Showing only real, populated metrics, and honestly refusing to show a fake safety score for tokens too new to have one, means you can trust what you see and go do the diligence yourself.',
     'Reach for it to find fresh launches with genuine early traction, then immediately run the Token X-Ray to check whether smart money is behind them and whether the volume is real before you enter.',
   ],
   whatsNew: [

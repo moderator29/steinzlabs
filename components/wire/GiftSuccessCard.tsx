@@ -1,7 +1,6 @@
 'use client';
 
-import { ExternalLink } from '@/components/icons/brand';
-import { Gift } from 'lucide-react';
+import { ExternalLink, Gift } from 'lucide-react';
 import { getGiftChain } from '@/lib/wallet/giftSend';
 
 export interface GiftSuccessData {

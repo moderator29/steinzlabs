@@ -11,7 +11,7 @@ import BackButton from '@/components/ui/BackButton';
 import GlobalControls from '@/components/GlobalControls';
 
 /**
- * /docs/vault — public, comprehensive Vault & NakaCult documentation.
+ * /docs/vault: public, comprehensive Vault & NakaCult documentation.
  *
  * Single-file by design: every Vault doc lives on this page with anchor
  * links per section. The /docs root has its own 13-section build using
@@ -19,7 +19,7 @@ import GlobalControls from '@/components/GlobalControls';
  * piece of cult-facing lore + spec so it can ship and evolve on its own
  * cadence without touching that route.
  *
- * Spec §8 — ten required sections (Introduction, How to Enter, The
+ * Spec §8: ten required sections (Introduction, How to Enter, The
  * Conclave, The Oracle, The Sanctum, The Chosen Seal, Cult Mechanics,
  * Security & Privacy, FAQ, Roadmap), sticky sidebar nav, search,
  * anchor links, mobile responsive, dark default, aurora brand.
@@ -142,7 +142,7 @@ export default function VaultDocsPage() {
             <BackButton href="/" label="Home" />
             <div className="flex items-center gap-2 min-w-0">
               <BookOpen className="w-4 h-4 text-[#FFD86B]" />
-              <span className="text-sm font-bold tracking-tight truncate">The Naka Vault — Documentation</span>
+              <span className="text-sm font-bold tracking-tight truncate">The Naka Vault: Documentation</span>
             </div>
             <div className="ms-auto flex items-center gap-2">
               <GlobalControls />
@@ -198,15 +198,15 @@ export default function VaultDocsPage() {
           {/* Body */}
           <main className="min-w-0">
             <section className="mb-16">
-              <H id="introduction" eyebrow="01 — Lore + Premise">Introduction</H>
+              <H id="introduction" eyebrow="01: Lore + Premise">Introduction</H>
               <P>
-                The Naka Vault is the inner chamber of the Naka Labs platform. It is not a feature — it is a private
+                The Naka Vault is the inner chamber of the Naka Labs platform. It is not a feature: it is a private
                 house owned by the holders of <Code>$NAKA</Code> and the bearers of the NakaLabs NFTs. Inside live three
                 rooms: the Conclave, the Oracle, and the Sanctum. Each room is earned, none are given.
               </P>
               <P>
                 The Vault exists because Naka Go&apos;s breed was saved by a small group of people who refuse to let it die.
-                Every member of the Cult holds the same charge — preserve the lineage, run the order, outlive us all.
+                Every member of the Cult holds the same charge: preserve the lineage, run the order, outlive us all.
               </P>
               <Callout tone="gold">
                 Membership is non-custodial. We never hold your private keys. Your wallet stays your wallet.
@@ -214,19 +214,19 @@ export default function VaultDocsPage() {
             </section>
 
             <section className="mb-16">
-              <H id="how-to-enter" eyebrow="02 — Onboarding">How to Enter</H>
+              <H id="how-to-enter" eyebrow="02: Onboarding">How to Enter</H>
               <P>There are exactly two doors into the Vault. Both lead to the same hallway.</P>
-              <H3>Door one — hold the threshold balance</H3>
+              <H3>Door one: hold the threshold balance</H3>
               <UL>
                 <li>Connect any EVM wallet via WalletConnect / Reown AppKit.</li>
                 <li>Hold at least <strong>1,227,000 <Code>$NAKA</Code></strong> in your detection wallet.</li>
                 <li>Sign a one-time SIWE message to prove ownership. The server-side verifier reads your balance
                   directly on-chain via Alchemy. We never trust client-reported balances.</li>
               </UL>
-              <H3>Door two — bear a Naka NFT</H3>
+              <H3>Door two: bear a Naka NFT</H3>
               <UL>
-                <li><strong>$27 Loyalty Gem</strong> — unlocks Pro tier and Vault entry. Read-only access.</li>
-                <li><strong>$48 Development NFT</strong> — unlocks Max tier and the Chosen Seal. Write access in the
+                <li><strong>$27 Loyalty Gem</strong>: unlocks Pro tier and Vault entry. Read-only access.</li>
+                <li><strong>$48 Development NFT</strong>: unlocks Max tier and the Chosen Seal. Write access in the
                   Oracle, double weight in the Conclave, curation rights in the Sanctum.</li>
               </UL>
               <H3>What we provision for you</H3>
@@ -244,15 +244,15 @@ export default function VaultDocsPage() {
             </section>
 
             <section className="mb-16">
-              <H id="conclave" eyebrow="03 — Governance">The Conclave</H>
+              <H id="conclave" eyebrow="03: Governance">The Conclave</H>
               <P>The Conclave is where the Cult speaks. Three kinds of proposals can be brought before the chamber.</P>
               <H3>Proposal types</H3>
               <UL>
-                <li><strong>Decree</strong> — binding direction (treasury moves, policy changes). Passes at a 60% yes
+                <li><strong>Decree</strong>: binding direction (treasury moves, policy changes). Passes at a 60% yes
                   share of cast weight with a minimum 5% turnout of total Cult weight.</li>
-                <li><strong>Edict</strong> — non-binding signal. Pass conditions are the same; outcome is recorded in
+                <li><strong>Edict</strong>: non-binding signal. Pass conditions are the same; outcome is recorded in
                   the Codex but does not auto-execute.</li>
-                <li><strong>Inquiry</strong> — a question put to the Cult. Surface-level only; recorded in the Codex.</li>
+                <li><strong>Inquiry</strong>: a question put to the Cult. Surface-level only; recorded in the Codex.</li>
               </UL>
               <H3>Weighting</H3>
               <P>
@@ -263,7 +263,7 @@ export default function VaultDocsPage() {
               <H3>Stake to propose</H3>
               <P>
                 Submitting a proposal locks <strong>100 <Code>$NAKA</Code></strong> for the duration of the vote. The
-                stake returns to your wallet at close — regardless of outcome — unless the Codex flags the proposal as
+                stake returns to your wallet at close, regardless of outcome, unless the Codex flags the proposal as
                 spam by majority vote, in which case the stake is forfeit to the Treasury.
               </P>
               <H3>Treasury Dashboard</H3>
@@ -275,9 +275,9 @@ export default function VaultDocsPage() {
             </section>
 
             <section className="mb-16">
-              <H id="oracle" eyebrow="04 — Intelligence">The Oracle</H>
+              <H id="oracle" eyebrow="04: Intelligence">The Oracle</H>
               <P>The Oracle is the daily voice of the Cult, made of four parts.</P>
-              <H3>Daily Seal — 07:00 UTC</H3>
+              <H3>Daily Seal: 07:00 UTC</H3>
               <P>
                 A short brief generated by Claude (Anthropic) at dawn. It surveys overnight on-chain activity, surfaces
                 three watch points for the day, and is pinned at the top of the Oracle until 07:00 the following day.
@@ -303,7 +303,7 @@ export default function VaultDocsPage() {
             </section>
 
             <section className="mb-16">
-              <H id="sanctum" eyebrow="05 — Identity">The Sanctum</H>
+              <H id="sanctum" eyebrow="05: Identity">The Sanctum</H>
               <P>The Sanctum is the room where the Cult&apos;s identity lives.</P>
               <H3>The Mantle</H3>
               <P>Customize your sigil, banner, and Naka-username. Chosen Seal bearers unlock the gold-trim sigil set.</P>
@@ -316,25 +316,25 @@ export default function VaultDocsPage() {
             </section>
 
             <section className="mb-16">
-              <H id="chosen-seal" eyebrow="06 — Lineage">The Chosen Seal</H>
+              <H id="chosen-seal" eyebrow="06: Lineage">The Chosen Seal</H>
               <P>
                 The Chosen Seal is the gold mark of the lineage. It is earned by holding the <strong>$48 Development
-                NFT</strong> at any point in the audited window. Once earned, it persists across NFT transfers — the Cult
+                NFT</strong> at any point in the audited window. Once earned, it persists across NFT transfers: the Cult
                 tracks lineage, not the asset.
               </P>
               <H3>What it unlocks</H3>
               <UL>
-                <li>The Elder Chamber — Chosen-only governance side-channel.</li>
-                <li>Quarterly Audience — a live call with the founder.</li>
-                <li>Early Access Lab — pre-release features two weeks before public.</li>
+                <li>The Elder Chamber: Chosen-only governance side-channel.</li>
+                <li>Quarterly Audience: a live call with the founder.</li>
+                <li>Early Access Lab: pre-release features two weeks before public.</li>
                 <li>Custom sigil set + gold-trim avatar treatment.</li>
-                <li>Chronicles — your name written into the Annals permanently.</li>
-                <li>Tokenized rewards (Phase 3) — share of fee-flow back to lineage holders.</li>
+                <li>Chronicles: your name written into the Annals permanently.</li>
+                <li>Tokenized rewards (Phase 3): share of fee-flow back to lineage holders.</li>
               </UL>
             </section>
 
             <section className="mb-16">
-              <H id="mechanics" eyebrow="07 — How the order runs">Cult Mechanics</H>
+              <H id="mechanics" eyebrow="07: How the order runs">Cult Mechanics</H>
               <H3>Vote weighting</H3>
               <Pre>{`weight = min(25, floor(naka_balance / 1_000_000))
        * (is_chosen ? 2 : 1)
@@ -353,7 +353,7 @@ export default function VaultDocsPage() {
               <H3>Balance verification</H3>
               <P>
                 Server-side, on every Cult-gated action. We re-fetch the detection wallet&apos;s balance from Alchemy
-                with a 5-minute cache. The 7-day grace window only protects against transient drops — sustained sub-
+                with a 5-minute cache. The 7-day grace window only protects against transient drops; sustained sub-
                 threshold balance hibernates the membership.
               </P>
               <H3>The 7-day grace</H3>
@@ -364,11 +364,11 @@ export default function VaultDocsPage() {
             </section>
 
             <section className="mb-16">
-              <H id="security" eyebrow="08 — Trust">Security &amp; Privacy</H>
+              <H id="security" eyebrow="08: Trust">Security &amp; Privacy</H>
               <H3>Detection wallet vs trading wallet</H3>
               <P>
                 Your <em>detection wallet</em> is the address we read balance from to verify Cult eligibility. Your
-                <em>trading wallet</em> is whatever wallet you sign swap transactions with — we never assume they are
+                <em>trading wallet</em> is whatever wallet you sign swap transactions with, and we never assume they are
                 the same. You can rotate either at any time without losing your seat.
               </P>
               <H3>SIWE</H3>
@@ -396,15 +396,15 @@ export default function VaultDocsPage() {
             </section>
 
             <section className="mb-16">
-              <H id="faq" eyebrow="09 — Questions">FAQ</H>
+              <H id="faq" eyebrow="09: Questions">FAQ</H>
               <H3 id="faq-sell">Can I sell my NAKA after entering?</H3>
               <P>
                 Yes. If your detection wallet&apos;s balance drops below threshold you enter the 7-day grace window;
                 refill or transfer back to restore privileges. The Cult never custodies your tokens.
               </P>
               <H3 id="faq-no-nft">Can I enter without an NFT?</H3>
-              <P>Yes — holding 1,227,000 NAKA in any EVM wallet you control is sufficient.</P>
-              <H3 id="faq-27-vs-48">$27 Loyalty Gem vs $48 Development NFT — what&apos;s the actual difference?</H3>
+              <P>Yes, holding 1,227,000 NAKA in any EVM wallet you control is sufficient.</P>
+              <H3 id="faq-27-vs-48">$27 Loyalty Gem vs $48 Development NFT: what&apos;s the actual difference?</H3>
               <P>
                 The Gem grants Pro tier + Vault entry only. The Development NFT grants Max tier, the Chosen Seal, double
                 Conclave weight, Oracle write-access, Sanctum curation rights, and a share of the future tokenized
@@ -412,14 +412,14 @@ export default function VaultDocsPage() {
               </P>
               <H3 id="faq-stake-refund">Can I get my Conclave proposal stake back?</H3>
               <P>
-                Yes — at vote close, regardless of outcome. The only case where the stake is forfeit is when a majority
+                Yes, at vote close, regardless of outcome. The only case where the stake is forfeit is when a majority
                 Codex flag marks the proposal as spam.
               </P>
               <H3 id="faq-leave">Can I leave NakaCult?</H3>
               <P>
                 Yes. Either transfer your NAKA below threshold (privileges hibernate after the grace window) or contact
                 support and we&apos;ll mark the profile <Code>tier = &apos;free&apos;</Code> on request. We do not retain Cult
-                writes (votes, Whispers) post-departure — they remain in the Codex for historical integrity.
+                writes (votes, Whispers) post-departure; they remain in the Codex for historical integrity.
               </P>
               <H3 id="faq-vote-public">Is my voting power public?</H3>
               <P>
@@ -429,30 +429,30 @@ export default function VaultDocsPage() {
             </section>
 
             <section className="mb-20">
-              <H id="roadmap" eyebrow="10 — Forward">Roadmap</H>
-              <H3>Phase 1 — Live</H3>
+              <H id="roadmap" eyebrow="10: Forward">Roadmap</H>
+              <H3>Phase 1: Live</H3>
               <UL>
                 <li>NakaCult launches. Three chambers fully wired. Daily Seal cron at 07:00 UTC.</li>
                 <li>Conclave with weighted voting, treasury read, Codex pinning.</li>
                 <li>Whisper Network + Echo Chamber.</li>
               </UL>
-              <H3>Phase 2 — NFTs mint</H3>
+              <H3>Phase 2: NFTs mint</H3>
               <UL>
                 <li>$27 Loyalty Gem + $48 Development NFT public mint.</li>
                 <li>Chosen Seal auto-grant on mint detection.</li>
               </UL>
-              <H3>Phase 3 — Tokenized rewards</H3>
+              <H3>Phase 3: Tokenized rewards</H3>
               <UL>
                 <li>Platform fee share routed to a Cult-owned vault contract.</li>
                 <li>Lineage-weighted claim flow for Chosen Seal bearers.</li>
               </UL>
-              <H3>Phase 4 — Cross-platform expansion</H3>
+              <H3>Phase 4: Cross-platform expansion</H3>
               <UL>
                 <li>Cult-only API for builders outside the Naka Labs platform.</li>
                 <li>Cross-chain detection (NAKA wrapping on Solana, etc.).</li>
               </UL>
               <Callout tone="gold">
-                Canonical NAKA contract — Ethereum:
+                Canonical NAKA contract, Ethereum:
                 <span className="block mt-1 font-mono text-[12px] text-white/85 break-all">{NAKA_CONTRACT}</span>
               </Callout>
             </section>

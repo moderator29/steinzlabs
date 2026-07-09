@@ -13,7 +13,7 @@ export const maxDuration = 15;
 // directly, so we insert with the service-role client here, having verified
 // the caller is the sender.
 
-const GIFT_CHAINS = new Set(['ethereum', 'base', 'bsc', 'solana']);
+const GIFT_CHAINS = new Set(['ethereum', 'base', 'bsc', 'robinhood', 'solana']);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EVM_TX_RE = /^0x[0-9a-fA-F]{64}$/;
 const SOL_TX_RE = /^[1-9A-HJ-NP-Za-km-z]{43,90}$/;
@@ -92,10 +92,15 @@ export async function POST(req: NextRequest) {
 
   // Integrity: the recorded recipient address must match the address we would
   // independently resolve for that user on that chain. Prevents recording a
-  // transfer to an attacker-chosen address under someone else's name. If the
-  // user has no resolvable receive address we skip this (nothing to compare).
+  // transfer to an attacker-chosen address under someone else's name. The
+  // client obtained recipientAddress from /api/wire/gift/resolve (same server
+  // resolver), so a recipient with no resolvable address could not have been a
+  // legitimate gift target — reject rather than trust the client's address.
   const resolved = await resolveReceiveAddress(recipientId, chain);
-  if (resolved && !sameAddress(chain, resolved, recipientAddress)) {
+  if (!resolved) {
+    return NextResponse.json({ error: 'Recipient has no receive wallet on this chain' }, { status: 409 });
+  }
+  if (!sameAddress(chain, resolved, recipientAddress)) {
     return NextResponse.json({ error: 'Recipient address does not match their receive wallet' }, { status: 409 });
   }
 
@@ -119,31 +124,18 @@ export async function POST(req: NextRequest) {
     .single<{ id: string }>();
 
   if (insErr) {
+    // The on-chain transfer already happened; a retry that hits the
+    // UNIQUE (chain, tx_hash) constraint means this exact gift is already
+    // recorded. Treat it as idempotent success, not a 500.
+    if (insErr.code === '23505') {
+      return NextResponse.json({ ok: true, duplicate: true, status: 'pending' });
+    }
     return NextResponse.json({ error: insErr.message || 'Failed to record gift' }, { status: 500 });
   }
 
-  // Best-effort denormalized counters on the post. Non-fatal on failure —
-  // the gift is already recorded.
-  if (postId) {
-    try {
-      const { data: post } = await supabase
-        .from('wire_posts')
-        .select('gift_count, gift_total_usd')
-        .eq('id', postId)
-        .maybeSingle<{ gift_count: number; gift_total_usd: number }>();
-      if (post) {
-        await supabase
-          .from('wire_posts')
-          .update({
-            gift_count: (post.gift_count ?? 0) + 1,
-            gift_total_usd: Number(post.gift_total_usd ?? 0) + (amountUsd ?? 0),
-          })
-          .eq('id', postId);
-      }
-    } catch {
-      /* counter bump is best-effort */
-    }
-  }
+  // Post counters (gift_count / gift_total_usd) are maintained atomically by the
+  // trg_wire_gift_counts trigger on wire_gifts — no manual bump here (that path
+  // was a non-atomic read-modify-write that lost counts under concurrency).
 
   return NextResponse.json({ ok: true, id: inserted.id, status: 'pending' });
 }

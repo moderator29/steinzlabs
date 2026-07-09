@@ -26,7 +26,7 @@ export const FEATURE_CARDS: CardData[] = [
   },
   {
     tag: 'For Security', title: 'Shadow Guardian Protection',
-    description: 'AI scam detection on every transaction — honeypot, rug, and phishing checks built in.',
+    description: 'AI scam detection on every transaction: honeypot, rug, and phishing checks built in.',
     bullets: ['Honeypot simulation before every swap', 'Deployer history + rug scoring', 'Phishing domain blocking'],
     pills: ['Honeypot', 'Rug Scanner', 'Phishing Shield'],
     icon: Shield,
@@ -36,7 +36,7 @@ export const FEATURE_CARDS: CardData[] = [
   {
     tag: 'For DeFi', title: 'Multi-Chain Swap Engine',
     description: 'Trade across EVM + Solana with a security scan on every swap. Best route, best price.',
-    bullets: ['Security scan on every swap', 'MEV / sandwich protection', '0.5% platform fee — transparent'],
+    bullets: ['Security scan on every swap', 'MEV / sandwich protection', '0.5% platform fee, transparent'],
     pills: ['Security Scan', 'MEV Protection', '0.5% Fee'],
     icon: Zap,
     gradient: 'linear-gradient(135deg,#4c1d95 0%,#5b21b6 50%,#6d28d9 100%)',
@@ -55,7 +55,7 @@ export const FEATURE_CARDS: CardData[] = [
   },
   {
     tag: 'For Alpha', title: 'Smart Money + Whale Tracker',
-    description: 'Follow the wallets that consistently win — and get alerted when they converge.',
+    description: 'Follow the wallets that consistently win, and get alerted when they converge.',
     bullets: ['Real-time large-wallet feed', 'Signals when 3+ smart wallets converge', 'Personal whale watchlist + alerts'],
     pills: ['Live Feed', 'Convergence', 'Watchlist'],
     icon: TrendingUp,
@@ -75,7 +75,7 @@ export const FEATURE_CARDS: CardData[] = [
   },
   {
     tag: 'Automated', title: 'Market Maker Bot',
-    description: 'Non-custodial automated market making — work a spread around a token with bounded, capped two-sided swaps.',
+    description: 'Non-custodial automated market making: work a spread around a token with bounded, capped two-sided swaps.',
     bullets: ['Grid + Range strategies', 'Budget, inventory + slippage caps you sign for', 'Net PnL tracking · pause/stop kill switch'],
     pills: ['Non-Custodial', 'Grid + Range', 'Capped'],
     badge: 'BETA',
@@ -86,7 +86,7 @@ export const FEATURE_CARDS: CardData[] = [
   },
   {
     tag: 'For Intelligence', title: 'On-Chain Trend Detection',
-    description: 'Catch momentum before Twitter — unique-wallet growth, volume, and social in one signal.',
+    description: 'Catch momentum before Twitter: unique-wallet growth, volume, and social in one signal.',
     bullets: ['Momentum via unique-wallet growth', 'Live social sentiment (LunarCrush)', 'Early launches gaining traction'],
     pills: ['Momentum', 'Social Sentiment', 'New Launches'],
     icon: BarChart2,
@@ -95,7 +95,7 @@ export const FEATURE_CARDS: CardData[] = [
   },
   {
     tag: 'For Research', title: 'Wallet Intelligence DNA',
-    description: 'Full behavioral profiles for any wallet — entity labels, clusters, and PnL history.',
+    description: 'Full behavioral profiles for any wallet: entity labels, clusters, and PnL history.',
     bullets: ['Transaction history analysis', 'Entity labels + cluster affiliations', 'Win rate, PnL + archetype'],
     pills: ['Smart Money', 'Whale', 'Degen'],
     icon: Fingerprint,

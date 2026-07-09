@@ -27,7 +27,7 @@ import { addressesEqual } from '@/lib/utils/addressNormalize';
 
 export interface GiftChain {
   /** Canonical id stored in wire_gifts.chain and passed to resolveReceiveAddress. */
-  id: 'ethereum' | 'base' | 'bsc' | 'solana';
+  id: 'ethereum' | 'base' | 'bsc' | 'solana' | 'robinhood';
   name: string;
   symbol: string;
   rpc: string;
@@ -63,12 +63,27 @@ export const GIFT_CHAINS: GiftChain[] = [
     nativeCgId: 'binancecoin', isEvm: true, evmChainIdHex: '0x38',
   },
   {
+    id: 'robinhood', name: 'Robinhood Chain', symbol: 'ETH',
+    rpc: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY
+      ? `https://robinhood-mainnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`
+      : 'https://rpc.mainnet.chain.robinhood.com',
+    explorerUrl: 'https://explorer.chain.robinhood.com', explorerName: 'Robinhood Explorer',
+    nativeCgId: 'ethereum', isEvm: true, evmChainIdHex: '0x1237',
+  },
+  {
     id: 'solana', name: 'Solana', symbol: 'SOL',
     rpc: process.env.NEXT_PUBLIC_ALCHEMY_SOLANA_RPC || 'https://api.mainnet-beta.solana.com',
     explorerUrl: 'https://solscan.io', explorerName: 'SolScan',
     nativeCgId: 'solana', isEvm: false,
   },
 ];
+
+// Robinhood Chain gift config. The non-custodial send helpers below
+// (resolveGiftSender / readNativeBalance / maxSendableNative / sendNativeGift)
+// are chain-agnostic — it's just another EVM chain (native ETH, its own RPC +
+// hex chain id 0x1237 / 4663). Now LIVE in GIFT_CHAINS; the recipient
+// receive-address resolver and the gift API allowlists include 'robinhood'.
+export const ROBINHOOD_GIFT_CHAIN: GiftChain = GIFT_CHAINS.find((c) => c.id === 'robinhood')!;
 
 export function getGiftChain(id: string): GiftChain | undefined {
   return GIFT_CHAINS.find((c) => c.id === id);

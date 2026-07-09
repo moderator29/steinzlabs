@@ -33,11 +33,22 @@ const POST_SELECT = `*, ${AUTHOR}, original:wire_posts!wire_posts_repost_of_fkey
 
 const PAGE_SIZE = 20;
 
+// Only accept media that lives in OUR wire-media storage bucket. Rejecting
+// arbitrary external URLs stops a wire from smuggling a tracking pixel or an
+// off-platform image that loads in every viewer's browser.
+const WIRE_MEDIA_MARKER = '/storage/v1/object/public/wire-media/';
+
 const CreateBody = z.object({
   body: z.string().trim().min(1, 'Body required').max(600, 'Max 600 characters'),
-  media_url: z.string().trim().url().max(2048).optional().nullable(),
+  media_url: z
+    .string()
+    .trim()
+    .url()
+    .max(2048)
+    .refine((u) => u.includes(WIRE_MEDIA_MARKER), 'Image must be uploaded to the wire')
+    .optional()
+    .nullable(),
   repost_of: z.string().uuid().optional().nullable(),
-  reply_to: z.string().uuid().optional().nullable(),
   tags: z
     .array(z.string())
     .max(WIRE_MAX_TAGS, `Up to ${WIRE_MAX_TAGS} topics`)
@@ -72,7 +83,10 @@ export async function POST(req: NextRequest) {
     body: parsed.data.body,
     media_url: parsed.data.media_url ?? null,
     repost_of: parsed.data.repost_of ?? null,
-    reply_to: parsed.data.reply_to ?? null,
+    // Replies are created ONLY through /api/wire/posts/[id]/reply, which enforces
+    // the single-level "cannot reply to a reply" rule. Never honor a client
+    // reply_to here or that guard can be bypassed.
+    reply_to: null,
     tags: cleanTags(parsed.data.tags),
   };
 

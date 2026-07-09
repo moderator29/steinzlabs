@@ -6,9 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Brand icon library — gradient-glowing platform icons. Missing specialty
 // icons fall back to lucide-react (hybrid pattern used elsewhere on main).
 import {
-  Wallet, User, TrendingDown, Activity, ChartBar as BarChart3,
-} from '@/components/icons/brand';
-import {
+  Wallet, User, TrendingDown, Activity, BarChart3,
   Home, MessageSquare, Zap, ArrowUpRight, ArrowDownRight, Search, Menu, X,
   LayoutGrid, Rss, Radio, Newspaper, LineChart, Sparkles,
 } from 'lucide-react';

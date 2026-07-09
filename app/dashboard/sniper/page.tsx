@@ -6,8 +6,6 @@ import Link from 'next/link';
 import * as Sentry from '@sentry/nextjs';
 import {
   AlertTriangle, Play, Pause, ExternalLink, Plus, TrendingUp, Trash2,
-} from '@/components/icons/brand';
-import {
   Crosshair, Loader2, Lock, Power, Zap, Target, Search, RefreshCw, Radar, Clock, Bell, ShieldAlert,
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';

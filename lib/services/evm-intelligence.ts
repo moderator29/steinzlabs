@@ -19,6 +19,10 @@ export const EVM_CHAIN_CONFIG: Record<string, {
   avalanche:{ nativeSymbol: 'AVAX', chainName: 'Avalanche', explorerUrl: 'https://snowtrace.io', priceId: 'avalanche-2' },
   arbitrum: { nativeSymbol: 'ETH', chainName: 'Arbitrum', explorerUrl: 'https://arbiscan.io', priceId: 'ethereum' },
   bsc:      { nativeSymbol: 'BNB', chainName: 'BNB Chain', explorerUrl: 'https://bscscan.com', priceId: 'binancecoin' },
+  // Robinhood Chain — Arbitrum-Orbit L2, native gas ETH (priced as ethereum).
+  // Blockscout explorer. Balance/token reads route through Alchemy's
+  // robinhood-mainnet endpoint (see getAlchemy url-override in alchemy.ts).
+  robinhood:{ nativeSymbol: 'ETH', chainName: 'Robinhood Chain', explorerUrl: 'https://explorer.chain.robinhood.com', priceId: 'ethereum' },
 };
 
 export const KNOWN_TOKEN_LOGOS: Record<string, string> = {

@@ -23,7 +23,7 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 // Gift chains the Wire supports. EVM chains all share one 0x receive
 // address (identity chain 'evm'); Solana is separate.
-const EVM_GIFT_CHAINS = new Set(['ethereum', 'base', 'bsc']);
+const EVM_GIFT_CHAINS = new Set(['ethereum', 'base', 'bsc', 'robinhood']);
 
 interface WalletJson {
   address?: string;

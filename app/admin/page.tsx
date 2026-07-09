@@ -1,14 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-// Naka Labs brand icons — broad swap. BarChart3 → ChartBar, Share2 → Share, LayoutDashboard → Dashboard aliased.
 import {
   Shield, LogOut, Eye, CheckCircle, XCircle, AlertTriangle, Clock,
-  Activity, Lock, ChartBar as BarChart3, TrendingUp, TrendingDown,
+  Activity, Lock, BarChart3, TrendingUp, TrendingDown,
   Bell, Settings, Send, Trash2, Menu, X, Search, ExternalLink,
-  ChevronRight, Heart, Share as Share2, Dashboard as LayoutDashboard, RefreshCw,
-} from '@/components/icons/brand';
-import {
+  ChevronRight, Heart, Share2, LayoutDashboard, RefreshCw,
   Users, Zap, RotateCcw, DollarSign, Layers, Database, Wifi,
   ArrowUpRight, ArrowDownRight, Ban, UserCheck, Home, ShieldCheck,
   Server, Briefcase, Globe, UserPlus, ShieldAlert, Radio,
