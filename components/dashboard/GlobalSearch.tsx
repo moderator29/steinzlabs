@@ -59,21 +59,26 @@ export function GlobalSearch() {
       setResults([]);
       return;
     }
+    // Guard against out-of-order responses: a slower earlier request must not
+    // overwrite the results of a newer query. Only the latest in-flight effect
+    // is allowed to commit state.
+    let cancelled = false;
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
         const res = await fetch(`/api/dashboard/search?q=${encodeURIComponent(query)}`);
+        if (cancelled) return;
         if (!res.ok) {
           setResults([]);
           return;
         }
         const data = (await res.json()) as { results: SearchResult[] };
-        setResults(data.results ?? []);
+        if (!cancelled) setResults(data.results ?? []);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }, 300);
-    return () => clearTimeout(timer);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [query]);
 
   useEffect(() => {

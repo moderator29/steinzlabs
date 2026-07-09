@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCultAccess } from '@/lib/cult/access';
+import { verifyAdminRequest } from '@/lib/auth/adminAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const runtime = 'nodejs';
@@ -16,12 +16,15 @@ interface ReorderPayload {
  * is_active) are ignored silently — never error on a half-sync from the
  * client because Sanctum can be edited concurrently.
  *
- * Chosen-only. Server-side gate via getCultAccess(); the RLS policy in
+ * Reordering the Library is a privileged write; "Chosen" is retired, so this
+ * is gated to platform admins via the admin bearer — like every other
+ * privileged cult write (see sanctum/annals). Previously it only checked cult
+ * membership, so ANY member could reorder the catalog. The RLS policy in
  * 2026_05_12_cult_sanctum_curation.sql is a second line of defense.
  */
 export async function PATCH(req: NextRequest) {
-  const access = await getCultAccess();
-  if (!access.allowed || !access.userId) {
+  const adminUserId = await verifyAdminRequest(req);
+  if (!adminUserId) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
 
@@ -51,7 +54,7 @@ export async function PATCH(req: NextRequest) {
     order.map((id, index) =>
       admin
         .from('cult_ambient_tracks')
-        .update({ display_order: index, curated_by: access.userId, curated_at: now })
+        .update({ display_order: index, curated_by: adminUserId, curated_at: now })
         .eq('id', id)
         .select('id')
         .maybeSingle()

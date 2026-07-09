@@ -47,9 +47,14 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { username, score, coins, distance } = body;
-    if (!username || typeof score !== 'number') {
-      return NextResponse.json({ error: 'Username and score required' }, { status: 400 });
+    // typeof NaN/Infinity is 'number', so the old guard accepted score: Infinity
+    // / NaN — which then poisoned Math.max(existing.score, score) and the
+    // ORDER BY forever. Require a finite, non-negative score.
+    if (!username || !Number.isFinite(score) || score < 0) {
+      return NextResponse.json({ error: 'Username and a valid score required' }, { status: 400 });
     }
+    const safeCoins = Number.isFinite(coins) && coins >= 0 ? coins : 0;
+    const safeDistance = Number.isFinite(distance) && distance >= 0 ? distance : 0;
     const cleanName = String(username).trim().slice(0, 20);
     const id = cleanName.toLowerCase().replace(/[^a-z0-9]/g, '_');
     if (!id) return NextResponse.json({ error: 'Invalid username' }, { status: 400 });
@@ -62,10 +67,10 @@ export async function POST(req: Request) {
       .maybeSingle<Omit<Row, 'id' | 'username'>>();
 
     const nextScore = existing ? Math.max(existing.score, score) : score;
-    const nextCoins = existing ? (score > existing.score ? (coins || 0) : existing.coins) : (coins || 0);
-    const nextDistance = existing ? (score > existing.score ? (distance || 0) : existing.distance) : (distance || 0);
+    const nextCoins = existing ? (score > existing.score ? safeCoins : existing.coins) : safeCoins;
+    const nextDistance = existing ? (score > existing.score ? safeDistance : existing.distance) : safeDistance;
     const nextGames = (existing?.games_played ?? 0) + 1;
-    const nextStreak = Math.max(existing?.best_streak ?? 0, distance || 0);
+    const nextStreak = Math.max(existing?.best_streak ?? 0, safeDistance);
 
     await admin.from('game_scores').upsert({
       id,

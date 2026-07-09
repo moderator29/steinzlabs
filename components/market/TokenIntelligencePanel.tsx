@@ -20,7 +20,7 @@ interface Brief {
   whale_holders: WhaleHolder[];
   recent_whale_activity: ActivityRow[];
   clusters_touching: ClusterRow[];
-  concentration: { top_holder_value: number; whale_count: number; avg_whale_score: number };
+  concentration: { whale_count: number; avg_whale_score: number };
   thesis: string | null;
 }
 

@@ -1,5 +1,19 @@
 import 'server-only';
-import { createHmac, randomBytes } from 'crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
+
+/**
+ * Constant-time string compare. A plain `===` on the derived TOTP digits
+ * leaks, via early-exit timing, how many leading digits of the code were
+ * correct — enough to make online guessing meaningfully cheaper. Compare
+ * over a fixed-length buffer instead. Length mismatch short-circuits to
+ * false (both inputs here are always 6 ASCII digits, so no length leak).
+ */
+function constantTimeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a, 'utf8');
+  const bb = Buffer.from(b, 'utf8');
+  if (ab.length !== bb.length) return false;
+  return timingSafeEqual(ab, bb);
+}
 
 /**
  * Minimal RFC 6238 TOTP implementation using Node crypto only.
@@ -73,10 +87,13 @@ export function verifyTotp(secret: string, code: string, atMs: number = Date.now
   if (!/^\d{6}$/.test(code)) return false;
   const counter = Math.floor(atMs / 1000 / 30);
   const key = base32Decode(secret);
+  let matched = false;
+  // Iterate every window (no early return) and OR the constant-time result
+  // so overall timing does not depend on which window matched.
   for (const window of [-1, 0, 1]) {
-    if (hotp(key, counter + window) === code) return true;
+    if (constantTimeEqual(hotp(key, counter + window), code)) matched = true;
   }
-  return false;
+  return matched;
 }
 
 /**

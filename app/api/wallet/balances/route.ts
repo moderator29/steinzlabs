@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getTokenBalances, getEthBalance } from '@/lib/services/alchemy';
+import { getTokenBalances, getTokenMetadata, getEthBalance } from '@/lib/services/alchemy';
 import { getSolanaWalletTokens } from '@/lib/services/alchemy-solana';
 
 /**
@@ -76,19 +76,31 @@ export async function GET(req: NextRequest) {
         });
       }
     }
-    for (const b of balances) {
-      const decimals = b.decimals ?? 18;
-      const ui = b.tokenBalance ? Number(BigInt(b.tokenBalance)) / 10 ** decimals : null;
-      rows.push({
+    // getTokenBalances returns only contractAddress + raw tokenBalance (no
+    // decimals/symbol/name), so decimals must be read from token metadata —
+    // defaulting to 18 mis-scales USDC (6), WBTC (8), etc. by orders of
+    // magnitude. Only non-zero balances need enrichment (a zero balance is
+    // zero at any scale), which bounds the metadata fan-out to real holdings.
+    const enriched = await Promise.all(balances.map(async (b) => {
+      const raw = b.tokenBalance ?? '0';
+      // Hex or decimal string; zero if it parses to 0. Avoid BigInt literals so
+      // we stay within the project's compile target.
+      const rawNum = Number(raw);
+      const isZero = !Number.isFinite(rawNum) ? false : rawNum === 0;
+      const meta = isZero ? null : await getTokenMetadata(b.contractAddress, chain).catch(() => null);
+      const decimals = typeof meta?.decimals === 'number' ? meta.decimals : (b.decimals ?? 18);
+      const ui = isZero ? 0 : Number(raw) / 10 ** decimals;
+      return {
         contract_address: b.contractAddress,
-        symbol: b.symbol ?? null,
-        name: b.name ?? null,
+        symbol: meta?.symbol ?? b.symbol ?? null,
+        name: meta?.name ?? b.name ?? null,
         decimals,
-        balance: b.tokenBalance ?? '0',
+        balance: raw,
         balance_ui: ui,
-        logo_url: b.logo ?? null,
-      });
-    }
+        logo_url: meta?.logo ?? b.logo ?? null,
+      } satisfies TokenRow;
+    }));
+    rows.push(...enriched);
     return NextResponse.json({ chain, address, tokens: rows });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Balance fetch failed' }, { status: 500 });

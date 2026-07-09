@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { cacheWithFallback } from '@/lib/cache/redis';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -71,8 +72,11 @@ export async function GET(request: NextRequest) {
       if (convergences.length === 0) return { convergences: [], refreshedAt: new Date().toISOString() };
 
       // Batch-load the reputation of every whale involved across all rows.
+      // normalizeAddress (not .toLowerCase()) so Solana base58 wallets keep their
+      // case — lowercasing them made the .in('address', …) miss every Solana
+      // whale, dropping their reputation from the alpha score / named list.
       const allAddrs = Array.from(new Set(
-        convergences.flatMap((c) => (c.wallets ?? []).map((a) => a.toLowerCase())),
+        convergences.flatMap((c) => (c.wallets ?? []).map((a) => normalizeAddress(a))),
       ));
       const whaleMap = new Map<string, WhaleRow>();
       if (allAddrs.length) {
@@ -84,14 +88,14 @@ export async function GET(request: NextRequest) {
             .select('address, label, archetype, win_rate, pnl_30d_usd, whale_score')
             .in('address', chunk);
           for (const w of (whales ?? []) as WhaleRow[]) {
-            whaleMap.set((w.address || '').toLowerCase(), w);
+            whaleMap.set(normalizeAddress(w.address || ''), w);
           }
         }
       }
 
       const now = Date.now();
       const enriched = convergences.map((c) => {
-        const addrs = (c.wallets ?? []).map((a) => a.toLowerCase());
+        const addrs = (c.wallets ?? []).map((a) => normalizeAddress(a));
         const whales = addrs.map((a) => whaleMap.get(a)).filter(Boolean) as WhaleRow[];
         const winRates = whales.map((w) => w.win_rate).filter((v): v is number => typeof v === 'number' && v > 0);
         const avgWinRate = winRates.length ? winRates.reduce((s, v) => s + v, 0) / winRates.length : null;

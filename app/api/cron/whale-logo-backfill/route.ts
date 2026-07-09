@@ -24,12 +24,21 @@ export async function GET(request: NextRequest) {
   const admin = getSupabaseAdmin();
   const cutoffIso = new Date(Date.now() - STALE_AFTER_MS).toISOString();
 
+  // Order by least-recently-attempted (logo_resolved_at ASC, never-attempted
+  // first) rather than by portfolio value. This backfill re-selects on
+  // `logo_url.is.null`, and resolveWhaleLogo can legitimately return a null url
+  // (no logo exists) while we still stamp logo_resolved_at below — so those
+  // whales stay null-logo and match forever. Ordering by portfolio_value DESC
+  // meant the top BATCH by value were re-probed every run while the long tail
+  // of null-logo whales (521 of 954 active) was never reached. ASC on
+  // logo_resolved_at rotates the whole set through, draining fairly and
+  // re-attempting each on a fixed cycle instead of starving the tail.
   const { data: whales } = await admin
     .from("whales")
     .select("address, chain, logo_resolved_at")
     .eq("is_active", true)
     .or(`logo_url.is.null,logo_resolved_at.lt.${cutoffIso}`)
-    .order("portfolio_value_usd", { ascending: false, nullsFirst: false })
+    .order("logo_resolved_at", { ascending: true, nullsFirst: true })
     .limit(BATCH);
 
   if (!whales || whales.length === 0) {

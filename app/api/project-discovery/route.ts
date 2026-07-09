@@ -70,7 +70,14 @@ async function fetchDexScreenerTrending() {
       const chain = token.chainId || 'unknown';
       return {
         name: token.description?.split(' ')[0] || token.tokenAddress?.slice(0, 8) + '...',
-        symbol: chain.toUpperCase(),
+        // DexScreener's token-boosts endpoint carries NO ticker/symbol for a
+        // boosted token. The previous value put the CHAIN NAME here (e.g. a
+        // boosted Solana token rendered its ticker as "SOLANA"), which the
+        // discovery card then showed right next to a separate chain badge —
+        // a fabricated symbol that misrepresents the token. There is no free
+        // source for the real ticker on this endpoint, so surface an honest
+        // unknown ('?') matching the CoinGecko branch's convention above.
+        symbol: '?',
         slug: token.tokenAddress || '',
         description: token.description || `Boosted on ${chain} — ${token.amount || 0} boosts`,
         category: 'DexScreener',

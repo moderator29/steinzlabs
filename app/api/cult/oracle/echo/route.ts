@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCultAccess } from '@/lib/cult/access';
+import { verifyAdminRequest } from '@/lib/auth/adminAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { isEvmAddress, isSolanaAddress, normalizeAddress, type Chain } from '@/lib/utils/addressNormalize';
 
@@ -41,11 +42,15 @@ export async function GET(_req: NextRequest) {
 /**
  * POST /api/cult/oracle/echo — add a wallet to the chamber.
  *
- * Chosen-only. Auto-allocates the next free position (1..25); 25/25 returns 409.
+ * Admin-only (curation). The member-facing "seat a wallet" UI was gated on the
+ * retired "Chosen" role and is effectively dead, so this route is the curator
+ * surface; require the admin bearer, matching the other cult curation routes
+ * (daily-seal draft, sanctum library). Auto-allocates the next free position
+ * (1..25); 25/25 returns 409.
  */
 export async function POST(req: NextRequest) {
-  const access = await getCultAccess();
-  if (!access.allowed || !access.userId) {
+  const adminUserId = await verifyAdminRequest(req);
+  if (!adminUserId) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
 
@@ -105,7 +110,7 @@ export async function POST(req: NextRequest) {
       chain,
       label: label || null,
       notes: notes || null,
-      added_by: access.userId,
+      added_by: adminUserId,
     })
     .select('id,position,address,chain,label,notes,added_at')
     .single();

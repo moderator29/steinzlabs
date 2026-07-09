@@ -6,6 +6,7 @@ import { BookOpen, Clock, Tag, Eye, ArrowRight } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { TiltCard } from '@/components/brand/TiltCard';
+import { sanitizeHtml } from '@/lib/utils/sanitize';
 
 interface Post {
   id: string;
@@ -104,7 +105,7 @@ export default function ResearchDetailPage({ params }: { params: Promise<{ id: s
 
               <div className="nl-fade-up nl-fade-up-3">
                 {looksLikeHtml(post.content) ? (
-                  <div className="nl-research-content" dangerouslySetInnerHTML={{ __html: post.content }} />
+                  <div className="nl-research-content" dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }} />
                 ) : (
                   <div className="text-[15px] text-gray-300 leading-relaxed whitespace-pre-wrap">{post.content}</div>
                 )}

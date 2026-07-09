@@ -1,4 +1,5 @@
 import { getTokenHolders, getAddressIntel, getWalletConnections, getEntityPerformance } from '../services/arkham';
+import { getTokenSecurity } from '../services/goplus';
 import type { ArkhamHolder } from '../arkham/types';
 import { analyzeLiquidity, findSimilarTokens, LiquidityAnalysis, PatternMatchingResults } from './historicalTracking';
 
@@ -224,10 +225,18 @@ export async function loadHolderIntelligence(
       findSimilarTokens(tokenAddress),
     ]);
 
+    // Real TOTAL holder count from GoPlus (holder_count), not the length of the
+    // top-N sample we fetched for the bubble map. `holders.length` is capped at
+    // holderLimit (20/50), so reporting it as `totalHolders` understated a
+    // 50,000-holder token as "20 holders" and poisoned the persisted holder
+    // snapshot timeline. When GoPlus has no count we report 0 (honest unknown →
+    // the UI renders an em dash) rather than the sample size.
+    const realHolderCount = await getRealHolderCount(tokenAddress, chain);
+
     return {
       tokenAddress,
       chain: chain || 'unknown',
-      totalHolders: holders.length,
+      totalHolders: realHolderCount,
       topHolders: enrichedHolders,
       composition,
       network,
@@ -243,6 +252,22 @@ export async function loadHolderIntelligence(
   } catch (error) {
 
     throw error;
+  }
+}
+
+/**
+ * Real total holder count from GoPlus token security (`holder_count`). Returns
+ * 0 when GoPlus has no figure or the lookup fails — an honest "unknown", never
+ * the top-N sample size. Shares GoPlus's cache with the holder fetch, so this
+ * is typically a free in-memory hit.
+ */
+async function getRealHolderCount(tokenAddress: string, chain?: string): Promise<number> {
+  try {
+    const sec = await getTokenSecurity(tokenAddress, chain || 'ethereum');
+    const count = Number(sec?.holderCount);
+    return Number.isFinite(count) && count > 0 ? count : 0;
+  } catch {
+    return 0;
   }
 }
 

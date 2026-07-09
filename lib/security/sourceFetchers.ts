@@ -1,5 +1,6 @@
 import 'server-only';
 import type { SourceVerdict } from '@/lib/security/honeypotTriangulator';
+import { goplusAuthHeaders } from '@/lib/security/goplusService';
 
 /**
  * Per-source honeypot fetchers used by the triangulation route. Each
@@ -40,8 +41,10 @@ const GOPLUS_CHAIN_ID: Record<string, string> = {
 export async function fetchGoPlusVerdict(chain: string, token: string): Promise<{ verdict: SourceVerdict; raw: unknown }> {
   const chainId = GOPLUS_CHAIN_ID[chain.toLowerCase()];
   if (!chainId) return { verdict: 'unknown', raw: null };
-  const key = process.env.GOPLUS_API_KEY ?? '';
-  const headers: Record<string, string> = key ? { Authorization: key } : {};
+  // Use the signed access token (shared, cached) so these calls count against
+  // the plan and get full rate limits — a raw static key is not valid GoPlus
+  // auth and was being served as anonymous public tier.
+  const headers = await goplusAuthHeaders();
   if (chainId === 'solana') {
     const raw = await safeFetch(`https://api.gopluslabs.io/api/v1/solana/token_security?contract_addresses=${token}`, headers) as { result?: Record<string, unknown> } | null;
     const node = raw?.result?.[token];

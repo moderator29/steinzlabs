@@ -1,7 +1,8 @@
 import 'server-only';
 import { NextRequest } from 'next/server';
+import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 import { getUserWallets } from '@/lib/services/supabase';
-import { getTokenBalances, getEthBalance } from '@/lib/services/alchemy';
+import { getTokenBalances, getTokenMetadata, getEthBalance } from '@/lib/services/alchemy';
 import { getSolanaWalletTokens, getSolanaSOLBalance } from '@/lib/services/alchemy-solana';
 import { getTokenPrices } from '@/lib/services/jupiter';
 import { getContractPrice } from '@/lib/services/coingecko';
@@ -11,9 +12,11 @@ export const dynamic = 'force-dynamic';
 
 /**
  * SSE Portfolio Update Feed
- * GET /api/stream/portfolio-updates?userId=<id>
+ * GET /api/stream/portfolio-updates
  *
- * Streams portfolio balance + value updates for all wallets linked to a user.
+ * Streams portfolio balance + value updates for all wallets linked to the
+ * authenticated caller. The user is resolved from the session, not a query
+ * param, so a caller can only ever stream their own holdings.
  * Aggregates across EVM chains and Solana.
  * Updates every 60 seconds (aligned with WALLET_BALANCE TTL).
  */
@@ -97,14 +100,21 @@ async function buildEvmPortfolio(address: string, chain: string): Promise<Portfo
     tokenBalances
       .filter(b => b.tokenBalance && b.tokenBalance !== '0')
       .map(async b => {
-        const decimals = b.decimals ?? 18;
+        // getTokenBalances does not return per-token decimals/symbol; without
+        // the real decimals a 6-decimal token (USDC) or 8-decimal token (WBTC)
+        // is scaled by 10**18, making balance and valueUsd wrong by many orders
+        // of magnitude and corrupting totalValueUsd. Read real metadata.
+        const [meta, priceUsd] = await Promise.all([
+          getTokenMetadata(b.contractAddress, chain).catch(() => null),
+          getContractPrice(b.contractAddress, chain).catch(() => 0),
+        ]);
+        const decimals = typeof meta?.decimals === 'number' ? meta.decimals : (b.decimals ?? 18);
         const rawBalance = BigInt(b.tokenBalance ?? '0');
         const balance = Number(rawBalance) / Math.pow(10, decimals);
-        const priceUsd = await getContractPrice(b.contractAddress, chain).catch(() => 0);
         return {
           mint: b.contractAddress,
-          symbol: b.symbol,
-          name: b.name,
+          symbol: meta?.symbol ?? b.symbol,
+          name: meta?.name ?? b.name,
           balance,
           decimals,
           priceUsd,
@@ -130,12 +140,21 @@ async function buildEvmPortfolio(address: string, chain: string): Promise<Portfo
 }
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = req.nextUrl;
-  const userId = searchParams.get('userId');
-
-  if (!userId) {
-    return new Response('userId is required', { status: 400 });
+  // Security: this stream leaks a user's full portfolio — wallet addresses,
+  // token balances, and total USD value. It MUST be bound to the authenticated
+  // session, never to a client-supplied ?userId (which previously let anyone
+  // stream ANY user's holdings by guessing their id — cross-account leak).
+  const authed = await getAuthenticatedUser(req).catch(() => null);
+  if (!authed) {
+    return new Response('Unauthorized', { status: 401 });
   }
+  const requested = req.nextUrl.searchParams.get('userId');
+  // A supplied userId is only honored when it matches the caller; otherwise
+  // reject rather than silently serving someone else's portfolio.
+  if (requested && requested !== authed.id) {
+    return new Response('Forbidden', { status: 403 });
+  }
+  const userId = authed.id;
 
   const encoder = new TextEncoder();
 

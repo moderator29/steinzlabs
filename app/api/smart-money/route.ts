@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { searchPairs } from '@/lib/services/dexscreener';
 import type { DexPair } from '@/lib/services/dexscreener';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY;
 
@@ -467,16 +468,24 @@ async function getWalletsFromWhales(): Promise<{ wallets: SmartWallet[]; recentM
   } catch { /* Dune surface optional — leaderboard still renders */ }
 
   // One query for recent activity across all listed whales; grouped per wallet.
-  const { data: acts } = await admin
-    .from('whale_activity')
-    .select('whale_address, chain, action, token_symbol, value_usd, timestamp')
-    .in('whale_address', addresses)
-    .order('timestamp', { ascending: false })
-    .limit(600);
+  // Case-insensitive match: whale_activity holds mixed-case legacy EVM rows,
+  // while `addresses` are canonical lowercase whales.address values. An exact
+  // .in() silently undercounts those legacy rows, so per-wallet recent moves
+  // came back empty for any whale whose activity was stored checksummed.
+  let acts: Array<{ whale_address: string; chain: string; action: string | null; token_symbol: string | null; value_usd: number | null; timestamp: string }> = [];
+  if (addresses.length) {
+    const { data } = await admin
+      .from('whale_activity')
+      .select('whale_address, chain, action, token_symbol, value_usd, timestamp')
+      .or(addresses.map((a) => `whale_address.ilike.${a}`).join(','))
+      .order('timestamp', { ascending: false })
+      .limit(600);
+    acts = (data ?? []) as typeof acts;
+  }
 
   const byWallet = new Map<string, SmartTrade[]>();
   const recentMoves: SmartTrade[] = [];
-  for (const a of (acts ?? []) as Array<{ whale_address: string; chain: string; action: string | null; token_symbol: string | null; value_usd: number | null; timestamp: string }>) {
+  for (const a of acts) {
     const trade: SmartTrade = {
       action: activityAction(a.action),
       token: a.token_symbol || 'TOKEN',
@@ -484,8 +493,11 @@ async function getWalletsFromWhales(): Promise<{ wallets: SmartWallet[]; recentM
       time: a.timestamp ? timeAgo(a.timestamp) : 'recent',
       chain: CHAIN_LABEL[a.chain] ?? a.chain?.toUpperCase().slice(0, 4) ?? 'ETH',
     };
-    const list = byWallet.get(a.whale_address) ?? [];
-    if (list.length < 3) { list.push(trade); byWallet.set(a.whale_address, list); }
+    // Key on the normalized address so the per-wallet lookup below (which uses
+    // the canonical whales.address) always resolves, regardless of stored case.
+    const key = normalizeAddress(a.whale_address);
+    const list = byWallet.get(key) ?? [];
+    if (list.length < 3) { list.push(trade); byWallet.set(key, list); }
     if (recentMoves.length < 12) recentMoves.push({ ...trade, wallet: shortenAddress(a.whale_address) });
   }
 
@@ -517,7 +529,7 @@ async function getWalletsFromWhales(): Promise<{ wallets: SmartWallet[]; recentM
       name: label,
       totalVolume,
       totalVolumeStr: formatVolume(totalVolume),
-      recentTrades: byWallet.get(w.address) ?? [],
+      recentTrades: byWallet.get(normalizeAddress(w.address)) ?? [],
       chain: w.chain,
       chains: [chainLabel],
       lastActive: w.last_active_at ? timeAgo(w.last_active_at) : 'recent',

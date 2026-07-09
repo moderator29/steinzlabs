@@ -39,7 +39,18 @@ export async function GET() {
   const all = trades ?? [];
   const executed = all.filter((t) => t.status === "success");
   const alerts = all.filter((t) => t.status === "alert");
-  const blocked = all.filter((t) => t.status === "failed" || t.status === "cancelled");
+  // Guard/rule blocks are recorded with status 'blocked_rule' / 'blocked_security'
+  // (see /api/copy-trading/execute recordBlocked + the status CHECK constraint),
+  // not 'failed'/'cancelled'. The old filter matched neither, so the dashboard's
+  // "Blocked · security + rule guards" card silently under-counted every trade the
+  // caps and GoPlus checks actually stopped. Count the real block statuses.
+  const blocked = all.filter(
+    (t) =>
+      t.status === "blocked_rule" ||
+      t.status === "blocked_security" ||
+      t.status === "failed" ||
+      t.status === "cancelled",
+  );
   const totalPnl = executed.reduce(
     (acc: number, t: { pnl_usd: number | null }) => acc + (t.pnl_usd ?? 0),
     0,

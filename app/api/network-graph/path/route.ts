@@ -18,7 +18,7 @@ interface EdgeRow {
   from_address: string;
   to_address: string;
   total_value_usd: number | null;
-  tx_count: number | null;
+  transaction_count: number | null;
 }
 
 export async function GET(req: NextRequest) {
@@ -44,8 +44,8 @@ export async function GET(req: NextRequest) {
 
   for (let hop = 0; hop < maxHops && frontier.length > 0; hop++) {
     const [outRes, inRes] = await Promise.all([
-      admin.from('wallet_edges').select('from_address, to_address, total_value_usd, tx_count').in('from_address', frontier).limit(5000).returns<EdgeRow[]>(),
-      admin.from('wallet_edges').select('from_address, to_address, total_value_usd, tx_count').in('to_address', frontier).limit(5000).returns<EdgeRow[]>(),
+      admin.from('wallet_edges').select('from_address, to_address, total_value_usd, transaction_count').in('from_address', frontier).limit(5000).returns<EdgeRow[]>(),
+      admin.from('wallet_edges').select('from_address, to_address, total_value_usd, transaction_count').in('to_address', frontier).limit(5000).returns<EdgeRow[]>(),
     ]);
     if (outRes.error) return NextResponse.json({ error: outRes.error.message }, { status: 500 });
     if (inRes.error) return NextResponse.json({ error: inRes.error.message }, { status: 500 });

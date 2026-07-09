@@ -1,7 +1,7 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
+import { verifyAdminRequest, verifyAdminContext, hasPermission, unauthorizedResponse } from '@/lib/auth/adminAuth';
 import { logAdminAction, type AdminAuditAction } from '@/lib/admin/auditLog';
 
 const MAX_LIMIT = 200;
@@ -191,8 +191,17 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const adminId = await verifyAdminRequest(request);
-  if (!adminId) return unauthorizedResponse();
+  // Role-aware context so we can enforce the permission matrix per action.
+  // The old handler used verifyAdminRequest(), which only proves the caller
+  // is *some* admin. That let any admin role (support, moderator, finance,
+  // read_only) POST set_role → role='admin'. Because verifyAdminContext()
+  // treats profiles.role==='admin' as super_admin (legacy fallback), a
+  // low-privilege admin could promote themselves or a confederate to full
+  // super_admin — a straight privilege escalation. Gate the sensitive
+  // actions on the same permissions the matrix already defines. Fail closed.
+  const ctx = await verifyAdminContext(request);
+  if (!ctx) return unauthorizedResponse();
+  const adminId = ctx.userId;
 
   try {
     // Bug §2.18: the old handler called `request.json()` once for action+userId
@@ -214,6 +223,9 @@ export async function POST(request: Request) {
     };
 
     if (action === 'delete') {
+      if (!hasPermission(ctx.role, 'user.delete')) {
+        return NextResponse.json({ error: 'Forbidden', missingPermission: 'user.delete' }, { status: 403 });
+      }
       const { error } = await supabase.auth.admin.deleteUser(userId);
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
       await supabase.from('profiles').delete().eq('id', userId);
@@ -227,6 +239,9 @@ export async function POST(request: Request) {
     // updated a non-existent `profiles.status` column and silently
     // failed — admins thought ban was working, it never was.
     if (action === 'ban' || action === 'unban') {
+      if (!hasPermission(ctx.role, 'user.suspend')) {
+        return NextResponse.json({ error: 'Forbidden', missingPermission: 'user.suspend' }, { status: 403 });
+      }
       const ban_duration = action === 'ban' ? '876000h' : 'none';
       // Supabase types are loose around ban_duration; cast at boundary only.
       const { error } = await supabase.auth.admin.updateUserById(userId, { ban_duration } as { ban_duration: string });
@@ -236,6 +251,12 @@ export async function POST(request: Request) {
     }
 
     if (action === 'set_role') {
+      // role.grant is super_admin only. Without this gate any admin could
+      // set a target's profiles.role to 'admin', which the auth layer maps
+      // back to super_admin — self-service privilege escalation.
+      if (!hasPermission(ctx.role, 'role.grant')) {
+        return NextResponse.json({ error: 'Forbidden', missingPermission: 'role.grant' }, { status: 403 });
+      }
       const role = typeof body.role === 'string' ? body.role : null;
       if (!role) return NextResponse.json({ error: 'role required' }, { status: 400 });
       const allowedRoles = ['user', 'admin', 'moderator'];

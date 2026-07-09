@@ -159,7 +159,20 @@ async function getSolanaWhales(): Promise<WhaleProfile[]> {
       .filter(t => t.volume >= 20_000 && t.volume <= 5_000_000 && t.trades >= 3)
       .slice(0, 100)
       .map((t, i) => {
-        const winRatePct = Math.round(t.winRate * 100);
+        // getTopTraders casts raw Birdeye items with NO field mapping, so any
+        // field the gainers-losers payload omits arrives as undefined. Guard
+        // before it flows into computeWhaleScore / timeAgo and produces NaN.
+        // Birdeye winRate is a 0..1 fraction; tolerate a 0..100 percent too.
+        const rawWinRate = Number(t.winRate);
+        const winRatePct = Number.isFinite(rawWinRate)
+          ? Math.round(rawWinRate <= 1 ? rawWinRate * 100 : Math.min(100, rawWinRate))
+          : 0; // unknown — honest fallback, same sentinel the EVM path uses
+        const rawLastTrade = Number(t.lastTradeTime);
+        const hasLastTrade = Number.isFinite(rawLastTrade) && rawLastTrade > 0;
+        const rawPnl = Number(t.pnl);
+        const pnl = Number.isFinite(rawPnl) ? rawPnl : 0;
+        const rawPnlPct = Number(t.pnlPercent);
+        const pnlPercent = Number.isFinite(rawPnlPct) ? rawPnlPct : 0;
         const score = computeWhaleScore({
           totalVolumeUsd: t.volume,
           trades: t.trades,
@@ -176,14 +189,14 @@ async function getSolanaWhales(): Promise<WhaleProfile[]> {
           whaleScore: score,
           totalVolumeUsd: t.volume,
           volumeStr: fmt(t.volume),
-          pnl: t.pnl,
-          pnlStr: `${t.pnl >= 0 ? '+' : ''}${fmt(Math.abs(t.pnl))}`,
-          pnlPercent: t.pnlPercent,
+          pnl,
+          pnlStr: `${pnl >= 0 ? '+' : ''}${fmt(Math.abs(pnl))}`,
+          pnlPercent,
           winRate: winRatePct,
           trades: t.trades,
           winTrades: t.winTrades,
           lossTrades: t.lossTrades,
-          lastTradeTime: timeAgo(t.lastTradeTime * 1000),
+          lastTradeTime: hasLastTrade ? timeAgo(rawLastTrade * 1000) : 'Unknown',
           recentTokens: [],
           featured: i < 3,
           tags: ['Solana', t.volume >= 1e6 ? 'High Volume' : 'Active'],

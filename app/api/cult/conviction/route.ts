@@ -61,7 +61,11 @@ export async function GET(_req: NextRequest) {
     admin.from('cult_convictions')
       .select('id, user_id, asset, chain, direction, thesis, status, score, created_at, resolved_at')
       .eq('status', 'scored')
-      .order('score', { ascending: false })
+      // Exclude un-scored rows and force NULLS LAST: Postgres orders NULLs
+      // FIRST on DESC by default, which would float any scored-but-null row to
+      // the TOP of "Top convictions" above real high scores.
+      .not('score', 'is', null)
+      .order('score', { ascending: false, nullsFirst: false })
       .limit(10),
   ]);
 

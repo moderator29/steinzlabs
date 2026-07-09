@@ -4,9 +4,17 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { sendVerificationEmail } from '@/lib/email';
 import { generateVerifyToken } from '@/lib/authTokens';
 import { getSiteUrl } from '@/lib/siteUrl';
+import { rateLimit, rateLimitResponse } from '@/lib/rateLimit';
 
 export async function POST(request: Request) {
   try {
+    // Throttle per IP: this fires a verification email and (via the 404 vs
+    // success responses) is an account-existence oracle. Left unthrottled it's
+    // an email-bombing + enumeration surface. Mirrors the forgot-password cap.
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const rl = await rateLimit(`auth:resend-verification:${ip}`, { interval: 3_600_000, maxRequests: 5 });
+    if (!rl.success) return rateLimitResponse(rl);
+
     const { email } = await request.json();
     if (!email) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });

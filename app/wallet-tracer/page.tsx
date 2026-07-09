@@ -140,10 +140,10 @@ export default function WalletTracerPage() {
                 )}
 
                 <div className="grid grid-cols-3 gap-4">
-                  {intel.transactionCount !== undefined && (
+                  {intel.transactionCount != null && Number.isFinite(Number(intel.transactionCount)) && (
                     <div className="nl-card rounded-lg p-4">
                       <div className="text-gray-400 text-sm">Transactions</div>
-                      <div className="text-white text-xl font-bold mt-1">{intel.transactionCount.toLocaleString()}</div>
+                      <div className="text-white text-xl font-bold mt-1">{Number(intel.transactionCount).toLocaleString()}</div>
                     </div>
                   )}
                   {intel.totalVolume && (
@@ -155,7 +155,7 @@ export default function WalletTracerPage() {
                   {intel.scamHistory && (
                     <div className="bg-red-500/10 rounded-lg p-4 border border-red-500/30">
                       <div className="text-red-400 text-sm">Scam History</div>
-                      <div className="text-red-400 text-xl font-bold mt-1">{intel.scamHistory.totalRugs} rugs</div>
+                      <div className="text-red-400 text-xl font-bold mt-1">{intel.scamHistory.totalRugs ?? 0} rugs</div>
                     </div>
                   )}
                 </div>

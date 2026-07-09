@@ -17,7 +17,16 @@ const Body = z.object({
   show_wallet_balance:  z.boolean().optional(),
   show_activity:        z.boolean().optional(),
   bio:                  z.string().max(500).optional(),
-  social_links:         z.record(z.string(), z.string().url().max(512)).optional(),
+  // z.string().url() ALSO accepts javascript:/data: URIs, which become a stored
+  // XSS the moment a viewer clicks the link on the public profile. Constrain the
+  // protocol to http(s) at the write boundary so those values never persist.
+  social_links:         z.record(
+                          z.string(),
+                          z.string().url().max(512).refine(
+                            (u) => /^https?:\/\//i.test(u),
+                            { message: 'Only http(s) links are allowed' },
+                          ),
+                        ).optional(),
   // Real contact email for wallet users (whose auth email is synthetic
   // {address}@wallet.nakalabs.xyz). Empty string clears it.
   contact_email:        z.union([z.string().email().max(254), z.literal('')]).optional(),

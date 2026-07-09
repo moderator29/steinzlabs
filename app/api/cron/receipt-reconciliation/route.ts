@@ -312,7 +312,11 @@ export async function GET(request: NextRequest) {
               .eq("token_address", row.token_address)
               .eq("action", "buy")
               .eq("status", "success")
-              .is("pnl_usd", null)
+              // "Consumed" is tracked by pnl_matched_at, NOT pnl_usd. The buy leg
+              // must never carry a pnl_usd value or every consumer that sums/
+              // filters pnl_usd double-counts the round trip (2x dashboard PnL,
+              // inflated reputation). Realized pnl lives only on the sell row.
+              .is("pnl_matched_at", null)
               .order("created_at", { ascending: false })
               .limit(1)
               .maybeSingle();
@@ -320,9 +324,9 @@ export async function GET(request: NextRequest) {
             if (buyCostUsd > 0) {
               const pnlUsd = proceedsUsd - buyCostUsd;
               await admin.from("user_copy_trades").update({ pnl_usd: pnlUsd }).eq("id", row.id);
-              // Mark the matched buy with the same pnl so we don't double-count
-              // it against another future sell.
-              await admin.from("user_copy_trades").update({ pnl_usd: pnlUsd }).eq("id", matchedBuy!.id);
+              // Mark the matched buy consumed so a future sell can't re-match it,
+              // WITHOUT giving it a pnl_usd value (which would double-count).
+              await admin.from("user_copy_trades").update({ pnl_matched_at: new Date().toISOString() }).eq("id", matchedBuy!.id);
             }
           }
         }

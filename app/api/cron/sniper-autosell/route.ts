@@ -15,6 +15,7 @@
  */
 
 import { NextRequest } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { verifyCron, cronResponse, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getCurrentTokenPriceUsd, getEvmTokenDecimalsStrict, getSolanaTokenDecimals } from "@/lib/sniper/priceFeed";
@@ -127,6 +128,10 @@ export async function GET(request: NextRequest) {
     pnlPct?: number;
     pendingTradeId?: string;
   }> = [];
+
+  // Rows whose sell was dispatched more than this ago are treated as stuck and
+  // may be re-claimed (mirrors the auto-execute 120s stale-claim window).
+  const claimStaleIso = new Date(Date.now() - 120_000).toISOString();
 
   for (const pos of open) {
     if (!pos.chain || !pos.criteria_id) {
@@ -244,6 +249,27 @@ export async function GET(request: NextRequest) {
       BigInt(1e6)
     ).toString();
 
+    // Atomically claim this sell BEFORE broadcasting anything on-chain. The AA
+    // path below spends real tokens with no other cross-tick guard than the
+    // cron lock; if that lock ever fails, or a settlement write below is lost,
+    // a second tick would re-broadcast the SAME sell and dump the position
+    // twice. Setting sell_dispatched_at under a 120s stale window skips a row
+    // that is mid-flight while still letting a genuinely stuck row recover
+    // after the window (and a partial sell resumes unwinding once stale).
+    const { data: sellClaim } = await supabase
+      .from("sniper_executions")
+      .update({ sell_dispatched_at: new Date().toISOString() })
+      .eq("id", pos.id)
+      .is("realized_at", null)
+      .is("sell_pending_trade_id", null)
+      .or(`sell_dispatched_at.is.null,sell_dispatched_at.lt.${claimStaleIso}`)
+      .select("id")
+      .maybeSingle();
+    if (!sellClaim) {
+      summary.push({ id: pos.id, action: "skip", reason: "sell already in flight (claimed by another tick)" });
+      continue;
+    }
+
     // AA fast-path (#45): if the user has an active, owner-approved session key
     // on this chain, unwind the position right here as a background userOp
     // (token → USDC) — no browser, no pending-trade round trip. On any miss
@@ -276,18 +302,34 @@ export async function GET(request: NextRequest) {
         // Fully sold if not capped down (allow tiny rounding slack).
         const fullySold = soldBase * BigInt(1000) >= reqBase * BigInt(999);
         const remainingTokens = Math.max(0, (pos.tokens_received ?? 0) - tokensSold);
-        await supabase
-          .from("sniper_executions")
-          .update({
-            sell_tx_hash: aa.txHash,
-            sell_dispatched_at: new Date().toISOString(),
-            ...(fullySold ? { realized_at: new Date().toISOString() } : { tokens_received: remainingTokens }),
-            // Accumulate — a partial sell already recorded a chunk; don't overwrite
-            // it and lose the earlier chunk's realized PnL (it feeds reputation/stats).
-            ...(realizedPnlUsd != null ? { pnl_usd: (pos.pnl_usd ?? 0) + realizedPnlUsd } : {}),
-          })
-          .eq("id", pos.id)
-          .is("realized_at", null);
+        // The sell already broadcast on-chain, so this settlement write MUST
+        // stick: if it is lost, the position keeps realized_at=null and (once
+        // the 120s claim window lapses) a later tick re-sells it. Retry 3x +
+        // Sentry, mirroring the auto-execute settlement write.
+        let settleErr: { message: string } | null = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const { error: e } = await supabase
+            .from("sniper_executions")
+            .update({
+              sell_tx_hash: aa.txHash,
+              sell_dispatched_at: new Date().toISOString(),
+              ...(fullySold ? { realized_at: new Date().toISOString() } : { tokens_received: remainingTokens }),
+              // Accumulate — a partial sell already recorded a chunk; don't overwrite
+              // it and lose the earlier chunk's realized PnL (it feeds reputation/stats).
+              ...(realizedPnlUsd != null ? { pnl_usd: (pos.pnl_usd ?? 0) + realizedPnlUsd } : {}),
+            })
+            .eq("id", pos.id)
+            .is("realized_at", null);
+          settleErr = e;
+          if (!e) break;
+          await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+        }
+        if (settleErr) {
+          Sentry.captureException(
+            new Error(`AA autosell sold on-chain but settlement write failed (tx ${aa.txHash}, pos ${pos.id}): ${settleErr.message}`),
+            { tags: { source: "sniper-autosell", posId: pos.id, txHash: aa.txHash } },
+          );
+        }
 
         summary.push({
           id: pos.id,

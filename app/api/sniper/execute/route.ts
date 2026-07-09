@@ -126,7 +126,18 @@ export const POST = withTierGate('max', async (req: NextRequest) => {
   if (!concentrationOk) return NextResponse.json({ blocked: true, reason: `Top 10 holders control ${top10Pct.toFixed(0)}%`, steps });
 
   const pairs = await searchPairs(address).catch(() => []);
-  const liq = pairs[0]?.liquidity?.usd ?? 0;
+  // searchPairs() hits DexScreener's cross-chain search, which returns pools for
+  // the SAME address string on every chain it appears (CREATE2 redeploys, etc).
+  // The liquidity gate must only trust a pool on the chain we're actually
+  // sniping — otherwise a thin/rug pool on `chain` could borrow a deep pool's
+  // liquidity from another network and pass the ≥$10k check. Filter to the
+  // requested chain and take the deepest such pool; NO cross-chain fallback, so
+  // "no pool on this chain" fails closed to $0 (blocked). Strengthens step 4.
+  const onChainPairs = pairs
+    .filter((p) => p.chainId === chain)
+    .sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0));
+  const bestPair = onChainPairs[0] ?? null;
+  const liq = bestPair?.liquidity?.usd ?? 0;
   const liqOk = liq >= 10_000;
   steps.push({ step: 4, label: 'Liquidity Check (≥$10k)', passed: liqOk, detail: `Pool liquidity: $${liq.toLocaleString()}` });
   if (!liqOk) return NextResponse.json({ blocked: true, reason: `Insufficient liquidity: $${liq.toLocaleString()}`, steps });
@@ -166,8 +177,8 @@ export const POST = withTierGate('max', async (req: NextRequest) => {
     steps,
     liquidity: liq,
     slippage,
-    pair: pairs[0]?.pairAddress ?? null,
-    price: pairs[0]?.priceUsd ? parseFloat(pairs[0].priceUsd) : null,
+    pair: bestPair?.pairAddress ?? null,
+    price: bestPair?.priceUsd ? parseFloat(bestPair.priceUsd) : null,
     execution_time_ms: executionTimeMs,
   };
   // C.7: cache the success response so a retry with the same

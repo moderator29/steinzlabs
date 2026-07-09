@@ -48,8 +48,9 @@ interface EvmQuote {
 }
 
 interface SolQuote {
-  outAmount?: string;
-  inAmount?: string;
+  // /api/swap/quote (Jupiter) returns the buy amount as `buyAmount` (base
+  // units) — matching the EVM shape — NOT `outAmount`.
+  buyAmount?: string;
   priceImpactPct?: string;
   routePlan?: Array<{ swapInfo?: { label?: string } }>;
 }
@@ -85,14 +86,26 @@ export function LiteSwapModal({ open, onClose, tokenAddress, tokenSymbol, chain,
       setError(null);
       try {
         if (isSolana) {
+          // Solana quotes route through /api/swap/quote (Jupiter), same as
+          // EVM. The old code hit /api/swap/price with `inputMint`/`outputMint`
+          // params the route never reads (it wants sellToken/buyToken/sellAmount)
+          // so every Solana quote 400'd, and it read `outAmount` which the route
+          // doesn't return — the quote box was permanently stuck on "—".
+          // Jupiter needs a real taker to build the route, so require one.
+          if (!takerAddress) throw new Error('Connect your Solana wallet to quote this swap');
           const params = new URLSearchParams({
-            inputMint: sellToken,
-            outputMint: tokenAddress,
-            amount: sellAmountRaw,
+            chain: 'solana',
+            sellToken,
+            buyToken: tokenAddress,
+            sellAmount: sellAmountRaw,
             slippageBps: String(slippageBps),
+            taker: takerAddress,
           });
-          const res = await fetch(`/api/swap/price?${params}&chain=solana`, { cache: 'no-store' });
-          if (!res.ok) throw new Error(`Quote ${res.status}`);
+          const res = await fetch(`/api/swap/quote?${params}`, { cache: 'no-store' });
+          if (!res.ok) {
+            const j = await res.json().catch(() => ({}));
+            throw new Error((j as { error?: string }).error ?? `Quote ${res.status}`);
+          }
           const data = (await res.json()) as SolQuote;
           if (!cancelled) setQuote(data);
         } else {
@@ -101,6 +114,7 @@ export function LiteSwapModal({ open, onClose, tokenAddress, tokenSymbol, chain,
             sellToken,
             buyToken: tokenAddress,
             sellAmount: sellAmountRaw,
+            slippageBps: String(slippageBps),
             taker: takerAddress ?? '0x0000000000000000000000000000000000000000',
           });
           const res = await fetch(`/api/swap/quote?${params}`, { cache: 'no-store' });
@@ -124,7 +138,7 @@ export function LiteSwapModal({ open, onClose, tokenAddress, tokenSymbol, chain,
 
   const outAmountStr = quote
     ? (isSolana
-        ? formatTokenAmount((quote as SolQuote).outAmount, null)
+        ? formatTokenAmount((quote as SolQuote).buyAmount, null)
         : formatTokenAmount((quote as EvmQuote).buyAmount, null))
     : null;
   const priceImpact = quote
@@ -156,7 +170,7 @@ export function LiteSwapModal({ open, onClose, tokenAddress, tokenSymbol, chain,
       aria-modal="true"
       aria-labelledby="lite-swap-title"
     >
-      <div ref={trapRef} className="nl-glass rounded-2xl p-5 w-full max-w-sm" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+      <div ref={trapRef} className="nl-glass rounded-2xl p-5 w-full max-w-sm max-h-[90dvh] overflow-y-auto" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Repeat className="w-4 h-4 text-[#0066FF]" aria-hidden />

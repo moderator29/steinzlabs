@@ -3,11 +3,81 @@
  * Internal security data provider — backend only, never expose provider name in UI
  */
 
+import { createHash } from 'crypto';
 import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
 const GOPLUS_BASE = 'https://api.gopluslabs.io/api/v1';
-const API_KEY = process.env.GOPLUS_API_KEY || '';
 const TIMEOUT_MS = parseInt(process.env.GOPLUS_TIMEOUT_MS || '15000', 10);
+
+// GoPlus authentication.
+//
+// GoPlus does NOT authenticate via a static key in the Authorization header.
+// The paid plan is unlocked with a short-lived ACCESS TOKEN obtained by signing
+// (app_key + time + app_secret) with SHA1 and POSTing it to /token. That token
+// is then sent as the Authorization header. The old code sent GOPLUS_API_KEY
+// verbatim as Authorization, which GoPlus ignores — so every request was served
+// as anonymous public-tier (invisible to the account dashboard, heavily
+// rate-limited). Setting GOPLUS_APP_KEY + GOPLUS_APP_SECRET makes requests count
+// against the plan and lifts the rate limit.
+const APP_KEY = process.env.GOPLUS_APP_KEY || '';
+const APP_SECRET = process.env.GOPLUS_APP_SECRET || '';
+
+let cachedToken: { token: string; expiresAt: number } | null = null;
+let tokenInflight: Promise<string | null> | null = null;
+
+async function getAccessToken(): Promise<string | null> {
+  // Without app credentials we fall back to the PUBLIC tier by sending no
+  // Authorization header at all. We deliberately do NOT send the legacy static
+  // key: an unrecognized Authorization value risks a 401, whereas omitting it
+  // cleanly serves the (rate-limited) public tier.
+  if (!APP_KEY || !APP_SECRET) return null;
+  const now = Date.now();
+  // Refresh a minute before expiry so an in-flight request never races expiry.
+  if (cachedToken && cachedToken.expiresAt - 60_000 > now) return cachedToken.token;
+  if (tokenInflight) return tokenInflight;
+  tokenInflight = (async () => {
+    try {
+      const time = Math.floor(now / 1000);
+      const sign = createHash('sha1').update(`${APP_KEY}${time}${APP_SECRET}`).digest('hex');
+      const res = await fetch(`${GOPLUS_BASE}/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ app_key: APP_KEY, time, sign }),
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      const token: string | undefined = data?.result?.access_token;
+      const expiresIn = Number(data?.result?.expires_in) || 3600;
+      if (data?.code === 1 && token) {
+        cachedToken = { token, expiresAt: now + expiresIn * 1000 };
+        return token;
+      }
+      return null;
+    } catch {
+      return null;
+    } finally {
+      tokenInflight = null;
+    }
+  })();
+  return tokenInflight;
+}
+
+async function authHeaders(): Promise<Record<string, string>> {
+  const token = await getAccessToken();
+  return token ? { Authorization: token } : {};
+}
+
+/**
+ * Shared GoPlus auth headers for the few other modules that call GoPlus
+ * directly (e.g. lib/security/sourceFetchers). Returns `{ Authorization }` with
+ * a live access token when app credentials are configured, otherwise `{}` so
+ * the request falls back to the public tier. Reuses the cached token so extra
+ * callers don't each mint their own.
+ */
+export async function goplusAuthHeaders(): Promise<Record<string, string>> {
+  return authHeaders();
+}
 
 const CHAIN_MAP: Record<string, string> = {
   ethereum: '1', eth: '1',
@@ -31,13 +101,19 @@ export class SecurityRateLimitError extends Error {
   constructor() { super('Security API rate-limited'); this.name = 'SecurityRateLimitError'; }
 }
 
-async function goplusGet(path: string): Promise<any> {
+async function goplusGet(path: string, _retriedAuth = false): Promise<any> {
   const url = `${GOPLUS_BASE}${path}`;
   const res = await fetch(url, {
-    headers: { Authorization: API_KEY },
+    headers: await authHeaders(),
     next: { revalidate: 60 },
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
+  // A 401/403 usually means the cached access token expired mid-window; drop it
+  // and retry once with a freshly minted token before giving up.
+  if ((res.status === 401 || res.status === 403) && !_retriedAuth && APP_KEY && APP_SECRET) {
+    cachedToken = null;
+    return goplusGet(path, true);
+  }
   // #39: surface 429 as a typed error so callers can return a "temporarily
   // unavailable, retry shortly" state instead of collapsing it into a hidden/
   // empty panel that reads like "no data".
@@ -669,7 +745,7 @@ export async function simulateTransaction(
     const body = { chain_id: chainId, from_address: fromAddress, to_address: toAddress, input_data: data, value };
     const res = await fetch(`${GOPLUS_BASE}/transaction/simulation`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: API_KEY },
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });

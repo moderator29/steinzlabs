@@ -1,5 +1,5 @@
 import 'server-only';
-import { getTokenBalances, getEthBalance, isHolderOfContract } from '@/lib/services/alchemy';
+import { getTokenBalances, getTokenMetadata, getEthBalance, isHolderOfContract } from '@/lib/services/alchemy';
 import { getSolanaWalletTokens, getSolanaAssetsByOwner } from '@/lib/services/alchemy-solana';
 
 /**
@@ -119,7 +119,12 @@ async function resolveEvm(addr: string): Promise<CultHoldings> {
       const balances = await getTokenBalances(addr, 'ethereum');
       const match = balances.find(b => b.contractAddress.toLowerCase() === tokenContract.toLowerCase());
       if (match?.tokenBalance) {
-        const decimals = match.decimals ?? 18;
+        // getTokenBalances does not return per-token decimals, so read the real
+        // decimals for the $NAKA contract from token metadata. Defaulting to 18
+        // for a non-18-decimal token would mis-scale the balance by orders of
+        // magnitude and silently break the membership threshold check.
+        const meta = await getTokenMetadata(tokenContract, 'ethereum').catch(() => null);
+        const decimals = typeof meta?.decimals === 'number' ? meta.decimals : 18;
         nakaBalance = Number(BigInt(match.tokenBalance)) / 10 ** decimals;
       }
     } catch {

@@ -1,5 +1,18 @@
 import 'server-only';
+import { timingSafeEqual } from 'crypto';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+
+/**
+ * Constant-time compare for the static ADMIN_BEARER_TOKEN. A plain `===`
+ * short-circuits on the first differing byte, leaking the shared secret's
+ * matching prefix length through response timing. Compare over buffers.
+ */
+function tokenMatches(provided: string, expected: string): boolean {
+  const a = Buffer.from(provided, 'utf8');
+  const b = Buffer.from(expected, 'utf8');
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
 
 /**
  * ADM1: admin authentication with granular role + permission matrix.
@@ -75,7 +88,7 @@ export async function verifyAdminContext(request: Request): Promise<AdminContext
     // Static ADMIN_BEARER_TOKEN — treated as super_admin so existing
     // cron + integration callers keep working.
     const adminBearerToken = process.env.ADMIN_BEARER_TOKEN;
-    if (adminBearerToken && token === adminBearerToken) {
+    if (adminBearerToken && tokenMatches(token, adminBearerToken)) {
       return { userId: 'admin-bearer', role: 'super_admin', staticBearer: true };
     }
 

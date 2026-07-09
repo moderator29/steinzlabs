@@ -208,25 +208,33 @@ export async function getTokensMulti(
 
       const pairs = data.pairs ?? [];
 
-      // Group by base token address, pick highest-liquidity pair per token
-      const byToken = new Map<string, DexPair>();
+      // Group ALL pairs by base token address. We need the full per-token list
+      // (not just the single deepest pair) because we cache it under the SHARED
+      // `token_pairs` key that getTokenPairs()/getDexPriceForChain() also read.
+      // Caching only `[best]` here corrupted that key: a later chain-scoped
+      // price lookup (getDexPriceForChain) filters the cached list by chain, so
+      // a token whose deepest pair is on another chain read back as $0 even
+      // though it really trades on the requested chain.
+      const pairsByToken = new Map<string, DexPair[]>();
       for (const pair of pairs) {
         const addr = normalizeAddress(pair.baseToken.address, pair.chainId);
-        const existing = byToken.get(addr);
-        if (!existing || (pair.liquidity?.usd ?? 0) > (existing.liquidity?.usd ?? 0)) {
-          byToken.set(addr, pair);
-        }
+        const list = pairsByToken.get(addr);
+        if (list) list.push(pair);
+        else pairsByToken.set(addr, [pair]);
       }
 
-      // Write results + cache each token's pairs
+      // Write results + cache each token's FULL pair list.
       for (const addr of chunk) {
         const norm = normalizeAddress(addr, chain);
-        const best = byToken.get(norm);
-        if (best) {
+        const list = pairsByToken.get(norm);
+        if (list && list.length) {
+          const best = list.reduce((a, b) =>
+            (b.liquidity?.usd ?? 0) > (a.liquidity?.usd ?? 0) ? b : a,
+          );
           result.set(norm, best);
           cache.set(
             cacheKey('dexscreener', 'token_pairs', { tokenAddress: norm }),
-            [best],
+            list,
             TTL.TOKEN_PRICE
           );
         }

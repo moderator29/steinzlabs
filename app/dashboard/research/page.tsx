@@ -15,6 +15,7 @@ import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { TiltCard } from '@/components/brand/TiltCard';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { researchHowItWorks } from '@/lib/howItWorks/content/research';
+import { sanitizeHtml } from '@/lib/utils/sanitize';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface ResearchPost {
@@ -264,7 +265,7 @@ function ArticleView({ post, onBack }: { post: ResearchPost; onBack: () => void 
           correctly so HTML markup is never shown as raw text. */}
       <div className="nl-fade-up nl-fade-up-3">
         {/<\/?[a-z][\s\S]*>/i.test(post.content) ? (
-          <div className="nl-research-content text-[13px]" dangerouslySetInnerHTML={{ __html: post.content }} />
+          <div className="nl-research-content text-[13px]" dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }} />
         ) : (
           <div className="text-[13px] text-gray-300 leading-relaxed whitespace-pre-wrap">{post.content}</div>
         )}
@@ -355,7 +356,7 @@ function MarketBriefCard({ post, onOpen }: { post: ResearchPost; onOpen: () => v
             {isHtml ? (
               <div
                 className="nl-research-content text-[13px]"
-                dangerouslySetInnerHTML={{ __html: post.content }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }}
               />
             ) : (
               <div className="text-[13px] text-gray-300 leading-relaxed whitespace-pre-wrap">{post.content}</div>

@@ -91,7 +91,7 @@ export default function FollowWhaleModal({
   return (
     <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full md:max-w-md nl-glass rounded-t-2xl md:rounded-2xl shadow-2xl overflow-hidden">
+      <div className="relative w-full md:max-w-md nl-glass rounded-t-2xl md:rounded-2xl shadow-2xl max-h-[90dvh] overflow-y-auto">
         <div className="px-5 py-4 border-b border-white/10 flex items-center gap-2">
           <h2 className="font-bold">Follow {whale.label || whale.address.slice(0, 8)}</h2>
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 uppercase">{whale.chain}</span>

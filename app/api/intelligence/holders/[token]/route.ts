@@ -40,6 +40,10 @@ async function persistSnapshot(
   topHolders: Array<{ percentage: number }>,
 ): Promise<void> {
   try {
+    // holderCount is 0 when the real total is unknown (GoPlus had no figure).
+    // Skip the snapshot so the BubbleMapTimelineChart never plots a fabricated
+    // "0 holders" point that would read as a total collapse.
+    if (!(holderCount > 0)) return;
     const top10Pct = topHolders.slice(0, 10).reduce((s, h) => s + (h.percentage ?? 0), 0);
     const supabase = getSupabaseAdmin();
     // Upsert one row per (token, chain, day). The partial unique

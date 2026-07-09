@@ -449,12 +449,12 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
             <StatInline label="6h" value={`${change6h >= 0 ? '+' : ''}${change6h.toFixed(2)}%`} tone={change6h >= 0 ? 'up' : 'down'} />
           )}
           <StatInline label="24h" value={`${change24hUnified >= 0 ? '+' : ''}${change24hUnified.toFixed(2)}%`} tone={change24hUnified >= 0 ? 'up' : 'down'} />
-          <StatInline label="5m Vol" value={vol5m != null && vol5m > 0 ? `$${formatLargeNumber(vol5m)}` : '—'} />
-          <StatInline label="24h Vol" value={volume24h ? `$${formatLargeNumber(volume24h)}` : '—'} />
-          <StatInline label="24h Buy" value={buys24h != null && buys24h > 0 ? formatLargeNumber(buys24h) : '—'} tone={buys24h && buys24h > 0 ? 'up' : undefined} />
-          <StatInline label="24h Sell" value={sells24h != null && sells24h > 0 ? formatLargeNumber(sells24h) : '—'} tone={sells24h && sells24h > 0 ? 'down' : undefined} />
-          <StatInline label="Mcap" value={marketCap ? `$${formatLargeNumber(marketCap)}` : '—'} />
-          <StatInline label="FDV" value={fdv ? `$${formatLargeNumber(fdv)}` : '—'} />
+          <StatInline label="5m Vol" value={vol5m != null && vol5m > 0 ? formatLargeNumber(vol5m) : '—'} />
+          <StatInline label="24h Vol" value={volume24h ? formatLargeNumber(volume24h) : '—'} />
+          <StatInline label="24h Buy" value={buys24h != null && buys24h > 0 ? buys24h.toLocaleString() : '—'} tone={buys24h && buys24h > 0 ? 'up' : undefined} />
+          <StatInline label="24h Sell" value={sells24h != null && sells24h > 0 ? sells24h.toLocaleString() : '—'} tone={sells24h && sells24h > 0 ? 'down' : undefined} />
+          <StatInline label="Mcap" value={marketCap ? formatLargeNumber(marketCap) : '—'} />
+          <StatInline label="FDV" value={fdv ? formatLargeNumber(fdv) : '—'} />
         </div>
       </div>
 

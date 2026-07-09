@@ -29,6 +29,14 @@ export interface TradeIntent {
   fromTokenSymbol?: string | null;
   toTokenAddress: string;
   toTokenSymbol?: string | null;
+  /**
+   * RAW base units of the from-token (wei / smallest unit) as a decimal string.
+   * This is what every caller passes (limit-order-monitor/dca-executor/
+   * stop-loss-monitor all pass an *amountInBase value) and what the read path
+   * requires: it is written verbatim to pending_trades.amount_in and later fed
+   * to getSwapQuote/Jupiter as `sellAmount`, both of which do BigInt(sellAmount)
+   * and therefore reject a human-decimal value. Do NOT pass a human amount here.
+   */
   amountIn: string;
   slippageBps: number;
   reason: TradeNotificationReason;
@@ -64,8 +72,7 @@ export interface TradeResult {
   broadcastTxHash?: string;
 }
 
-const HONEYPOT_BLOCK_TRUST_FLOOR = 40; // trustScore below this + honeypot = block
-const CRITICAL_TRUST_FLOOR = 20;        // always block regardless of honeypot flag
+const CRITICAL_TRUST_FLOOR = 20;        // always block on low composite trust
 
 export async function executeTrade(intent: TradeIntent): Promise<TradeResult> {
   try {
@@ -83,11 +90,25 @@ export async function executeTrade(intent: TradeIntent): Promise<TradeResult> {
         const sec = await getTokenSecurity(intent.toTokenAddress, intent.chain);
         trustScore = sec.trustScore;
         isHoneypot = sec.isHoneypot;
-        if (sec.isHoneypot && sec.trustScore < HONEYPOT_BLOCK_TRUST_FLOOR) {
+        // Hard flags block UNCONDITIONALLY, mirroring isHighRisk (lib/services/goplus.ts).
+        // A confirmed honeypot is only a single -40 score hit, so a pure honeypot
+        // reports trustScore=60 — the old `isHoneypot && trustScore < 40` conjunction
+        // therefore never fired for exactly the tokens it was meant to stop. Each
+        // affirmative rug flag must independently block regardless of the composite.
+        const hardFlag =
+          sec.isHoneypot ||
+          sec.cannotBuy ||
+          sec.cannotSellAll ||
+          sec.selfDestruct ||
+          sec.canTakeBackOwnership ||
+          sec.ownerCanChangeBalance ||
+          sec.hasHiddenOwner ||
+          (sec.sellTax ?? 0) > 0.30;
+        if (hardFlag) {
           return {
             success: false,
             securityBlocked: true,
-            failureReason: `Blocked: token flagged as honeypot (trust ${sec.trustScore}/100)`,
+            failureReason: `Blocked: token failed a hard security check (honeypot or rug risk detected, trust ${sec.trustScore}/100)`,
           };
         }
         if (sec.trustScore < CRITICAL_TRUST_FLOOR || sec.safetyLevel === "DANGER") {

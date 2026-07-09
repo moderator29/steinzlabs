@@ -45,6 +45,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
+  // Re-apply the same floors POST enforces. Without this a PATCH can set
+  // interval_seconds below the 1h minimum (making the bot fire far more often
+  // than the cap allows) or a non-positive amount_per_execution.
+  if (body.amount_per_execution !== undefined && !(body.amount_per_execution > 0)) {
+    return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
+  }
+  if (body.interval_seconds !== undefined && !(body.interval_seconds >= 3600)) {
+    return NextResponse.json({ error: "Invalid interval (min 1h)" }, { status: 400 });
+  }
+
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (body.status) update.status = body.status;
   if (body.amount_per_execution !== undefined) update.amount_per_execution = body.amount_per_execution;

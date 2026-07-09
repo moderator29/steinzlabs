@@ -7,6 +7,7 @@ import {
 } from '@/lib/services/dexscreener';
 import { getPoolStats } from '@/lib/services/geckoterminal';
 import { resolveTokenId } from '@/lib/market/tokenIdMaps';
+import { headlineMarketCap, clampFdv } from '@/lib/market/headline';
 import type { TokenStats, StatTier, TxnTier } from '@/lib/market/tokenStats';
 
 export const dynamic = 'force-dynamic';
@@ -84,6 +85,16 @@ async function fromDexScreener(id: string, chain: string): Promise<TokenStats | 
   const socials = extractDexSocials(pair);
   const { change, volume, txns } = tiersFromPair(pair);
 
+  // Headline market-cap convention (lib/market/headline.ts) — the SAME logic the
+  // coin-detail route (/api/market/token/[id]) already applies. DexScreener's
+  // circulating `marketCap` is unreliable for long-tail tokens, so the FDV is
+  // headlined when it exceeds it. Without this the left stats panel showed the
+  // raw circulating cap (e.g. $116M) while the header strip on the SAME page
+  // showed the headline figure (e.g. $267M) for the identical token. Zeros are
+  // nulled so the panel keeps its honest "—" empty state.
+  const headlineMc = headlineMarketCap(pair.fdv, pair.marketCap);
+  const clampedFdv = clampFdv(pair.fdv ?? pair.marketCap, headlineMc);
+
   // Real unique buyer/seller counts from GeckoTerminal when the chain + pool
   // are supported. Falls through to null (honest empty Traders state) otherwise.
   let buyers24h: number | null = null;
@@ -115,8 +126,8 @@ async function fromDexScreener(id: string, chain: string): Promise<TokenStats | 
     priceNative: pair.priceNative || null,
     nativeSymbol: pair.quoteToken?.symbol ? pair.quoteToken.symbol.toUpperCase() : null,
     liquidityUsd: num(pair.liquidity?.usd),
-    fdv: num(pair.fdv),
-    marketCap: num(pair.marketCap),
+    fdv: clampedFdv > 0 ? clampedFdv : null,
+    marketCap: headlineMc > 0 ? headlineMc : null,
     change,
     volume,
     txns,

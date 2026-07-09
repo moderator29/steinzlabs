@@ -138,21 +138,31 @@ export default function SettingsPage() {
   }, [newPassword, confirmPassword]);
 
   const handleDeleteAccount = useCallback(async () => {
-    if (deleteConfirm !== 'DELETE') {
-      toast.error('Type DELETE to confirm');
+    // The API gate requires the account email in the body (CSRF-hardening).
+    // The client must send it and match locally so the button never fires a
+    // request that is guaranteed to 400.
+    if (!userEmail || deleteConfirm.trim().toLowerCase() !== userEmail.toLowerCase()) {
+      toast.error('Type your account email to confirm');
       return;
     }
     setDeleteLoading(true);
     try {
-      const res = await fetch('/api/account/delete', { method: 'POST' });
-      if (!res.ok) throw new Error('Delete failed');
+      const res = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: deleteConfirm.trim() }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => null);
+        throw new Error((j as { error?: string } | null)?.error || 'Delete failed');
+      }
       await supabase.auth.signOut();
       window.location.href = '/';
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete account');
       setDeleteLoading(false);
     }
-  }, [deleteConfirm]);
+  }, [deleteConfirm, userEmail]);
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -390,18 +400,18 @@ export default function SettingsPage() {
                   <p className="text-gray-400 text-sm mb-4">This action is irreversible. All your data will be permanently deleted.</p>
                   <div className="space-y-3">
                     <div>
-                      <label className="text-sm text-gray-400 mb-1 block">Type <span className="text-white font-mono">DELETE</span> to confirm</label>
+                      <label className="text-sm text-gray-400 mb-1 block">Type your account email <span className="text-white font-mono">{userEmail}</span> to confirm</label>
                       <input
-                        type="text"
+                        type="email"
                         value={deleteConfirm}
                         onChange={e => setDeleteConfirm(e.target.value)}
-                        placeholder="DELETE"
+                        placeholder="you@example.com"
                         className="w-full nl-card border border-red-900/40 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-red-500/60"
                       />
                     </div>
                     <button
                       onClick={handleDeleteAccount}
-                      disabled={deleteLoading || deleteConfirm !== 'DELETE'}
+                      disabled={deleteLoading || !userEmail || deleteConfirm.trim().toLowerCase() !== userEmail.toLowerCase()}
                       className="flex items-center gap-2 bg-red-600/20 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-red-400 hover:text-white border border-red-600/40 font-medium px-6 py-2 rounded-lg transition-colors"
                     >
                       {deleteLoading && <Loader2 size={14} className="animate-spin" />}

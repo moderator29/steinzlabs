@@ -260,7 +260,7 @@ export async function runClusterAgent(input: ClusterAgentInput): Promise<Cluster
   try {
     const session = await (client.beta as any).sessions?.create?.({
       system: CLUSTER_SYSTEM_PROMPT,
-      model: 'claude-sonnet-4-6',
+      model: 'claude-sonnet-5',
     });
     sessionId = session?.id;
   } catch {
@@ -291,7 +291,7 @@ Run your full analysis. Fetch transfers and trades for ALL wallets, then run clu
     iterations++;
 
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-sonnet-5',
       max_tokens: 8192,
       system: CLUSTER_SYSTEM_PROMPT,
       tools: CLUSTER_TOOLS,

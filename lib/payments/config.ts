@@ -42,6 +42,13 @@ export function treasuryAddress(): string | null {
 
 /**
  * Amount tolerance (in USDC) when matching an on-chain transfer to a pending
- * payment. Small because we use a unique cents offset per payment.
+ * payment. This MUST stay well below the smallest gap between two distinct
+ * expected amounts, otherwise the "unique amount" stops being unique and one
+ * user's transfer can be matched to another user's pending payment. The
+ * per-payment offset is minted in steps of 0.00001 USDC (randomInt / 100000),
+ * so adjacent amounts differ by only 1e-5; a tolerance of 1e-6 (one USDC base
+ * unit) absorbs any decimal-rounding on the transfer read while keeping every
+ * distinct amount unambiguous. USDC transfers are exact to 6 decimals, so an
+ * on-the-nose payment always matches with room to spare.
  */
-export const AMOUNT_MATCH_TOLERANCE = 0.005;
+export const AMOUNT_MATCH_TOLERANCE = 0.000001;

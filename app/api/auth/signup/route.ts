@@ -27,10 +27,18 @@ export async function POST(request: Request) {
       }
       try {
         const admin = getSupabaseAdmin();
+        // Case-insensitive availability probe: the uniqueness contract is the
+        // profiles_username_lower_key index on lower(username), so a stored
+        // "Bob" must read as taken when probing "bob". `.eq` on the lowercased
+        // value would miss any mixed-case row. cleanUsername is charset-validated
+        // above ([a-z0-9_]) but `_` is a legal char AND an ILIKE single-char
+        // wildcard, so `foo_bar` would spuriously match `fooXbar`. Escape the
+        // ILIKE metacharacters so the probe is an exact case-insensitive match.
+        const escapedUsername = cleanUsername.replace(/[\\%_]/g, '\\$&');
         const { data: existingProfile, error: profileError } = await admin
           .from('profiles')
           .select('id')
-          .eq('username', cleanUsername)
+          .ilike('username', escapedUsername)
           .maybeSingle();
         if (!profileError) {
           return NextResponse.json({ available: !existingProfile });
@@ -108,8 +116,21 @@ export async function POST(request: Request) {
     });
 
     if (createError) {
-
-      if (createError.message.toLowerCase().includes('already') || createError.message.toLowerCase().includes('exists') || createError.message.toLowerCase().includes('duplicate')) {
+      const msg = createError.message?.toLowerCase() ?? '';
+      // A case-insensitive username collision surfaces here because the
+      // handle_new_user() trigger inserts the profile row inside createUser and
+      // trips the profiles_username_lower_key unique index (Postgres 23505).
+      // Match it FIRST — the raw message contains "duplicate"/"unique", so the
+      // generic email branch below would otherwise swallow it into a misleading
+      // "email already exists" (or, for other constraints, a raw 500).
+      if (
+        (createError as { code?: string }).code === '23505' ||
+        msg.includes('profiles_username') ||
+        (msg.includes('username') && (msg.includes('duplicate') || msg.includes('unique')))
+      ) {
+        return NextResponse.json({ error: 'Username is already taken' }, { status: 400 });
+      }
+      if (msg.includes('already') || msg.includes('exists') || msg.includes('duplicate')) {
         return NextResponse.json({ error: 'An account with this email already exists. Try signing in.' }, { status: 400 });
       }
       return NextResponse.json({ error: createError.message }, { status: 500 });
@@ -119,8 +140,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to create account.' }, { status: 500 });
     }
 
-    try {
-      await admin.from('profiles').upsert({
+    {
+      // handle_new_user() has already inserted the profile row; this upsert
+      // backfills email + created_at. A 23505 here means the username was taken
+      // (case-insensitively) between the pre-check and now (TOCTOU race) — roll
+      // back the just-created auth user and return a friendly, accurate error
+      // instead of leaving an orphaned account and reporting success.
+      const { error: profileErr } = await admin.from('profiles').upsert({
         id: newUser.user.id,
         first_name: firstName.trim(),
         last_name: lastName.trim(),
@@ -128,8 +154,16 @@ export async function POST(request: Request) {
         email: cleanEmail,
         created_at: new Date().toISOString(),
       }, { onConflict: 'id' });
-    } catch (profileErr: any) {
-
+      if (profileErr?.code === '23505') {
+        await admin.auth.admin.deleteUser(newUser.user.id).catch(() => {});
+        const pmsg = profileErr.message?.toLowerCase() ?? '';
+        if (pmsg.includes('email')) {
+          return NextResponse.json({ error: 'An account with this email already exists. Try signing in.' }, { status: 400 });
+        }
+        return NextResponse.json({ error: 'Username is already taken' }, { status: 400 });
+      }
+      // Any other profile write error is non-fatal: the trigger row already
+      // exists, so the account is usable and verification can proceed.
     }
 
     const token = await generateVerifyToken(newUser.user.id, cleanEmail);

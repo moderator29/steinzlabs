@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'node:crypto';
+import { safeCompareStrings } from '@/lib/security/webhookAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { matchSniperEvent } from '@/lib/sniper/matcher';
 import type { SniperChain } from '@/lib/sniper/chains';
@@ -63,7 +64,8 @@ function verifyAlchemy(raw: string, signature: string | null): boolean {
 function verifyHelius(authHeader: string | null): boolean {
   const secret = process.env.HELIUS_WEBHOOK_SECRET;
   if (!secret || !authHeader) return false;
-  return authHeader === secret;
+  // Constant-time compare — plain `===` leaks the secret via response timing.
+  return safeCompareStrings(authHeader, secret);
 }
 
 // Alchemy sends network slugs like ETH_MAINNET / BASE_MAINNET / MATIC_MAINNET.

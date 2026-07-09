@@ -42,12 +42,20 @@ export async function GET(request: NextRequest) {
     // Batch pricing (GeckoTerminal multi endpoint) is ~30x cheaper per token,
     // so we can scan a much larger slice per pass and actually drain the
     // NULL backlog instead of re-scanning the same newest 200 forever.
+    //
+    // Order OLDEST-in-window first. The in-window NULL backlog (~1.9k) exceeds
+    // this batch, so newest-first would re-scan the same freshest 600 each pass
+    // and let rows ranked past the batch age out of the 8d window permanently
+    // unpriced — the very starvation this backfill exists to prevent. Fresh
+    // rows are already priced at ingest (poll cron + webhooks); the stragglers
+    // this safety-net targets are precisely the older-in-window rows about to
+    // leave the window, so pricing them first is what actually drains it.
     const { data: rows, error } = await sb
       .from("whale_activity")
       .select("id, chain, token_address, token_symbol, amount")
       .or("value_usd.is.null,value_usd.eq.0")
       .gte("timestamp", sinceIso)
-      .order("timestamp", { ascending: false })
+      .order("timestamp", { ascending: true })
       .limit(600);
     if (error) {
       Sentry.captureException(error, { tags: { cron: NAME } });

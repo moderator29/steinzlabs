@@ -85,7 +85,7 @@ export const GET = withTierGate('pro', async (
           .from('wallet_edges')
           .select('from_address, to_address, edge_type, chain, weight, confidence, total_value_usd, transaction_count, first_seen_at, last_seen_at')
           .in(col, batch)
-          .order('last_seen_at', { ascending: false })
+          .order('last_seen_at', { ascending: false, nullsFirst: false })
           .limit(stopAt);
         return (data ?? []) as EdgeRow[];
       };
@@ -105,6 +105,20 @@ export const GET = withTierGate('pro', async (
           if (collected.length >= stopAt) break;
         }
       }
+      // The chunked fetch interleaves rows from independent per-chunk queries,
+      // so `collected` is not globally ordered even though each chunk was.
+      // Sort the whole set by last_seen_at desc (nulls last) with a stable
+      // tiebreak on edge identity before slicing, so the "ordered by
+      // last_seen_at desc" contract holds for clusters with >50 members and
+      // cursor windows are deterministic.
+      const edgeKeyOf = (e: EdgeRow) => `${e.from_address}|${e.to_address}|${e.edge_type}|${e.chain}`;
+      collected.sort((a, b) => {
+        const ta = a.last_seen_at ? Date.parse(a.last_seen_at) : -Infinity;
+        const tb = b.last_seen_at ? Date.parse(b.last_seen_at) : -Infinity;
+        if (tb !== ta) return tb - ta;
+        const ka = edgeKeyOf(a), kb = edgeKeyOf(b);
+        return ka < kb ? -1 : ka > kb ? 1 : 0;
+      });
       // Slice the requested window. If we accumulated one extra row past
       // the window, that signals more pages exist.
       const window = collected.slice(cursor, cursor + limit);

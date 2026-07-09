@@ -121,6 +121,11 @@ interface WhaleEvent {
 }
 
 function fmtUsd(val: number): string {
+  // Large-cap tokens (BTC ~$2T, ETH ~$400B) flow through here from the
+  // CoinGecko top-10 source. Without the B/T tiers a $2T market cap rendered
+  // as "$2000000.0M" in card summaries.
+  if (val >= 1e12) return `$${(val / 1e12).toFixed(1)}T`;
+  if (val >= 1e9) return `$${(val / 1e9).toFixed(1)}B`;
   if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
   if (val >= 1000) return `$${(val / 1000).toFixed(1)}K`;
   return `$${val.toFixed(0)}`;

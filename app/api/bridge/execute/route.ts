@@ -61,6 +61,22 @@ export async function POST(req: NextRequest) {
   }
 
   const admin = getSupabaseAdmin();
+
+  // Idempotency: a bridge is broadcast client-side exactly once, and srcTxHash
+  // is its unique on-chain id. A client retry (lost response) must NOT create a
+  // second 'confirmed' bridge row — that double-counts the movement in every
+  // downstream portfolio / cost-basis reader. If a row for this user + tx hash
+  // already exists, return it instead of inserting again.
+  const { data: existing } = await admin
+    .from('pending_trades')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('confirmed_tx_hash', body.srcTxHash!)
+    .maybeSingle<{ id: string }>();
+  if (existing) {
+    return NextResponse.json({ ok: true, pendingTradeId: existing.id, deduped: true });
+  }
+
   const { data, error } = await admin
     .from('pending_trades')
     .insert({

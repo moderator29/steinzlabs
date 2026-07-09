@@ -94,7 +94,7 @@ export function CryptoPaymentModal({ tier, onClose, onActivated }: Props) {
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/75 backdrop-blur-md" onClick={onClose} />
       <div
-        className="relative w-full max-w-[420px] nl-glass rounded-t-2xl sm:rounded-2xl p-5 shadow-2xl"
+        className="relative w-full max-w-[420px] max-h-[90dvh] overflow-y-auto nl-glass rounded-t-2xl sm:rounded-2xl p-5 shadow-2xl"
         style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 24px rgba(0,102,255,.18)' }}
       >
         <div className="flex items-center justify-between mb-4">

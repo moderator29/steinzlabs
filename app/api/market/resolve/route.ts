@@ -28,8 +28,11 @@ export const dynamic = 'force-dynamic';
  * DexScreener or DexTools (10k+), searchable by name, symbol, or contract:
  *
  *   Contract (0x… / base58) → DexScreener token pairs (per-chain, real
- *     price/liquidity/volume/mcap/logo), then CoinGecko contract-price +
- *     DexTools (if configured) as fallbacks.
+ *     price/liquidity/volume/mcap/logo), then DexTools (only if a key is
+ *     configured — pure enhancement), then GeckoTerminal token metadata
+ *     (keyless, real name/symbol/logo/price for both Solana and EVM), then
+ *     CoinGecko contract-price as the price-only last resort. Every path
+ *     returns real data with no DexTools key present.
  *
  *   Name / symbol → CoinGecko /search (majors, enriched with real market
  *     data for price + mcap + ranking) MERGED with DexScreener /search and
@@ -125,7 +128,7 @@ async function resolveContract(q: string): Promise<ResolvedMatch[]> {
     }
   }
 
-  // 3. GeckoTerminal token metadata (keyless, 100+ networks) for Solana / odd chains.
+  // 3a. GeckoTerminal token metadata (keyless, 100+ networks) for Solana.
   if (matches.length === 0 && isSolanaAddress(q)) {
     const meta = await getTokenMeta('solana', q).catch(() => null);
     if (meta && (meta.priceUsd ?? 0) > 0) {
@@ -133,6 +136,26 @@ async function resolveContract(q: string): Promise<ResolvedMatch[]> {
         id: null, name: meta.name, symbol: meta.symbol, image: meta.logo,
         chain: 'solana', address: q, priceUsd: meta.priceUsd ?? 0, source: 'geckoterminal',
       });
+    }
+  }
+
+  // 3b. GeckoTerminal token metadata for EVM contracts — the keyless equivalent
+  //     of the DexTools probe above. When DexScreener misses a contract and no
+  //     DexTools key is configured, this still resolves REAL name/symbol/logo/
+  //     price across the EVM platforms, so the result is a full token identity
+  //     rather than the price-only CoinGecko fallback below. (mcap has no free
+  //     source in this single-call path, so it stays null honestly.)
+  if (matches.length === 0 && isEvmContract(q)) {
+    const probes = await Promise.all(
+      EVM_PLATFORMS.map((chain) => getTokenMeta(chain, q).catch(() => null)),
+    );
+    for (const meta of probes) {
+      if (meta && (meta.priceUsd ?? 0) > 0) {
+        matches.push({
+          id: null, name: meta.name, symbol: meta.symbol, image: meta.logo,
+          chain: meta.chain, address: q, priceUsd: meta.priceUsd ?? 0, source: 'geckoterminal',
+        });
+      }
     }
   }
 

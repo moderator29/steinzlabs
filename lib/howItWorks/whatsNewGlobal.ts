@@ -8,6 +8,41 @@ import type { WhatsNewEntry } from '@/lib/howItWorks/types';
 export const GLOBAL_WHATS_NEW: WhatsNewEntry[] = [
   {
     date: 'July 2026',
+    tag: 'IMPROVED',
+    text: 'Safer trading: Swap now blocks known honeypot and high risk tokens before you sign, and refuses trades from sanctioned wallets, so a dangerous token cannot be bought by mistake.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'IMPROVED',
+    text: 'Stronger wallet security: your sniper signing key is now encrypted on your device instead of stored in the clear, and sign in no longer keeps a copy of your session token in the browser.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'FIXED',
+    text: 'Portfolio and wallet balances now value every token correctly, including stablecoins and wrapped coins, so your total net worth reads true.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'FIXED',
+    text: 'Copy trading and sniper now record each trade exactly once, so your realized profit and loss and win rate are accurate.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'IMPROVED',
+    text: 'Real data only: trending, holder counts, token cards and charts now show live figures or an honest blank, never a placeholder or filler value.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'IMPROVED',
+    text: 'Mobile polish: trade and wallet pop ups now fit the screen so the confirm button is always in reach, even with the keyboard open.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'IMPROVED',
+    text: 'Account hardening across sign in, profiles, alerts and admin tools to keep your account and your data safe.',
+  },
+  {
+    date: 'July 2026',
     tag: 'NEW',
     text: 'Live token terminal: every coin now opens a real time stats panel (price, liquidity, FDV, market cap, buys and sells) that refreshes every few seconds from live DEX data.',
   },

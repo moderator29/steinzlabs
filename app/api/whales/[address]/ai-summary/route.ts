@@ -87,11 +87,20 @@ async function handler(req: NextRequest, ctx: RouteCtx) {
     return NextResponse.json({ error: 'Whale not found in database' }, { status: 404 });
   }
 
-  // Also pull last 20 activity rows for trading-pattern context
-  const { data: activity } = await supabase
+  // Also pull last 20 activity rows for trading-pattern context.
+  // whale_activity holds legacy EVM rows in MIXED case (webhook writers
+  // weren't always normalized), so an exact eq on the lowercased key misses
+  // real active whales → "(no recent activity)". Match EVM case-insensitively
+  // via ilike (hex has no LIKE wildcards); Solana is case-sensitive → exact eq.
+  // Mirrors the sibling whales/[address]/route.ts.
+  const isEvmWhale = addrKey.startsWith('0x');
+  let activityQuery = supabase
     .from('whale_activity')
-    .select('action, token_symbol, value_usd, timestamp')
-    .eq('whale_address', addrKey)
+    .select('action, token_symbol, value_usd, timestamp');
+  activityQuery = isEvmWhale
+    ? activityQuery.ilike('whale_address', addrKey)
+    : activityQuery.eq('whale_address', addrKey);
+  const { data: activity } = await activityQuery
     .eq('chain', chain)
     .order('timestamp', { ascending: false })
     .limit(20);

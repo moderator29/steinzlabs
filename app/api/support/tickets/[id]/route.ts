@@ -53,7 +53,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'Message must be 1–5000 characters.' }, { status: 400 });
   }
 
-  // RLS enforces user ownership on insert.
+  // Verify the ticket belongs to the caller before inserting a reply. The GET
+  // handler double-checks ownership rather than trusting RLS alone; this write
+  // path must too, or a user could post replies onto any other user's ticket
+  // (and, depending on notification wiring, reach that user) if the RLS insert
+  // policy is ever missing or too permissive.
+  const { data: ticket, error: tErr } = await supabase
+    .from('support_tickets')
+    .select('user_id')
+    .eq('id', id)
+    .maybeSingle();
+  if (tErr || !ticket) return NextResponse.json({ error: 'Ticket not found.' }, { status: 404 });
+  if (ticket.user_id !== user.id) return NextResponse.json({ error: 'Forbidden.' }, { status: 403 });
+
   const { data, error: rErr } = await supabase
     .from('ticket_replies')
     .insert({

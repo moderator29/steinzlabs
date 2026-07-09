@@ -33,7 +33,7 @@ const SERVICE_ROLE =
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY!;
 const LIMIT = Number(process.env.BACKFILL_ADDRESS_LIMIT ?? 500);
 const LOOKBACK_DAYS = Number(process.env.BACKFILL_LOOKBACK_DAYS ?? 30);
-const CLAUDE_MODEL = "claude-sonnet-4-6";
+const CLAUDE_MODEL = "claude-sonnet-5";
 
 if (!SUPABASE_URL || !SERVICE_ROLE) {
   console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");

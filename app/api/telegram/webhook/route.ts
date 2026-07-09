@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendTelegramMessage, answerCallbackQuery, type TelegramUpdate } from "@/lib/telegram/client";
 import { checkTier, type Tier } from "@/lib/subscriptions/tierCheck";
+import { safeCompareStrings } from "@/lib/security/webhookAuth";
 
 // §13b — per-user sliding-window rate limiter. 10 commands per 60s per
 // chat_id is generous for human use, harsh for an attacker spamming
@@ -67,7 +68,8 @@ function verifyWebhook(request: NextRequest): boolean {
     if (env === 'production') return false;
     return true;
   }
-  return request.headers.get(WEBHOOK_SECRET_HEADER) === expected;
+  // Constant-time compare — plain `===` leaks the secret token via timing.
+  return safeCompareStrings(request.headers.get(WEBHOOK_SECRET_HEADER) ?? '', expected);
 }
 
 // TG4: check the platform_settings.telegram_paused kill switch. Cached

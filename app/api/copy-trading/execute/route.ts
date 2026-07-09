@@ -176,19 +176,49 @@ export async function POST(request: NextRequest) {
 
   let score = 100;
   const reasons: string[] = [];
+  // Affirmative rug flags that must block UNCONDITIONALLY, mirroring isHighRisk
+  // (lib/services/goplus.ts). A pure honeypot is only a -60 score hit here, which
+  // lands on exactly 40 and slips past the `score < 40` gate — so the score path
+  // alone let honeypots through. Each hard flag blocks on its own. tokenSec is
+  // null only on a scanner outage (fetched with .catch(() => null)) — we fail
+  // OPEN there and never block a legit copy trade during an outage.
+  const hardReasons: string[] = [];
+  if (tokenSec && typeof tokenSec === "object") {
+    const s = tokenSec as unknown as Record<string, unknown>;
+    if (s.isHoneypot) hardReasons.push("honeypot");
+    if (s.cannotBuy) hardReasons.push("cannot_buy");
+    if (s.cannotSellAll) hardReasons.push("cannot_sell_all");
+    if (s.selfDestruct) hardReasons.push("self_destruct");
+    if (s.canTakeBackOwnership) hardReasons.push("can_take_back_ownership");
+    if (s.ownerCanChangeBalance) hardReasons.push("owner_balance_mutable");
+    if (s.hasHiddenOwner) hardReasons.push("hidden_owner");
+    // buyTax/sellTax are 0..1 FRACTIONS (0.30 = 30%), matching goplusService.
+    const sellTaxFrac = typeof s.sellTax === "number" ? s.sellTax : 0;
+    if (sellTaxFrac > 0.30) hardReasons.push("extreme_sell_tax");
+  }
+  if (hardReasons.length > 0) {
+    await recordBlocked("blocked_security", hardReasons.join(","), 0);
+    return NextResponse.json({ error: "Security check failed", score: 0, reasons: hardReasons }, { status: 403 });
+  }
   if (tokenSec && typeof tokenSec === "object") {
     const s = tokenSec as unknown as Record<string, unknown>;
     if (s.isHoneypot) { score -= 60; reasons.push("honeypot"); }
     if (s.isMintable) { score -= 15; reasons.push("mintable"); }
     if (s.ownerCanChangeBalance) { score -= 25; reasons.push("owner_balance_mutable"); }
+    // Taxes are 0..1 FRACTIONS (0.10 = 10%). The old `> 10` compared a fraction
+    // against 1000%, so the penalty never fired.
     const buyTax = typeof s.buyTax === "number" ? s.buyTax : 0;
     const sellTax = typeof s.sellTax === "number" ? s.sellTax : 0;
-    if (buyTax > 10) { score -= 10; reasons.push(`buy_tax_${buyTax}`); }
-    if (sellTax > 10) { score -= 10; reasons.push(`sell_tax_${sellTax}`); }
+    if (buyTax > 0.10) { score -= 10; reasons.push(`buy_tax_${buyTax}`); }
+    if (sellTax > 0.10) { score -= 10; reasons.push(`sell_tax_${sellTax}`); }
   }
   if (addrSec && typeof addrSec === "object") {
     const a = addrSec as unknown as Record<string, unknown>;
-    if (a.isScam) { score -= 80; reasons.push("scam_address"); }
+    // AddressScanResult has NO `isScam` field — it exposes `isMalicious`
+    // (phishing / stealing / cybercrime), `isBlacklisted`, `isPhishing`, `isMixer`.
+    // The old read of `a.isScam` was always undefined, so this -80 penalty was
+    // dead and a malicious source whale never lost points.
+    if (a.isMalicious) { score -= 80; reasons.push("malicious_address"); }
     if (a.isBlacklisted) { score -= 50; reasons.push("blacklisted"); }
   }
 

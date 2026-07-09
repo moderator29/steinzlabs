@@ -20,8 +20,10 @@ function scoreFromResult(res: { isHoneypot?: boolean; isMintable?: boolean; owne
   if (res.isHoneypot) { score -= 60; reasons.push("honeypot"); }
   if (res.isMintable) { score -= 20; reasons.push("mintable"); }
   if (res.ownerCanChangeBalance) { score -= 25; reasons.push("owner_can_change_balance"); }
-  if ((res.buyTax ?? 0) > 10) { score -= 15; reasons.push(`buy_tax_${res.buyTax}`); }
-  if ((res.sellTax ?? 0) > 10) { score -= 15; reasons.push(`sell_tax_${res.sellTax}`); }
+  // buyTax/sellTax are 0..1 FRACTIONS (0.10 = 10%), per TokenSecurityResult.
+  // The old `> 10` compared a fraction against 1000%, so the tax penalty was dead.
+  if ((res.buyTax ?? 0) > 0.10) { score -= 15; reasons.push(`buy_tax_${res.buyTax}`); }
+  if ((res.sellTax ?? 0) > 0.10) { score -= 15; reasons.push(`sell_tax_${res.sellTax}`); }
   score = Math.max(0, Math.min(100, score));
   const level: "safe" | "low" | "medium" | "high" | "critical" =
     score >= 85 ? "safe" : score >= 65 ? "low" : score >= 40 ? "medium" : score >= 20 ? "high" : "critical";

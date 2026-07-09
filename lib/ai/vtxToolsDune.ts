@@ -1,6 +1,7 @@
 import 'server-only';
 import type Anthropic from '@anthropic-ai/sdk';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { isEvmAddress, isSolanaAddress, normalizeAddress } from '@/lib/utils/addressNormalize';
 import {
   readHolderConcentration,
   readSmartMoneyScore,
@@ -331,12 +332,23 @@ async function handleClusterOf(input: { address: string; chain?: string }): Prom
   if (!isDuneConfigured()) return unavailable();
   const admin = getSupabaseAdmin();
   const chain = input.chain ?? 'ethereum';
+  // SECURITY: input.address is model/user-supplied and is interpolated into a
+  // PostgREST .or() filter STRING below. An un-validated value containing a
+  // comma, dot, or PostgREST operator would break out of the intended filter
+  // (filter injection against an admin/service-role client that bypasses RLS).
+  // Reject anything that isn't a well-formed on-chain address, and normalize
+  // EVM case so the lookup can actually match the stored (lowercased) row.
+  const rawAddr = typeof input.address === 'string' ? input.address.trim() : '';
+  if (!isEvmAddress(rawAddr) && !isSolanaAddress(rawAddr)) {
+    return JSON.stringify({ error: 'invalid address', address: input.address });
+  }
+  const addr = normalizeAddress(rawAddr, chain);
   // wallet_edges has cluster info via cluster-analysis cron — reuse.
   const { data } = await admin
     .from('wallet_edges')
     .select('cluster_id')
     .eq('chain', chain)
-    .or(`from_address.eq.${input.address},to_address.eq.${input.address}`)
+    .or(`from_address.eq.${addr},to_address.eq.${addr}`)
     .limit(1)
     .maybeSingle<{ cluster_id: string }>();
   if (!data?.cluster_id) return JSON.stringify({ address: input.address, cluster_id: null });

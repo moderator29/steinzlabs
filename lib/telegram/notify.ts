@@ -51,16 +51,24 @@ async function deliverWithRetry(chatId: number, text: string): Promise<{ ok: tru
   let lastErr = 'unknown';
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {
-      await sendTelegramMessage(chatId, text, {
+      // sendTelegramMessage catches its own network/HTTP errors and returns a
+      // boolean — it does NOT throw on a failed send. Ignoring the return value
+      // made every delivery report ok even when Telegram rejected it, so the
+      // terminal-failure path (telegram_delivery_failures + the retry cron)
+      // never fired and real failures were silently swallowed as fabricated
+      // successes. Check the returned flag so a false result is a real,
+      // retryable failure.
+      const sent = await sendTelegramMessage(chatId, text, {
         parse_mode: 'Markdown',
         disable_web_page_preview: true,
       });
-      return { ok: true };
+      if (sent) return { ok: true };
+      lastErr = 'sendTelegramMessage returned false';
     } catch (err) {
       lastErr = err instanceof Error ? err.message : String(err);
-      if (attempt < MAX_ATTEMPTS - 1) {
-        await new Promise((r) => setTimeout(r, BACKOFF_MS[attempt]));
-      }
+    }
+    if (attempt < MAX_ATTEMPTS - 1) {
+      await new Promise((r) => setTimeout(r, BACKOFF_MS[attempt]));
     }
   }
   return { ok: false, error: lastErr, attempts: MAX_ATTEMPTS };
