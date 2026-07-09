@@ -111,7 +111,7 @@ ${JSON.stringify(context, null, 2)}
 Rules: no markdown, no em dashes, no asterisks, plain clean language.`;
 
         const msg = await anthropic.messages.create({
-          model: "claude-sonnet-4-6",
+          model: "claude-sonnet-5",
           max_tokens: 800,
           messages: [{ role: "user", content: prompt }],
         });
@@ -133,7 +133,7 @@ Rules: no markdown, no em dashes, no asterisks, plain clean language.`;
           recent_thesis: parsed.recent_thesis,
           confidence: parsed.confidence,
           raw_context: context,
-          model: "claude-sonnet-4-6",
+          model: "claude-sonnet-5",
         });
 
         return parsed;

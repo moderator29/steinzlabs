@@ -12,7 +12,7 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
  *  Step 4: Transaction construction (Jupiter for Solana)
  *  Step 5: Result logging (Supabase sniper_executions)
  *
- * Uses claude-sonnet-4-6 as the executor model within a managed beta session.
+ * Uses claude-sonnet-5 as the executor model within a managed beta session.
  */
 
 const client = new Anthropic({
@@ -210,7 +210,7 @@ export async function runSniperAgent(config: SniperConfig): Promise<SniperResult
   try {
     const session = await (client.beta as any).sessions?.create?.({
       system: SNIPER_SYSTEM_PROMPT,
-      model: 'claude-sonnet-4-6',
+      model: 'claude-sonnet-5',
     });
     sessionId = session?.id;
   } catch {
@@ -248,7 +248,7 @@ Run all 5 steps. Report each step result clearly.`,
     iterations++;
 
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-sonnet-5',
       max_tokens: 4096,
       system: SNIPER_SYSTEM_PROMPT,
       tools: SNIPER_TOOLS,
