@@ -38,14 +38,21 @@ const PAGE_SIZE = 20;
 // off-platform image that loads in every viewer's browser.
 const WIRE_MEDIA_MARKER = '/storage/v1/object/public/wire-media/';
 
+// A single bucket-scoped media URL — reused for both the legacy media_url and
+// each entry of the media_urls[] array so the storage-origin check is identical.
+const WireMediaUrl = z
+  .string()
+  .trim()
+  .url()
+  .max(2048)
+  .refine((u) => u.includes(WIRE_MEDIA_MARKER), 'Image must be uploaded to the wire');
+
 const CreateBody = z.object({
   body: z.string().trim().min(1, 'Body required').max(600, 'Max 600 characters'),
-  media_url: z
-    .string()
-    .trim()
-    .url()
-    .max(2048)
-    .refine((u) => u.includes(WIRE_MEDIA_MARKER), 'Image must be uploaded to the wire')
+  media_url: WireMediaUrl.optional().nullable(),
+  media_urls: z
+    .array(WireMediaUrl)
+    .max(4, 'Up to 4 images')
     .optional()
     .nullable(),
   repost_of: z.string().uuid().optional().nullable(),
@@ -77,11 +84,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid payload' }, { status: 400 });
   }
 
+  // Prefer the new media_urls[] (up to 4); fall back to a legacy single
+  // media_url so older clients keep working. media_url stays populated with the
+  // first image so any reader still on the single column shows something.
+  const mediaUrls =
+    parsed.data.media_urls && parsed.data.media_urls.length > 0
+      ? parsed.data.media_urls
+      : parsed.data.media_url
+        ? [parsed.data.media_url]
+        : [];
+  const primaryMediaUrl = mediaUrls[0] ?? null;
+
   const sb = getSupabaseAdmin();
   const insert = {
     author_id: user.id, // session-derived, never from the client
     body: parsed.data.body,
-    media_url: parsed.data.media_url ?? null,
+    media_url: primaryMediaUrl,
+    media_urls: mediaUrls,
     repost_of: parsed.data.repost_of ?? null,
     // Replies are created ONLY through /api/wire/posts/[id]/reply, which enforces
     // the single-level "cannot reply to a reply" rule. Never honor a client

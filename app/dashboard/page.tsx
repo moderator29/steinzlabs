@@ -48,6 +48,8 @@ const WireTab  = lazy(() => import('@/components/wire/WireTab'));
 const GiftSheet = lazy(() => import('@/components/wire/GiftSheet').then(m => ({ default: m.GiftSheet })));
 const GiftSuccessCard = lazy(() => import('@/components/wire/GiftSuccessCard').then(m => ({ default: m.GiftSuccessCard })));
 const NewsTab  = lazy(() => import('@/components/news/NewsTab'));
+// Prediction sub-tab — real Polymarket (keyless Gamma API) markets board.
+const PredictionBoard = lazy(() => import('@/components/prediction/PredictionBoard'));
 
 // Sub-tab ordering + typing for the home feed. Kept as a const tuple so the
 // union type, the deep-link parser and the tab-bar UI can never drift apart.
@@ -298,80 +300,6 @@ function SubTabHelpHeader({ label, content }: { label: string; content: HowItWor
   );
 }
 
-// Prediction Markets teaser — a visual only, Polymarket style preview. No
-// live data or ordering yet; the "Notify me" control is presentational.
-function PredictionTeaser() {
-  const previews = [
-    { q: 'Will BTC close above $150k this year?', yes: 62 },
-    { q: 'Will the Fed cut rates at the next meeting?', yes: 44 },
-    { q: 'Will ETH flip its prior all time high in 2026?', yes: 71 },
-  ];
-  return (
-    <div className="space-y-5">
-      <SubTabHelpHeader label="Prediction" content={predictionHowItWorks} />
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25 }}
-        className="relative overflow-hidden nl-glass rounded-2xl px-5 py-7 text-center"
-        style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.28), 0 0 30px rgba(0,102,255,.14)' }}
-      >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -top-20 left-1/2 -translate-x-1/2 w-72 h-72 rounded-full blur-3xl opacity-40"
-          style={{ background: 'radial-gradient(circle, rgba(30,144,255,.5) 0%, rgba(18,51,174,0) 70%)' }}
-        />
-        <div className="relative">
-          <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold tracking-wide text-[#9FD0FF] bg-[#0066FF]/[0.14] border border-[#0066FF]/25 rounded-full px-2.5 py-1 mb-3">
-            Coming soon
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Prediction Markets</h2>
-          <p className="text-sm text-[#B4C0E0] mt-2 max-w-md mx-auto">
-            Trade on the outcome of crypto and world events. Coming soon.
-          </p>
-          <div className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/[0.08] p-1 pl-3">
-            <span className="text-xs text-gray-400">Get notified at launch</span>
-            <span
-              className="px-3 py-1.5 rounded-lg text-white text-xs font-semibold cursor-default select-none"
-              style={{ background: 'linear-gradient(135deg, #1E90FF 0%, #0066FF 55%, #1233AE 100%)' }}
-            >
-              Notify me
-            </span>
-          </div>
-        </div>
-      </motion.div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {previews.map((m, i) => (
-          <motion.div
-            key={m.q}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2, delay: 0.05 + i * 0.05 }}
-            className="cult-card p-4 flex flex-col justify-between min-h-[140px]"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-sm font-semibold text-white leading-snug">{m.q}</p>
-              <span className="shrink-0 text-[9px] font-semibold tracking-wide text-[#9FD0FF] bg-[#0066FF]/[0.14] border border-[#0066FF]/25 rounded-full px-2 py-0.5">
-                Soon
-              </span>
-            </div>
-            <div className="mt-4">
-              <div className="flex items-center justify-between text-[11px] mb-1">
-                <span className="text-emerald-400 font-medium">Yes {m.yes}%</span>
-                <span className="text-gray-500">No {100 - m.yes}%</span>
-              </div>
-              <div className="h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden">
-                <div className="h-full rounded-full bg-emerald-400/70" style={{ width: `${m.yes}%` }} />
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // Bug §2 — /dashboard (and by extension /dashboard/profile via redirect)
 // showed an infinite spinner when useAuth() never resolved (Supabase hiccup,
 // stale session cookie, network drop). The user was trapped with no escape.
@@ -594,7 +522,12 @@ export default function Dashboard() {
           <NewsTab />
         </div>
       );
-      if (activeTab === 'prediction') return <PredictionTeaser />;
+      if (activeTab === 'prediction') return (
+        <div className="space-y-5">
+          <SubTabHelpHeader label="Prediction" content={predictionHowItWorks} />
+          <PredictionBoard />
+        </div>
+      );
       return (
         // OV3: widget order honours the user's saved preference from
         // /api/dashboard/widgets. Each widget retains its own self-hide

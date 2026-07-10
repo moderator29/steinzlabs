@@ -5,8 +5,9 @@
 // authenticity, and buyer wallet-age — then a plain verdict. The capstone that
 // ties the whole intelligence suite together. Real data only.
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Loader2, ScanSearch, Radar, Fish, Waves, ShieldCheck, Sprout, CheckCircle2, AlertTriangle, BadgeCheck } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { ChainLogo } from '@/components/common/ChainLogo';
@@ -56,7 +57,8 @@ function Panel({ icon, title, children, href }: { icon: React.ReactNode; title: 
   return href ? <Link href={href} className="block hover:opacity-90 transition-opacity">{inner}</Link> : inner;
 }
 
-export default function TokenXrayPage() {
+function TokenXrayInner() {
+  const searchParams = useSearchParams();
   const [input, setInput] = useState('');
   const [result, setResult] = useState<XrayResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -76,13 +78,14 @@ export default function TokenXrayPage() {
     } finally { setLoading(false); }
   }, []);
 
+  // Cross-feature deep-link: `?token=<addressOrSymbol>&chain=<chainId>` pre-loads
+  // the token X-Ray (the shared param contract). `?q=` stays supported for the
+  // older internal links. Manual entry keeps working either way.
   useEffect(() => {
-    try {
-      const q = new URLSearchParams(window.location.search).get('q');
-      if (q && q.trim()) { setInput(q); run(q); }
-    } catch { /* ignore */ }
+    const token = searchParams.get('token') ?? searchParams.get('q');
+    if (token && token.trim()) { setInput(token); run(token); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   const sig = result?.signals;
   const v = result?.verdict ? VERDICT_META[result.verdict] : null;
@@ -204,5 +207,14 @@ export default function TokenXrayPage() {
         </>
       )}
     </div>
+  );
+}
+
+// useSearchParams requires a Suspense boundary in the Next app router.
+export default function TokenXrayPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center py-20 text-slate-400"><Loader2 className="w-6 h-6 animate-spin" /></div>}>
+      <TokenXrayInner />
+    </Suspense>
   );
 }

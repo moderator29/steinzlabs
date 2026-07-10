@@ -1,6 +1,7 @@
 import 'server-only';
 import Anthropic from '@anthropic-ai/sdk';
 import { DUNE_TOOLS } from '@/lib/ai/vtxToolsDune';
+import { GOLDRUSH_TOOLS } from '@/lib/ai/vtxToolsGoldRush';
 
 /**
  * VTX AI Engine — Advisor Strategy Architecture
@@ -337,6 +338,10 @@ export const VTX_TOOLS: Anthropic.Tool[] = [
   // the dune-refresh cron — VTX latency stays low even though Dune
   // queries themselves take seconds-to-minutes.
   ...DUNE_TOOLS,
+  // GoldRush (Covalent) optional wallet tools — real multichain balances + tx
+  // history from lib/ai/vtxToolsGoldRush. No-op (returns "goldrush_unconfigured")
+  // when the key is unset so the agent falls back to wallet_profile / RPC tools.
+  ...GOLDRUSH_TOOLS,
 ];
 
 // ─── Core VTX Query Function ──────────────────────────────────────────────────

@@ -25,7 +25,7 @@ import { aggregate, type NewsItem } from "../../news/route";
 interface DigestPrefs extends QuietHoursPrefs {
   user_id: string;
   news_alerts: boolean | null;
-  email_enabled: boolean | null;
+  news_email_enabled: boolean | null;
   telegram_enabled: boolean | null;
   news_alerts_last_url: string | null;
 }
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     const { data: prefsRows } = await supabase
       .from("notification_settings")
       .select(
-        "user_id, news_alerts, email_enabled, telegram_enabled, news_alerts_last_url, quiet_hours_enabled, quiet_hours_start_minute, quiet_hours_end_minute, quiet_hours_timezone",
+        "user_id, news_alerts, news_email_enabled, telegram_enabled, news_alerts_last_url, quiet_hours_enabled, quiet_hours_start_minute, quiet_hours_end_minute, quiet_hours_timezone",
       )
       .eq("news_alerts", true)
       .limit(5000);
@@ -131,11 +131,12 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Email — only when the user's email channel is enabled. The News "Alerts"
-      // bell popover discloses that the digest goes to enabled channels
-      // (Telegram / email) and links to settings to manage them, so this honors
-      // the user's existing email preference rather than surprising them.
-      if (p.email_enabled === true) {
+      // Email — only when the user has EXPLICITLY opted the news digest into
+      // email (news_email_enabled). This is a dedicated switch, off by default,
+      // separate from the general email_enabled channel — so Telegram-only users
+      // are never surprised by a news email they didn't ask for. The News
+      // "Alerts" bell popover exposes this exact toggle.
+      if (p.news_email_enabled === true) {
         const { data: authUser } = await supabase.auth.admin.getUserById(p.user_id);
         const email = authUser?.user?.email ?? null;
         if (email) {

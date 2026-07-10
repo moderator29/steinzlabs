@@ -11,6 +11,7 @@ const Body = z.object({
   email_notifications:    z.boolean().optional(),
   push_notifications:     z.boolean().optional(),
   telegram_notifications: z.boolean().optional(),
+  news_email_enabled:     z.boolean().optional(),
 });
 
 export async function GET(req: NextRequest) {

@@ -315,6 +315,15 @@ function MembersList({ members }: { members: Member[] }) {
               <div className={`w-2 h-2 rounded-full ${m.role === 'hub' ? 'bg-amber-400' : 'bg-emerald-400'}`} />
               <code className="flex-1 text-xs font-mono text-slate-300 truncate">{m.address}</code>
               <span className="text-[10px] text-slate-500 uppercase">{m.role || 'member'}</span>
+              {/* Cross-feature link: this wallet's cluster / on-chain intelligence page. */}
+              <Link
+                href={`/dashboard/wallet-clusters/${m.address}`}
+                className="text-slate-500 hover:text-[#8FA3FF]"
+                aria-label="Wallet intelligence"
+                title="Wallet intelligence"
+              >
+                <Network className="w-3 h-3" />
+              </Link>
               <a
                 href={`https://etherscan.io/address/${m.address}`}
                 target="_blank"

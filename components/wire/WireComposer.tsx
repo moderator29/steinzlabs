@@ -9,18 +9,20 @@ import type { WirePost } from './WirePostCard';
 /**
  * WireComposer — the post box for creating a wire.
  *
- * Textarea with a live 0/600 counter, a single image upload (client-validated
- * < 1MB, images only, stored in the public `wire-media` bucket under
- * <uid>/<uuid>.<ext>), a 1–3 topic tag picker, and a Post button disabled while
- * empty, over the limit, uploading, or submitting. On success it hands the
- * created wire back to the parent for optimistic prepend.
+ * Textarea with a live 0/600 counter, up to FOUR image uploads (each
+ * client-validated < 1MB, images only, stored in the public `wire-media` bucket
+ * under <uid>/<uuid>.<ext>), a 1–3 topic tag picker, and a Post button disabled
+ * while empty, over the limit, uploading, or submitting. Attached images show as
+ * a compact thumbnail row with per-image remove and an "add" tile that disables
+ * at the 4-image cap. On success it hands the created wire back to the parent for
+ * optimistic prepend.
  *
- * NOTE (flagged, not faked): wire_posts.media_url is a single column, so this
- * supports ONE image. Multi-image (up to 4) is a deliberate follow-up requiring
- * a media[] column or wire_media child table — see the delivery notes.
+ * Media is submitted as media_urls: string[] (bucket public URLs only); the API
+ * still accepts the legacy single media_url for older clients.
  */
 
 const MAX = 600;
+const MAX_IMAGES = 4;
 const MAX_IMAGE_BYTES = 1_048_576; // 1MB — mirrors the wire-media bucket cap
 const ALLOWED_MIME: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -42,7 +44,7 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted }: WireC
   const [body, setBody] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [showTags, setShowTags] = useState(false);
-  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,53 +63,74 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted }: WireC
     });
   };
 
+  /** Upload one already-validated file, returning its public URL (or null). */
+  const uploadOne = async (file: File, ext: string): Promise<string | null> => {
+    const uuid =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const path = `${userId}/${uuid}.${ext}`;
+    const { error: upErr } = await supabase.storage
+      .from('wire-media')
+      .upload(path, file, { contentType: file.type, cacheControl: '3600', upsert: false });
+    if (upErr) {
+      setError(upErr.message || 'Upload failed — try again');
+      return null;
+    }
+    const { data: pub } = supabase.storage.from('wire-media').getPublicUrl(path);
+    if (!pub?.publicUrl) {
+      setError('Could not resolve the image URL');
+      return null;
+    }
+    return pub.publicUrl;
+  };
+
   const onPickFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    // Allow re-picking the same file later
+    const picked = Array.from(e.target.files ?? []);
+    // Allow re-picking the same file(s) later
     if (fileRef.current) fileRef.current.value = '';
-    if (!file) return;
+    if (picked.length === 0) return;
     setError(null);
 
-    const ext = ALLOWED_MIME[file.type];
-    if (!ext) {
-      setError('Images only — JPG, PNG, WebP or GIF');
-      return;
-    }
-    if (file.size > MAX_IMAGE_BYTES) {
-      setError(`Image is too large (${(file.size / 1_048_576).toFixed(1)}MB). Max is 1MB.`);
-      return;
-    }
     if (!userId) {
       setError('Sign in to attach an image');
       return;
     }
 
+    // Only take as many as remain under the 4-image cap.
+    const remaining = MAX_IMAGES - mediaUrls.length;
+    if (remaining <= 0) {
+      setError(`Up to ${MAX_IMAGES} images per wire`);
+      return;
+    }
+    const files = picked.slice(0, remaining);
+    if (picked.length > remaining) {
+      setError(`Up to ${MAX_IMAGES} images per wire — extra images skipped`);
+    }
+
     setUploading(true);
     try {
-      const uuid =
-        typeof crypto !== 'undefined' && 'randomUUID' in crypto
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      const path = `${userId}/${uuid}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from('wire-media')
-        .upload(path, file, { contentType: file.type, cacheControl: '3600', upsert: false });
-      if (upErr) {
-        setError(upErr.message || 'Upload failed — try again');
-        return;
+      for (const file of files) {
+        const ext = ALLOWED_MIME[file.type];
+        if (!ext) {
+          setError('Images only — JPG, PNG, WebP or GIF');
+          continue;
+        }
+        if (file.size > MAX_IMAGE_BYTES) {
+          setError(`"${file.name}" is too large (${(file.size / 1_048_576).toFixed(1)}MB). Max is 1MB.`);
+          continue;
+        }
+        const url = await uploadOne(file, ext);
+        if (url) setMediaUrls((prev) => (prev.length < MAX_IMAGES ? [...prev, url] : prev));
       }
-      const { data: pub } = supabase.storage.from('wire-media').getPublicUrl(path);
-      if (!pub?.publicUrl) {
-        setError('Could not resolve the image URL');
-        return;
-      }
-      setMediaUrl(pub.publicUrl);
     } catch {
       setError('Upload failed — try again');
     } finally {
       setUploading(false);
     }
   };
+
+  const removeImage = (url: string) => setMediaUrls((prev) => prev.filter((u) => u !== url));
 
   const submit = async () => {
     if (!canPost) return;
@@ -119,7 +142,7 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted }: WireC
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           body: body.trim(),
-          media_url: mediaUrl ?? undefined,
+          media_urls: mediaUrls.length ? mediaUrls : undefined,
           tags: tags.length ? tags : undefined,
         }),
       });
@@ -133,7 +156,7 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted }: WireC
       setBody('');
       setTags([]);
       setShowTags(false);
-      setMediaUrl(null);
+      setMediaUrls([]);
     } catch {
       setError('Network error — try again');
     } finally {
@@ -171,22 +194,41 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted }: WireC
             className="w-full bg-transparent resize-none outline-none text-[15px] text-white placeholder:text-white/35 leading-relaxed"
           />
 
-          {/* Image preview */}
-          {mediaUrl ? (
-            <div className="mt-2 relative rounded-xl overflow-hidden border border-white/10 max-w-full">
-              <img src={mediaUrl} alt="" className="w-full max-h-[320px] object-cover" />
-              <button
-                type="button"
-                onClick={() => setMediaUrl(null)}
-                className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white/90 hover:bg-black/80 transition"
-                aria-label="Remove image"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          ) : uploading ? (
-            <div className="mt-2 flex items-center gap-2 text-white/50 text-sm">
-              <Loader2 className="w-4 h-4 animate-spin" /> Uploading image…
+          {/* Thumbnail row — up to 4 attached images + an add tile */}
+          {mediaUrls.length > 0 || uploading ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {mediaUrls.map((url) => (
+                <div
+                  key={url}
+                  className="relative w-20 h-20 rounded-xl overflow-hidden border border-white/10 flex-shrink-0"
+                >
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(url)}
+                    className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white/90 hover:bg-black/80 transition"
+                    aria-label="Remove image"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+
+              {uploading ? (
+                <div className="w-20 h-20 rounded-xl border border-white/10 flex items-center justify-center flex-shrink-0 text-white/50">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                </div>
+              ) : mediaUrls.length < MAX_IMAGES ? (
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="w-20 h-20 rounded-xl border border-dashed border-white/15 flex items-center justify-center flex-shrink-0 text-white/40 hover:text-[#4d94ff] hover:border-[#0066FF]/40 hover:bg-[#0066FF]/8 transition"
+                  aria-label="Add another image"
+                  title="Add image"
+                >
+                  <ImagePlus className="w-5 h-5" />
+                </button>
+              ) : null}
             </div>
           ) : null}
 
@@ -231,16 +273,17 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted }: WireC
               ref={fileRef}
               type="file"
               accept="image/jpeg,image/png,image/webp,image/gif"
+              multiple
               className="hidden"
               onChange={onPickFile}
             />
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              disabled={uploading || !!mediaUrl}
+              disabled={uploading || mediaUrls.length >= MAX_IMAGES}
               className="p-2 rounded-lg transition text-white/45 hover:text-[#4d94ff] hover:bg-[#0066FF]/12 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
               aria-label="Add image"
-              title={mediaUrl ? 'One image per wire' : 'Add image'}
+              title={mediaUrls.length >= MAX_IMAGES ? `Up to ${MAX_IMAGES} images per wire` : 'Add image'}
             >
               <ImagePlus className="w-[18px] h-[18px]" />
             </button>

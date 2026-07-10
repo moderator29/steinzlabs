@@ -1,5 +1,16 @@
 import 'server-only';
 import { Resend } from 'resend';
+import { brandedEmailWrapper, emailButton } from '@/lib/email';
+
+const APP_BASE_URL = (process.env.NEXT_PUBLIC_APP_URL || 'https://nakalabs.xyz').replace(/\/$/, '');
+const esc = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+// Shared card + row primitives for the near-black glass email system.
+const glassCard = (inner: string) =>
+  `<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:14px;padding:16px 18px;margin-bottom:18px;">${inner}</div>`;
+const statRow = (label: string, value: string, color = '#ffffff', last = false) =>
+  `<tr><td style="padding:9px 0;${last ? '' : 'border-bottom:1px solid rgba(255,255,255,0.07);'}font-size:13px;color:#8a93a8;">${label}</td><td style="padding:9px 0;${last ? '' : 'border-bottom:1px solid rgba(255,255,255,0.07);'}font-size:13px;font-weight:700;color:${color};text-align:right;">${value}</td></tr>`;
 
 /**
  * Resend Email Delivery Service
@@ -64,29 +75,24 @@ export async function sendPriceAlert(params: {
   changePercent?: number;
 }): Promise<EmailResult> {
   const { symbol, currentPrice, targetPrice, direction, changePercent } = params;
-  const arrow = direction === 'above' ? '▲' : '▼';
-  const color = direction === 'above' ? '#22c55e' : '#ef4444';
+  const sym = esc(symbol);
+  const isUp = direction === 'above';
+  const arrow = isUp ? '▲' : '▼';
+  const accent = isUp ? '#10B981' : '#ef4444';
   const changePart = changePercent !== undefined
-    ? `<p style="color:${color};font-size:14px;margin:4px 0">${arrow} ${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}% in 24h</p>`
+    ? `<div style="font-size:14px;font-weight:600;color:${accent};margin-top:8px;">${arrow} ${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}% in 24h</div>`
     : '';
 
-  const html = `
-    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0f172a;color:#f1f5f9;padding:32px;border-radius:12px">
-      <h2 style="color:#a855f7;margin:0 0 16px">⚡ Price Alert: ${symbol}</h2>
-      <p style="font-size:16px;color:#94a3b8;margin:0 0 8px">
-        ${symbol} has moved ${direction} your target of <strong style="color:#f1f5f9">$${targetPrice.toLocaleString()}</strong>
-      </p>
-      <p style="font-size:28px;font-weight:700;color:${color};margin:16px 0">
-        $${currentPrice.toLocaleString()}
-      </p>
+  const body = `
+    <p style="margin:0 0 18px;font-size:14px;line-height:1.65;color:#dfe4ee;">${sym} moved ${direction} your target of <strong style="color:#ffffff;">$${targetPrice.toLocaleString()}</strong>.</p>
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:14px;padding:22px;text-align:center;margin-bottom:22px;">
+      <div style="font-size:11px;letter-spacing:.08em;color:#8a93a8;text-transform:uppercase;">Current price</div>
+      <div style="font-size:36px;font-weight:800;color:${accent};line-height:1.05;margin-top:6px;letter-spacing:-0.5px;">$${currentPrice.toLocaleString()}</div>
       ${changePart}
-      <hr style="border:none;border-top:1px solid #1e293b;margin:24px 0"/>
-      <p style="font-size:12px;color:#475569">
-        You're receiving this because you set a price alert on Naka Labs.
-        <a href="#" style="color:#a855f7">Manage alerts</a>
-      </p>
     </div>
-  `;
+    ${emailButton(`${APP_BASE_URL}/dashboard/alerts`, 'Manage alerts')}
+    <p style="margin:22px 0 0;font-size:12px;line-height:1.5;color:#7c869c;">You're receiving this because you set a price alert on Naka Labs.</p>`;
+  const html = brandedEmailWrapper(`Price alert: ${sym}`, `${sym} crossed your target`, body);
 
   return sendBroadcast({
     to: params.to,
@@ -115,34 +121,24 @@ export async function sendSecurityAlert(params: {
 
   const color = severityColor[params.severity];
   const short = `${params.walletAddress.slice(0, 6)}...${params.walletAddress.slice(-4)}`;
+  const typeLabel = esc(params.alertType.replace(/_/g, ' '));
 
-  const html = `
-    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0f172a;color:#f1f5f9;padding:32px;border-radius:12px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-        <span style="font-size:24px">🛡️</span>
-        <h2 style="color:#a855f7;margin:0">Security Alert</h2>
-      </div>
-      <div style="background:#1e293b;border-radius:8px;padding:16px;margin-bottom:16px">
-        <p style="margin:0 0 4px;color:#94a3b8;font-size:12px;text-transform:uppercase">Wallet</p>
-        <code style="color:#f1f5f9;font-size:13px">${short}</code>
-      </div>
-      <div style="border-left:3px solid ${color};padding-left:16px;margin-bottom:16px">
-        <p style="margin:0 0 4px;color:${color};font-size:12px;font-weight:600;text-transform:uppercase">
-          ${params.severity} severity: ${params.alertType.replace(/_/g, ' ')}
-        </p>
-        <p style="margin:0;color:#cbd5e1">${params.description}</p>
-      </div>
-      ${params.txHash ? `
-        <p style="font-size:13px;color:#64748b">
-          TX: <code style="color:#a855f7">${params.txHash.slice(0, 20)}...</code>
-        </p>
-      ` : ''}
-      <hr style="border:none;border-top:1px solid #1e293b;margin:24px 0"/>
-      <p style="font-size:12px;color:#475569">
-        Naka Labs Wallet Intelligence. <a href="#" style="color:#a855f7">Manage notifications</a>
-      </p>
+  const body = `
+    ${glassCard(`
+      <div style="font-size:10px;letter-spacing:.08em;color:#8a93a8;text-transform:uppercase;margin-bottom:6px;">Wallet</div>
+      <code style="color:#ffffff;font-size:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${esc(short)}</code>
+    `)}
+    <div style="background:rgba(255,255,255,0.045);border:1px solid rgba(255,255,255,0.09);border-left:3px solid ${color};border-radius:12px;padding:14px 16px;margin-bottom:18px;">
+      <div style="font-size:11px;letter-spacing:.06em;color:${color};font-weight:700;text-transform:uppercase;margin-bottom:6px;">${esc(params.severity)} severity · ${typeLabel}</div>
+      <div style="margin:0;color:#dfe4ee;font-size:14px;line-height:1.55;">${esc(params.description)}</div>
     </div>
-  `;
+    ${params.txHash ? glassCard(`
+      <div style="font-size:10px;letter-spacing:.08em;color:#8a93a8;text-transform:uppercase;margin-bottom:6px;">Transaction</div>
+      <code style="color:#4d94ff;font-size:12px;word-break:break-all;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${esc(params.txHash.slice(0, 20))}…</code>
+    `) : ''}
+    ${emailButton(`${APP_BASE_URL}/dashboard/settings`, 'Manage notifications')}
+    <p style="margin:22px 0 0;font-size:12px;line-height:1.5;color:#7c869c;">Naka Labs Wallet Intelligence.</p>`;
+  const html = brandedEmailWrapper('Security alert', `${params.severity.charAt(0).toUpperCase() + params.severity.slice(1)} severity · ${short}`, body);
 
   return sendBroadcast({
     to: params.to,
@@ -314,48 +310,34 @@ export async function sendSniperNotification(params: {
   chain: 'solana' | 'ethereum' | 'base';
 }): Promise<EmailResult> {
   const { symbol, action, amountUsd, entryPrice, targetPrice, stopLoss, txHash, chain } = params;
-  const statusColor = action === 'executed' ? '#22c55e' : action === 'failed' ? '#ef4444' : '#f59e0b';
-  const statusLabel = action === 'executed' ? 'Order Executed' : action === 'failed' ? 'Order Failed' : 'Order Cancelled';
+  const sym = esc(symbol);
+  const statusColor = action === 'executed' ? '#10B981' : action === 'failed' ? '#ef4444' : '#F59E0B';
+  const statusLabel = action === 'executed' ? 'Order executed' : action === 'failed' ? 'Order failed' : 'Order cancelled';
   const chainLabel = chain.charAt(0).toUpperCase() + chain.slice(1);
 
-  const html = `
-    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0f172a;color:#f1f5f9;padding:32px;border-radius:12px">
-      <div style="border-left:4px solid ${statusColor};padding-left:16px;margin-bottom:20px">
-        <p style="margin:0 0 4px;color:${statusColor};font-size:12px;font-weight:700;text-transform:uppercase">${statusLabel}</p>
-        <h2 style="margin:0;color:#f1f5f9;font-size:24px">${symbol}</h2>
-        <p style="margin:4px 0 0;color:#94a3b8;font-size:13px">${chainLabel} Network</p>
-      </div>
-      <div style="background:#1e293b;border-radius:8px;padding:16px;margin-bottom:16px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-          <span style="color:#64748b;font-size:13px">Amount</span>
-          <span style="color:#f1f5f9;font-size:13px;font-weight:600">$${amountUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-          <span style="color:#64748b;font-size:13px">Entry Price</span>
-          <span style="color:#f1f5f9;font-size:13px;font-weight:600">$${entryPrice.toLocaleString()}</span>
-        </div>
-        ${targetPrice ? `
-        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-          <span style="color:#64748b;font-size:13px">Target Price</span>
-          <span style="color:#22c55e;font-size:13px;font-weight:600">$${targetPrice.toLocaleString()}</span>
-        </div>` : ''}
-        ${stopLoss ? `
-        <div style="display:flex;justify-content:space-between">
-          <span style="color:#64748b;font-size:13px">Stop Loss</span>
-          <span style="color:#ef4444;font-size:13px;font-weight:600">$${stopLoss.toLocaleString()}</span>
-        </div>` : ''}
-      </div>
-      ${txHash ? `
-      <div style="background:#0a0e1a;border:1px solid #1e293b;border-radius:8px;padding:12px;margin-bottom:16px">
-        <p style="margin:0 0 4px;color:#64748b;font-size:11px;text-transform:uppercase">Transaction Hash</p>
-        <code style="color:#a855f7;font-size:12px;word-break:break-all">${txHash}</code>
-      </div>` : ''}
-      <hr style="border:none;border-top:1px solid #1e293b;margin:24px 0"/>
-      <p style="font-size:12px;color:#475569">
-        Naka Labs Sniper Engine. <a href="#" style="color:#a855f7">View Dashboard</a>
-      </p>
+  const rows = [
+    statRow('Amount', `$${amountUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`),
+    statRow('Entry price', `$${entryPrice.toLocaleString()}`, '#ffffff', !targetPrice && !stopLoss),
+    targetPrice ? statRow('Target price', `$${targetPrice.toLocaleString()}`, '#10B981', !stopLoss) : '',
+    stopLoss ? statRow('Stop loss', `$${stopLoss.toLocaleString()}`, '#ef4444', true) : '',
+  ].join('');
+
+  const body = `
+    <div style="border-left:3px solid ${statusColor};padding-left:14px;margin-bottom:20px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${statusColor};">${statusLabel}</div>
+      <div style="font-size:24px;font-weight:800;color:#ffffff;margin-top:4px;">${sym}</div>
+      <div style="font-size:13px;color:#8a93a8;margin-top:2px;">${chainLabel} network</div>
     </div>
-  `;
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:14px;padding:6px 18px;margin-bottom:18px;">
+      <table width="100%" cellpadding="0" cellspacing="0" role="presentation">${rows}</table>
+    </div>
+    ${txHash ? glassCard(`
+      <div style="font-size:10px;letter-spacing:.08em;color:#8a93a8;text-transform:uppercase;margin-bottom:6px;">Transaction hash</div>
+      <code style="color:#4d94ff;font-size:12px;word-break:break-all;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${esc(txHash)}</code>
+    `) : ''}
+    ${emailButton(`${APP_BASE_URL}/dashboard`, 'View dashboard')}
+    <p style="margin:22px 0 0;font-size:12px;line-height:1.5;color:#7c869c;">Naka Labs Sniper Engine.</p>`;
+  const html = brandedEmailWrapper(statusLabel, `${sym} · ${chainLabel}`, body);
 
   return sendBroadcast({
     to: params.to,
@@ -377,33 +359,20 @@ export async function sendResearchNotification(params: {
   publishedAt?: string;
 }): Promise<EmailResult> {
   const { authorName, title, summary, category, slug, publishedAt } = params;
-  const categoryColor = '#0066FF';
   const dateLabel = publishedAt
     ? new Date(publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-  const html = `
-    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0f172a;color:#f1f5f9;padding:32px;border-radius:12px">
-      <div style="text-align:center;margin-bottom:24px">
-        <p style="margin:0 0 4px;color:${categoryColor};font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px">${category}</p>
-        <h2 style="margin:0;color:#f1f5f9;font-size:20px;line-height:1.4">${title}</h2>
-        <p style="margin:8px 0 0;color:#64748b;font-size:13px">By ${authorName} · ${dateLabel}</p>
-      </div>
-      <div style="background:#1e293b;border-radius:8px;padding:16px;margin-bottom:20px">
-        <p style="margin:0;color:#cbd5e1;font-size:14px;line-height:1.7">${summary}</p>
-      </div>
-      <div style="text-align:center;margin-bottom:16px">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://nakalabs.xyz'}/research/${slug}"
-           style="display:inline-block;background:${categoryColor};color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600">
-          Read Full Research
-        </a>
-      </div>
-      <hr style="border:none;border-top:1px solid #1e293b;margin:24px 0"/>
-      <p style="font-size:12px;color:#475569;text-align:center">
-        Naka Labs Research. <a href="#" style="color:#a855f7">Manage notifications</a>
-      </p>
+  const body = `
+    <div style="text-align:center;margin-bottom:20px;">
+      <span style="display:inline-block;background:rgba(0,102,255,0.14);border:1px solid rgba(0,102,255,0.35);color:#4d94ff;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:5px 12px;border-radius:999px;">${esc(category)}</span>
+      <h2 style="margin:14px 0 0;color:#ffffff;font-size:19px;font-weight:800;line-height:1.4;">${esc(title)}</h2>
+      <p style="margin:8px 0 0;color:#8a93a8;font-size:13px;">By ${esc(authorName)} &middot; ${dateLabel}</p>
     </div>
-  `;
+    ${glassCard(`<p style="margin:0;color:#dfe4ee;font-size:14px;line-height:1.7;">${esc(summary)}</p>`)}
+    ${emailButton(`${APP_BASE_URL}/research/${encodeURIComponent(slug)}`, 'Read full research')}
+    <p style="margin:22px 0 0;font-size:12px;line-height:1.5;color:#7c869c;text-align:center;">Naka Labs Research.</p>`;
+  const html = brandedEmailWrapper('New research', `${esc(category)} &middot; ${dateLabel}`, body);
 
   return sendBroadcast({
     to: params.to,

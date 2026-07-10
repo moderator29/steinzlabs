@@ -59,7 +59,9 @@ export default function TokenLensPage() {
 
   useEffect(() => {
     try {
-      const q = new URLSearchParams(window.location.search).get('q');
+      // Cross-feature deep-link contract: `?token=` (falls back to legacy `?q=`).
+      const sp = new URLSearchParams(window.location.search);
+      const q = sp.get('token') ?? sp.get('q');
       if (q && q.trim()) { setInput(q); run(q, win); }
     } catch { /* ignore */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -110,7 +112,7 @@ export default function TokenLensPage() {
       {!loading && s && (
         <>
           <div className="flex justify-center mb-3">
-            <Link href={`/dashboard/token-xray?q=${encodeURIComponent(result!.query)}`} className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full bg-[#0066FF]/10 border border-[#0066FF]/30 text-[#00C8FF] hover:border-[#0066FF]/50 transition-colors">
+            <Link href={`/dashboard/token-xray?token=${encodeURIComponent(result!.query)}`} className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full bg-[#0066FF]/10 border border-[#0066FF]/30 text-[#00C8FF] hover:border-[#0066FF]/50 transition-colors">
               <ScanSearch className="w-3.5 h-3.5" /> Full Token X-Ray
             </Link>
           </div>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ExternalLink, RefreshCw, Newspaper, AlertCircle, TrendingUp, TrendingDown, Bell, BellRing, Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { useNotificationSettings } from '@/lib/preferences/notificationSettings';
+import { useNotificationSettings, type NotificationSettings } from '@/lib/preferences/notificationSettings';
 
 /**
  * NewsTab — clean, premium crypto news feed for the dashboard.
@@ -329,12 +329,47 @@ function SkeletonRow() {
 }
 
 // ── main ──────────────────────────────────────────────────────────────────
+/** Small pill switch used across the news-alerts popover. */
+function ToggleSwitch({
+  checked,
+  disabled,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  disabled: boolean;
+  onChange: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      disabled={disabled}
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+        checked ? 'bg-[#0066FF]' : 'bg-white/15'
+      }`}
+    >
+      <span
+        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+          checked ? 'translate-x-[18px]' : 'translate-x-[3px]'
+        }`}
+      />
+    </button>
+  );
+}
+
 /**
- * NewsAlertToggle — opt in/out of the twice-daily news digest (email/Telegram).
- * Writes notification_settings.news_alerts via the shared hook. Only renders for
- * signed-in users; a short popover explains where the digest is delivered and
- * links to full settings. The digest itself is dispatched by the news-digest
- * cron to users whose telegram_enabled / email_enabled channel is on.
+ * NewsAlertToggle — opt in/out of the twice-daily news digest and explicitly
+ * choose its delivery channels. Writes notification_settings via the shared
+ * hook: `news_alerts` is the master switch, then two channel switches —
+ * Telegram (telegram_enabled) and Email (news_email_enabled). Email is a
+ * dedicated opt-in that is OFF by default, so Telegram-only users are never
+ * surprised by a news email. Only renders for signed-in users. The digest is
+ * dispatched by the news-digest cron to each enabled channel.
  */
 function NewsAlertToggle() {
   const { user } = useAuth();
@@ -345,13 +380,15 @@ function NewsAlertToggle() {
   if (!user) return null;
 
   const on = Boolean(settings?.news_alerts);
-  const disabled = loading || saving || !hasExtendedSchema;
+  const telegramOn = Boolean(settings?.telegram_enabled);
+  const emailOn = Boolean(settings?.news_email_enabled);
+  const baseDisabled = loading || saving || !hasExtendedSchema;
 
-  const toggle = async () => {
-    if (disabled) return;
+  const patch = async (p: Partial<NotificationSettings>) => {
+    if (baseDisabled) return;
     setSaving(true);
     try {
-      await update({ news_alerts: !on });
+      await update(p);
     } catch {
       /* hook rolls back + logs on failure */
     } finally {
@@ -379,39 +416,60 @@ function NewsAlertToggle() {
       {open ? (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-11 z-50 w-64 rounded-2xl border border-white/10 bg-[#0d1120] p-3.5 shadow-2xl">
+          <div className="absolute right-0 top-11 z-50 w-72 rounded-2xl border border-white/10 bg-[#0d1120] p-3.5 shadow-2xl">
+            {/* Master switch */}
             <div className="flex items-center justify-between">
               <span className="text-[13px] font-semibold text-white">News alerts</span>
-              <button
-                type="button"
-                onClick={toggle}
-                disabled={disabled}
-                role="switch"
-                aria-checked={on}
-                className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
-                  on ? 'bg-[#0066FF]' : 'bg-white/15'
-                }`}
-              >
-                <span
-                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
-                    on ? 'translate-x-[18px]' : 'translate-x-[3px]'
-                  }`}
+              <div className="flex items-center gap-1.5">
+                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" /> : null}
+                <ToggleSwitch
+                  checked={on}
+                  disabled={baseDisabled}
+                  onChange={() => patch({ news_alerts: !on })}
+                  label="Toggle news alerts"
                 />
-                {saving ? <Loader2 className="absolute -right-5 h-3.5 w-3.5 animate-spin text-slate-400" /> : null}
-              </button>
+              </div>
             </div>
             <p className="mt-1.5 text-[11.5px] leading-relaxed text-slate-400">
-              A twice-daily roundup of top crypto headlines, sent to your enabled channels
-              (Telegram / email).
+              A twice-daily roundup of top crypto headlines. Choose where it&apos;s delivered.
             </p>
+
+            {/* Channel switches — only meaningful when news alerts are on */}
+            <div className="mt-3 space-y-2.5 border-t border-white/10 pt-3">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className={`text-[12.5px] font-medium ${on ? 'text-slate-200' : 'text-slate-500'}`}>Telegram</span>
+                  <span className="text-[10.5px] text-slate-500">Requires a linked Telegram</span>
+                </div>
+                <ToggleSwitch
+                  checked={telegramOn}
+                  disabled={baseDisabled || !on}
+                  onChange={() => patch({ telegram_enabled: !telegramOn })}
+                  label="Toggle Telegram delivery"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className={`text-[12.5px] font-medium ${on ? 'text-slate-200' : 'text-slate-500'}`}>Email</span>
+                  <span className="text-[10.5px] text-slate-500">Off by default</span>
+                </div>
+                <ToggleSwitch
+                  checked={emailOn}
+                  disabled={baseDisabled || !on}
+                  onChange={() => patch({ news_email_enabled: !emailOn })}
+                  label="Toggle email delivery"
+                />
+              </div>
+            </div>
+
             {!hasExtendedSchema ? (
-              <p className="mt-2 text-[11px] text-amber-400/80">Syncing your settings — try again in a moment.</p>
+              <p className="mt-3 text-[11px] text-amber-400/80">Syncing your settings — try again in a moment.</p>
             ) : (
               <a
                 href="/dashboard/settings"
-                className="mt-2 inline-block text-[11.5px] font-medium text-[#4d94ff] hover:underline"
+                className="mt-3 inline-block text-[11.5px] font-medium text-[#4d94ff] hover:underline"
               >
-                Manage channels in settings →
+                Manage all channels in settings →
               </a>
             )}
           </div>

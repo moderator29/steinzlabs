@@ -189,10 +189,14 @@ export default function WhaleComparePage() {
                   <div key={w.address} className="nl-card rounded-2xl p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <ChainLogo chain={w.chain} className="w-5 h-5" />
-                      <div className="min-w-0">
-                        <div className="text-sm font-bold truncate">{whaleDisplayName({ label: w.label, nakaNumber: w.nakaNumber, address: w.address, chain: w.chain })}</div>
+                      <Link
+                        href={`/dashboard/whale-tracker/${encodeURIComponent(w.address)}?chain=${encodeURIComponent(w.chain)}`}
+                        className="min-w-0 group/whale"
+                        title="Open whale profile"
+                      >
+                        <div className="text-sm font-bold truncate group-hover/whale:text-[#8FA3FF] transition-colors">{whaleDisplayName({ label: w.label, nakaNumber: w.nakaNumber, address: w.address, chain: w.chain })}</div>
                         <div className="text-[10px] text-slate-500 font-mono truncate">{short(w.address)}</div>
-                      </div>
+                      </Link>
                     </div>
                     {w.archetype && <div className="inline-block text-[10px] px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-300 mb-3">{w.archetype}</div>}
                     <dl className="space-y-2 text-xs">
