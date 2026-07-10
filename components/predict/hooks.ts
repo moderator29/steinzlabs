@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
+  DailyStatus,
   MarketsResponse,
   MeResponse,
   LeaderboardResponse,
@@ -82,6 +83,12 @@ export function useMe(enabled: boolean, intervalMs = 15000) {
 
 export function useLeaderboard(enabled: boolean, intervalMs = 30000) {
   return usePoller<LeaderboardResponse>(enabled ? '/api/predict/leaderboard' : null, intervalMs);
+}
+
+// Daily-bonus status. Polled slowly — the claim itself is a one-off POST and the
+// countdown to the next window ticks client-side from `nextAt`.
+export function useDaily(enabled: boolean, intervalMs = 60000) {
+  return usePoller<DailyStatus>(enabled ? '/api/predict/daily' : null, intervalMs);
 }
 
 // Live price ticks for the given symbols. Returns a symbol→tick map so callers

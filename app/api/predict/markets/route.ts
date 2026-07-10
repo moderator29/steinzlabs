@@ -22,7 +22,7 @@ export async function GET() {
       admin
         .from('predict_markets')
         .select(
-          'id, symbol, coingecko_id, direction, target_price, open_price, horizon_seconds, closes_at, yes_stake, no_stake, entries_count',
+          'id, symbol, coingecko_id, kind, direction, target_price, open_price, horizon_seconds, closes_at, yes_stake, no_stake, entries_count',
         )
         .eq('status', 'open')
         .order('closes_at', { ascending: true })
@@ -61,6 +61,7 @@ export async function GET() {
         id: r.id,
         symbol,
         coingeckoId: r.coingecko_id,
+        kind: (r.kind ?? 'threshold') as 'threshold' | 'direction',
         direction: r.direction as 'above' | 'below',
         target: Number(r.target_price),
         price,

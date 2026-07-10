@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Activity, AlertTriangle, Coins, Flame, Trophy, User } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
-import type { EnterResponse, MeResponse, ResolvedMarket, Side } from './types';
+import type { EnterResponse, Market, MeResponse, ResolvedMarket, Side } from './types';
 import { useLeaderboard, useMarkets, useMe, useNow, usePrices } from './hooks';
 import { formatPoints, formatUsd, pickFeatured } from './utils';
 import { FeaturedMarket } from './FeaturedMarket';
@@ -12,6 +12,9 @@ import { MarketCard } from './MarketCard';
 import { LeaderboardView } from './LeaderboardView';
 import { MyPredictionsView } from './MyPredictionsView';
 import { LivePulse } from './LivePulse';
+import { QuickPlay } from './QuickPlay';
+import { DailyBonus } from './DailyBonus';
+import { ResultCelebration, type Celebration } from './ResultCelebration';
 
 type View = 'live' | 'leaderboard' | 'mine';
 
@@ -72,8 +75,11 @@ export default function LivePredict() {
   const serverPoints = me.data?.points ?? null;
   const displayPoints = optimisticPoints ?? serverPoints;
   useEffect(() => {
-    if (optimisticPoints != null && serverPoints != null && serverPoints <= optimisticPoints) {
-      setOptimisticPoints(null); // server reconciled
+    // The optimistic overlay is always set to a server-authoritative target
+    // (pointsLeft on entry, points on claim), so drop it the moment /me agrees —
+    // this reconciles both spends (down) and daily claims (up) without flicker.
+    if (optimisticPoints != null && serverPoints != null && serverPoints === optimisticPoints) {
+      setOptimisticPoints(null);
     }
   }, [serverPoints, optimisticPoints]);
 
@@ -85,41 +91,103 @@ export default function LivePredict() {
 
   const goSignIn = useCallback(() => router.push('/login'), [router]);
 
-  const handleEnter = useCallback(
-    async (side: Side, stake: number) => {
-      if (!featured || submitting) return;
-      if (!signedIn) return goSignIn();
+  // Generic entry — shared by the featured threshold market and Quick Play's
+  // one-tap UP/DOWN. Optimistic points (subtract the stake now, reconcile from
+  // the authoritative pointsLeft), then pull /me for the fresh open position.
+  const handleEnterMarket = useCallback(
+    async (marketId: string, side: Side, stake: number): Promise<boolean> => {
+      if (submitting) return false;
+      if (!signedIn) {
+        goSignIn();
+        return false;
+      }
       if (serverPoints != null && stake > serverPoints) {
         setFlash({ tone: 'err', msg: 'Not enough Naka Points for that stake.' });
-        return;
+        return false;
       }
       setSubmitting(true);
-      // optimistic: subtract the stake immediately.
       if (serverPoints != null) setOptimisticPoints(Math.max(0, serverPoints - stake));
       try {
         const res = await fetch('/api/predict/enter', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ marketId: featured.id, side, stake }),
+          body: JSON.stringify({ marketId, side, stake }),
         });
         const json = (await res.json()) as EnterResponse;
         if (!res.ok || !json.ok) {
           setOptimisticPoints(null); // roll back
           setFlash({ tone: 'err', msg: json.error || 'Could not place prediction.' });
-        } else {
-          if (typeof json.pointsLeft === 'number') setOptimisticPoints(json.pointsLeft);
-          setFlash({ tone: 'ok', msg: `Prediction placed — ${side.toUpperCase()} for ${formatPoints(stake)} pts.` });
-          me.refresh(); // pull the authoritative open-entry + points
+          return false;
         }
+        if (typeof json.pointsLeft === 'number') setOptimisticPoints(json.pointsLeft);
+        setFlash({ tone: 'ok', msg: `Prediction placed. ${formatPoints(stake)} pts staked.` });
+        me.refresh(); // pull the authoritative open-entry + points
+        return true;
       } catch {
         setOptimisticPoints(null);
-        setFlash({ tone: 'err', msg: 'Network error — prediction not placed.' });
+        setFlash({ tone: 'err', msg: 'Network error. Prediction not placed.' });
+        return false;
       } finally {
         setSubmitting(false);
       }
     },
-    [featured, submitting, signedIn, serverPoints, goSignIn, me],
+    [submitting, signedIn, serverPoints, goSignIn, me],
   );
+
+  const handleEnter = useCallback(
+    (side: Side, stake: number) => {
+      if (!featured) return;
+      void handleEnterMarket(featured.id, side, stake);
+    },
+    [featured, handleEnterMarket],
+  );
+
+  // Daily bonus lands directly on the balance; reconcile via /me.
+  const handleDailyClaimed = useCallback(
+    (points: number) => {
+      setOptimisticPoints(points);
+      me.refresh();
+    },
+    [me],
+  );
+
+  // ── Result celebration ──────────────────────────────────────────────────────
+  // Watch the user's entries: when one that was OPEN flips to won/lost, flash a
+  // single tasteful toast. Seed on first load so past history never replays.
+  const prevOpenIds = useRef<Set<string> | null>(null);
+  const celebratedIds = useRef<Set<string>>(new Set());
+  const [celebration, setCelebration] = useState<Celebration | null>(null);
+  const [celebQueue, setCelebQueue] = useState<Celebration[]>([]);
+
+  useEffect(() => {
+    const d = me.data;
+    if (!d) return;
+    const openIds = new Set(d.open.map((e) => e.id));
+    const prev = prevOpenIds.current;
+    if (prev == null) {
+      // First sighting: mark all currently-resolved entries as already seen.
+      for (const e of d.history) celebratedIds.current.add(e.id);
+    } else {
+      const fresh: Celebration[] = [];
+      for (const e of d.history) {
+        const status = e.status?.toLowerCase();
+        if ((status === 'won' || status === 'lost') && prev.has(e.id) && !celebratedIds.current.has(e.id)) {
+          celebratedIds.current.add(e.id);
+          fresh.push({ id: e.id, entry: e, won: status === 'won', streak: d.stats?.currentStreak ?? 0 });
+        }
+      }
+      if (fresh.length) setCelebQueue((q) => [...q, ...fresh]);
+    }
+    prevOpenIds.current = openIds;
+  }, [me.data]);
+
+  // Show one celebration at a time.
+  useEffect(() => {
+    if (!celebration && celebQueue.length) {
+      setCelebration(celebQueue[0]);
+      setCelebQueue((q) => q.slice(1));
+    }
+  }, [celebration, celebQueue]);
 
   const streak = me.data?.stats?.currentStreak ?? 0;
 
@@ -142,6 +210,8 @@ export default function LivePredict() {
             <span className="text-[11px] text-orange-300">streak</span>
           </div>
         )}
+
+        {signedIn && <DailyBonus now={now} onClaimed={handleDailyClaimed} />}
 
         {/* segmented control */}
         <div className="ms-auto inline-flex rounded-full border border-white/[0.08] bg-white/[0.03] p-0.5">
@@ -179,6 +249,7 @@ export default function LivePredict() {
       {/* Views */}
       {view === 'live' && (
         <LiveView
+          markets={marketList}
           featured={featured}
           featuredPrice={featuredPrice}
           others={others}
@@ -192,6 +263,7 @@ export default function LivePredict() {
           selectedId={featured?.id ?? null}
           onSelect={setSelectedId}
           onEnter={handleEnter}
+          onEnterMarket={handleEnterMarket}
           onSignIn={goSignIn}
         />
       )}
@@ -221,11 +293,14 @@ export default function LivePredict() {
           Naka Predict is a free-to-play game. Points have no cash value. Odds are model estimates, not financial advice.
         </p>
       )}
+
+      <ResultCelebration celebration={celebration} onClose={() => setCelebration(null)} />
     </div>
   );
 }
 
 function LiveView({
+  markets,
   featured,
   featuredPrice,
   others,
@@ -239,8 +314,10 @@ function LiveView({
   selectedId,
   onSelect,
   onEnter,
+  onEnterMarket,
   onSignIn,
 }: {
+  markets: Market[];
   featured: ReturnType<typeof pickFeatured>;
   featuredPrice: number | null;
   others: NonNullable<ReturnType<typeof pickFeatured>>[];
@@ -254,11 +331,25 @@ function LiveView({
   selectedId: string | null;
   onSelect: (id: string) => void;
   onEnter: (side: Side, stake: number) => void;
+  onEnterMarket: (marketId: string, side: Side, stake: number) => Promise<boolean>;
   onSignIn: () => void;
 }) {
+  const quickPlay = (
+    <QuickPlay
+      markets={markets}
+      now={now}
+      me={me}
+      signedIn={signedIn}
+      submitting={submitting}
+      onEnter={onEnterMarket}
+      onSignIn={onSignIn}
+    />
+  );
+
   if (loading && !featured) {
     return (
       <div className="space-y-4">
+        {quickPlay}
         <div className="nl-glass rounded-3xl h-[520px] animate-pulse" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -271,24 +362,16 @@ function LiveView({
 
   if (!featured) {
     return (
-      <div className="nl-glass rounded-3xl px-5 py-14 text-center">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#0066FF]/10 mb-3">
-          {error ? <AlertTriangle className="w-6 h-6 text-amber-400" /> : <Activity className="w-6 h-6 text-[#9FD0FF]" />}
-        </div>
-        <h3 className="text-base font-semibold text-white">
-          {error ? 'Markets unavailable' : 'Markets warming up'}
-        </h3>
-        <p className="text-sm text-gray-400 mt-1 max-w-sm mx-auto">
-          {error
-            ? 'We couldn’t reach the prediction engine. No data is shown rather than stale guesses.'
-            : 'New Breaking-Live rounds open every few minutes. Hang tight — the next one is on its way.'}
-        </p>
+      <div className="space-y-4">
+        {quickPlay}
+        <FeaturedEmpty error={error} />
       </div>
     );
   }
 
   return (
     <div className="space-y-5">
+      {quickPlay}
       <FeaturedMarket
         market={featured}
         now={now}
@@ -316,6 +399,24 @@ function LiveView({
       )}
 
       {results.length > 0 && <RecentResults results={results} />}
+    </div>
+  );
+}
+
+function FeaturedEmpty({ error }: { error: boolean }) {
+  return (
+    <div className="nl-glass rounded-3xl px-5 py-14 text-center">
+      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#0066FF]/10 mb-3">
+        {error ? <AlertTriangle className="w-6 h-6 text-amber-400" /> : <Activity className="w-6 h-6 text-[#9FD0FF]" />}
+      </div>
+      <h3 className="text-base font-semibold text-white">
+        {error ? 'Markets unavailable' : 'Markets warming up'}
+      </h3>
+      <p className="text-sm text-gray-400 mt-1 max-w-sm mx-auto">
+        {error
+          ? 'We couldn’t reach the prediction engine. No data is shown rather than stale guesses.'
+          : 'New Breaking-Live rounds open every few minutes. Hang tight, the next one is on its way.'}
+      </p>
     </div>
   );
 }

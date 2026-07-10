@@ -3,6 +3,7 @@
 import { CheckCircle2, MinusCircle, XCircle } from 'lucide-react';
 import type { Entry, MeResponse } from './types';
 import { Countdown } from './Countdown';
+import { ShareToWire } from './ShareToWire';
 import { formatPoints } from './utils';
 
 export function MyPredictionsView({
@@ -118,18 +119,25 @@ function HistoryRow({ entry }: { entry: Entry }) {
   const delta = won ? `+${formatPoints(entry.payout)}` : lost ? `-${formatPoints(entry.stake)}` : '±0';
 
   return (
-    <div className="nl-glass rounded-2xl px-3.5 py-3 flex items-center gap-3">
-      <Icon className={`w-5 h-5 shrink-0 ${tone}`} />
-      <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium text-white truncate">{entry.market.question || entry.symbol}</div>
-        <div className="text-[11px] text-gray-500">
-          {entry.side.toUpperCase()} · {formatPoints(entry.stake)} pts · {entry.multiplier.toFixed(2)}x
+    <div className="nl-glass rounded-2xl px-3.5 py-3">
+      <div className="flex items-center gap-3">
+        <Icon className={`w-5 h-5 shrink-0 ${tone}`} />
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium text-white truncate">{entry.market.question || entry.symbol}</div>
+          <div className="text-[11px] text-gray-500">
+            {entry.side.toUpperCase()} · {formatPoints(entry.stake)} pts · {entry.multiplier.toFixed(2)}x
+          </div>
+        </div>
+        <div className="text-right">
+          <div className={`text-sm font-bold tabular-nums ${tone}`}>{delta}</div>
+          <div className={`text-[10px] font-semibold uppercase ${tone}`}>{label}</div>
         </div>
       </div>
-      <div className="text-right">
-        <div className={`text-sm font-bold tabular-nums ${tone}`}>{delta}</div>
-        <div className={`text-[10px] font-semibold uppercase ${tone}`}>{label}</div>
-      </div>
+      {won && (
+        <div className="mt-2.5 flex justify-end">
+          <ShareToWire entry={entry} />
+        </div>
+      )}
     </div>
   );
 }

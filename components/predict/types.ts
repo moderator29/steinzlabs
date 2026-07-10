@@ -4,11 +4,15 @@
 
 export type Direction = 'above' | 'below';
 export type Side = 'yes' | 'no';
+export type MarketKind = 'threshold' | 'direction';
 
 export interface Market {
   id: string;
   symbol: string;
   coingeckoId: string;
+  // 'threshold' = will {SYMBOL} be above/below $X? · 'direction' = one-tap UP/DOWN.
+  // Older payloads may omit this; treat a missing kind as 'threshold'.
+  kind?: MarketKind;
   direction: Direction;
   target: number;
   price: number;
@@ -99,4 +103,21 @@ export interface EnterResponse {
   pointsLeft?: number;
   entry?: { side: Side; stake: number; multiplier: number };
   error?: string;
+}
+
+// ── Daily bonus ──────────────────────────────────────────────────────────────
+export interface DailyStatus {
+  canClaim: boolean;
+  nextAt: string | null; // ISO when the next claim unlocks
+  dailyStreak: number;
+  points: number;
+}
+
+export interface DailyClaimResult {
+  ok: boolean;
+  awarded?: number;
+  dailyStreak?: number;
+  points?: number;
+  error?: string;
+  nextAt?: string | null;
 }

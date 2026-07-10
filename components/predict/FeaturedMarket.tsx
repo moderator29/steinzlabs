@@ -81,7 +81,7 @@ export function FeaturedMarket({ market, now, livePrice, me, signedIn, submittin
 
       {/* model-estimate disclaimer */}
       <p className="mt-3 text-[10px] text-gray-500">
-        Odds are an honest model estimate from live price action — not a guarantee.
+        Odds are an honest model estimate from live price action, not a guarantee.
       </p>
 
       {/* stake OR existing position */}
@@ -131,7 +131,7 @@ function ExistingPosition({ entry, closed }: { entry: Entry; closed: boolean }) 
         </div>
       </div>
       <p className="mt-2 text-[11px] text-gray-400">
-        {closed ? 'Resolving this round…' : 'You’re in — one prediction per market. Good luck.'}
+        {closed ? 'Resolving this round…' : 'You’re in. One prediction per market. Good luck.'}
       </p>
     </div>
   );

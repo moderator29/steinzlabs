@@ -1,4 +1,4 @@
-import type { Direction, Market } from './types';
+import type { Direction, Entry, Market } from './types';
 
 // ── number / money formatting ────────────────────────────────────────────────
 export function formatPrice(n: number | null | undefined): string {
@@ -71,6 +71,32 @@ export function symbolColor(symbol: string): string {
   let hash = 0;
   for (let i = 0; i < symbol.length; i++) hash = (hash * 31 + symbol.charCodeAt(i)) & 0xffffffff;
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+// ── share-to-Wire copy ───────────────────────────────────────────────────────
+// Honest, non-hype body describing a won prediction. The Entry carries no `kind`
+// field, so we read the resolved wording out of the market question:
+//   direction game → "Will {SYMBOL} go UP or DOWN in mm:ss?"  → UP / DOWN
+//   threshold game → "Will {SYMBOL} be above/below $X in mm:ss?" → above/below $X
+export function winShareDescriptor(entry: Entry): string {
+  const q = (entry.market?.question || '').toLowerCase();
+  const yes = entry.side === 'yes';
+  if (q.includes('up or down') || q.includes(' up ') || q.includes('direction')) {
+    return yes ? 'UP' : 'DOWN';
+  }
+  const m = q.match(/(above|below)\s*\$?\s*([\d.,]+)/);
+  if (m) {
+    // YES backs the stated direction; NO backs the opposite.
+    const stated = m[1] as Direction;
+    const dir: Direction = yes ? stated : stated === 'above' ? 'below' : 'above';
+    return `${dir} $${m[2]}`;
+  }
+  return yes ? 'YES' : 'NO';
+}
+
+export function winShareBody(entry: Entry): string {
+  const payout = formatPoints(entry.payout);
+  return `Called ${entry.symbol} ${winShareDescriptor(entry)} and won ${payout} points on Naka Predict. #prediction`;
 }
 
 // Pick the featured market: soonest to close among still-open markets, with the
