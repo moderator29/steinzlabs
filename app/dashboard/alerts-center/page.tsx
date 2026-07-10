@@ -118,7 +118,7 @@ export default function AlertsCenterPage() {
       <div className="flex flex-wrap gap-1.5 mb-4">
         {(['all', 'general', 'price', 'wallet', 'trend', 'composite'] as const).map((f) => (
           <button key={f} onClick={() => setFilter(f)}
-            className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${filter === f ? 'bg-[#0066FF] text-white' : 'text-slate-400 bg-white/[0.04] border border-white/[0.08] hover:text-white'}`}>
+            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${filter === f ? 'bg-[#0066FF] text-white' : 'text-slate-400 bg-white/[0.04] border border-white/[0.08] hover:text-white'}`}>
             {f === 'all' ? 'All' : TYPE_META[f].label}{f !== 'all' && counts ? ` ${counts[f]}` : ''}
           </button>
         ))}
@@ -172,7 +172,7 @@ export default function AlertsCenterPage() {
 
       {!loading && !error && (
         <div className="mt-6 text-center">
-          <Link href="/dashboard/alerts" className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white"><Plus className="w-3 h-3" /> Create new alert</Link>
+          <Link href="/dashboard/alerts" className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-slate-300 hover:text-white"><Plus className="w-3 h-3" /> Create new alert</Link>
         </div>
       )}
     </div>

@@ -427,8 +427,8 @@ export default function AdminResearchPage() {
                 {/* Publish toggle */}
                 <label className="flex items-center gap-3 cursor-pointer pt-1">
                   <div onClick={() => setForm(f => ({ ...f, published: !f.published }))}
-                    className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${form.published ? 'bg-emerald-500' : 'bg-[#1E2433]'}`}>
-                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.published ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                    className={`w-8 h-5 sm:w-10 sm:h-6 rounded-md transition-colors relative flex-shrink-0 ${form.published ? 'bg-emerald-500' : 'bg-[#1E2433]'}`}>
+                    <div className={`absolute top-0.5 sm:top-1 w-4 h-4 bg-white rounded-[4px] shadow transition-transform ${form.published ? 'translate-x-[14px] sm:translate-x-5' : 'translate-x-0.5'}`} />
                   </div>
                   <span className="text-sm text-gray-300">{form.scheduled_at ? 'Scheduled' : form.published ? 'Published' : 'Draft'}</span>
                 </label>

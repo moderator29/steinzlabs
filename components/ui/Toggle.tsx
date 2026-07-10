@@ -18,9 +18,21 @@ export interface ToggleProps {
   className?: string;
 }
 
+// Smaller on mobile, slightly larger at sm:. Track height - knob = 4px in every
+// case, so the fixed top-0.5 keeps the knob vertically centered at both widths.
 const DIMS: Record<Size, { track: string; knob: string; on: string; off: string }> = {
-  sm: { track: 'w-8 h-5', knob: 'w-4 h-4 rounded-[4px]', on: 'left-[14px]', off: 'left-0.5' },
-  md: { track: 'w-10 h-6', knob: 'w-5 h-5 rounded-[5px]', on: 'left-[18px]', off: 'left-0.5' },
+  sm: {
+    track: 'w-7 h-4 sm:w-8 sm:h-5',
+    knob: 'w-3 h-3 sm:w-4 sm:h-4 rounded-[3px] sm:rounded-[4px]',
+    on: 'left-[14px]',
+    off: 'left-0.5',
+  },
+  md: {
+    track: 'w-8 h-5 sm:w-10 sm:h-6',
+    knob: 'w-4 h-4 sm:w-5 sm:h-5 rounded-[4px] sm:rounded-[5px]',
+    on: 'left-[14px] sm:left-[18px]',
+    off: 'left-0.5',
+  },
 };
 
 export function Toggle({ checked, onChange, disabled = false, label, size = 'md', className = '' }: ToggleProps) {

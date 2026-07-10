@@ -60,8 +60,8 @@ function SettingToggle({ label, icon: Icon, on, onClick }: { label: string; icon
     <button onClick={onClick} className="w-full text-start flex items-center gap-2 px-2 py-2 rounded-lg text-[12px] text-slate-200 hover:bg-white/[0.05]">
       <Icon className="w-3.5 h-3.5 text-white/60" />
       <span className="flex-1">{label}</span>
-      <span className={`w-7 h-4 rounded-full relative transition ${on ? 'bg-[#0066FF]' : 'bg-white/15'}`}>
-        <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${on ? 'left-3.5' : 'left-0.5'}`} />
+      <span className={`w-7 h-4 sm:w-8 sm:h-4 rounded-md relative transition ${on ? 'bg-[#0066FF]' : 'bg-white/15'}`}>
+        <span className={`absolute top-0.5 w-3 h-3 rounded-[3px] bg-white transition-all ${on ? 'left-3.5 sm:left-[18px]' : 'left-0.5'}`} />
       </span>
     </button>
   );

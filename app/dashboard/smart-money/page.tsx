@@ -68,9 +68,9 @@ function PrefToggle({ label, desc, on, onToggle }: { label: string; desc: string
         aria-checked={on}
         aria-label={label}
         onClick={onToggle}
-        className={`w-10 h-5 rounded-full relative flex-shrink-0 ms-4 transition-colors ${on ? 'bg-[#0066FF]' : 'bg-white/[0.12]'}`}
+        className={`w-8 h-5 sm:w-10 sm:h-6 rounded-md relative flex-shrink-0 ms-4 transition-colors ${on ? 'bg-[#0066FF]' : 'bg-white/[0.12]'}`}
       >
-        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${on ? 'left-5' : 'left-0.5'}`} />
+        <span className={`absolute top-0.5 sm:top-1 w-4 h-4 bg-white rounded-[4px] transition-all ${on ? 'left-[14px] sm:left-5' : 'left-0.5'}`} />
       </button>
     </div>
   );

@@ -1158,9 +1158,9 @@ export default function VtxAiTab() {
                 </div>
                 <button
                   onClick={() => updateSettings({ webSearch: !settings.webSearch })}
-                  className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.webSearch ? 'bg-[#0066FF]' : 'bg-white/10'}`}
+                  className={`w-8 sm:w-9 h-5 rounded-md transition-colors relative flex-shrink-0 ${settings.webSearch ? 'bg-[#0066FF]' : 'bg-white/10'}`}
                 >
-                  <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.webSearch ? 'right-[3px]' : 'left-[3px]'}`} />
+                  <div className={`w-3.5 h-3.5 bg-white rounded-[3px] absolute top-[3px] transition-all ${settings.webSearch ? 'right-[3px]' : 'left-[3px]'}`} />
                 </button>
               </div>
 
@@ -1172,9 +1172,9 @@ export default function VtxAiTab() {
                 </div>
                 <button
                   onClick={() => updateSettings({ autoCharts: !settings.autoCharts })}
-                  className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.autoCharts ? 'bg-[#0066FF]' : 'bg-white/10'}`}
+                  className={`w-8 sm:w-9 h-5 rounded-md transition-colors relative flex-shrink-0 ${settings.autoCharts ? 'bg-[#0066FF]' : 'bg-white/10'}`}
                 >
-                  <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.autoCharts ? 'right-[3px]' : 'left-[3px]'}`} />
+                  <div className={`w-3.5 h-3.5 bg-white rounded-[3px] absolute top-[3px] transition-all ${settings.autoCharts ? 'right-[3px]' : 'left-[3px]'}`} />
                 </button>
               </div>
 
@@ -1186,9 +1186,9 @@ export default function VtxAiTab() {
                 </div>
                 <button
                   onClick={() => updateSettings({ focusMode: !settings.focusMode })}
-                  className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.focusMode ? 'bg-[#0066FF]' : 'bg-white/10'}`}
+                  className={`w-8 sm:w-9 h-5 rounded-md transition-colors relative flex-shrink-0 ${settings.focusMode ? 'bg-[#0066FF]' : 'bg-white/10'}`}
                 >
-                  <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.focusMode ? 'right-[3px]' : 'left-[3px]'}`} />
+                  <div className={`w-3.5 h-3.5 bg-white rounded-[3px] absolute top-[3px] transition-all ${settings.focusMode ? 'right-[3px]' : 'left-[3px]'}`} />
                 </button>
               </div>
 
@@ -1200,9 +1200,9 @@ export default function VtxAiTab() {
                 </div>
                 <button
                   onClick={() => updateSettings({ messageSound: !settings.messageSound })}
-                  className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.messageSound ? 'bg-[#0066FF]' : 'bg-white/10'}`}
+                  className={`w-8 sm:w-9 h-5 rounded-md transition-colors relative flex-shrink-0 ${settings.messageSound ? 'bg-[#0066FF]' : 'bg-white/10'}`}
                 >
-                  <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.messageSound ? 'right-[3px]' : 'left-[3px]'}`} />
+                  <div className={`w-3.5 h-3.5 bg-white rounded-[3px] absolute top-[3px] transition-all ${settings.messageSound ? 'right-[3px]' : 'left-[3px]'}`} />
                 </button>
               </div>
             </div>
