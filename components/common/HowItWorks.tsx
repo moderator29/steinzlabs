@@ -61,12 +61,16 @@ export function HowItWorksButton({
         aria-haspopup="dialog"
         aria-label={`How ${content.title} works`}
         title="How it works"
-        className={`inline-flex shrink-0 items-center justify-center gap-0.5 sm:gap-1 rounded-full border border-[#0066FF]/40 bg-[#0066FF]/12 text-[#cfe0ff] transition-colors hover:border-[#0066FF] hover:bg-[#0066FF]/25 hover:text-white ${
-          iconOnly ? 'h-2.5 w-2.5 sm:h-3.5 sm:w-3.5' : 'px-1 py-px text-[8px] sm:px-2 sm:py-0.5 sm:text-[10px]'
+        className={`group inline-flex shrink-0 items-center justify-center text-[#4DA2FF] transition-colors hover:text-white ${
+          // Single clean glyph: the HelpCircle IS the ring around the "?", so we
+          // do NOT wrap it in a second bordered circle (that produced two
+          // concentric rings with a gap). A small negative-margin tap pad keeps
+          // the touch target comfortable without drawing a visible second ring.
+          iconOnly ? 'p-1.5 -m-1.5' : 'gap-1 rounded-full border border-[#0066FF]/40 bg-[#0066FF]/12 px-2 py-0.5 text-[10px] text-[#cfe0ff] hover:border-[#0066FF] hover:bg-[#0066FF]/25'
         } ${className}`}
       >
-        <HelpCircle className="h-1.5 w-1.5 sm:h-2 sm:w-2 flex-shrink-0 text-[#4DA2FF]" />
-        {!iconOnly && <span className="text-[8px] sm:text-[10px] font-semibold leading-none">How it works</span>}
+        <HelpCircle className={`flex-shrink-0 ${iconOnly ? 'h-[18px] w-[18px]' : 'h-3 w-3'}`} />
+        {!iconOnly && <span className="text-[10px] font-semibold leading-none">How it works</span>}
       </button>
       {open && <HowItWorksPanel content={content} onClose={() => setOpen(false)} />}
     </>

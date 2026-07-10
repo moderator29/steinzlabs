@@ -1,7 +1,11 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { Loader2, ImagePlus, X, Hash, Sparkles } from 'lucide-react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import {
+  Loader2, ImagePlus, X, Sparkles, ChevronDown, Check,
+  Coins, Building2, Bot, BrainCircuit, Blocks, TrendingUp, Laugh, Hexagon, Globe,
+  type LucideIcon,
+} from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { WIRE_TOPICS, WIRE_MAX_TAGS } from '@/lib/wire/topics';
 import type { WirePost } from './WirePostCard';
@@ -11,14 +15,18 @@ import type { WirePost } from './WirePostCard';
  *
  * Textarea with a live 0/600 counter, up to FOUR image uploads (each
  * client-validated < 1MB, images only, stored in the public `wire-media` bucket
- * under <uid>/<uuid>.<ext>), a 1–3 topic tag picker, and a Post button disabled
- * while empty, over the limit, uploading, or submitting. Attached images show as
- * a compact thumbnail row with per-image remove and an "add" tile that disables
- * at the 4-image cap. On success it hands the created wire back to the parent for
- * optimistic prepend.
+ * under <uid>/<uuid>.<ext>), a 1 to 3 topic tag picker behind an "Options"
+ * dropdown, and a Post button disabled while empty, over the limit, uploading,
+ * or submitting. Attached images show as a compact thumbnail row with per-image
+ * remove and an "add" tile that disables at the 4-image cap. On success it hands
+ * the created wire back to the parent for optimistic prepend.
  *
  * Media is submitted as media_urls: string[] (bucket public URLs only); the API
  * still accepts the legacy single media_url for older clients.
+ *
+ * The full-page compose route drives Post from its own top bar, so it holds a
+ * ref to this component and calls submit(); onStateChange keeps that button's
+ * enabled/spinner state in sync.
  */
 
 const MAX = 600;
@@ -31,25 +39,52 @@ const ALLOWED_MIME: Record<string, string> = {
   'image/gif': 'gif',
 };
 
+// One flat icon per topic so the Options dropdown reads at a glance. Chains that
+// have no dedicated glyph share a neutral hexagon rather than a fake logo.
+const TOPIC_ICON: Record<string, LucideIcon> = {
+  new: Sparkles,
+  crypto: Coins,
+  rwa: Building2,
+  ai: Bot,
+  agi: BrainCircuit,
+  blockchain: Blocks,
+  solana: Hexagon,
+  eth: Hexagon,
+  bnb: Hexagon,
+  prediction: TrendingUp,
+  memes: Laugh,
+};
+
+export interface WireComposerHandle {
+  submit: () => void;
+}
+
 export interface WireComposerProps {
   avatarUrl?: string | null;
   displayName?: string | null;
+  /** @handle shown under the display name in page mode (X-style identity row). */
+  username?: string | null;
   /** Session user id — the storage upload folder must be <uid>/ (owner-scoped). */
   userId?: string | null;
   /** Called with the freshly created wire so the parent can prepend it. */
   onPosted: (post: WirePost) => void;
-  /** Show the topic picker expanded from the start (used by the compose page). */
-  expandedTags?: boolean;
-  /** Page mode: larger textarea + autofocus for the full-screen compose route. */
+  /** Page mode: larger textarea + autofocus + X-style identity row. */
   large?: boolean;
   /** Render without the outer glass card (the compose page supplies its own). */
   bare?: boolean;
+  /** Hide the inline Post button — the page renders Post in its own top bar. */
+  hideInlinePost?: boolean;
+  /** Live enabled/spinner state for a host-rendered Post button. */
+  onStateChange?: (s: { canPost: boolean; submitting: boolean }) => void;
 }
 
-export function WireComposer({ avatarUrl, displayName, userId, onPosted, expandedTags, large, bare }: WireComposerProps) {
+export const WireComposer = forwardRef<WireComposerHandle, WireComposerProps>(function WireComposer(
+  { avatarUrl, displayName, username, userId, onPosted, large, bare, hideInlinePost, onStateChange },
+  ref,
+) {
   const [body, setBody] = useState('');
   const [tags, setTags] = useState<string[]>([]);
-  const [showTags, setShowTags] = useState(!!expandedTags);
+  const [showTags, setShowTags] = useState(false);
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -62,6 +97,11 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted, expande
   const over = len > MAX;
   const empty = body.trim().length === 0;
   const canPost = !empty && !over && !submitting && !uploading;
+
+  // Keep a host-rendered Post button (compose page top bar) in sync.
+  useEffect(() => {
+    onStateChange?.({ canPost, submitting });
+  }, [canPost, submitting, onStateChange]);
 
   const toggleTag = (value: string) => {
     setTags((prev) => {
@@ -82,7 +122,7 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted, expande
       .from('wire-media')
       .upload(path, file, { contentType: file.type, cacheControl: '3600', upsert: false });
     if (upErr) {
-      setError(upErr.message || 'Upload failed — try again');
+      setError(upErr.message || 'Upload failed. Try again.');
       return null;
     }
     const { data: pub } = supabase.storage.from('wire-media').getPublicUrl(path);
@@ -113,7 +153,7 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted, expande
     }
     const files = picked.slice(0, remaining);
     if (picked.length > remaining) {
-      setError(`Up to ${MAX_IMAGES} images per wire — extra images skipped`);
+      setError(`Up to ${MAX_IMAGES} images per wire. Extra images skipped.`);
     }
 
     setUploading(true);
@@ -121,7 +161,7 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted, expande
       for (const file of files) {
         const ext = ALLOWED_MIME[file.type];
         if (!ext) {
-          setError('Images only — JPG, PNG, WebP or GIF');
+          setError('Images only: JPG, PNG, WebP or GIF');
           continue;
         }
         if (file.size > MAX_IMAGE_BYTES) {
@@ -132,7 +172,7 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted, expande
         if (url) setMediaUrls((prev) => (prev.length < MAX_IMAGES ? [...prev, url] : prev));
       }
     } catch {
-      setError('Upload failed — try again');
+      setError('Upload failed. Try again.');
     } finally {
       setUploading(false);
     }
@@ -177,7 +217,6 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted, expande
           }
           return merged;
         });
-        setShowTags(true);
       }
     } catch {
       setAiError('AI assist unavailable');
@@ -212,29 +251,47 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted, expande
       setShowTags(false);
       setMediaUrls([]);
     } catch {
-      setError('Network error — try again');
+      setError('Network error. Try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
+  useImperativeHandle(ref, () => ({ submit }));
+
   const initial = (displayName || '?').trim().charAt(0).toUpperCase();
   const pct = Math.min(1, len / MAX);
   const ringColor = over ? '#ef4444' : len > MAX * 0.9 ? '#f59e0b' : '#0066FF';
 
+  const avatar = avatarUrl ? (
+    <img src={avatarUrl} alt="" className="w-11 h-11 rounded-full object-cover border border-white/10 flex-shrink-0" />
+  ) : (
+    <div
+      className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 text-white/90 font-semibold border border-white/10"
+      style={{ background: 'linear-gradient(135deg,#0066FF33,#5566FF33)' }}
+    >
+      {initial}
+    </div>
+  );
+
   return (
     <div className={bare ? '' : 'nl-glass rounded-2xl p-4'}>
-      <div className="flex gap-3">
-        {avatarUrl ? (
-          <img src={avatarUrl} alt="" className="w-11 h-11 rounded-full object-cover border border-white/10 flex-shrink-0" />
-        ) : (
-          <div
-            className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 text-white/90 font-semibold border border-white/10"
-            style={{ background: 'linear-gradient(135deg,#0066FF33,#5566FF33)' }}
-          >
-            {initial}
+      {/* X-style identity row (page mode): avatar + name/@handle + public pill. */}
+      {large ? (
+        <div className="flex items-center gap-3 mb-3">
+          {avatar}
+          <div className="min-w-0 flex-1">
+            <div className="text-white font-semibold text-sm leading-tight truncate">{displayName || 'You'}</div>
+            {username ? <div className="text-white/40 text-xs leading-tight truncate">@{username}</div> : null}
           </div>
-        )}
+          <span className="inline-flex items-center gap-1 rounded-full border border-[#0066FF]/30 bg-[#0066FF]/10 px-2.5 py-1 text-[11px] font-semibold text-[#8fb6ff] flex-shrink-0">
+            <Globe className="w-3 h-3" /> Everyone
+          </span>
+        </div>
+      ) : null}
+
+      <div className="flex gap-3">
+        {large ? null : avatar}
 
         <div className="min-w-0 flex-1">
           <textarea
@@ -247,7 +304,7 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted, expande
             rows={large ? 6 : 3}
             autoFocus={large}
             className={`w-full bg-transparent resize-none outline-none text-white placeholder:text-white/35 leading-relaxed ${
-              large ? 'text-lg min-h-[8rem]' : 'text-[15px]'
+              large ? 'text-lg min-h-[9rem]' : 'text-[15px]'
             }`}
           />
 
@@ -289,39 +346,90 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted, expande
             </div>
           ) : null}
 
-          {/* Tag picker */}
-          {showTags ? (
-            <div className="mt-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-white/45">Add up to {WIRE_MAX_TAGS} topics</span>
-                <span className="text-xs text-white/35 tabular-nums">{tags.length}/{WIRE_MAX_TAGS}</span>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {WIRE_TOPICS.map((t) => {
-                  const active = tags.includes(t.value);
-                  const atCap = !active && tags.length >= WIRE_MAX_TAGS;
-                  return (
-                    <button
-                      key={t.value}
-                      type="button"
-                      onClick={() => toggleTag(t.value)}
-                      disabled={atCap}
-                      className={`text-xs font-medium px-2.5 py-1 rounded-full border transition ${
-                        active
-                          ? 'bg-[#0066FF]/20 text-[#4d94ff] border-[#0066FF]/50'
-                          : atCap
-                            ? 'text-white/25 border-white/10 cursor-not-allowed'
-                            : 'text-white/60 border-white/12 hover:text-white hover:border-white/25'
-                      }`}
-                      aria-pressed={active}
-                    >
-                      {t.label}
-                    </button>
-                  );
-                })}
-              </div>
+          {/* Selected-topic pills (always visible once chosen) */}
+          {tags.length ? (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {tags.map((v) => {
+                const t = WIRE_TOPICS.find((x) => x.value === v);
+                const Icon = TOPIC_ICON[v] ?? Hexagon;
+                return (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => toggleTag(v)}
+                    className="inline-flex items-center gap-1 rounded-full border border-[#0066FF]/50 bg-[#0066FF]/20 px-2.5 py-1 text-xs font-medium text-[#8fb6ff]"
+                  >
+                    <Icon className="w-3 h-3" /> {t?.label ?? v}
+                    <X className="w-3 h-3 opacity-70" />
+                  </button>
+                );
+              })}
             </div>
           ) : null}
+
+          {/* Topic picker — a single "Options" trigger that pulls out a vertical,
+              icon-led list (like the Context Feed chain picker). Multi-select up
+              to 3; the list stays open so several can be added, and closes on the
+              trigger or a tap outside. */}
+          <div className="mt-3 relative">
+            <button
+              type="button"
+              onClick={() => setShowTags((s) => !s)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                showTags || tags.length
+                  ? 'border-[#0066FF]/50 bg-[#0066FF]/15 text-[#8fb6ff]'
+                  : 'border-white/12 text-white/60 hover:text-white hover:border-white/25'
+              }`}
+              aria-expanded={showTags}
+              aria-haspopup="listbox"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              {tags.length ? `${tags.length}/${WIRE_MAX_TAGS} topics` : 'Add topics'}
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showTags ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showTags ? (
+              <>
+                <button
+                  type="button"
+                  aria-label="Close topics"
+                  className="fixed inset-0 z-10 cursor-default"
+                  onClick={() => setShowTags(false)}
+                />
+                <div
+                  role="listbox"
+                  className="absolute z-20 mt-2 w-60 max-h-72 overflow-y-auto no-scrollbar nl-glass rounded-2xl p-1.5 shadow-[0_20px_60px_rgba(0,0,0,0.55)]"
+                >
+                  {WIRE_TOPICS.map((t) => {
+                    const active = tags.includes(t.value);
+                    const atCap = !active && tags.length >= WIRE_MAX_TAGS;
+                    const Icon = TOPIC_ICON[t.value] ?? Hexagon;
+                    return (
+                      <button
+                        key={t.value}
+                        type="button"
+                        role="option"
+                        aria-selected={active}
+                        onClick={() => toggleTag(t.value)}
+                        disabled={atCap}
+                        className={`w-full flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition text-left ${
+                          active
+                            ? 'bg-[#0066FF]/18 text-white'
+                            : atCap
+                              ? 'text-white/25 cursor-not-allowed'
+                              : 'text-white/75 hover:bg-white/[0.05] hover:text-white'
+                        }`}
+                      >
+                        <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-[#4d94ff]' : 'text-white/45'}`} />
+                        <span className="flex-1">{t.label}</span>
+                        {active ? <Check className="w-4 h-4 text-[#4d94ff]" /> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            ) : null}
+          </div>
 
           {error ? <div className="mt-2 text-xs text-red-400" role="alert">{error}</div> : null}
           {aiError ? <div className="mt-2 text-xs text-amber-400/90" role="status">{aiError}</div> : null}
@@ -344,16 +452,6 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted, expande
               title={mediaUrls.length >= MAX_IMAGES ? `Up to ${MAX_IMAGES} images per wire` : 'Add image'}
             >
               <ImagePlus className="w-[18px] h-[18px]" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowTags((s) => !s)}
-              className={`p-2 rounded-lg transition hover:bg-[#0066FF]/12 ${showTags || tags.length ? 'text-[#4d94ff]' : 'text-white/45 hover:text-[#4d94ff]'}`}
-              aria-label="Add topics"
-              aria-pressed={showTags}
-              title="Add topics"
-            >
-              <Hash className="w-[18px] h-[18px]" />
             </button>
             <button
               type="button"
@@ -389,21 +487,23 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted, expande
                 </span>
               </div>
 
-              <button
-                type="button"
-                onClick={submit}
-                disabled={!canPost}
-                className="naka-button-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
-              >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                Post
-              </button>
+              {hideInlinePost ? null : (
+                <button
+                  type="button"
+                  onClick={submit}
+                  disabled={!canPost}
+                  className="naka-button-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
+                >
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  Post
+                </button>
+              )}
             </div>
           </div>
         </div>
       </div>
     </div>
   );
-}
+});
 
 export default WireComposer;
