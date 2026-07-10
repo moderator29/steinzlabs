@@ -30,6 +30,13 @@ import { WIRE_TOPIC_SET, WIRE_MAX_TAGS } from '@/lib/wire/topics';
 const AUTHOR = 'author:profiles!wire_posts_author_id_fkey(id,username,display_name,avatar_url,is_verified)';
 // Full post select including the embedded original (for reposts) and its author.
 const POST_SELECT = `*, ${AUTHOR}, original:wire_posts!wire_posts_repost_of_fkey(*, ${AUTHOR})`;
+// Create-response select — a freshly created post is always top-level (reposts
+// go through the dedicated /repost route), so it never has an `original` to
+// embed. Omitting the wire_posts->wire_posts self-join here keeps posting
+// working even if PostgREST's schema cache lags on the self-referential FK
+// (the cause of the "Could not find a relationship between 'wire_posts' and
+// 'wire_posts'" errors on create).
+const CREATE_SELECT = `*, ${AUTHOR}`;
 
 const PAGE_SIZE = 20;
 
@@ -112,11 +119,11 @@ export async function POST(req: NextRequest) {
   const { data, error } = await sb
     .from('wire_posts')
     .insert(insert)
-    .select(POST_SELECT)
+    .select(CREATE_SELECT)
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ post: { ...data, liked: false, reposted: false } });
+  return NextResponse.json({ post: { ...data, original: null, liked: false, reposted: false } });
 }
 
 export async function GET(req: NextRequest) {
