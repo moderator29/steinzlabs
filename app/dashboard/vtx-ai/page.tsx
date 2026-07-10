@@ -1340,13 +1340,19 @@ function VtxAiPageInner() {
                   </div>
                 )}
                 {msg.role === 'assistant' && msg.suggestions && msg.suggestions.length > 0 && i === messages.length - 1 && (
-                  <div className="mt-3 pt-3 border-t border-white/[0.06]">
-                    {/* pe-8 reserves the bottom-right corner so the absolutely
-                        positioned Copy button never overlays the last chip
-                        (visible on touch where :hover sticks after a tap). */}
-                    <div className="flex flex-wrap gap-1.5 pe-8">
+                  // A defined glass panel (not a bare hairline): the chips sit
+                  // INSIDE a padded rounded box so nothing touches the edge, and
+                  // it reads as an intentional "try asking" tray rather than a
+                  // stray line. pe-1 keeps clear of the absolute Copy button.
+                  <div className="mt-3 nl-glass rounded-2xl p-2.5">
+                    <div className="text-[9px] font-semibold uppercase tracking-wider text-gray-500 mb-2 ps-0.5">Try asking</div>
+                    <div className="flex flex-col gap-1.5 pe-1">
                       {msg.suggestions.map((s, si) => (
-                        <button key={si} onClick={() => handleSend(s)} className="px-2.5 py-1.5 bg-[#0066FF]/[0.06] border border-[#0066FF]/15 rounded-lg text-[10px] text-[#0066FF] hover:bg-[#0066FF]/10 transition-all">
+                        <button
+                          key={si}
+                          onClick={() => handleSend(s)}
+                          className="w-full text-start px-3 py-2 rounded-xl bg-[#0066FF]/[0.08] border border-[#0066FF]/25 text-[11px] font-medium text-[#8fb6ff] hover:bg-[#0066FF]/15 hover:border-[#0066FF]/45 hover:text-white transition-all"
+                        >
                           {s}
                         </button>
                       ))}

@@ -18,7 +18,6 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { GlobalWhatsNewButton } from '@/components/common/GlobalWhatsNew';
-import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { useAuth } from '@/lib/hooks/useAuth';
 
 interface SidebarMenuProps {
@@ -232,7 +231,6 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
             <span className="font-heading text-base font-bold tracking-tight text-white">NAKA LABS</span>
           </button>
           <div className="flex items-center gap-2">
-            <ThemeToggle />
             <button
               ref={closeRef}
               onClick={onClose}
