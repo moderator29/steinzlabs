@@ -92,7 +92,7 @@ function diffToken(prev: TokenSnapshot | null, cur: TokenSnapshot): string[] {
   }
   if (prev.liquidityUsd && cur.liquidityUsd != null && cur.liquidityUsd < prev.liquidityUsd * LIQ_DROP_RATIO) {
     const dropPct = ((prev.liquidityUsd - cur.liquidityUsd) / prev.liquidityUsd) * 100;
-    changes.push(`${sym} liquidity dropped ${dropPct.toFixed(0)}% ($${Math.round(prev.liquidityUsd).toLocaleString()} → $${Math.round(cur.liquidityUsd).toLocaleString()}) — a rug-enabling move.`);
+    changes.push(`${sym} liquidity dropped ${dropPct.toFixed(0)}% ($${Math.round(prev.liquidityUsd).toLocaleString()} → $${Math.round(cur.liquidityUsd).toLocaleString()}): a rug-enabling move.`);
   }
   if (cur.convergenceWallets >= CONVERGENCE_MIN && cur.convergenceWallets > (prev.convergenceWallets ?? 0)) {
     changes.push(`Smart money is converging on ${sym}: ${cur.convergenceWallets} cohort wallets now accumulating (was ${prev.convergenceWallets ?? 0}).`);

@@ -2,7 +2,7 @@
 
 ## Our Standards
 
-Steinz Labs is built and maintained by a small team. We expect everyone who contributes to or interacts with this project — collaborators, contractors, security researchers, and users — to behave professionally and treat others with respect.
+Steinz Labs is built and maintained by a small team. We expect everyone who contributes to or interacts with this project (collaborators, contractors, security researchers, and users) to behave professionally and treat others with respect.
 
 Specifically:
 
@@ -14,11 +14,11 @@ Specifically:
 
 ## Scope
 
-This Code of Conduct applies in any space where the Steinz Labs project is represented — the GitHub repository, the Telegram bot, the Discord server, conference talks, social media accounts under the project's name, and any private 1:1 communication that arises out of project work.
+This Code of Conduct applies in any space where the Steinz Labs project is represented: the GitHub repository, the Telegram bot, the Discord server, conference talks, social media accounts under the project's name, and any private 1:1 communication that arises out of project work.
 
 ## Enforcement
 
-Reports go to **conduct@nakalabs.xyz**. The maintainers will review every report, ask for additional context if needed, and respond with the action taken. Possible actions include a private warning, a temporary block from the project, or — for serious or repeated violations — a permanent ban.
+Reports go to **conduct@nakalabs.xyz**. The maintainers will review every report, ask for additional context if needed, and respond with the action taken. Possible actions include a private warning, a temporary block from the project, or, for serious or repeated violations, a permanent ban.
 
 Reports are kept confidential. Reporters will not be exposed to the person being reported without explicit consent.
 

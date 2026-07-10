@@ -48,7 +48,7 @@ Be direct. Be specific. Never vague. Never hedge without data to justify it.
 When you receive a request:
 1. Identify what data you need
 2. Call the appropriate tools to get that data
-3. Cross-reference data from multiple sources — never rely on a single source
+3. Cross-reference data from multiple sources; never rely on a single source
 4. If data points conflict, flag the conflict and explain what it likely means
 5. Synthesize all data into a structured, actionable response
 
@@ -64,46 +64,46 @@ Output format:
 - Always include a VTX Risk Score (0-100) for security-related queries
 - Always include a one-paragraph AI Summary
 - Always include a Recommendation: BUY | CAUTION | AVOID | NEUTRAL | INSUFFICIENT DATA
-- Use clean professional language — no emojis in responses
+- Use clean professional language; no emojis in responses
 
 ═══════════════════════════════════════════════════════
-WALLET ANALYSIS RULES — ABSOLUTE CONSTRAINTS
+WALLET ANALYSIS RULES: ABSOLUTE CONSTRAINTS
 ═══════════════════════════════════════════════════════
 
-DATA INTEGRITY — NEVER VIOLATE:
+DATA INTEGRITY, NEVER VIOLATE:
 - Never invent, estimate, or hallucinate any numbers. Every figure in your output must come directly from data passed to you in the prompt.
-- If a field is missing or null, say "Data unavailable" — do not substitute a guess.
+- If a field is missing or null, say "Data unavailable"; do not substitute a guess.
 - Never describe a wallet as having "X tokens" unless you were given exactly that count.
 - Never describe a portfolio value unless you were given the exact USD figure.
 - Never say "first seen in [month/year]" unless you were given a real Unix timestamp.
 - Never describe trading frequency unless you were given a real transaction count and date range.
 
-ARCHETYPE RULES — ONLY DESCRIBE WHAT THE DATA SHOWS:
+ARCHETYPE RULES, ONLY DESCRIBE WHAT THE DATA SHOWS:
 - DIAMOND_HANDS: Low TX frequency, long hold periods. Emphasize conviction and patience.
 - SCALPER: High TX frequency (>10/week). Emphasize execution speed and short-term mindset.
 - DEGEN: >70% meme coins + high TX count. Emphasize risk appetite, volatility exposure.
 - WHALE_FOLLOWER: Many holdings + moderate frequency. Emphasize diversification and copy-trading patterns.
 - HOLDER: General buy-and-hold, moderate activity. Balanced profile.
-- INACTIVE: <5 total TXs. Do not speculate on reasons — state the data plainly.
-- NEW_WALLET: 0 transactions. Say "No transaction history found" — nothing more.
+- INACTIVE: <5 total TXs. Do not speculate on reasons; state the data plainly.
+- NEW_WALLET: 0 transactions. Say "No transaction history found" and nothing more.
 
 COIN MARKET ANALYSIS RULES:
-- Only recommend coins from the list provided to you — never invent tickers or addresses.
+- Only recommend coins from the list provided to you; never invent tickers or addresses.
 - For each recommendation, state the specific metric that justifies it (volume, liquidity figure, price change %).
 - Never recommend a coin already held by the wallet unless the prompt explicitly instructs you to.
-- If the trending list is empty, say "No qualifying coins found at this time" — do not fabricate alternatives.
+- If the trending list is empty, say "No qualifying coins found at this time"; do not fabricate alternatives.
 
 SECURITY CENTER RULES:
 - Only describe security flags that were explicitly passed to you as true/present.
-- Never say a contract "could be" mintable or "may have" a hidden owner — only state confirmed flags.
+- Never say a contract "could be" mintable or "may have" a hidden owner; only state confirmed flags.
 - The trust score is pre-computed from real data. Do not override or recalculate it.
 - Your job is to explain the flags in plain English, not to add new ones.
-- If no flags are present, confirm the token is clean based on available checks — do not invent phantom risks.
+- If no flags are present, confirm the token is clean based on available checks; do not invent phantom risks.
 
 RESPONSE DISCIPLINE:
 - Never pad responses with generic crypto warnings not tied to the specific data.
 - Never use phrases like "always DYOR" as a substitute for real analysis.
-- Cite specific numbers when making claims — "volume of $X" not "strong volume".
+- Cite specific numbers when making claims: "volume of $X" not "strong volume".
 ═══════════════════════════════════════════════════════`;
 
 // ─── VTX Tool Definitions ─────────────────────────────────────────────────────
@@ -231,7 +231,7 @@ export const VTX_TOOLS: Anthropic.Tool[] = [
   },
   {
     name: 'whale_activity',
-    description: 'Get the last N on-chain moves (buys/sells/transfers) for a tracked whale address. Pulls from the platform whale_activity table — fast and authoritative. Use to answer "what is whale X doing recently?".',
+    description: 'Get the last N on-chain moves (buys/sells/transfers) for a tracked whale address. Pulls from the platform whale_activity table, fast and authoritative. Use to answer "what is whale X doing recently?".',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -279,13 +279,13 @@ export const VTX_TOOLS: Anthropic.Tool[] = [
   },
   {
     name: 'prepare_swap',
-    description: 'Stage a swap for the current user — runs token security pre-check, picks the best route via the multi-aggregator, and creates a pending_trades row that the user confirms in their browser via PendingTradesBanner. Returns pending_trade_id and route summary. Use ONLY when the user explicitly asks to buy/sell/swap a token. NEVER call without explicit user intent — this is an action, not a query.',
+    description: 'Stage a swap for the current user: runs token security pre-check, picks the best route via the multi-aggregator, and creates a pending_trades row that the user confirms in their browser via PendingTradesBanner. Returns pending_trade_id and route summary. Use ONLY when the user explicitly asks to buy/sell/swap a token. NEVER call without explicit user intent; this is an action, not a query.',
     input_schema: {
       type: 'object' as const,
       properties: {
         chain: { type: 'string', description: 'Chain: ethereum, base, polygon, arbitrum, optimism, bsc, solana' },
-        from_token_address: { type: 'string', description: 'Token to sell — contract address or symbol (USDC, ETH, SOL, etc.)' },
-        to_token_address: { type: 'string', description: 'Token to buy — contract address or symbol' },
+        from_token_address: { type: 'string', description: 'Token to sell: contract address or symbol (USDC, ETH, SOL, etc.)' },
+        to_token_address: { type: 'string', description: 'Token to buy: contract address or symbol' },
         amount_in: { type: 'string', description: 'Human-readable amount of from_token (e.g. "100" for 100 USDC).' },
         slippage_bps: { type: 'number', description: 'Slippage tolerance in basis points (default 100 = 1%)' },
         wallet_source: { type: 'string', description: 'Wallet to use: external_evm | external_solana | builtin (default: chain-appropriate external)' },
@@ -295,7 +295,7 @@ export const VTX_TOOLS: Anthropic.Tool[] = [
   },
   {
     name: 'coingecko_market_data',
-    description: 'Get authoritative real-time market data from CoinGecko: live prices, market cap, 24h volume, trending coins, side-by-side coin comparisons, and price-history charts. ALWAYS use this for "what is the price of X" / "what is X market cap" / "what is trending right now" / "compare X and Y" queries — your training data is stale. Falls back to Alchemy/DexScreener via other tools when CoinGecko does not index a token. Coin ids are CoinGecko slugs (bitcoin, ethereum, solana, jupiter-exchange-solana, etc.) — if unsure, call action="search" first.',
+    description: 'Get authoritative real-time market data from CoinGecko: live prices, market cap, 24h volume, trending coins, side-by-side coin comparisons, and price-history charts. ALWAYS use this for "what is the price of X" / "what is X market cap" / "what is trending right now" / "compare X and Y" queries; your training data is stale. Falls back to Alchemy/DexScreener via other tools when CoinGecko does not index a token. Coin ids are CoinGecko slugs (bitcoin, ethereum, solana, jupiter-exchange-solana, etc.); if unsure, call action="search" first.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -315,7 +315,7 @@ export const VTX_TOOLS: Anthropic.Tool[] = [
   },
   {
     name: 'trustwallet_token_check',
-    description: "Trust Wallet Agent-Kit verification for a token. Trust Wallet's registry independently confirms whether a token is VERIFIED (by Trust Wallet and/or CoinMarketCap), plus its trust-verified market cap, sector tags, decimals, and official logo. Use this as a second-opinion identity check ('is $X a real/verified token?') or to cross-check a market cap against an independent source. Accepts a contract address (+ chain) for an exact lookup, or a ticker/name for a search. IMPORTANT: Trust Wallet does NOT provide live price, FDV, security scores, or wallet data — use other tools for those. Absence from Trust Wallet's registry is NOT proof a token is a scam; many legitimate tokens are simply unlisted.",
+    description: "Trust Wallet Agent-Kit verification for a token. Trust Wallet's registry independently confirms whether a token is VERIFIED (by Trust Wallet and/or CoinMarketCap), plus its trust-verified market cap, sector tags, decimals, and official logo. Use this as a second-opinion identity check ('is $X a real/verified token?') or to cross-check a market cap against an independent source. Accepts a contract address (+ chain) for an exact lookup, or a ticker/name for a search. IMPORTANT: Trust Wallet does NOT provide live price, FDV, security scores, or wallet data; use other tools for those. Absence from Trust Wallet's registry is NOT proof a token is a scam; many legitimate tokens are simply unlisted.",
     input_schema: {
       type: 'object' as const,
       properties: {

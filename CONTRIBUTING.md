@@ -1,6 +1,6 @@
 # Contributing to Steinz Labs
 
-Thanks for taking the time to help. This is a private repository — most contributions come from team members. The same workflow applies if you've been invited as a collaborator or are a contractor working against an issue.
+Thanks for taking the time to help. This is a private repository; most contributions come from team members. The same workflow applies if you've been invited as a collaborator or are a contractor working against an issue.
 
 ## Workflow
 
@@ -30,12 +30,12 @@ Thanks for taking the time to help. This is a private repository — most contri
 - No empty `try/catch`. Either handle the error or let it propagate.
 - Functions over 50 lines should have a brief docstring explaining the why.
 - Files over 500 lines are a refactor candidate.
-- Address comparisons go through `lib/utils/addressNormalize.ts`. Never call `.toLowerCase()` on a wallet/token address — Solana is case-sensitive at the protocol level.
+- Address comparisons go through `lib/utils/addressNormalize.ts`. Never call `.toLowerCase()` on a wallet/token address: Solana is case-sensitive at the protocol level.
 - No mock or fake data. The platform is wired to real APIs (CoinGecko, Alchemy, Helius, GoPlus, Jupiter, 0x, Anthropic, Supabase). If data isn't available, return empty state with an error.
 
 ## Tests
 
-The codebase does not currently maintain a unit test suite for application code. When adding tests, colocate them next to the file under test (`foo.test.ts` next to `foo.ts`) and run via `vitest` or whichever runner is in `package.json` at the time. Don't ship a flaky test — if it can't run reliably in CI, fix it or don't merge it.
+The codebase does not currently maintain a unit test suite for application code. When adding tests, colocate them next to the file under test (`foo.test.ts` next to `foo.ts`) and run via `vitest` or whichever runner is in `package.json` at the time. Don't ship a flaky test: if it can't run reliably in CI, fix it or don't merge it.
 
 ## Database Changes
 
@@ -74,4 +74,4 @@ Before requesting review:
 
 ## Releasing
 
-`main` is the deployment branch — every merge to `main` ships to production via Vercel. There is no separate staging environment. If you're shipping a risky change, use a feature flag in `platform_settings` so the kill switch is server-side and reversible without a redeploy.
+`main` is the deployment branch: every merge to `main` ships to production via Vercel. There is no separate staging environment. If you're shipping a risky change, use a feature flag in `platform_settings` so the kill switch is server-side and reversible without a redeploy.

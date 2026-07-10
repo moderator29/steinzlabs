@@ -138,7 +138,7 @@ export default function WhaleActivityChart({ activity, height = 220, className =
     return (
       <div className={`flex items-center justify-center text-xs text-gray-500 nl-glass rounded-xl ${className}`}
            style={{ height }}>
-        Not enough activity to chart yet — needs at least 2 trades with USD value.
+        Not enough activity to chart yet. Needs at least 2 trades with USD value.
       </div>
     );
   }

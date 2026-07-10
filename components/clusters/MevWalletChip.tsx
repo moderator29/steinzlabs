@@ -22,10 +22,10 @@ function fmtUsd(n: number): string {
 }
 
 const PATTERN_LABEL: Record<MevWalletChipProps['pattern'], string> = {
-  sandwich: 'MEV — sandwich',
-  frontrun: 'MEV — frontrun',
-  jit: 'MEV — JIT',
-  arbitrage: 'MEV — arb',
+  sandwich: 'MEV: sandwich',
+  frontrun: 'MEV: frontrun',
+  jit: 'MEV: JIT',
+  arbitrage: 'MEV: arb',
   none: '',
 };
 

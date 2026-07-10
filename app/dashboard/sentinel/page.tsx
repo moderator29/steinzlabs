@@ -86,7 +86,7 @@ export default function SentinelPage() {
         <h1 className="text-lg font-bold flex items-center gap-2"><Radar className="w-5 h-5 text-[#0066FF]" /> VTX Sentinel</h1>
       </div>
       <p className="text-xs text-slate-400 mb-4">
-        Autonomous watches. Point a sentinel at a token or wallet and it decides for itself what&rsquo;s material — a big price or liquidity move, smart money converging, a large cohort trade — and only pings you when something <span className="text-white">real</span> changes. No thresholds to guess.
+        Autonomous watches. Point a sentinel at a token or wallet and it decides for itself what&rsquo;s material: a big price or liquidity move, smart money converging, a large cohort trade. It only pings you when something <span className="text-white">real</span> changes. No thresholds to guess.
       </p>
 
       <div className="nl-glass rounded-xl p-4 mb-4 space-y-3">
@@ -119,7 +119,7 @@ export default function SentinelPage() {
         <div className="space-y-2">
           {list.map((s) => {
             const snap = s.last_snapshot;
-            let summary = 'Baseline recorded — watching for change.';
+            let summary = 'Baseline recorded. Watching for change.';
             if (snap?.kind === 'token') {
               const parts: string[] = [];
               if (snap.priceUsd) parts.push(`$${snap.priceUsd.toPrecision(3)}`);

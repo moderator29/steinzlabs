@@ -32,7 +32,7 @@ export function CTASection() {
           Start with intelligence.
         </h2>
 
-        {/* AAA contrast fix — was #1e2e50 (1.5:1 on dark bg). Now uses
+        {/* AAA contrast fix: was #1e2e50 (1.5:1 on dark bg). Now uses
             the brand token --nl-text-muted (#B4C0E0) which clears AAA. */}
         <p className="text-[16px] max-w-md" style={{ color: 'var(--nl-text-muted,#B4C0E0)' }}>
           No fees to join. Connect your wallet and start analyzing in seconds.
@@ -52,7 +52,7 @@ export function CTASection() {
           Launch App <ArrowRight className="w-4 h-4" />
         </Link>
 
-        {/* AAA contrast fix — was #0a1430 (1.2:1 on dark bg).
+        {/* AAA contrast fix: was #0a1430 (1.2:1 on dark bg).
             slate-400 / var(--nl-text-tertiary) reads cleanly. */}
         <p className="text-[10px]" style={{ color: 'var(--nl-text-tertiary,#9CA3AF)' }}>
           No signup required&nbsp;&nbsp;•&nbsp;&nbsp;Non-custodial&nbsp;&nbsp;•&nbsp;&nbsp;Free to analyze

@@ -17,6 +17,7 @@ import { DocsSection07 } from '@/components/docs/DocsSection07';
 import { DocsSectionWallet } from '@/components/docs/DocsSectionWallet';
 import { DocsSection08 } from '@/components/docs/DocsSection08';
 import { DocsSection09 } from '@/components/docs/DocsSection09';
+import { DocsSectionFeed } from '@/components/docs/DocsSectionFeed';
 import { DocsSection10 } from '@/components/docs/DocsSection10';
 import { DocsSection11 } from '@/components/docs/DocsSection11';
 import { DocsSection12 } from '@/components/docs/DocsSection12';
@@ -57,7 +58,7 @@ export default function DocsPage() {
   return (
     <AuroraBackground fullHeight>
     <div className="min-h-screen text-white">
-      {/* Top Nav — clean single-row layout on all sizes.
+      {/* Top Nav: clean single-row layout on all sizes.
           Mobile: hamburger + compact "NAKA Docs" title + Open App only
                   (toggles live inside the sidebar drawer to avoid overflow).
           Desktop: full label + Back link + toggle cluster + Whitepaper + Open App. */}
@@ -134,7 +135,7 @@ export default function DocsPage() {
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-white mb-3">NAKA LABS</h1>
             <p className="text-gray-400 text-sm sm:text-base leading-relaxed max-w-2xl">
-              The complete reference for every feature in NAKA LABS — your institutional-grade on-chain intelligence operating system. Navigate using the menu to explore any section.
+              The complete reference for every feature in NAKA LABS: your institutional-grade on-chain intelligence operating system. Navigate using the menu to explore any section.
             </p>
             <div className="flex flex-wrap gap-2 mt-4">
               {['Intelligence', 'Security', 'Trading', 'Portfolio', 'AI'].map(tag => (
@@ -153,6 +154,7 @@ export default function DocsPage() {
           <DocsSectionWallet />
           <DocsSection08 />
           <DocsSection09 />
+          <DocsSectionFeed />
           <DocsSection10 />
           <DocsSection11 />
           <DocsSection12 />

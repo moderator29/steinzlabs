@@ -127,38 +127,38 @@ export default function AnnouncementsPage() {
           <p className="text-xs text-gray-500 mt-0.5">Banner and notification announcements shown to users</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={load} disabled={loading} className="p-2 text-gray-400 hover:text-white border border-[#1E2433] rounded-lg hover:border-[#2E3443] transition-colors">
+          <button onClick={load} disabled={loading} className="p-2 nl-button nl-button--ghost">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
           <button onClick={() => setShowForm(p => !p)}
-            className="flex items-center gap-2 text-xs bg-[#0066FF] hover:bg-[#0818CC] text-white px-3 py-2 rounded-lg transition-colors font-medium">
+            className="flex items-center gap-2 text-xs naka-button-primary">
             <Plus className="w-3.5 h-3.5" /> New Announcement
           </button>
         </div>
       </div>
 
       {showForm && (
-        <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 mb-4 space-y-3">
+        <div className="nl-glass rounded-2xl p-4 mb-4 space-y-3">
           <h3 className="text-sm font-semibold text-white">New Announcement</h3>
           <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Announcement title"
-            className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40" />
+            className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors" />
           <textarea value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} rows={3} placeholder="Announcement body..."
-            className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40 resize-none" />
+            className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors resize-none" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as AnnType }))}
-              className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
+              className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors">
               {(['info', 'warning', 'maintenance', 'feature'] as AnnType[]).map(t => <option key={t}>{t}</option>)}
             </select>
             <select value={form.targetAudience} onChange={e => setForm(f => ({ ...f, targetAudience: e.target.value }))}
-              className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
+              className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors">
               {['All', 'Pro only', 'Free only'].map(t => <option key={t}>{t}</option>)}
             </select>
           </div>
           <div className="flex gap-2">
-            <button onClick={save} disabled={saving} className="bg-[#0066FF] hover:bg-[#0818CC] text-white text-xs px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50">
+            <button onClick={save} disabled={saving} className="text-xs disabled:opacity-50 naka-button-primary">
               {saving ? 'Saving...' : 'Save'}
             </button>
-            <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-white text-xs px-4 py-2 rounded-lg hover:bg-[#1E2433] transition-colors">Cancel</button>
+            <button onClick={() => setShowForm(false)} className="text-xs nl-button nl-button--ghost">Cancel</button>
           </div>
         </div>
       )}
@@ -180,7 +180,7 @@ export default function AnnouncementsPage() {
 
       <div className="space-y-3">
         {items.map(ann => (
-          <div key={ann.id} className={`bg-[#141824] border rounded-xl p-4 transition-all ${ann.active ? 'border-[#1E2433]' : 'border-[#1E2433] opacity-50'}`}>
+          <div key={ann.id} className={`nl-glass rounded-2xl p-4 transition-all ${ann.active ? '' : 'opacity-50'}`}>
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3 flex-1">
                 <Bell className={`w-4 h-4 mt-0.5 flex-shrink-0 ${ann.active ? 'text-[#0066FF]' : 'text-gray-600'}`} />

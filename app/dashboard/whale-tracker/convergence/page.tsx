@@ -132,7 +132,7 @@ export default function ConvergenceRadarPage() {
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold text-white">Convergence Radar</h1>
             <p className="text-sm text-slate-400 mt-0.5">
-              Tokens where multiple tracked smart-money wallets are buying together — ranked by wallet reputation and how early it is, stablecoins and wrapped majors demoted so you see real accumulation.
+              Tokens where multiple tracked smart-money wallets are buying together, ranked by wallet reputation and how early it is, stablecoins and wrapped majors demoted so you see real accumulation.
             </p>
           </div>
         </div>
@@ -243,7 +243,7 @@ export default function ConvergenceRadarPage() {
           <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => setSelected(null)} />
           <div className="relative w-full max-w-[460px] p-4">
             <AiInsightCard
-              title={`Why ${selected.tokenSymbol || 'this token'} — VTX thesis`}
+              title={`Why ${selected.tokenSymbol || 'this token'}: VTX thesis`}
               text={thesis?.text ?? ''}
               streaming={!!thesis?.text}
               loading={thesisLoading}

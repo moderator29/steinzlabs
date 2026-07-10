@@ -3,9 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-// Naka Labs brand icons — TrendingUp/Down swapped. ArrowRight + ShieldAlert stay on lucide.
-import { TrendingUp, TrendingDown } from "@/components/icons/brand";
-import { ArrowRight, ShieldAlert } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowRight, ShieldAlert } from "lucide-react";
 import { MicroDonut } from "@/components/charts/MicroChart";
 import { createChart, AreaSeries, type IChartApi, type ISeriesApi, ColorType } from "lightweight-charts";
 import { BackButton } from "@/components/ui/BackButton";
@@ -274,7 +272,7 @@ export default function PortfolioPage() {
         </div>
         <div className="flex flex-wrap items-baseline gap-4">
           <div className="text-4xl sm:text-[56px] font-mono font-bold text-white tabular-nums leading-none">
-            {loadingIntel && !intel ? "—" : formatPrice(totalValueUsd)}
+            {loadingIntel && !intel ? "-" : formatPrice(totalValueUsd)}
           </div>
           <div className="flex items-center gap-2">
             {/* This is TODAY'S CAPITAL FLOW (deposits/buys in − withdrawals/sells
@@ -282,7 +280,7 @@ export default function PortfolioPage() {
                 Neutral styling + explicit label so it never reads as P&L. */}
             <span
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-300 bg-white/[0.05]"
-              title="Net capital moved in/out today — not profit or loss"
+              title="Net capital moved in/out today, not profit or loss"
             >
               {today.delta >= 0 ? "+" : ""}
               {formatPrice(today.delta)}
@@ -299,11 +297,11 @@ export default function PortfolioPage() {
         </div>
 
         <div className="mt-2 text-[11px] text-slate-500">
-          Cumulative capital flow over time — buys add, stable-out reduces. Not mark-to-market PnL.
+          Cumulative capital flow over time: buys add, stable-out reduces. Not mark-to-market PnL.
         </div>
         {perfError && (
           <div className="mt-2 rounded-lg border border-rose-500/40 bg-rose-500/5 px-3 py-2 text-xs text-rose-300">
-            {perfError} — chart may be empty.
+            {perfError}. Chart may be empty.
           </div>
         )}
         <PerformanceChart series={perf?.series ?? []} timeframe={timeframe} loading={loadingPerf} />
@@ -705,13 +703,13 @@ function HoldingsTable({
                   {balNum < 0.0001 ? balNum.toExponential(2) : balNum.toLocaleString(undefined, { maximumFractionDigits: 6 })}
                 </td>
                 <td className="px-4 py-3 text-end font-mono text-white tabular-nums">
-                  {currentPrice > 0 ? formatPrice(currentPrice) : "—"}
+                  {currentPrice > 0 ? formatPrice(currentPrice) : "-"}
                 </td>
                 <td className="px-4 py-3 text-end">
-                  {typeof h.change24h === "number" ? <PriceChangeDisplay value={h.change24h} size="sm" /> : <span className="text-slate-500">—</span>}
+                  {typeof h.change24h === "number" ? <PriceChangeDisplay value={h.change24h} size="sm" /> : <span className="text-slate-500">-</span>}
                 </td>
                 <td className="px-4 py-3 text-end font-mono text-white tabular-nums">
-                  {valueUsd > 0 ? formatLargeNumber(valueUsd) : "—"}
+                  {valueUsd > 0 ? formatLargeNumber(valueUsd) : "-"}
                 </td>
                 <td className="px-4 py-3 text-end">
                   {totalValueUsd > 0 && valueUsd > 0 ? (
@@ -727,7 +725,7 @@ function HoldingsTable({
                       </span>
                     </div>
                   ) : (
-                    <span className="text-slate-500">—</span>
+                    <span className="text-slate-500">-</span>
                   )}
                 </td>
                 <td className="px-4 py-3">
@@ -766,7 +764,7 @@ function PerformanceTab({ stats, loading }: { stats: PerformanceStats | null; lo
   }
   return (
     <div className="p-5 grid gap-3 grid-cols-2 md:grid-cols-3">
-      <Metric label="Win rate" value={stats.winRate != null ? `${stats.winRate.toFixed(1)}%` : "—"} />
+      <Metric label="Win rate" value={stats.winRate != null ? `${stats.winRate.toFixed(1)}%` : "-"} />
       <Metric label="Closed trades" value={stats.closedTrades.toString()} />
       <Metric label="Total trades" value={stats.totalTrades.toString()} />
       <Metric
@@ -776,16 +774,16 @@ function PerformanceTab({ stats, loading }: { stats: PerformanceStats | null; lo
             ? stats.avgHoldHours >= 24
               ? `${(stats.avgHoldHours / 24).toFixed(1)}d`
               : `${stats.avgHoldHours.toFixed(1)}h`
-            : "—"
+            : "-"
         }
       />
       <Metric
         label="Best token"
-        value={stats.bestToken ? `${stats.bestToken.symbol} · ${formatPrice(stats.bestToken.pnl)}` : "—"}
+        value={stats.bestToken ? `${stats.bestToken.symbol} · ${formatPrice(stats.bestToken.pnl)}` : "-"}
       />
       <Metric
         label="Worst token"
-        value={stats.worstToken ? `${stats.worstToken.symbol} · ${formatPrice(stats.worstToken.pnl)}` : "—"}
+        value={stats.worstToken ? `${stats.worstToken.symbol} · ${formatPrice(stats.worstToken.pnl)}` : "-"}
       />
       <Metric label="Total gas" value={formatPrice(stats.totalGasUsd)} />
     </div>

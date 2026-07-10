@@ -45,7 +45,7 @@ export default function SandwichForensicsPage() {
         <h1 className="text-lg font-bold flex items-center gap-2"><Swords className="w-5 h-5 text-[#0066FF]" /> Sandwich Forensics</h1>
       </div>
       <p className="text-xs text-slate-400 mb-4">
-        How much MEV was extracted <span className="text-white">from your own swaps</span> — sandwiches and frontruns detected against your address on Ethereum (ZeroMEV, last 30 days). Nobody else ties MEV to <em>your</em> fills.
+        How much MEV was extracted <span className="text-white">from your own swaps</span>: sandwiches and frontruns detected against your address on Ethereum (ZeroMEV, last 30 days). Nobody else ties MEV to <em>your</em> fills.
       </p>
 
       <div className="flex gap-2 mb-4">

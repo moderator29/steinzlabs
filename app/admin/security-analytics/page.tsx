@@ -120,18 +120,18 @@ export default function SecurityAnalyticsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-white">Security Analytics</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Flagged token registry — blocks display in security scans</p>
+          <p className="text-xs text-gray-500 mt-0.5">Flagged token registry - blocks display in security scans</p>
         </div>
         <button
           onClick={() => setShowAdd(prev => !prev)}
-          className="flex items-center gap-2 text-xs bg-[#0066FF] hover:bg-[#0818CC] text-white px-3 py-2 rounded-lg transition-colors font-medium"
+          className="naka-button-primary flex items-center gap-2 text-xs"
         >
           <Plus className="w-3.5 h-3.5" /> Flag Token
         </button>
       </div>
 
       {showAdd && (
-        <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 mb-4">
+        <div className="nl-glass rounded-2xl p-4 mb-4">
           <h3 className="text-sm font-semibold text-white mb-3">Flag New Token</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             {[['address', 'Contract Address'], ['symbol', 'Token Symbol']].map(([name, placeholder]) => (
@@ -140,20 +140,20 @@ export default function SecurityAnalyticsPage() {
                 placeholder={placeholder}
                 value={(newToken as Record<string, string>)[name]}
                 onChange={e => setNewToken(prev => ({ ...prev, [name]: e.target.value }))}
-                className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40"
+                className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors"
               />
             ))}
             <select
               value={newToken.chain}
               onChange={e => setNewToken(prev => ({ ...prev, chain: e.target.value }))}
-              className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
+              className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors"
             >
               {['ETH', 'SOL', 'BASE', 'ARB', 'BSC'].map(c => <option key={c}>{c}</option>)}
             </select>
             <select
               value={newToken.severity}
               onChange={e => setNewToken(prev => ({ ...prev, severity: e.target.value as 'high' }))}
-              className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
+              className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors"
             >
               {['low', 'medium', 'high', 'critical'].map(s => <option key={s}>{s}</option>)}
             </select>
@@ -162,20 +162,20 @@ export default function SecurityAnalyticsPage() {
             placeholder="Reason for flagging"
             value={newToken.reason}
             onChange={e => setNewToken(prev => ({ ...prev, reason: e.target.value }))}
-            className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40 mb-3"
+            className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors mb-3"
           />
           <div className="flex gap-2">
             <button
               onClick={addToken}
               disabled={submitting}
-              className="bg-[#0066FF] hover:bg-[#0818CC] text-white text-xs px-4 py-2 rounded-lg transition-colors font-medium flex items-center gap-2 disabled:opacity-50"
+              className="naka-button-primary text-xs flex items-center gap-2 disabled:opacity-50"
             >
               {submitting && <Loader2 className="w-3 h-3 animate-spin" />}
               Add to Registry
             </button>
             <button
               onClick={() => setShowAdd(false)}
-              className="text-gray-400 hover:text-white text-xs px-4 py-2 rounded-lg hover:bg-[#1E2433] transition-colors"
+              className="nl-button nl-button--ghost text-xs"
             >
               Cancel
             </button>
@@ -183,15 +183,15 @@ export default function SecurityAnalyticsPage() {
         </div>
       )}
 
-      <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden overflow-x-auto">
-        <div className="p-3 border-b border-[#1E2433]">
+      <div className="nl-glass rounded-2xl overflow-hidden overflow-x-auto">
+        <div className="p-3 border-b border-white/10">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search by address, symbol, or reason..."
-              className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-9 pe-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40"
+              className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl ps-9 pe-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors"
             />
           </div>
         </div>
@@ -208,16 +208,16 @@ export default function SecurityAnalyticsPage() {
           </div>
         ) : (
           <table className="w-full text-xs min-w-[700px]">
-            <thead className="border-b border-[#1E2433]">
+            <thead className="border-b border-white/10">
               <tr>
                 {['Token', 'Chain', 'Reason', 'Severity', 'Flagged', 'Source', 'Active', 'Actions'].map(h => (
-                  <th key={h} className="px-4 py-2.5 text-start text-gray-500 font-medium">{h}</th>
+                  <th key={h} className="px-4 py-2.5 text-start text-gray-400 font-medium">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.map(t => (
-                <tr key={t.id} className="border-b border-[#1E2433] last:border-0 hover:bg-[#1E2433]/30">
+                <tr key={t.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.03] transition-colors">
                   <td className="px-4 py-3">
                     <div className="text-white font-bold">{t.symbol}</div>
                     <div className="font-mono text-gray-500 text-[10px]">{t.address}</div>
@@ -240,7 +240,7 @@ export default function SecurityAnalyticsPage() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => toggleToken(t.id)}
-                        className="text-[10px] text-gray-500 hover:text-white border border-[#1E2433] rounded px-2 py-1 hover:border-[#2E3443] transition-colors"
+                        className="text-[10px] text-gray-500 hover:text-white border border-white/10 rounded-lg px-2 py-1 hover:border-white/20 transition-colors"
                       >
                         {t.active ? 'Disable' : 'Enable'}
                       </button>

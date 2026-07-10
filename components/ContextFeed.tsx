@@ -478,16 +478,20 @@ export default function ContextFeed() {
   const fetchedRef = useRef<Set<string>>(new Set());
   const viewedRef = useRef<Set<string>>(new Set());
 
+  // Load real like/view counts for EVERY card on screen, not just the first
+  // five. The old `.slice(0, 5)` cap meant every card past the fifth rendered a
+  // static 0 because its counts were never fetched. fetchedRef dedupes so each
+  // event is fetched once per session.
   useEffect(() => {
-    const unfetched = events.filter(e => !fetchedRef.current.has(e.id)).slice(0, 5);
+    const unfetched = events.filter(e => !fetchedRef.current.has(e.id));
     unfetched.forEach(event => {
       fetchedRef.current.add(event.id);
       fetchEngagement(event.id);
     });
-  }, [events]);
+  }, [events, fetchEngagement]);
 
   useEffect(() => {
-    const unviewed = events.filter(e => !viewedRef.current.has(e.id)).slice(0, 5);
+    const unviewed = events.filter(e => !viewedRef.current.has(e.id));
     if (unviewed.length === 0) return;
     unviewed.forEach(e => viewedRef.current.add(e.id));
     const timer = setTimeout(() => {
@@ -496,7 +500,24 @@ export default function ContextFeed() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ eventId: event.id, action: 'view' })
-        }).catch(() => {});
+        })
+          // Reflect the just-recorded view on the card instead of leaving it
+          // frozen: the route returns the fresh aggregate counts.
+          .then(r => (r.ok ? r.json() : null))
+          .then(counts => {
+            if (!counts) return;
+            setEngagement(prev => ({
+              ...prev,
+              [event.id]: {
+                ...(prev[event.id] ?? { liked: false, shared: false }),
+                views: counts.views ?? 0,
+                comments: counts.comments ?? 0,
+                shares: counts.shares ?? 0,
+                likes: counts.likes ?? 0,
+              },
+            }));
+          })
+          .catch(() => {});
       });
     }, 2000);
     return () => clearTimeout(timer);
@@ -758,7 +779,7 @@ export default function ContextFeed() {
                   <a
                     href="/dashboard/security/portfolio-risk"
                     className="mb-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#0066FF]/10 border border-[#0066FF]/30 text-[10px] font-bold uppercase tracking-wide text-[#8FA3FF] hover:bg-[#0066FF]/15 hover:border-[#0066FF]/50"
-                    aria-label={`${c.wallet_count} smart wallets bought ${sym} in the last 24 hours — check portfolio risk`}
+                    aria-label={`${c.wallet_count} smart wallets bought ${sym} in the last 24 hours. Check portfolio risk`}
                   >
                     <span aria-hidden>◈</span>
                     <span>{c.wallet_count} smart wallets bought ${sym} (24h)</span>
@@ -821,7 +842,7 @@ export default function ContextFeed() {
                   the desktop layout identical and parks the wrapped
                   mobile button on the right edge of its row. */}
               <div className="flex flex-wrap items-center gap-y-2">
-                <div className="flex items-center gap-2 min-w-0 flex-wrap" title="Signal confidence — how reliable this event's source is, separate from token-level Trust Score.">
+                <div className="flex items-center gap-2 min-w-0 flex-wrap" title="Signal confidence: how reliable this event's source is, separate from token-level Trust Score.">
                   <span className="text-[9px] font-semibold text-slate-500 uppercase flex-shrink-0">Signal</span>
                   <div className="w-20 bg-white/20 rounded-full h-1.5 flex-shrink-0">
                     <div

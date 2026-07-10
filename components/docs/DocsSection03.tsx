@@ -1,9 +1,9 @@
 import { Radio, Filter, Sparkles, Crown } from 'lucide-react';
 
 const INTEL_SOURCES = [
-  { name: 'AI Market Pulse', desc: 'An AI read on the live feed — what is hot, where volume sits, and the overall tone (bullish/bearish/mixed). Refreshed a few times daily.' },
+  { name: 'AI Market Pulse', desc: 'An AI read on the live feed: what is hot, where volume sits, and the overall tone (bullish/bearish/mixed). Refreshed a few times daily.' },
   { name: 'Smart-Money Labels', desc: 'On-chain moves by our curated, labeled whale wallets are surfaced as high-signal smart-money events with the wallet label and archetype.' },
-  { name: 'Fresh Pairs (all chains)', desc: 'Genuinely new liquidity pools across Ethereum, Base, Arbitrum, Optimism, BSC, Polygon and Avalanche — not just curated lists.' },
+  { name: 'Fresh Pairs (all chains)', desc: 'Genuinely new liquidity pools across Ethereum, Base, Arbitrum, Optimism, BSC, Polygon and Avalanche, not just curated lists.' },
   { name: 'Solana Coverage', desc: 'High-quality Solana trending by real 24h volume, plus pump.fun launches gated to strong-volume coins only (no flood).' },
   { name: 'Security & Rug Alerts', desc: 'Honeypot, high-tax and ownership-risk tokens flagged from live security scans so danger surfaces, not just hype.' },
   { name: 'Personal Feed Alerts', desc: 'Subscribe to a slice of the feed (chain + kind + volume/price thresholds); matching launches arrive in your notifications in real time.' },
@@ -49,7 +49,7 @@ export function DocsSection03() {
           <Sparkles className="w-4 h-4 text-[#0066FF]" />Intelligence Sources
         </h3>
         <p className="text-sm text-gray-400 leading-relaxed mb-4">
-          The feed is Ethereum-first (our primary chain) with every other chain mixed in, ranked by quality — not a single-chain or pump.fun flood. The pills (News, Coins, New Coins, Volume, Trending) each surface exactly their kind of signal.
+          The feed is Ethereum-first (our primary chain) with every other chain mixed in, ranked by quality, not a single-chain or pump.fun flood. The pills (News, Coins, New Coins, Volume, Trending) each surface exactly their kind of signal.
         </p>
         <div className="space-y-3">
           {INTEL_SOURCES.map(s => (

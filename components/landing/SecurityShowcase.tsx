@@ -14,25 +14,25 @@ const LAYERS: Layer[] = [
   {
     icon: ShieldCheck,
     title: 'GoPlus token scanning',
-    detail: 'Every token you interact with is scanned against the GoPlus security engine before a swap, snipe, or VTX reference. Honeypots, hidden taxes, blacklists and unverified contracts are flagged — or blocked outright.',
+    detail: 'Every token you interact with is scanned against the GoPlus security engine before a swap, snipe, or VTX reference. Honeypots, hidden taxes, blacklists and unverified contracts are flagged, or blocked outright.',
     color: '#10B981',
   },
   {
     icon: Cpu,
     title: 'Shadow Guardian simulation',
-    detail: 'Every swap is simulated on-chain in under 200ms before it’s submitted. If a token prevents selling — the fingerprint of a honeypot — the trade is aborted automatically. No gas spent, no funds lost.',
+    detail: 'Every swap is simulated on-chain in under 200ms before it’s submitted. If a token prevents selling (the fingerprint of a honeypot), the trade is aborted automatically. No gas spent, no funds lost.',
     color: '#0066FF',
   },
   {
     icon: Lock,
     title: 'AES-256-GCM wallet encryption',
-    detail: 'Your Naka wallet keys are encrypted in your browser using AES-256-GCM with PBKDF2 (100k iterations). Only opaque ciphertext reaches our servers. We cannot decrypt your keys — ever.',
+    detail: 'Your Naka wallet keys are encrypted in your browser using AES-256-GCM with PBKDF2 (100k iterations). Only opaque ciphertext reaches our servers. We cannot decrypt your keys, ever.',
     color: '#F59E0B',
   },
   {
     icon: KeyRound,
     title: 'JWT + Supabase RLS',
-    detail: 'Every protected route verifies your Supabase JWT. Every database table enforces Row-Level Security so no user can read data belonging to another account — even under a compromised service.',
+    detail: 'Every protected route verifies your Supabase JWT. Every database table enforces Row-Level Security so no user can read data belonging to another account, even under a compromised service.',
     color: '#8B5CF6',
   },
   {
@@ -92,7 +92,7 @@ export function SecurityShowcase() {
             {"Security isn’t a feature."}<br /> {"It’s the default."}
           </h2>
           <p className="text-white/50 text-base sm:text-lg max-w-2xl leading-relaxed">
-            Eight protection layers run on every interaction — automatically, invisibly. You cannot accidentally skip a scan. You cannot accidentally sign something dangerous. And we cannot accidentally lose your keys, because we never hold them.
+            Eight protection layers run on every interaction: automatically, invisibly. You cannot accidentally skip a scan. You cannot accidentally sign something dangerous. And we cannot accidentally lose your keys, because we never hold them.
           </p>
         </div>
 

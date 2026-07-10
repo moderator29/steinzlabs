@@ -1296,7 +1296,7 @@ function VtxAiPageInner() {
                             { label: 'Security', send: `Run a full security scan on ${token.symbol}` },
                             { label: 'Chart', send: `Show me the price chart for ${token.symbol}` },
                             { label: 'Swap', prefill: `Swap 0.1 ${native} for ${token.symbol}` },
-                            { label: 'Tell me more', send: `Tell me more about ${token.symbol} — fundamentals, momentum, and risks` },
+                            { label: 'Tell me more', send: `Tell me more about ${token.symbol}: fundamentals, momentum, and risks` },
                           ];
                           return (
                             <div className="flex flex-wrap gap-1.5">

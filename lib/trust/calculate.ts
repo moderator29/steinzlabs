@@ -36,7 +36,7 @@ export function bandFor(score: number): { band: TrustBand; label: string; color:
   if (score >= 60) return { band: "trusted", label: "Trusted", color: "#3B82F6" };
   if (score >= 40) return { band: "caution", label: "Caution", color: "#F59E0B" };
   if (score >= 20) return { band: "high_risk", label: "High Risk", color: "#F97316" };
-  return { band: "dangerous", label: "Dangerous — Avoid", color: "#EF4444" };
+  return { band: "dangerous", label: "Dangerous: Avoid", color: "#EF4444" };
 }
 
 export interface TrustLayers {

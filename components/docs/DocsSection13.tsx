@@ -8,7 +8,7 @@ export function DocsSection13() {
   return (
     <section id="about" className="mb-16 scroll-mt-20">
       <div className="flex items-baseline gap-3 mb-1">
-        <span className="text-5xl font-black text-white/[0.04] font-mono select-none leading-none">14</span>
+        <span className="text-5xl font-black text-white/[0.04] font-mono select-none leading-none">15</span>
         <h2 className="text-xl sm:text-2xl font-bold text-white">About &amp; Support</h2>
       </div>
       <p className="text-gray-400 text-sm sm:text-base leading-relaxed mb-8 mt-3">
@@ -54,13 +54,13 @@ export function DocsSection13() {
           <Lock className="w-4 h-4 text-[#10B981]" /> Naka Wallet · non-custodial by design
         </h3>
         <div className="nl-glass rounded-xl p-4">
-          <ul className="space-y-2 text-xs text-gray-400 leading-relaxed">
-            <li>— Your private key is stored on your device, encrypted with your password using AES-256-GCM.</li>
-            <li>— Naka Labs never sees your key. No keyserver, no custody, no recovery by us.</li>
-            <li>— If you lose access to your device, the <span className="text-white font-semibold">only</span> way to restore is the 12-word seed phrase you were shown at creation. Back it up before funding.</li>
-            <li>— Supported chains: Ethereum, Solana, Base, Arbitrum, Optimism, Polygon, BSC, Avalanche, and more. See Preferences for the full list.</li>
-            <li>— Encryption is the industry-standard AES-256-GCM with PBKDF2 (100,000 rounds). Nothing we run is custom crypto.</li>
-            <li>— See the <a href="#naka-wallet" className="text-[#4D6BFF] hover:underline">Naka Wallet</a> section for the full feature list: multi-account derivation, send/receive, in-wallet swap, approvals, NFTs, passkey unlock, Ledger, fiat on-ramp, and dApp connections.</li>
+          <ul className="space-y-2 text-xs text-gray-400 leading-relaxed list-disc ps-5 marker:text-[#4D6BFF]">
+            <li>Your private key is stored on your device, encrypted with your password using AES-256-GCM.</li>
+            <li>Naka Labs never sees your key. No keyserver, no custody, no recovery by us.</li>
+            <li>If you lose access to your device, the <span className="text-white font-semibold">only</span> way to restore is the 12-word seed phrase you were shown at creation. Back it up before funding.</li>
+            <li>Supported chains: Ethereum, Solana, Base, Arbitrum, Optimism, Polygon, BSC, Avalanche, and more. See Preferences for the full list.</li>
+            <li>Encryption is the industry-standard AES-256-GCM with PBKDF2 (100,000 rounds). Nothing we run is custom crypto.</li>
+            <li>See the <a href="#naka-wallet" className="text-[#4D6BFF] hover:underline">Naka Wallet</a> section for the full feature list: multi-account derivation, send/receive, in-wallet swap, approvals, NFTs, passkey unlock, Ledger, fiat on-ramp, and dApp connections.</li>
           </ul>
         </div>
       </div>

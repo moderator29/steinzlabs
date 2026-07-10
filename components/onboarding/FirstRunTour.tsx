@@ -170,7 +170,7 @@ export const DEFAULT_TOUR_STEPS: TourStep[] = [
   {
     selector: 'connect-wallet',
     title: 'Connect your wallet',
-    body: 'Naka reads on-chain — start by linking a wallet so the dashboard knows what to show.',
+    body: 'Naka reads on-chain. Start by linking a wallet so the dashboard knows what to show.',
     placement: 'bottom',
   },
   {

@@ -91,7 +91,7 @@ export function DappConnect() {
       await kit.pair({ uri: clean });
       setUri('');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Pairing failed. The URI may be expired — get a fresh one.');
+      setError(e instanceof Error ? e.message : 'Pairing failed. The URI may be expired. Get a fresh one.');
     } finally {
       setPairing(false);
     }

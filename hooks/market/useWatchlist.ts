@@ -2,7 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-export function useWatchlist(userId: string | null) {
+interface WatchlistOptions {
+  // Fires when a toggle is attempted while signed out, so the caller can
+  // prompt sign-in instead of the star silently doing nothing.
+  onRequireAuth?: () => void;
+}
+
+export function useWatchlist(userId: string | null, opts?: WatchlistOptions) {
+  const onRequireAuth = opts?.onRequireAuth;
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -52,9 +59,11 @@ export function useWatchlist(userId: string | null) {
   const isWatched = useCallback((tokenId: string) => watchlist.includes(tokenId), [watchlist]);
 
   const toggleWatchlist = useCallback(async (tokenId: string) => {
+    // Signed out: don't silently no-op — let the caller prompt sign-in.
+    if (!userId) { onRequireAuth?.(); return; }
     if (isWatched(tokenId)) await removeFromWatchlist(tokenId);
     else await addToWatchlist(tokenId);
-  }, [isWatched, addToWatchlist, removeFromWatchlist]);
+  }, [userId, onRequireAuth, isWatched, addToWatchlist, removeFromWatchlist]);
 
   return { watchlist, loading, addToWatchlist, removeFromWatchlist, isWatched, toggleWatchlist };
 }

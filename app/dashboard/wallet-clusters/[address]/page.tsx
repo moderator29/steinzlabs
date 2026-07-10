@@ -157,10 +157,10 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ addres
                   <tr key={m.address} className="border-b border-slate-800/50 hover:bg-white/[0.02]">
                     <td className="px-3 py-2 font-mono text-white">{m.address.slice(0, 10)}…{m.address.slice(-6)}</td>
                     <td className="px-3 py-2 text-slate-300 flex items-center gap-1">
-                      {m.label ?? "—"}
+                      {m.label ?? "-"}
                       {m.verified && <CheckCircle2 size={11} className="text-blue-400" />}
                     </td>
-                    <td className="px-3 py-2 text-[10px] uppercase text-slate-500">{m.entity_type ?? "—"}</td>
+                    <td className="px-3 py-2 text-[10px] uppercase text-slate-500">{m.entity_type ?? "-"}</td>
                     <td className="px-3 py-2">
                       {m.whale_score > 0 && <SecurityBadge score={m.whale_score} size="sm" compact />}
                     </td>

@@ -60,7 +60,7 @@ export default function LiquidityRadarPage() {
         <h1 className="text-lg font-bold flex items-center gap-2"><Droplets className="w-5 h-5 text-[#0066FF]" /> Liquidity-Cliff Radar</h1>
       </div>
       <p className="text-xs text-slate-400 mb-4">
-        Real pool depth from DexScreener + an estimated slippage curve (constant-product model). Tells you the biggest size you can trade before price impact bites — before you swap.
+        Real pool depth from DexScreener + an estimated slippage curve (constant-product model). Tells you the biggest size you can trade before price impact bites, before you swap.
       </p>
 
       <div className="flex gap-2 mb-4">

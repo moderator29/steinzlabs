@@ -46,6 +46,8 @@ export interface NotificationSettings {
   price_alerts: boolean;
   security_alerts: boolean;
   weekly_digest: boolean;
+  /** Twice-daily crypto news roundup (email/telegram). Off by default. */
+  news_alerts?: boolean;
   // Do Not Disturb
   quiet_hours_enabled?: boolean;
   quiet_hours_start_minute?: number;
@@ -63,6 +65,7 @@ const DEFAULTS: Omit<NotificationSettings, 'user_id'> = {
   price_alerts: true,
   security_alerts: true,
   weekly_digest: false,
+  news_alerts: false,
   quiet_hours_enabled: false,
   quiet_hours_start_minute: 22 * 60, // 22:00
   quiet_hours_end_minute: 7 * 60,    // 07:00
@@ -108,17 +111,21 @@ export function useNotificationSettings(userId: string | null | undefined): Hook
       let row: NotificationSettings | null = null;
       const tryExtended = await supabase
         .from('notification_settings')
-        .select('user_id, push_enabled, email_enabled, telegram_enabled, whale_alerts, smart_money, price_alerts, security_alerts, weekly_digest, quiet_hours_enabled, quiet_hours_start_minute, quiet_hours_end_minute, quiet_hours_timezone, updated_at')
+        .select('user_id, push_enabled, email_enabled, telegram_enabled, whale_alerts, smart_money, price_alerts, security_alerts, weekly_digest, news_alerts, quiet_hours_enabled, quiet_hours_start_minute, quiet_hours_end_minute, quiet_hours_timezone, updated_at')
         .eq('user_id', userId)
         .maybeSingle();
       if (!tryExtended.error) {
         extendedAvailable = true;
         row = (tryExtended.data as NotificationSettings | null) ?? null;
       } else {
-        // Any error (missing columns pre-migration, or a transient failure):
-        // fall back to the always-present legacy columns so the panel loads.
-        // The extended toggles render in a 'coming soon' state until a later
-        // reload confirms the schema.
+        // Distinguish "columns genuinely missing" (Postgres 42703 undefined_column)
+        // from a transient failure (RLS hiccup, network). Only the former means
+        // the extended schema is unavailable — a transient error must NOT latch
+        // hasExtendedSchema=false, which would disable the news-alerts toggle
+        // even though the columns exist. On a transient error, assume the schema
+        // is present (it is, in prod) so the toggle stays usable.
+        const code = (tryExtended.error as { code?: string })?.code;
+        if (code !== '42703') extendedAvailable = true;
         const fallback = await supabase
           .from('notification_settings')
           .select('user_id, push_enabled, whale_alerts, smart_money, price_alerts, security_alerts, weekly_digest, updated_at')

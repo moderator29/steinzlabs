@@ -42,13 +42,13 @@ export function shouldBlockSwap(input: SwapSecurityBlockerInput): {
   reason: string | null;
 } {
   const { data, priceImpact } = input;
-  if (priceImpact >= 15) return { blocking: true, reason: 'Price impact ≥ 15% — likely honeypot or drained pool.' };
+  if (priceImpact >= 15) return { blocking: true, reason: 'Price impact ≥ 15%: likely honeypot or drained pool.' };
   if (!data) return { blocking: false, reason: null };
-  if (data.isHoneypot) return { blocking: true, reason: 'Honeypot detected — this token cannot be sold.' };
+  if (data.isHoneypot) return { blocking: true, reason: 'Honeypot detected: this token cannot be sold.' };
   if (data.buyTax >= 0.30) return { blocking: true, reason: `Buy tax of ${(data.buyTax * 100).toFixed(1)}% would consume most of your input.` };
   if (data.sellTax >= 0.30) return { blocking: true, reason: `Sell tax of ${(data.sellTax * 100).toFixed(1)}% would consume most of your exit.` };
   if (data.isBlacklisted) return { blocking: true, reason: 'Your address (or the token) is blacklisted by the contract.' };
-  if (data.transferPausable) return { blocking: true, reason: 'Contract owner can pause transfers — funds could be trapped.' };
+  if (data.transferPausable) return { blocking: true, reason: 'Contract owner can pause transfers. Funds could be trapped.' };
   return { blocking: false, reason: null };
 }
 
@@ -77,10 +77,10 @@ export function SwapSecurityWarnings(props: SwapSecurityBlockerInput) {
   if (data) {
     // Tax in warn zone (10-30%)
     if (!blocking && data.sellTax >= 0.10 && data.sellTax < 0.30) {
-      items.push({ tone: 'warn', label: `Elevated sell tax (${(data.sellTax * 100).toFixed(1)}%) — you'll receive less on exit than the quoted minimum.` });
+      items.push({ tone: 'warn', label: `Elevated sell tax (${(data.sellTax * 100).toFixed(1)}%), you'll receive less on exit than the quoted minimum.` });
     }
     if (!blocking && data.buyTax >= 0.10 && data.buyTax < 0.30) {
-      items.push({ tone: 'warn', label: `Elevated buy tax (${(data.buyTax * 100).toFixed(1)}%) — your input will be partially eaten by the contract.` });
+      items.push({ tone: 'warn', label: `Elevated buy tax (${(data.buyTax * 100).toFixed(1)}%), your input will be partially eaten by the contract.` });
     }
     if (!blocking && data.cannotSellAll) {
       items.push({ tone: 'warn', label: 'Contract restricts selling 100% of your balance in a single transaction.' });
@@ -89,9 +89,9 @@ export function SwapSecurityWarnings(props: SwapSecurityBlockerInput) {
 
   // Slippage outside the safe range.
   if (slippagePct < 0.1) {
-    items.push({ tone: 'warn', label: `Slippage tolerance ${slippagePct}% is very tight — your transaction will likely fail when the price moves.` });
+    items.push({ tone: 'warn', label: `Slippage tolerance ${slippagePct}% is very tight: your transaction will likely fail when the price moves.` });
   } else if (slippagePct > 10) {
-    items.push({ tone: 'warn', label: `Slippage tolerance ${slippagePct}% is very loose — MEV bots can sandwich your trade and pocket the difference.` });
+    items.push({ tone: 'warn', label: `Slippage tolerance ${slippagePct}% is very loose: MEV bots can sandwich your trade and pocket the difference.` });
   }
 
   if (items.length === 0 && data && data.safetyLevel === 'SAFE') {

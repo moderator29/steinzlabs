@@ -76,13 +76,13 @@ export function TokenCard({ token }: { token: TokenCardData }) {
         .from('watchlist')
         .insert({ token_id: token.contractAddress || token.symbol, symbol: token.symbol, chain: token.chain });
       if (error) {
-        setToast(/duplicate|unique/i.test(error.message) ? 'Already in your watchlist' : 'Could not add to watchlist — try again');
+        setToast(/duplicate|unique/i.test(error.message) ? 'Already in your watchlist' : 'Could not add to watchlist. Try again');
       } else {
         setToast('Added to watchlist');
       }
       setTimeout(() => setToast(''), 2500);
     } catch (err) {
-      setToast('Could not add to watchlist — try again');
+      setToast('Could not add to watchlist. Try again');
       setTimeout(() => setToast(''), 2500);
       console.error('[TokenCard] Watch failed:', err instanceof Error ? err.message : err);
     } finally {

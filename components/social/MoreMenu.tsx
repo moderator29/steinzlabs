@@ -144,7 +144,7 @@ function ReportDialog({ targetId, username, onClose }: { targetId: string; usern
         </div>
         {done ? (
           <>
-            <p className="text-sm text-slate-300">Thanks — moderators will review. Your identity stays private.</p>
+            <p className="text-sm text-slate-300">Thanks. Moderators will review. Your identity stays private.</p>
             <div className="mt-4 flex justify-end">
               <button onClick={onClose} className="px-4 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-slate-200 text-sm">Close</button>
             </div>

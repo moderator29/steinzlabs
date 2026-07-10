@@ -99,7 +99,7 @@ export default function WhaleDnaPage() {
       </div>
 
       <div className="text-center mb-5">
-        <h1 className="text-2xl font-bold">Decode a wallet — find its whole cohort</h1>
+        <h1 className="text-2xl font-bold">Decode a wallet to find its whole cohort</h1>
         <p className="text-slate-400 text-sm mt-1">A wallet’s behavioral fingerprint, plus the wallets that trade just like it.</p>
       </div>
 

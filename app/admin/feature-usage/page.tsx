@@ -53,7 +53,7 @@ export default function FeatureUsagePage() {
           <h1 className="text-xl font-bold text-white">Feature Usage Analytics</h1>
           <p className="text-xs text-gray-500 mt-0.5">Usage counts and unique users per feature (last 30 days)</p>
         </div>
-        <button onClick={load} disabled={loading} className="p-2 text-gray-400 hover:text-white border border-[#1E2433] rounded-lg hover:border-[#2E3443] transition-colors">
+        <button onClick={load} disabled={loading} className="nl-button nl-button--ghost">
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
@@ -81,14 +81,14 @@ export default function FeatureUsagePage() {
               { label: 'Tracked Features', value: features.length.toString() },
               { label: 'Top Feature', value: features[0]?.name ?? '—' },
             ].map(k => (
-              <div key={k.label} className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
+              <div key={k.label} className="nl-glass rounded-2xl p-4">
                 <div className="text-xs text-gray-400 mb-2">{k.label}</div>
                 <div className="text-xl font-bold text-white">{k.value}</div>
               </div>
             ))}
           </div>
 
-          <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 mb-6">
+          <div className="nl-glass rounded-2xl p-4 mb-6">
             <h3 className="text-sm font-semibold text-white mb-4">Usage by Feature</h3>
             <MicroBar
               data={features}
@@ -100,19 +100,19 @@ export default function FeatureUsagePage() {
             />
           </div>
 
-          <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden overflow-x-auto">
-            <div className="px-4 py-3 border-b border-[#1E2433]">
+          <div className="nl-glass rounded-2xl overflow-hidden overflow-x-auto">
+            <div className="px-4 py-3 border-b border-white/10">
               <h3 className="text-sm font-semibold text-white">Feature Engagement Table</h3>
             </div>
             <table className="w-full text-xs min-w-[600px]">
-              <thead className="border-b border-[#1E2433]">
+              <thead className="border-b border-white/10">
                 <tr>{['Feature', 'Usage Count', 'Unique Users', 'Avg Events / User'].map(h => (
                   <th key={h} className="px-4 py-2.5 text-start text-gray-500 font-medium">{h}</th>
                 ))}</tr>
               </thead>
               <tbody>
                 {features.map(f => (
-                  <tr key={f.name} className="border-b border-[#1E2433] last:border-0 hover:bg-[#1E2433]/30">
+                  <tr key={f.name} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors last:border-0">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Zap className="w-3 h-3 text-[#0066FF]" />

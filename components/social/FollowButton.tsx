@@ -60,7 +60,7 @@ export function FollowButton({ targetId, initialState, mutual, onChange, size = 
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ target_id: targetId }),
         });
-        if (res.status === 429) { setError('Slow down — too many follows recently.'); return; }
+        if (res.status === 429) { setError('Slow down. Too many follows recently.'); return; }
         if (!res.ok) { setError('Could not follow'); return; }
         const json = await res.json();
         const next = json.follow?.status === 'pending' ? 'pending' : 'accepted';

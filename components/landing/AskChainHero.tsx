@@ -1,6 +1,6 @@
 'use client';
 
-// Landing hero prompt — a live, animated "Ask the Chain anything" bar that
+// Landing hero prompt: a live, animated "Ask the Chain anything" bar that
 // types out real example questions and drops visitors straight into the
 // product's signature AI surface. On-brand glass + aurora sheen. The homepage
 // showing the platform as something you can TALK to is the fleet's top landing

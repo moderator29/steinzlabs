@@ -23,6 +23,7 @@
  */
 
 import { normalizeAddress } from '@/lib/utils/addressNormalize';
+import { classifyAddress } from '@/lib/whales/labels';
 
 /** Naka brand logo — the avatar shown for any whale with no real profile pic. */
 export const NAKA_FALLBACK_AVATAR = '/logo.png';
@@ -75,6 +76,52 @@ export function whaleDisplayName(opts: {
       ? opts.nakaNumber
       : fallbackNakaNumber(opts.address, opts.chain);
   return `Naka Whale #${n}`;
+}
+
+/**
+ * The display name to headline a WHALE ALERT (in-app bell, Telegram, email).
+ * Layers three sources so an alert never shows a bare 0x… as its identity:
+ *
+ *   1. A curated known-entity name from the label registry (CEX / market maker /
+ *      bridge / protocol — e.g. "Binance 14"). This is the "known label if
+ *      available" tier and wins so an alert reads "Binance bought $X".
+ *   2. The whale's stored name — the user's follow label or the whales.label.
+ *   3. The deterministic "Naka Whale #N" fallback (shared with every other
+ *      surface via whaleDisplayName, so the same wallet always maps to the same
+ *      number in the alert AND in the Whale Tracker the alert links to).
+ *
+ * Pure and side-effect free — safe to call from cron routes and clients alike.
+ */
+export function whaleAlertDisplayName(opts: {
+  address: string;
+  chain?: string | null;
+  /** The user's per-follow label, if they named the whale. */
+  followLabel?: string | null;
+  /** The whales.label column, if the wallet is a labeled entity. */
+  whaleLabel?: string | null;
+  /** The persisted whales.naka_number, when the wallet is in the whales table. */
+  nakaNumber?: number | null;
+}): string {
+  const curated = classifyAddress(opts.address, (opts.chain ?? '') as string).name;
+  const stored = hasRealLabel(opts.followLabel)
+    ? opts.followLabel
+    : hasRealLabel(opts.whaleLabel)
+      ? opts.whaleLabel
+      : null;
+  return whaleDisplayName({
+    label: curated || stored,
+    nakaNumber: opts.nakaNumber,
+    address: opts.address,
+    chain: opts.chain,
+  });
+}
+
+/** Short 0x… form kept as small secondary context under the display name. */
+export function shortWhaleAddress(address: string): string {
+  if (!address) return '';
+  return address.length > 12
+    ? `${address.slice(0, 6)}…${address.slice(-4)}`
+    : address;
 }
 
 // ─── Avatars ──────────────────────────────────────────────────────────────────

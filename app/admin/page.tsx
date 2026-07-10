@@ -1,14 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-// Naka Labs brand icons — broad swap. BarChart3 → ChartBar, Share2 → Share, LayoutDashboard → Dashboard aliased.
 import {
   Shield, LogOut, Eye, CheckCircle, XCircle, AlertTriangle, Clock,
-  Activity, Lock, ChartBar as BarChart3, TrendingUp, TrendingDown,
+  Activity, Lock, BarChart3, TrendingUp, TrendingDown,
   Bell, Settings, Send, Trash2, Menu, X, Search, ExternalLink,
-  ChevronRight, Heart, Share as Share2, Dashboard as LayoutDashboard, RefreshCw,
-} from '@/components/icons/brand';
-import {
+  ChevronRight, Heart, Share2, LayoutDashboard, RefreshCw,
   Users, Zap, RotateCcw, DollarSign, Layers, Database, Wifi,
   ArrowUpRight, ArrowDownRight, Ban, UserCheck, Home, ShieldCheck,
   Server, Briefcase, Globe, UserPlus, ShieldAlert, Radio,
@@ -97,7 +94,7 @@ function MetricCard({ icon: Icon, label, value, sub, color, loading, trend }: {
   trend?: 'up' | 'down' | 'neutral';
 }) {
   return (
-    <div className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06] hover:border-white/[0.12] transition-all duration-300 group">
+    <div className="nl-glass rounded-2xl p-4 transition-all duration-300 group">
       <div className="flex items-center justify-between mb-3">
         <div className={`p-2 rounded-lg bg-gradient-to-br ${color === 'blue' ? 'from-[#0066FF]/10 to-[#0066FF]/5' : color === 'green' ? 'from-[#10B981]/10 to-[#10B981]/5' : color === 'purple' ? 'from-[#7C3AED]/10 to-[#7C3AED]/5' : color === 'amber' ? 'from-[#F59E0B]/10 to-[#F59E0B]/5' : 'from-[#EF4444]/10 to-[#EF4444]/5'}`}>
           <Icon className={`w-4 h-4 ${color === 'blue' ? 'text-[#0066FF]' : color === 'green' ? 'text-[#10B981]' : color === 'purple' ? 'text-[#7C3AED]' : color === 'amber' ? 'text-[#F59E0B]' : 'text-[#EF4444]'}`} />
@@ -357,9 +354,9 @@ export default function AdminPanel() {
 
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-[#0A0E1A] flex items-center justify-center px-4">
+      <div className="min-h-screen nl-aurora-bg flex items-center justify-center px-4">
         <div className="w-full max-w-sm">
-          <div className="bg-[#111827]/80 rounded-2xl p-8 border border-white/[0.06] backdrop-blur-xl">
+          <div className="nl-glass rounded-2xl p-8">
             <div className="flex flex-col items-center gap-3 mb-8">
               <div className="w-14 h-14 bg-gradient-to-br from-[#0066FF] to-[#0066FF]/60 rounded-xl flex items-center justify-center shadow-lg shadow-[#0066FF]/20">
                 <Shield className="w-7 h-7 text-white" />
@@ -374,7 +371,7 @@ export default function AdminPanel() {
                 Sign in to your Naka Labs account with admin privileges to access this panel.
               </p>
               {loginError && <p className="text-[#EF4444] text-xs text-center">{loginError}</p>}
-              <button onClick={handleLogin} className="w-full bg-[#0066FF] hover:bg-[#0066FF]/90 py-3 rounded-xl font-semibold text-sm transition-colors">
+              <button onClick={handleLogin} className="naka-button-primary w-full">
                 Verify Admin Access
               </button>
               <a href="/login" className="block text-center text-xs text-gray-500 hover:text-gray-300 transition-colors">
@@ -382,7 +379,7 @@ export default function AdminPanel() {
               </a>
             </div>
           </div>
-          <p className="text-center text-[10px] text-gray-700 mt-4">Protected access — authorized personnel only</p>
+          <p className="text-center text-[10px] text-gray-700 mt-4">Protected access - authorized personnel only</p>
         </div>
       </div>
     );
@@ -394,10 +391,10 @@ export default function AdminPanel() {
   const totalVolume = tokens.reduce((s, t) => s + (t.total_volume || 0), 0);
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white flex">
+    <div className="min-h-screen nl-aurora-bg text-white flex">
       <div className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity lg:hidden ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setSidebarOpen(false)} />
 
-      <aside className={`fixed top-0 left-0 h-full w-[260px] bg-[#0D1117] border-r border-white/[0.06] z-50 transform transition-transform lg:translate-x-0 lg:static lg:z-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed top-0 left-0 h-full w-[260px] nl-glass z-50 transform transition-transform lg:translate-x-0 lg:static lg:z-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-4 border-b border-white/[0.06]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -438,7 +435,7 @@ export default function AdminPanel() {
           })}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-2.5 border-t border-white/[0.06] bg-[#0D1117]">
+        <div className="absolute bottom-0 left-0 right-0 p-2.5 border-t border-white/[0.06] bg-[#0A0E1A]/80 backdrop-blur-xl">
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0066FF]/5 border border-[#0066FF]/10 mb-2">
             <Radio className="w-3 h-3 text-[#10B981] animate-pulse" />
             <span className="text-[10px] text-gray-400">Auto-refresh in <span className="text-white font-mono font-bold">{countdown}s</span></span>
@@ -505,7 +502,7 @@ export default function AdminPanel() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="lg:col-span-2 bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06]">
+                <div className="lg:col-span-2 nl-glass rounded-2xl p-4">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <UserPlus className="w-4 h-4 text-[#0066FF]" />
@@ -539,7 +536,7 @@ export default function AdminPanel() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06]">
+                  <div className="nl-glass rounded-2xl p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <Activity className="w-4 h-4 text-[#0066FF]" />
                       <span className="text-xs font-heading font-bold">API Health</span>
@@ -554,7 +551,7 @@ export default function AdminPanel() {
                     </div>
                   </div>
 
-                  <div className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06]">
+                  <div className="nl-glass rounded-2xl p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <TrendingUp className="w-4 h-4 text-[#10B981]" />
                       <span className="text-xs font-heading font-bold">Market Snapshot</span>
@@ -604,7 +601,7 @@ export default function AdminPanel() {
                       value={userSearch}
                       onChange={(e) => handleUserSearch(e.target.value)}
                       placeholder="Search users..."
-                      className="bg-[#111827] border border-white/[0.06] rounded-lg ps-9 pe-3 py-2 text-xs text-white focus:outline-none focus:border-[#0066FF]/40 w-56 transition-colors"
+                      className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl ps-9 pe-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 w-56 transition-colors"
                     />
                   </div>
                 }
@@ -617,7 +614,7 @@ export default function AdminPanel() {
                 <MetricCard icon={Users} label="This Week" value={stats?.users.weekSignups?.toString() || '0'} sub="Past 7 days" color="amber" loading={loadingStats} />
               </div>
 
-              <div className="bg-[#111827]/80 rounded-xl border border-white/[0.06] overflow-hidden">
+              <div className="nl-glass rounded-2xl overflow-hidden">
                 {loadingUsers ? (
                   <div className="p-6 space-y-2">
                     {[...Array(8)].map((_, i) => <div key={i} className="h-12 bg-white/[0.03] rounded-lg animate-pulse" />)}
@@ -626,7 +623,7 @@ export default function AdminPanel() {
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="border-b border-white/[0.06] text-[10px] text-gray-500 uppercase tracking-wider">
+                        <tr className="border-b border-white/10 text-[10px] text-gray-400 uppercase tracking-wider">
                           <th className="text-start px-4 py-3">User</th>
                           <th className="text-start px-4 py-3">Username</th>
                           <th className="text-start px-4 py-3">Email</th>
@@ -635,7 +632,7 @@ export default function AdminPanel() {
                       </thead>
                       <tbody>
                         {users.map((user) => (
-                          <tr key={user.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
+                          <tr key={user.id} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors">
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2.5">
                                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 flex items-center justify-center text-[10px] font-bold text-[#0066FF]">
@@ -682,7 +679,7 @@ export default function AdminPanel() {
                 action={
                   <div className="relative">
                     <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                    <input type="text" value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)} placeholder="Filter tokens..." className="bg-[#111827] border border-white/[0.06] rounded-lg ps-9 pe-3 py-2 text-xs text-white focus:outline-none focus:border-[#0066FF]/40 w-48 transition-colors" />
+                    <input type="text" value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)} placeholder="Filter tokens..." className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl ps-9 pe-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 w-48 transition-colors" />
                   </div>
                 }
               />
@@ -695,17 +692,17 @@ export default function AdminPanel() {
               </div>
 
               {loadingTokens ? (
-                <div className="bg-[#111827]/80 rounded-xl p-6 border border-white/[0.06]">
+                <div className="nl-glass rounded-2xl p-6">
                   <div className="space-y-2">
                     {[...Array(10)].map((_, i) => <div key={i} className="h-12 bg-white/[0.03] rounded-lg animate-pulse" />)}
                   </div>
                 </div>
               ) : (
-                <div className="bg-[#111827]/80 rounded-xl border border-white/[0.06] overflow-hidden">
+                <div className="nl-glass rounded-2xl overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="border-b border-white/[0.06] text-[10px] text-gray-500 uppercase tracking-wider">
+                        <tr className="border-b border-white/10 text-[10px] text-gray-400 uppercase tracking-wider">
                           <th className="text-start px-4 py-3">#</th>
                           <th className="text-start px-4 py-3">Token</th>
                           <th className="text-end px-4 py-3">Price</th>
@@ -716,7 +713,7 @@ export default function AdminPanel() {
                       </thead>
                       <tbody>
                         {tokens.filter(t => !searchFilter || t.name?.toLowerCase().includes(searchFilter.toLowerCase()) || t.symbol?.toLowerCase().includes(searchFilter.toLowerCase())).map((token, i) => (
-                          <tr key={token.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
+                          <tr key={token.id} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors">
                             <td className="px-4 py-3 text-[10px] text-gray-600 font-mono">{i + 1}</td>
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-2.5">
@@ -766,7 +763,7 @@ export default function AdminPanel() {
 
               <div className="space-y-2">
                 {apiHealth.map((api) => (
-                  <div key={api.name} className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06] flex items-center justify-between hover:border-white/[0.1] transition-colors">
+                  <div key={api.name} className="nl-glass rounded-2xl p-4 flex items-center justify-between transition-colors">
                     <div className="flex items-center gap-3">
                       <div className={`w-2.5 h-2.5 rounded-full ${api.status === 'online' ? 'bg-[#10B981]' : api.status === 'degraded' ? 'bg-[#F59E0B]' : 'bg-[#EF4444]'} ${api.status !== 'online' ? 'animate-pulse' : ''}`} />
                       <div>
@@ -798,7 +795,7 @@ export default function AdminPanel() {
                 <MetricCard icon={DollarSign} label="Awaiting Payment" value={tokenListings.filter(l => ['approved_pending_payment', 'payment_sent'].includes(l.status)).length.toString()} sub="Approved" color="purple" loading={loadingListings} />
               </div>
 
-              <div className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06]">
+              <div className="nl-glass rounded-2xl p-4">
                 {loadingListings ? (
                   <div className="space-y-2">
                     {[...Array(3)].map((_, i) => <div key={i} className="h-20 bg-white/[0.03] rounded-lg animate-pulse" />)}
@@ -808,7 +805,7 @@ export default function AdminPanel() {
                 ) : (
                   <div className="space-y-3">
                     {tokenListings.map((listing) => (
-                      <div key={listing.id} className="bg-[#0A0E1A]/60 rounded-xl p-4 border border-white/[0.04] hover:border-white/[0.08] transition-colors">
+                      <div key={listing.id} className="bg-white/[0.02] rounded-xl p-4 border border-white/[0.06] hover:border-white/[0.1] transition-colors">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-3">
                             {listing.logoUrl ? (
@@ -889,7 +886,7 @@ export default function AdminPanel() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06]">
+                <div className="nl-glass rounded-2xl p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <ShieldCheck className="w-4 h-4 text-[#10B981]" />
                     <span className="text-xs font-heading font-bold">Shadow Guardian Status</span>
@@ -911,7 +908,7 @@ export default function AdminPanel() {
                   </div>
                 </div>
 
-                <div className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06]">
+                <div className="nl-glass rounded-2xl p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <Layers className="w-4 h-4 text-[#0066FF]" />
                     <span className="text-xs font-heading font-bold">Trading Infrastructure</span>
@@ -940,7 +937,7 @@ export default function AdminPanel() {
             <div className="space-y-4">
               <SectionHeader title="Broadcast Notifications" subtitle="Send platform-wide messages" />
 
-              <div className="bg-[#111827]/80 rounded-xl p-5 border border-white/[0.06]">
+              <div className="nl-glass rounded-2xl p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <Send className="w-4 h-4 text-[#0066FF]" />
                   <span className="text-xs font-heading font-bold">Compose Broadcast</span>
@@ -949,11 +946,11 @@ export default function AdminPanel() {
                   value={broadcastMsg}
                   onChange={(e) => setBroadcastMsg(e.target.value)}
                   placeholder="Write a platform-wide notification message..."
-                  className="w-full bg-[#0A0E1A] border border-white/[0.06] rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-[#0066FF]/30 min-h-[100px] text-white placeholder-gray-600 mb-4 transition-colors resize-none"
+                  className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-[#0066FF]/50 min-h-[100px] text-white placeholder-gray-500 mb-4 transition-colors resize-none"
                 />
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <button onClick={() => { if (broadcastMsg.trim()) { setBroadcastSent(true); setBroadcastMsg(''); setTimeout(() => setBroadcastSent(false), 3000); } }} className="bg-[#0066FF] hover:bg-[#0066FF]/90 px-5 py-2.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5">
+                    <button onClick={() => { if (broadcastMsg.trim()) { setBroadcastSent(true); setBroadcastMsg(''); setTimeout(() => setBroadcastSent(false), 3000); } }} className="naka-button-primary flex items-center gap-1.5">
                       <Send className="w-3.5 h-3.5" /> Send Broadcast
                     </button>
                     {broadcastSent && <span className="text-[#10B981] text-[11px] font-medium">Sent successfully!</span>}
@@ -962,7 +959,7 @@ export default function AdminPanel() {
                 </div>
               </div>
 
-              <div className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06]">
+              <div className="nl-glass rounded-2xl p-4">
                 <div className="text-xs font-heading font-bold mb-3">Quick Templates</div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                   {[
@@ -976,7 +973,7 @@ export default function AdminPanel() {
                       <button
                         key={i}
                         onClick={() => setBroadcastMsg(alert.msg)}
-                        className="bg-[#0A0E1A]/60 rounded-xl p-3.5 border border-white/[0.04] hover:border-white/[0.1] text-start transition-all flex items-start gap-3"
+                        className="bg-white/[0.02] rounded-xl p-3.5 border border-white/[0.06] hover:border-white/[0.1] text-start transition-all flex items-start gap-3"
                       >
                         <AlertIcon className={`w-4 h-4 ${alert.color} flex-shrink-0 mt-0.5`} />
                         <div>
@@ -995,7 +992,7 @@ export default function AdminPanel() {
             <div className="space-y-4">
               <SectionHeader title="Platform Configuration" subtitle="Data sources, settings, and admin tools" />
 
-              <div className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06]">
+              <div className="nl-glass rounded-2xl p-4">
                 <div className="flex items-center gap-2 mb-4">
                   <Database className="w-4 h-4 text-[#7C3AED]" />
                   <span className="text-xs font-heading font-bold">Data Sources & Infrastructure</span>
@@ -1024,7 +1021,7 @@ export default function AdminPanel() {
                 </div>
               </div>
 
-              <div className="bg-[#111827]/80 rounded-xl p-4 border border-white/[0.06]">
+              <div className="nl-glass rounded-2xl p-4">
                 <div className="flex items-center gap-2 mb-4">
                   <Settings className="w-4 h-4 text-gray-400" />
                   <span className="text-xs font-heading font-bold">Platform Settings</span>
@@ -1053,16 +1050,16 @@ export default function AdminPanel() {
                 </div>
               </div>
 
-              <div className="bg-[#111827]/80 rounded-xl p-4 border border-[#EF4444]/10">
+              <div className="nl-glass rounded-2xl p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Lock className="w-4 h-4 text-[#EF4444]" />
                   <span className="text-xs font-heading font-bold text-[#EF4444]">Danger Zone</span>
                 </div>
                 <div className="space-y-2">
-                  <button className="w-full py-2.5 px-4 rounded-xl border border-[#EF4444]/10 text-[#EF4444] text-xs font-semibold hover:bg-[#EF4444]/5 transition-colors text-start flex items-center gap-2.5">
+                  <button className="w-full py-2.5 px-4 rounded-xl border border-[#EF4444]/30 bg-[#EF4444]/5 text-[#EF4444] text-xs font-semibold hover:bg-[#EF4444]/10 transition-colors text-start flex items-center gap-2.5">
                     <Trash2 className="w-3.5 h-3.5" /> Clear All Caches
                   </button>
-                  <button className="w-full py-2.5 px-4 rounded-xl border border-[#EF4444]/10 text-[#EF4444] text-xs font-semibold hover:bg-[#EF4444]/5 transition-colors text-start flex items-center gap-2.5">
+                  <button className="w-full py-2.5 px-4 rounded-xl border border-[#EF4444]/30 bg-[#EF4444]/5 text-[#EF4444] text-xs font-semibold hover:bg-[#EF4444]/10 transition-colors text-start flex items-center gap-2.5">
                     <Ban className="w-3.5 h-3.5" /> Enable Maintenance Mode
                   </button>
                 </div>

@@ -2,7 +2,7 @@ import type { HowItWorksContent } from '@/lib/howItWorks/types';
 
 export const mevRadarHowItWorks: HowItWorksContent = {
   title: 'MEV Radar',
-  tagline: 'See how much wallets are quietly losing to MEV — sandwich attacks and frontrunning — over the last thirty days, and check any wallet’s toll.',
+  tagline: 'See how much wallets are quietly losing to MEV (sandwich attacks and frontrunning) over the last thirty days, and check any wallet’s toll.',
   howItWorks: [
     'MEV, short for maximal extractable value, is the profit bots take by reordering, inserting, or front-running transactions around yours, and it acts as an invisible tax that most traders never see itemized.',
     'The radar reads a thirty-day aggregate of measured MEV losses per wallet, broken down into how many times the wallet was sandwiched and how many times it was frontrun, along with the total dollars extracted.',

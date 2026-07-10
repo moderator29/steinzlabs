@@ -44,6 +44,7 @@ const EVM_CHAINID_TO_PLATFORM: Record<string, string> = {
   '0x89':    'polygon',      // 137
   '0x38':    'bsc',          // 56
   '0xa86a':  'avalanche',    // 43114
+  '0x1237':  'robinhood',    // 4663 — Robinhood Chain (Arbitrum-Orbit L2, native ETH)
 };
 
 export function evmChainIdToPlatformChain(chainIdHex: string | null | undefined): string | null {

@@ -29,6 +29,11 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   bsc: { id: 'bsc', label: 'BNB Chain', short: 'BSC', color: '#F0B90B', logo: tw('bsc') },
   polygon: { id: 'polygon', label: 'Polygon', short: 'POLY', color: '#8247E5', logo: tw('polygon') },
   avalanche: { id: 'avalanche', label: 'Avalanche', short: 'AVAX', color: '#E84142', logo: tw('avalanche') },
+  // Robinhood Chain — Arbitrum-Orbit L2 on Ethereum, native gas ETH,
+  // mainnet chain id 4663 (0x1237). Brand green #00C805. Logo asset should
+  // be vendored to /public/chains/robinhood.png; until then <ChainLogo>
+  // degrades to the brand-color dot.
+  robinhood: { id: 'robinhood', label: 'Robinhood Chain', short: 'HOOD', color: '#00C805', logo: tw('robinhood') },
 };
 
 /** Normalize common chain aliases to our canonical ids. */
@@ -57,6 +62,11 @@ export function normalizeChainId(raw: string | null | undefined): string {
     case 'avax':
     case 'avalanche':
     case 'avalanchec': return 'avalanche';
+    case 'robinhood':
+    case 'hood':
+    case 'rhc':
+    case 'robinhood-chain':
+    case '4663': return 'robinhood';
     default: return c;
   }
 }

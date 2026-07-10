@@ -473,7 +473,7 @@ export default function DNAAnalyzerPage() {
               </div>
               <h2 className="text-2xl font-heading font-bold mb-2">Deep Network Analysis</h2>
               <p className="text-gray-400 text-sm">
-                Decode the complete DNA of any wallet — identity profile, trading patterns, partner wallets, and AI intelligence.
+                Decode the complete DNA of any wallet: identity profile, trading patterns, partner wallets, and AI intelligence.
               </p>
             </div>
 

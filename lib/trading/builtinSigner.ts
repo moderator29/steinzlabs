@@ -20,8 +20,8 @@
 export class BuiltinAutoSigningNotSupported extends Error {
   constructor() {
     super(
-      "Built-in wallet auto-signing is not supported. Naka Labs is non-custodial — " +
-      "signing must happen client-side via the pending_trades confirmation flow.",
+      "Built-in wallet auto-signing is not supported. Naka Labs is non-custodial. " +
+      "Signing must happen client-side via the pending_trades confirmation flow.",
     );
     this.name = "BuiltinAutoSigningNotSupported";
   }

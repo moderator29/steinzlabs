@@ -77,7 +77,7 @@ export function BehaviorTimeline({ shifts, caption }: BehaviorTimelineProps) {
               <div
                 role="img"
                 aria-label={`${KIND_LABEL[s.kind]} on ${dateLabel(s.at)}: ${s.summary}`}
-                title={`${dateLabel(s.at)} — ${s.summary}`}
+                title={`${dateLabel(s.at)}: ${s.summary}`}
                 className="w-3 h-3 rounded-full border-2 cursor-help"
                 style={{ backgroundColor: color + '40', borderColor: color }}
               />

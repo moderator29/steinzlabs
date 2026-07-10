@@ -81,7 +81,7 @@ export default function LaunchRadarPage() {
 
       <div className="text-center mb-4">
         <h1 className="text-2xl font-bold">New launches worth watching</h1>
-        <p className="text-slate-400 text-sm mt-1">The freshest tokens that clear a real liquidity + activity bar — the shortlist, not the noise.</p>
+        <p className="text-slate-400 text-sm mt-1">The freshest tokens that clear a real liquidity + activity bar: the shortlist, not the noise.</p>
       </div>
 
       {/* Controls */}

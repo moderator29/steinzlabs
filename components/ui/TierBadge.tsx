@@ -37,25 +37,25 @@ const VARIANTS: Record<Variant, { src: string; label: string; message: string; r
   mini: {
     src: '/branding/badge-mini.png',
     label: 'Mini plan',
-    message: 'Mini Plan — welcome to the Naka ecosystem. The journey begins.',
+    message: 'Mini Plan. Welcome to the Naka ecosystem. The journey begins.',
     ringRgba: 'rgba(59,130,246,0.55)',
   },
   pro: {
     src: '/branding/badge-pro.png',
     label: 'Pro plan',
-    message: 'Pro Plan — built for serious traders. Your edge, sharpened.',
+    message: 'Pro Plan: built for serious traders. Your edge, sharpened.',
     ringRgba: 'rgba(203,213,225,0.55)',
   },
   max: {
     src: '/branding/badge-max.png',
     label: 'Max plan',
-    message: 'Max Plan — a legend in the making. Top tier. Top access. No limits.',
+    message: 'Max Plan: a legend in the making. Top tier. Top access. No limits.',
     ringRgba: 'rgba(250,204,21,0.6)',
   },
   naka_cult: {
     src: '/branding/badge-naka-cult.png',
     label: 'Naka Cult',
-    message: 'Naka Cult — the lineage. Vault entry, the Conclave, the Oracle, the Sanctum.',
+    message: 'Naka Cult: the lineage. Vault entry, the Conclave, the Oracle, the Sanctum.',
     ringRgba: 'rgba(220,20,60,0.6)',
   },
 };

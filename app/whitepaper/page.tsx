@@ -102,7 +102,7 @@ const TOC = [
   { n: '02', label: 'The Problem',                  id: 'problem' },
   { n: '03', label: 'Platform Architecture',        id: 'architecture' },
   { n: '04', label: 'Intelligence Layer',           id: 'intelligence' },
-  { n: '05', label: 'Security — Our Full Stack',    id: 'security' },
+  { n: '05', label: 'Security: Our Full Stack',    id: 'security' },
   { n: '06', label: 'Trading Suite',                id: 'trading' },
   { n: '07', label: 'Whales & Smart Money',         id: 'whales' },
   { n: '08', label: 'Non-Custodial Wallet',         id: 'wallet' },
@@ -121,7 +121,7 @@ const TOC = [
 export default function WhitepaperPage() {
   return (
     <div className="min-h-screen bg-[#080C18] text-white">
-      {/* Ambient animated gradient orbs — subtle depth in the background */}
+      {/* Ambient animated gradient orbs: subtle depth in the background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden>
         <div className="absolute top-[10%] left-[-10%] w-[600px] h-[600px] rounded-full blur-[150px] opacity-[0.25]"
              style={{ background: 'radial-gradient(circle, #4D6BFF 0%, transparent 70%)', animation: 'wpOrb 22s ease-in-out infinite' }} />
@@ -199,7 +199,7 @@ export default function WhitepaperPage() {
               </span>
             </h1>
             <p className="text-gray-400 text-[17px] sm:text-lg leading-[1.75] max-w-2xl">
-              A unified intelligence, security and trading workspace for anyone who takes crypto seriously. Built for people who want the same data professional funds use — without the five-figure subscription, without giving up custody, and without the jargon.
+              A unified intelligence, security and trading workspace for anyone who takes crypto seriously. Built for people who want the same data professional funds use, without the five-figure subscription, without giving up custody, and without the jargon.
             </p>
             <div className="flex flex-wrap gap-3 mt-8">
               <a href="#overview" className="inline-flex items-center gap-2 text-sm bg-[#0066FF] hover:bg-[#0818CC] text-white px-5 py-3 rounded-xl font-semibold transition-colors">
@@ -210,7 +210,7 @@ export default function WhitepaperPage() {
               </Link>
             </div>
 
-            {/* Floating 3D icon strip — lightweight visual signal of the four layers */}
+            {/* Floating 3D icon strip: lightweight visual signal of the four layers */}
             <div className="mt-10 flex flex-wrap gap-5 items-center">
               {[
                 { Icon: Brain,       color: '#4D6BFF', label: 'Intelligence' },
@@ -253,32 +253,32 @@ export default function WhitepaperPage() {
             </div>
           </div>
 
-          {/* 01 — Overview */}
+          {/* 01: Overview */}
           <WpSection id="overview" n="01" title="Overview" kicker="Start here">
             <p>
-              Naka Labs is an on-chain intelligence platform built around a single idea: retail users should have access to the same quality of information, the same execution tooling, and the same security guarantees as professional trading desks — in a clean, browser-based product they can understand in minutes.
+              Naka Labs is an on-chain intelligence platform built around a single idea: retail users should have access to the same quality of information, the same execution tooling, and the same security guarantees as professional trading desks, in a clean, browser-based product they can understand in minutes.
             </p>
             <p>
               The platform brings four things together in one place:
             </p>
             <FeatureGrid items={[
               { icon: Brain,    color: '#0066FF', title: 'Intelligence',  desc: 'A real-time signal stream, an AI agent with live on-chain tools, and behavioural fingerprints for any wallet on any chain we support.' },
-              { icon: Shield,   color: '#10B981', title: 'Security',      desc: 'Every token gets a Trust Score. Every swap gets a pre-flight simulation. Every approval, URL and signature gets checked — automatically.' },
+              { icon: Shield,   color: '#10B981', title: 'Security',      desc: 'Every token gets a Trust Score. Every swap gets a pre-flight simulation. Every approval, URL and signature gets checked, automatically.' },
               { icon: Repeat,   color: '#F59E0B', title: 'Execution',     desc: 'Multi-chain swaps routed through best-price liquidity. A sniper engine that won’t fire on honeypots. Copy-trade tooling built on verified on-chain P&L.' },
-              { icon: BarChart3,color: '#8B5CF6', title: 'Analytics',     desc: 'Portfolio tracking, smart-money convergence, whale flow, network metrics and research — all using the same live data feed.' },
+              { icon: BarChart3,color: '#8B5CF6', title: 'Analytics',     desc: 'Portfolio tracking, smart-money convergence, whale flow, network metrics and research, all using the same live data feed.' },
             ]} />
             <p>
               This whitepaper is long on purpose. Every feature is explained. Every security claim is backed by where and how it’s applied. Every promise we can’t yet keep is labelled <Pill color="#F59E0B">Coming soon</Pill> rather than quietly implied.
             </p>
             <Callout color="#F59E0B" icon={Sparkles} title="This is our MVP">
-              What you see today is the first public release. The core features are live and in daily use. A significant pipeline of upgrades — mobile apps, DAO governance, deeper automation, new chains — is in active development. Section 13 is the only place where we list them, and we don’t attach hard dates we can’t keep.
+              What you see today is the first public release. The core features are live and in daily use. A significant pipeline of upgrades (mobile apps, DAO governance, deeper automation, new chains) is in active development. Section 13 is the only place where we list them, and we don’t attach hard dates we can’t keep.
             </Callout>
           </WpSection>
 
-          {/* 02 — Problem */}
+          {/* 02: Problem */}
           <WpSection id="problem" n="02" title="The Problem" kicker="Why this exists">
             <p>
-              Crypto markets remain one of the most information-asymmetric environments on the internet. Funds, market makers, and protocol insiders have real-time on-chain feeds, private dashboards, and automated alerts. Retail participants — the people the industry keeps claiming it serves — have fragmented tools, stale data, and walls of jargon between them and the numbers that actually matter.
+              Crypto markets remain one of the most information-asymmetric environments on the internet. Funds, market makers, and protocol insiders have real-time on-chain feeds, private dashboards, and automated alerts. Retail participants (the people the industry keeps claiming it serves) have fragmented tools, stale data, and walls of jargon between them and the numbers that actually matter.
             </p>
             <StatList items={[
               { label: 'Lost to crypto scams annually', value: '$4.6B+' },
@@ -290,14 +290,14 @@ export default function WhitepaperPage() {
               The result: retail consistently buys what institutions are selling, interacts with malicious contracts they cannot audit, and misses smart-money signals that front-run most major moves by hours or days.
             </p>
             <p>
-              Existing solutions are either siloed (a scanner here, a portfolio tracker there), technical (read-the-docs-or-good-luck), or built for institutions at institutional prices. Naka Labs collapses the entire stack into one interface — and keeps pricing in the $0–$15 range where it belongs.
+              Existing solutions are either siloed (a scanner here, a portfolio tracker there), technical (read-the-docs-or-good-luck), or built for institutions at institutional prices. Naka Labs collapses the entire stack into one interface, and keeps pricing in the $0–$15 range where it belongs.
             </p>
           </WpSection>
 
-          {/* 03 — Architecture */}
+          {/* 03: Architecture */}
           <WpSection id="architecture" n="03" title="Platform Architecture" kicker="How it all fits together">
             <p>
-              Naka Labs is organised into four layers that share a single real-time data pipeline. You never have to think about which layer you’re in — the product decides — but the shape matters because it’s why the number you see in the Context Feed is the same number VTX reasons over and the same number the swap engine quotes against. One source of truth, everywhere.
+              Naka Labs is organised into four layers that share a single real-time data pipeline. You never have to think about which layer you’re in (the product decides), but the shape matters because it’s why the number you see in the Context Feed is the same number VTX reasons over and the same number the swap engine quotes against. One source of truth, everywhere.
             </p>
             <FeatureGrid items={[
               { icon: Layers,    color: '#0066FF', title: 'Intelligence Layer', desc: 'Context Feed, VTX AI Agent, DNA Analyzer, Wallet Intelligence, Bubble Map, On-Chain Trends.' },
@@ -310,17 +310,17 @@ export default function WhitepaperPage() {
               Naka Labs pulls from a deliberately wide set of first-class data providers so no single source is a point of failure. Live market data flows through CoinGecko. EVM chain data runs through Alchemy; Solana through Helius. Token security checks are powered by GoPlus (more in section 05). Liquidity, trending and early-launch signals come from DexScreener and Birdeye. Social and attention data is supplemented by LunarCrush. AI reasoning runs on Anthropic Claude via its tool-use API.
             </p>
             <p>
-              Every inbound API is wrapped with timeouts, retries, and fallbacks. If CoinGecko is rate-limited, we degrade gracefully instead of blanking the UI. If a cache miss happens, we serve stale data with a short TTL rather than hang the page. Users don’t see the plumbing — but the plumbing is why the experience stays snappy even when a vendor has a bad day.
+              Every inbound API is wrapped with timeouts, retries, and fallbacks. If CoinGecko is rate-limited, we degrade gracefully instead of blanking the UI. If a cache miss happens, we serve stale data with a short TTL rather than hang the page. Users don’t see the plumbing, but the plumbing is why the experience stays snappy even when a vendor has a bad day.
             </p>
             <Callout color="#8B5CF6" icon={Cpu} title="Runtime">
-              Built on Next.js 16 and deployed on Vercel’s edge. Database + auth on Supabase with Row-Level Security on every table. Client-side state is hydrated from server props; real-time streams use SSE. The whole thing runs in a browser — no installs, no extensions beyond the wallets you already have.
+              Built on Next.js 16 and deployed on Vercel’s edge. Database + auth on Supabase with Row-Level Security on every table. Client-side state is hydrated from server props; real-time streams use SSE. The whole thing runs in a browser: no installs, no extensions beyond the wallets you already have.
             </Callout>
           </WpSection>
 
-          {/* 04 — Intelligence */}
+          {/* 04: Intelligence */}
           <WpSection id="intelligence" n="04" title="Intelligence Layer" kicker="What the platform sees for you">
             <p>
-              The intelligence layer is the cognitive core. It processes on-chain events, classifies them, scores them, and surfaces only the ones that matter to you — filtered by the wallets you watch, the chains you care about, and the tokens in your portfolio.
+              The intelligence layer is the cognitive core. It processes on-chain events, classifies them, scores them, and surfaces only the ones that matter to you, filtered by the wallets you watch, the chains you care about, and the tokens in your portfolio.
             </p>
 
             <H3>Context Feed</H3>
@@ -328,7 +328,7 @@ export default function WhitepaperPage() {
               A real-time stream of classified on-chain signals: <span className="text-[#10B981] font-semibold">BULLISH</span>, <span className="text-[#F59E0B] font-semibold">HYPE</span>, <span className="text-[#EF4444] font-semibold">BEAR</span>, or <span className="text-gray-300 font-semibold">NEUTRAL</span>. Each event carries a Trust Score from 0–100 and a verifiable on-chain link. The feed is personalised to your watched wallets and chains, and streamed via Server-Sent Events so signals appear within seconds of the on-chain transaction.
             </p>
             <p>
-              The feed is powered by four parallel sources: live CoinGecko market data (top gainers, trending, new listings, large-cap movements), Alchemy and Solana RPC streams for whale transfers, DexScreener for liquidity and pump-fun tokens, and Birdeye for Solana momentum. A composite scorer combines recency, trust, USD size, pump-fun penalty, and whale boost into a single sort order — no fake "trending" padding.
+              The feed is powered by four parallel sources: live CoinGecko market data (top gainers, trending, new listings, large-cap movements), Alchemy and Solana RPC streams for whale transfers, DexScreener for liquidity and pump-fun tokens, and Birdeye for Solana momentum. A composite scorer combines recency, trust, USD size, pump-fun penalty, and whale boost into a single sort order, with no fake "trending" padding.
             </p>
 
             <H3>VTX AI Agent</H3>
@@ -349,7 +349,7 @@ export default function WhitepaperPage() {
 
             <H3>Bubble Map</H3>
             <p>
-              A force-directed graph of any token’s holders and their relationships. Nodes scale by holding size. The central token node colours green or red based on its 24-hour move. Three view modes — Token Holders, Wallet Network, Cluster View — let you spot coordinated holdings, insider clusters, and wallets tagged as exchanges, whales, scammers or team.
+              A force-directed graph of any token’s holders and their relationships. Nodes scale by holding size. The central token node colours green or red based on its 24-hour move. Three view modes (Token Holders, Wallet Network, Cluster View) let you spot coordinated holdings, insider clusters, and wallets tagged as exchanges, whales, scammers or team.
             </p>
 
             <H3>Wallet Intelligence</H3>
@@ -363,14 +363,14 @@ export default function WhitepaperPage() {
             </p>
           </WpSection>
 
-          {/* 05 — Security */}
-          <WpSection id="security" n="05" title="Security — Our Full Stack" kicker="Why you can trust us">
+          {/* 05: Security */}
+          <WpSection id="security" n="05" title="Security: Our Full Stack" kicker="Why you can trust us">
             <p>
-              Security is not a feature in Naka Labs. It is the default operating mode. Every token interaction is scanned before execution. Every approval is monitored. Every domain is checked. Every signature request is decoded. Users do not have to remember to run the checks — the platform runs them automatically, every time.
+              Security is not a feature in Naka Labs. It is the default operating mode. Every token interaction is scanned before execution. Every approval is monitored. Every domain is checked. Every signature request is decoded. Users do not have to remember to run the checks: the platform runs them automatically, every time.
             </p>
 
             <Callout color="#10B981" icon={ShieldCheck} title="How our security stack actually works">
-              We combine our own on-chain analysis with <strong className="text-white">GoPlus Security</strong> — one of the most widely-used token and contract security engines in crypto. GoPlus is our <em>third-party</em> audit backbone; our scoring, routing and pre-flight simulations sit <em>on top of it</em>. If GoPlus flags a contract, we block the interaction before it reaches your wallet. If we have additional signals GoPlus doesn’t (e.g. cluster analysis, whale dump detection) we add them. The result is defence-in-depth.
+              We combine our own on-chain analysis with <strong className="text-white">GoPlus Security</strong>, one of the most widely-used token and contract security engines in crypto. GoPlus is our <em>third-party</em> audit backbone; our scoring, routing and pre-flight simulations sit <em>on top of it</em>. If GoPlus flags a contract, we block the interaction before it reaches your wallet. If we have additional signals GoPlus doesn’t (e.g. cluster analysis, whale dump detection) we add them. The result is defence-in-depth.
             </Callout>
 
             <H3>Token Trust Score (0–100)</H3>
@@ -392,14 +392,14 @@ export default function WhitepaperPage() {
             </div>
 
             <H3>Where GoPlus is applied</H3>
-            <p>GoPlus runs automatically — you never have to invoke it — in every one of the following places:</p>
+            <p>GoPlus runs automatically (you never have to invoke it) in every one of the following places:</p>
             <div className="space-y-2 my-5">
               {[
                 { icon: Repeat, label: 'Swap engine', desc: 'Before a swap quote is executed, we run GoPlus on the destination token. Honeypots, taxes above threshold, blacklists, or unverified contracts abort the swap.' },
                 { icon: Target, label: 'Sniper Bot',  desc: 'New launches are put through a 5-layer safety gate that uses GoPlus as one of the layers. Auto-buy will not fire on a contract that fails honeypot + liquidity + holder checks.' },
                 { icon: Brain,  label: 'VTX Agent',   desc: 'When you ask VTX about a token, the response is grounded in a GoPlus pull. You get a plain-English summary of risks, not just a price quote.' },
                 { icon: Layers, label: 'Context Feed',desc: 'High-trust events weight higher in the feed. Tokens flagged by GoPlus receive warning treatment or are hidden depending on severity.' },
-                { icon: Eye,    label: 'Bubble Map',  desc: 'Holder graph integrates GoPlus flags — wallets tagged as scammers or blacklisted are coloured and labelled in the graph.' },
+                { icon: Eye,    label: 'Bubble Map',  desc: 'Holder graph integrates GoPlus flags: wallets tagged as scammers or blacklisted are coloured and labelled in the graph.' },
               ].map(i => (
                 <div key={i.label} className="flex items-start gap-3 nl-glass rounded-xl p-4">
                   <div className="w-7 h-7 rounded-lg bg-[#10B981]/15 flex items-center justify-center flex-shrink-0">
@@ -413,9 +413,9 @@ export default function WhitepaperPage() {
               ))}
             </div>
 
-            <H3>Shadow Guardian — pre-trade simulation</H3>
+            <H3>Shadow Guardian: pre-trade simulation</H3>
             <p>
-              Before every trade executes, Shadow Guardian simulates the transaction on-chain. If the token contract prevents selling — the defining property of a honeypot — the trade is blocked and the user is warned. This simulation runs in under 200ms and costs nothing. Shadow Guardian catches sophisticated scams where a token technically passes surface checks but reverts on sell.
+              Before every trade executes, Shadow Guardian simulates the transaction on-chain. If the token contract prevents selling (the defining property of a honeypot), the trade is blocked and the user is warned. This simulation runs in under 200ms and costs nothing. Shadow Guardian catches sophisticated scams where a token technically passes surface checks but reverts on sell.
             </p>
 
             <H3>Contract Analyzer</H3>
@@ -435,7 +435,7 @@ export default function WhitepaperPage() {
 
             <H3>Approval Manager</H3>
             <p>
-              A unified view of every token approval your wallet has outstanding, across every chain we support. Revoke approvals in one click. Surface the high-risk ones automatically — unlimited approvals, approvals to unverified contracts, approvals older than 30 days.
+              A unified view of every token approval your wallet has outstanding, across every chain we support. Revoke approvals in one click. Surface the high-risk ones automatically: unlimited approvals, approvals to unverified contracts, approvals older than 30 days.
             </p>
 
             <H3>Risk Scanner</H3>
@@ -456,7 +456,7 @@ export default function WhitepaperPage() {
             </Callout>
           </WpSection>
 
-          {/* 06 — Trading */}
+          {/* 06: Trading */}
           <WpSection id="trading" n="06" title="Trading Suite" kicker="Act on what you see">
             <p>
               Every trading tool in Naka Labs is designed around a single principle: no trade executes without a pre-flight safety check. The UI layer is optimised for speed; the safety layer is non-negotiable.
@@ -469,12 +469,12 @@ export default function WhitepaperPage() {
 
             <H3>VTX Built-in Swap</H3>
             <p>
-              Ask VTX "swap 0.5 ETH for USDC" in plain English. VTX detects the intent, pulls a live quote, and renders an inline SwapCard in the chat. The card is a full review screen — tap Execute to sign, or keep typing and VTX keeps reasoning. No context switch between "analysis" and "action".
+              Ask VTX "swap 0.5 ETH for USDC" in plain English. VTX detects the intent, pulls a live quote, and renders an inline SwapCard in the chat. The card is a full review screen: tap Execute to sign, or keep typing and VTX keeps reasoning. No context switch between "analysis" and "action".
             </p>
 
             <H3>Sniper Bot <Pill color="#F59E0B">Max plan</Pill></H3>
             <p>
-              Monitors new token launches in real time and — when the user’s criteria match — executes a configured buy. The 5-layer safety protocol runs before every auto-buy: honeypot simulation, tax threshold, liquidity lock check, ownership renouncement, top-holder concentration. Failed checks abort the transaction automatically. A server-side kill switch lets the user (or platform admin) stop all active snipes in a single call.
+              Monitors new token launches in real time and, when the user’s criteria match, executes a configured buy. The 5-layer safety protocol runs before every auto-buy: honeypot simulation, tax threshold, liquidity lock check, ownership renouncement, top-holder concentration. Failed checks abort the transaction automatically. A server-side kill switch lets the user (or platform admin) stop all active snipes in a single call.
             </p>
             <p>
               <Pill color="#F59E0B">Coming soon</Pill> Full mempool listening for pre-mint detection, cross-chain sniper config sharing, and stop-loss / take-profit automation on sniper positions.
@@ -484,7 +484,7 @@ export default function WhitepaperPage() {
             <p>
               Mirror the on-chain activity of any tracked whale. Configure a copy size (absolute or percentage of the source), a maximum per-trade cap, and optional safety filters (skip tokens below a Trust Score threshold). Copies execute when the source wallet buys; users retain control over exits.
             </p>
-            <p>Tier mapping: <Pill color="#0066FF">Alerts-only</Pill> <Pill color="#10B981">Pro — one-click copy</Pill> <Pill color="#F59E0B">Max — auto-copy</Pill>.</p>
+            <p>Tier mapping: <Pill color="#0066FF">Alerts-only</Pill> <Pill color="#10B981">Pro: one-click copy</Pill> <Pill color="#F59E0B">Max: auto-copy</Pill>.</p>
 
             <H3>Alerts</H3>
             <p>
@@ -497,7 +497,7 @@ export default function WhitepaperPage() {
             </p>
           </WpSection>
 
-          {/* 07 — Whales */}
+          {/* 07: Whales */}
           <WpSection id="whales" n="07" title="Whales & Smart Money" kicker="Where the money actually moves">
             <p>
               Understanding what professional capital is doing is one of the strongest edges available on-chain. Naka Labs tracks hundreds of high-performance wallets across 9 chains in real time, classifies them by behaviour, and surfaces their moves as they happen.
@@ -505,7 +505,7 @@ export default function WhitepaperPage() {
 
             <H3>Smart Money Classification</H3>
             <p>
-              Wallets are continuously scored on win rate, risk-adjusted P&L, consistency of performance, and trade timing relative to price moves. Top performers are classified as Smart Money and added to the tracked pool. Classification is dynamic — wallets can enter or exit the pool as their performance changes. No static list, no cherry-picking.
+              Wallets are continuously scored on win rate, risk-adjusted P&L, consistency of performance, and trade timing relative to price moves. Top performers are classified as Smart Money and added to the tracked pool. Classification is dynamic: wallets can enter or exit the pool as their performance changes. No static list, no cherry-picking.
             </p>
 
             <H3>Convergence Signal</H3>
@@ -524,20 +524,20 @@ export default function WhitepaperPage() {
             </p>
           </WpSection>
 
-          {/* 08 — Non-custodial wallet */}
+          {/* 08: Non-custodial wallet */}
           <WpSection id="wallet" n="08" title="Non-Custodial Wallet" kicker="Your keys, your coins, always">
             <p>
-              Naka Labs includes a built-in wallet — but "built-in" does not mean "custodied". At no point does Naka Labs ever see your private keys, your seed phrase, or the decryption password that protects them. This is not a marketing claim; it’s a consequence of how the wallet is designed.
+              Naka Labs includes a built-in wallet, but "built-in" does not mean "custodied". At no point does Naka Labs ever see your private keys, your seed phrase, or the decryption password that protects them. This is not a marketing claim; it’s a consequence of how the wallet is designed.
             </p>
 
             <H3>How the wallet is created</H3>
             <p>
-              When you create a wallet, your browser generates a standard BIP-39 mnemonic (12 words) locally. The mnemonic is shown to you exactly once for backup. You’re warned — repeatedly and loudly — to write it down physically and never share it. The mnemonic derives your private keys using standard HD wallet derivation (m/44’/60’/0’/0/0 for EVM, m/44’/501’/0’/0’ for Solana).
+              When you create a wallet, your browser generates a standard BIP-39 mnemonic (12 words) locally. The mnemonic is shown to you exactly once for backup. You’re warned, repeatedly and loudly, to write it down physically and never share it. The mnemonic derives your private keys using standard HD wallet derivation (m/44’/60’/0’/0/0 for EVM, m/44’/501’/0’/0’ for Solana).
             </p>
 
             <H3>How the wallet is stored</H3>
             <p>
-              Your private keys are encrypted in your browser using <strong className="text-white">AES-256-GCM</strong> before they leave your device. The encryption key is derived from a password you set, using <strong className="text-white">PBKDF2 with 100,000 iterations of SHA-256</strong> and a per-wallet random salt. Only the ciphertext — which we cannot decrypt without the password you never send us — is synced to our Supabase <code className="text-[11px] bg-white/5 px-1.5 py-0.5 rounded">user_wallets_v2</code> table (protected by Row-Level Security so only your session can read it).
+              Your private keys are encrypted in your browser using <strong className="text-white">AES-256-GCM</strong> before they leave your device. The encryption key is derived from a password you set, using <strong className="text-white">PBKDF2 with 100,000 iterations of SHA-256</strong> and a per-wallet random salt. Only the ciphertext, which we cannot decrypt without the password you never send us, is synced to our Supabase <code className="text-[11px] bg-white/5 px-1.5 py-0.5 rounded">user_wallets_v2</code> table (protected by Row-Level Security so only your session can read it).
             </p>
 
             <H3>How the wallet is used</H3>
@@ -546,7 +546,7 @@ export default function WhitepaperPage() {
             </p>
 
             <Callout color="#10B981" icon={Lock} title="What this means practically">
-              If Naka Labs is ever compromised, your funds are not exposed. The attacker would get ciphertext they cannot decrypt without passwords we never stored. If you forget your password, we cannot recover it — which is also why we nag you to back up your seed phrase. Non-custodial means non-custodial.
+              If Naka Labs is ever compromised, your funds are not exposed. The attacker would get ciphertext they cannot decrypt without passwords we never stored. If you forget your password, we cannot recover it, which is also why we nag you to back up your seed phrase. Non-custodial means non-custodial.
             </Callout>
 
             <H3>External wallet support</H3>
@@ -560,7 +560,7 @@ export default function WhitepaperPage() {
             </p>
           </WpSection>
 
-          {/* 09 — Privacy */}
+          {/* 09: Privacy */}
           <WpSection id="privacy" n="09" title="Your Privacy, Our View" kicker="What we see, and what we don't">
             <p>
               The question "what does this platform actually know about me" deserves a direct answer. Here it is, in full, without hedging.
@@ -604,18 +604,18 @@ export default function WhitepaperPage() {
               ))}
             </div>
 
-            <H3>VTX and wallet access — your choice</H3>
+            <H3>VTX and wallet access: your choice</H3>
             <p>
               By default, VTX only sees data you explicitly paste or query. You can opt-in to letting VTX see your wallet holdings (via the <em>VTX Wallet Access</em> toggle on your Profile), which unlocks personalised answers like "how is my portfolio doing" or "is my exposure to memecoins too high". The toggle is off by default. Flip it only if the personalisation is worth it to you. <Pill color="#F59E0B">Coming soon</Pill>
             </p>
 
             <H3>Your rights</H3>
             <p>
-              You can export your data, request deletion, and cancel your subscription at any time from Settings → Account. We honour GDPR and CCPA requests. Deletion is complete deletion — nothing retained in backups beyond our documented retention window.
+              You can export your data, request deletion, and cancel your subscription at any time from Settings → Account. We honour GDPR and CCPA requests. Deletion is complete deletion: nothing retained in backups beyond our documented retention window.
             </p>
           </WpSection>
 
-          {/* 10 — Telegram */}
+          {/* 10: Telegram */}
           <WpSection id="telegram" n="10" title="Telegram Bot" kicker="Intelligence where you already are">
             <p>
               The Naka Labs Telegram bot is the same intelligence platform, delivered to the chat app you check anyway. Link your account with a one-time code, then use slash commands directly from Telegram. Tier gates are enforced server-side, so the bot never exposes a feature your plan doesn’t cover.
@@ -630,7 +630,7 @@ export default function WhitepaperPage() {
                 { cmd: '/price <symbol>',  tier: 'Free',  desc: 'Live price and 24h change for any token.' },
                 { cmd: '/watchlist',       tier: 'Free',  desc: 'Your watched wallets and tokens.' },
                 { cmd: '/alerts',          tier: 'Free',  desc: 'List your active alerts.' },
-                { cmd: '/vtx <question>',  tier: 'Free',  desc: 'Ask VTX anything — daily limits apply.' },
+                { cmd: '/vtx <question>',  tier: 'Free',  desc: 'Ask VTX anything. Daily limits apply.' },
                 { cmd: '/whale <address>', tier: 'Mini+', desc: 'Quick intel on a whale wallet.' },
                 { cmd: '/portfolio',       tier: 'Mini+', desc: 'Your holdings across connected wallets.' },
                 { cmd: '/copy <whale>',    tier: 'Pro+',  desc: 'Start or manage a copy-trade.' },
@@ -648,11 +648,11 @@ export default function WhitepaperPage() {
               ))}
             </div>
             <p>
-              <Pill color="#F59E0B">Coming soon</Pill> Outbound event notifications — whale-activity and alert triggers delivered to your Telegram automatically, in addition to commands you initiate.
+              <Pill color="#F59E0B">Coming soon</Pill> Outbound event notifications: whale-activity and alert triggers delivered to your Telegram automatically, in addition to commands you initiate.
             </p>
           </WpSection>
 
-          {/* 11 — Pricing */}
+          {/* 11: Pricing */}
           <WpSection id="pricing" n="11" title="Pricing & Tiers" kicker="Clear, honest, cheap">
             <p>Four tiers. No hidden surcharges. Cancel or switch any time.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 my-6">
@@ -692,7 +692,7 @@ export default function WhitepaperPage() {
             <p className="text-[13px] text-gray-500">Payment in crypto. Fiat <Pill color="#F59E0B">Coming soon</Pill>. Enterprise tier (custom limits, white-label, dedicated support) available on request.</p>
           </WpSection>
 
-          {/* 12 — Value */}
+          {/* 12: Value */}
           <WpSection id="value" n="12" title="Why Naka Delivers More Value" kicker="Our pitch in plain English">
             <p>
               Everything listed so far exists elsewhere in some form. Where Naka Labs is different is the combination: the same real-time data feeding intelligence, security, execution, and analytics, delivered in a unified product at retail pricing. Specifically:
@@ -700,11 +700,11 @@ export default function WhitepaperPage() {
             <div className="space-y-3 my-6">
               {[
                 { title: 'One source of truth', desc: 'Feed, VTX, swap quote and risk score all read from the same pipeline. Competing tools stitch disparate APIs; we unified them so the numbers always agree.' },
-                { title: 'Security at every entry point', desc: 'GoPlus sits beneath every swap, snipe, VTX query and bubble map — not as a separate tab, but as the default path. You cannot accidentally skip the scan.' },
-                { title: 'AI that actually does the work', desc: 'VTX is tool-using Claude with direct on-chain access. It doesn’t just chat — it executes scans, renders token cards, and can complete a swap inside the chat. Not a demo, production.' },
+                { title: 'Security at every entry point', desc: 'GoPlus sits beneath every swap, snipe, VTX query and bubble map, not as a separate tab, but as the default path. You cannot accidentally skip the scan.' },
+                { title: 'AI that actually does the work', desc: 'VTX is tool-using Claude with direct on-chain access. It doesn’t just chat: it executes scans, renders token cards, and can complete a swap inside the chat. Not a demo, production.' },
                 { title: 'Non-custodial by default', desc: 'We never hold your keys. Competitors that bundle "convenience custody" take control you should never give up.' },
                 { title: 'Price', desc: 'Pro is $9/month. The nearest equivalent institutional tools run thousands per seat. We made the bet that breadth of users beats depth of pricing.' },
-                { title: 'No vendor lock-in', desc: 'Every insight surfaces on-chain links. Every trade executes through standard DEX aggregators. You can leave and take everything with you — which is the right way to build a platform.' },
+                { title: 'No vendor lock-in', desc: 'Every insight surfaces on-chain links. Every trade executes through standard DEX aggregators. You can leave and take everything with you, which is the right way to build a platform.' },
               ].map(v => (
                 <div key={v.title} className="nl-glass rounded-xl p-5">
                   <div className="text-sm font-semibold text-white mb-1">{v.title}</div>
@@ -714,7 +714,7 @@ export default function WhitepaperPage() {
             </div>
           </WpSection>
 
-          {/* 13 — Coming soon */}
+          {/* 13: Coming soon */}
           <WpSection id="coming-soon" n="13" title="Coming Soon" kicker="What we're building next (no roadmap dates)">
             <p>
               We’re deliberately not publishing timed roadmaps. Crypto punishes teams that promise dates and quietly miss them; we’d rather ship and then tell you. Here’s what’s actively in build:
@@ -747,14 +747,14 @@ export default function WhitepaperPage() {
             </div>
           </WpSection>
 
-          {/* 14 — Company / Legal */}
+          {/* 14: Company / Legal */}
           <WpSection id="company" n="14" title="Company & Legal" kicker="Who we are, what we promise">
             <H3>Company</H3>
             <p>
-              Naka Labs is an early-stage, independent team building what we wish existed when we started trading on-chain ourselves. The product you see today is a genuine MVP — not a beta codeword for "unfinished" — but the foundation for a much larger platform. The roadmap in section 13 is what we are actively building; every feature there exists in design or prototype today.
+              Naka Labs is an early-stage, independent team building what we wish existed when we started trading on-chain ourselves. The product you see today is a genuine MVP (not a beta codeword for "unfinished"), but the foundation for a much larger platform. The roadmap in section 13 is what we are actively building; every feature there exists in design or prototype today.
             </p>
             <p>
-              <strong className="text-white">We are registering the company formally, and that process is close to completion.</strong> Once finalised we will publish jurisdiction, registration number, and compliance contacts directly on this page. Until then, the entity operates as an unregistered team and all payments are processed through audited crypto rails. We consider this transparency non-negotiable — you deserve to know whether you’re paying a company or a team.
+              <strong className="text-white">We are registering the company formally, and that process is close to completion.</strong> Once finalised we will publish jurisdiction, registration number, and compliance contacts directly on this page. Until then, the entity operates as an unregistered team and all payments are processed through audited crypto rails. We consider this transparency non-negotiable: you deserve to know whether you’re paying a company or a team.
             </p>
 
             <H3>Governance <Pill color="#F59E0B">Coming soon</Pill></H3>
@@ -764,7 +764,7 @@ export default function WhitepaperPage() {
 
             <H3>Disclaimer</H3>
             <p>
-              Nothing in this whitepaper is financial, legal, investment, or tax advice. Crypto assets are highly volatile and speculative. The tools and data Naka Labs provides are advisory and educational. No feature — including security scanners, Trust Scores, AI recommendations, or copy trading — guarantees a profitable outcome or the absence of loss. Past performance is not indicative of future results. You are solely responsible for your financial decisions.
+              Nothing in this whitepaper is financial, legal, investment, or tax advice. Crypto assets are highly volatile and speculative. The tools and data Naka Labs provides are advisory and educational. No feature (including security scanners, Trust Scores, AI recommendations, or copy trading) guarantees a profitable outcome or the absence of loss. Past performance is not indicative of future results. You are solely responsible for your financial decisions.
             </p>
 
             <H3>Terms & Privacy</H3>
@@ -790,7 +790,7 @@ export default function WhitepaperPage() {
               </div>
             </div>
             <p className="text-[11px] text-gray-700 mt-5 leading-relaxed">
-              This whitepaper is for informational purposes only. Nothing herein constitutes financial, legal, investment, or tax advice. Crypto assets are highly volatile and speculative. Past performance of platform tools does not guarantee future results. Use of Naka Labs is subject to our Terms of Service. Document version 1.0 — last updated April 2026.
+              This whitepaper is for informational purposes only. Nothing herein constitutes financial, legal, investment, or tax advice. Crypto assets are highly volatile and speculative. Past performance of platform tools does not guarantee future results. Use of Naka Labs is subject to our Terms of Service. Document version 1.0, last updated April 2026.
             </p>
           </div>
         </main>

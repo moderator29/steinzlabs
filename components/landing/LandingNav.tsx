@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-// lucide Menu/X — the brand glowing-geometric variants paint with a fixed
+// lucide Menu/X: the brand glowing-geometric variants paint with a fixed
 // gradient stroke and ignore text-* colour, leaving the mobile toggle
 // invisible on the dark nav; lucide honours the button's currentColor.
 import { Menu, X } from 'lucide-react';
@@ -35,7 +35,7 @@ export function LandingNav() {
         <div className="max-w-7xl mx-auto px-3 sm:px-5 h-16 flex items-center justify-between gap-2 sm:gap-3">
           <Link href="/" className="flex items-center gap-2 min-w-0 flex-shrink">
             <SteinzLogo size={28} animated={false} />
-            {/* §nav-polish — wordmark tracking dropped from 3px to 2px and
+            {/* §nav-polish: wordmark tracking dropped from 3px to 2px and
                 font-size scales up at sm+. min-w-0 + truncate lets the wordmark
                 ellipsis on ultra-narrow screens instead of forcing the fixed
                 nav wider than the viewport (which read as a "zoomed-in" page
@@ -52,12 +52,12 @@ export function LandingNav() {
 
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <GlobalControls className="hidden sm:flex" />
-            {/* NakaCult landing toggle — flips the user to the token-gated
+            {/* NakaCult landing toggle: flips the user to the token-gated
                 cult marketing surface (/naka-cult) so they can read the
                 Cult lore before signing up. Crimson accent matches the
                 cult brand color and visually distinguishes from the
                 blue 'Get Started' primary CTA. */}
-            {/* NakaCult landing toggle — now visible at every breakpoint
+            {/* NakaCult landing toggle: now visible at every breakpoint
                 (was `hidden md:inline-flex`, which hid it on phones). The
                 compact mobile variant drops the label to a sigil-only
                 pill at <sm so the nav row still fits next to the
@@ -75,7 +75,7 @@ export function LandingNav() {
             <Link href="/login" className="hidden md:block text-sm text-white/60 hover:text-white transition-colors px-3 py-2">
               Log In
             </Link>
-            {/* §nav-polish — Get Started was wrapping to two lines on
+            {/* §nav-polish: Get Started was wrapping to two lines on
                 mobile because the parent flex row had no room and the
                 button had no whitespace-nowrap. Made the button a clean
                 square-cornered rounded-xl pill, single line, with a

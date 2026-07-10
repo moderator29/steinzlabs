@@ -491,7 +491,7 @@ function ConcentrationCard({ nodes, security, totalHolders, dataSource }: {
           <span className="font-mono font-bold" style={{ color: security.riskColor }}>
             {security.topHoldersConcentration.toFixed(1)}%
           </span>{' '}
-          of supply — {security.riskLevel.toLowerCase()} concentration risk
+          of supply, {security.riskLevel.toLowerCase()} concentration risk
           {totalHolders > 0 && <> across {totalHolders.toLocaleString()} total holders</>}.
         </p>
       )}
@@ -597,7 +597,7 @@ function BubbleMapInner() {
       setMapData(data);
     } catch {
       setMapData(null);
-      setErrorMsg('Network error — could not reach the holder-intel service. Check your connection and retry.');
+      setErrorMsg('Network error: could not reach the holder-intel service. Check your connection and retry.');
     } finally { setLoading(false); }
   }, [tokenAddress, chain, mode]);
 
@@ -685,7 +685,7 @@ function BubbleMapInner() {
       const shortCa = `${msg.slice(0, 6)}…${msg.slice(-4)}`;
       setChatMessages(p => [...p,
         { role: 'user', content: msg, timestamp: Date.now() },
-        { role: 'assistant', content: `Loading the bubble map for ${shortCa} on ${nextChain}. Give me a second — then ask me anything about the holders, clusters, or risk.`, timestamp: Date.now() },
+        { role: 'assistant', content: `Loading the bubble map for ${shortCa} on ${nextChain}. Give me a second, then ask me anything about the holders, clusters, or risk.`, timestamp: Date.now() },
       ]);
       setChatInput('');
       setTokenAddress(msg);
@@ -870,7 +870,7 @@ function BubbleMapInner() {
                 <span>Vol: <span className="text-gray-300 font-mono">{fmtNum(info.volume24h)}</span></span>
                 <span>MCap: <span className="text-gray-300 font-mono">{fmtNum(info.marketCap)}</span></span>
                 <span>Liq: <span className="text-gray-300 font-mono">{fmtNum(info.liquidity)}</span></span>
-                <span>Holders: <span className="text-gray-300 font-mono">{info.totalHolders > 0 ? info.totalHolders.toLocaleString() : '—'}</span></span>
+                <span>Holders: <span className="text-gray-300 font-mono">{info.totalHolders > 0 ? info.totalHolders.toLocaleString() : '-'}</span></span>
               </div>
             </div>
 
@@ -925,7 +925,7 @@ function BubbleMapInner() {
                       <Layers className="w-10 h-10 text-gray-700" />
                     </div>
                     <p className="text-sm font-semibold text-gray-400">No token loaded</p>
-                    <p className="text-xs text-gray-600 max-w-xs text-center">Paste a token contract address in the search above — or drop it into the agent below — to visualize the holder distribution network.</p>
+                    <p className="text-xs text-gray-600 max-w-xs text-center">Paste a token contract address in the search above, or drop it into the agent below, to visualize the holder distribution network.</p>
                   </div>
                 ) : holderNodes.length === 0 ? (
                   /* Honest empty state — the intel pipeline resolved the token

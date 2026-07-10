@@ -46,7 +46,7 @@ export default function TermsPage() {
         </div>
 
         <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.06] p-5 sm:p-6 mb-4">
-          <p className="text-amber-200/90 font-bold text-sm mb-2">⚠ Important disclaimer — read first</p>
+          <p className="text-amber-200/90 font-bold text-sm mb-2">⚠ Important disclaimer: read first</p>
           <p className="text-gray-300 text-[14px] leading-relaxed">
             Nothing on Naka Labs is financial, legal, investment, or tax advice. Trust Scores,
             whale data, AI responses, and every other tool are provided for educational and
@@ -84,8 +84,8 @@ export default function TermsPage() {
 
         <H2 n="5A">AI &amp; Swap Safety</H2>
         <p>VTX Agent is an intelligence layer, not a signer. When you ask VTX to swap, convert, or trade, the agent renders a Swap Card showing the proposed input token, output token, estimated receive amount, slippage tolerance, price impact, and platform fee. <strong>No transaction is broadcast, signed, or executed until you manually tap the "Sign &amp; Swap" (or "Execute Swap") button and your wallet approves the signature.</strong></p>
-        <p>VTX does not and cannot: withdraw funds, transfer tokens, approve allowances, move assets between wallets, or execute any on-chain action on your behalf without your explicit per-transaction confirmation. AI-generated text is advisory only. The wallet is the sole authority — every state-changing action requires a fresh user signature prompted by the wallet itself.</p>
-        <p>Your private keys and seed phrases are never transmitted to VTX, to Anthropic, or to any AI provider. VTX sees only your public wallet address (the same identifier visible on any block explorer) so it can quote swaps and read balances. Quotes are fetched fresh at signing time — the amount shown on the card may shift slightly due to market movement between quote and confirmation.</p>
+        <p>VTX does not and cannot: withdraw funds, transfer tokens, approve allowances, move assets between wallets, or execute any on-chain action on your behalf without your explicit per-transaction confirmation. AI-generated text is advisory only. The wallet is the sole authority; every state-changing action requires a fresh user signature prompted by the wallet itself.</p>
+        <p>Your private keys and seed phrases are never transmitted to VTX, to Anthropic, or to any AI provider. VTX sees only your public wallet address (the same identifier visible on any block explorer) so it can quote swaps and read balances. Quotes are fetched fresh at signing time, so the amount shown on the card may shift slightly due to market movement between quote and confirmation.</p>
         <p>High-price-impact swaps (greater than 30%) are automatically blocked by the Swap Card as a safety rail. You remain responsible for reviewing every swap detail before signing; Naka Labs is not liable for losses arising from signed transactions, including losses from slippage, MEV, incorrect token selection, or wallet compromise.</p>
 
         <H2 n="06">Risk Disclosure</H2>

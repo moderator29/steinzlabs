@@ -9,6 +9,7 @@ import {
   Settings, LifeBuoy, Zap, Search, Tag, Star,
   Mail, LogOut, Menu, X, ChevronRight, Lock, FileText,
   Flag, UserMinus, UserCog, ClipboardList, LineChart,
+  MessageSquare, Gift, Newspaper, CandlestickChart, Coins,
 } from 'lucide-react';
 import SteinzLogo from '@/components/SteinzLogo';
 import { HealthBadge } from '@/components/admin/HealthBadge';
@@ -41,6 +42,14 @@ const NAV_ITEMS = [
   { href: '/admin/social-users',           icon: UserCog,        label: 'Social User View' },
   { href: '/admin/onboarding-analytics',   icon: LineChart,      label: 'Onboarding Analytics' },
   { href: '/admin/audit-tracker',          icon: ClipboardList,  label: 'Audit Tracker' },
+  // Social feed / Wire layer (Session P additions).
+  { href: '/admin/feed',                   icon: MessageSquare,  label: 'Feed / Wire' },
+  { href: '/admin/gifts',                  icon: Gift,           label: 'Gifts' },
+  // Comms.
+  { href: '/admin/news-alerts',            icon: Newspaper,      label: 'News Alerts' },
+  // Markets.
+  { href: '/admin/rwa-markets',            icon: CandlestickChart, label: 'RWA Markets' },
+  { href: '/admin/robinhood-chain',        icon: Coins,          label: 'Robinhood Chain' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -73,12 +82,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   };
 
-  if (checking) return <div className="min-h-screen bg-[#0A0E1A]" />;
+  if (checking) return <div className="min-h-screen nl-aurora-bg" />;
 
   if (!authed) {
     return (
-      <div className="min-h-screen bg-[#0A0E1A] flex items-center justify-center p-6">
-        <div className="w-full max-w-sm bg-[#141824] border border-[#1E2433] rounded-2xl p-8">
+      <div className="min-h-screen nl-aurora-bg flex items-center justify-center p-6">
+        <div className="w-full max-w-sm nl-glass rounded-2xl p-8">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-10 h-10 bg-[#0066FF]/10 rounded-xl flex items-center justify-center">
               <Lock className="w-5 h-5 text-[#0066FF]" />
@@ -93,10 +102,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               name="token"
               type="password"
               placeholder="Admin bearer token"
-              className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#0066FF]/50 transition-colors"
+              className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#0066FF]/50 transition-colors"
               autoComplete="off"
             />
-            <button type="submit" className="w-full bg-[#0066FF] hover:bg-[#0818CC] text-white py-3 rounded-xl text-sm font-semibold transition-colors">
+            <button type="submit" className="naka-button-primary w-full justify-center py-3">
               Authenticate
             </button>
           </form>
@@ -106,15 +115,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-white flex">
+    <div className="min-h-screen bg-[#050816] text-white flex">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/60 z-20 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed lg:sticky top-0 left-0 h-screen w-56 bg-[#0D1120] border-r border-[#1E2433] flex flex-col z-30 transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <div className="flex items-center justify-between p-4 border-b border-[#1E2433]">
+      <aside className={`fixed lg:sticky top-0 left-0 h-screen w-56 bg-[#0A0E1A]/80 backdrop-blur-xl border-r border-white/[0.06] flex flex-col z-30 transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
           <Link href="/admin/dashboard" className="flex items-center gap-2">
             <SteinzLogo size={24} />
             <div>
@@ -130,7 +139,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Live infrastructure health — turns amber/red when Upstash, Supabase,
             CoinGecko, DexScreener, or Anthropic is degraded. Click to see
             the full health table. */}
-        <div className="px-3 py-2.5 border-b border-[#1E2433]">
+        <div className="px-3 py-2.5 border-b border-white/[0.06]">
           <HealthBadge />
         </div>
 
@@ -139,7 +148,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             const active = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
               <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-all group ${active ? 'bg-[#0066FF]/15 text-[#0066FF] font-semibold' : 'text-gray-400 hover:text-white hover:bg-[#1E2433]'}`}>
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-all group ${active ? 'bg-[#0066FF]/15 text-[#0066FF] font-semibold' : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'}`}>
                 <item.icon className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="flex-1">{item.label}</span>
                 {active && <ChevronRight className="w-3 h-3" />}
@@ -148,7 +157,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        <div className="p-3 border-t border-[#1E2433]">
+        <div className="p-3 border-t border-white/[0.06]">
           <button onClick={() => { sessionStorage.removeItem('admin_token'); setAuthed(false); setToken(''); }}
             className="flex items-center gap-2 text-xs text-gray-500 hover:text-red-400 transition-colors px-3 py-2 rounded-lg hover:bg-red-500/10 w-full">
             <LogOut className="w-3.5 h-3.5" />
@@ -159,7 +168,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="lg:hidden flex items-center gap-3 px-4 py-3 border-b border-[#1E2433] bg-[#0D1120]">
+        <header className="lg:hidden flex items-center gap-3 px-4 py-3 border-b border-white/[0.06] bg-[#0A0E1A]/80 backdrop-blur-xl">
           <button onClick={() => setSidebarOpen(true)} className="text-gray-400 hover:text-white">
             <Menu className="w-5 h-5" />
           </button>
@@ -168,7 +177,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <HealthBadge />
           </div>
         </header>
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto nl-aurora-bg">
           {children}
         </main>
       </div>

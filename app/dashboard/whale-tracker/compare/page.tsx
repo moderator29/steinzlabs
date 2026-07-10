@@ -31,7 +31,7 @@ function short(a: string): string {
   return a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a;
 }
 function fmtUsd(n: number | null): string {
-  if (n == null) return '—';
+  if (n == null) return 'N/A';
   const s = n < 0 ? '-' : '';
   const abs = Math.abs(n);
   if (abs >= 1_000_000_000) return `${s}$${(abs / 1e9).toFixed(2)}B`;
@@ -40,11 +40,11 @@ function fmtUsd(n: number | null): string {
   return `${s}$${Math.round(abs)}`;
 }
 function fmtHold(h: number | null): string {
-  if (h == null || h <= 0) return '—';
+  if (h == null || h <= 0) return 'N/A';
   return h >= 24 ? `${Math.round(h / 24)}d` : `${Math.round(h)}h`;
 }
 function fmtAgo(iso: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return 'N/A';
   const diff = Date.now() - new Date(iso).getTime();
   const h = diff / 3_600_000;
   if (h < 1) return `${Math.max(1, Math.round(h * 60))}m ago`;
@@ -128,7 +128,7 @@ export default function WhaleComparePage() {
       {/* Hero */}
       <div className="text-center mb-5">
         <h1 className="text-2xl font-bold">Put whales head to head</h1>
-        <p className="text-slate-400 text-sm mt-1">Pick 2–4 tracked wallets — compare reputation, PnL, and what they’re both buying.</p>
+        <p className="text-slate-400 text-sm mt-1">Pick 2–4 tracked wallets to compare reputation, PnL, and what they’re both buying.</p>
       </div>
 
       {/* Selection */}
@@ -158,7 +158,7 @@ export default function WhaleComparePage() {
 
         {picks.length > 0 && (
           <div className="mt-3">
-            <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1.5">Quick add — top tracked whales</div>
+            <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1.5">Quick add: top tracked whales</div>
             <div className="flex flex-wrap gap-1.5">
               {picks.filter((p) => !selected.includes(p.address)).slice(0, 8).map((p) => (
                 <button key={p.address} onClick={() => add(p.address)} disabled={selected.length >= 4}
@@ -196,12 +196,12 @@ export default function WhaleComparePage() {
                     </div>
                     {w.archetype && <div className="inline-block text-[10px] px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-300 mb-3">{w.archetype}</div>}
                     <dl className="space-y-2 text-xs">
-                      <Row icon={<Target className="w-3 h-3" />} label="Win rate" value={w.winRate == null ? '—' : `${w.winRate}%`} cls={cellCls(i === bestWin)} />
-                      <Row icon={<Trophy className="w-3 h-3" />} label="Whale score" value={w.whaleScore == null ? '—' : String(w.whaleScore)} cls={cellCls(i === bestScore)} />
+                      <Row icon={<Target className="w-3 h-3" />} label="Win rate" value={w.winRate == null ? 'N/A' : `${w.winRate}%`} cls={cellCls(i === bestWin)} />
+                      <Row icon={<Trophy className="w-3 h-3" />} label="Whale score" value={w.whaleScore == null ? 'N/A' : String(w.whaleScore)} cls={cellCls(i === bestScore)} />
                       <Row label="PnL 30d" value={fmtUsd(w.pnl30dUsd)} cls={`${cellCls(i === bestPnl)} ${(w.pnl30dUsd ?? 0) < 0 ? 'text-[#FF1744]' : ''}`} />
                       <Row label="Volume 7d" value={fmtUsd(w.volume7dUsd)} cls={cellCls(i === bestVol)} />
                       <Row label="Portfolio" value={fmtUsd(w.portfolioUsd)} cls="text-white font-semibold" />
-                      <Row label="Trades 30d" value={w.trades30d == null ? '—' : w.trades30d.toLocaleString()} cls="text-white font-semibold" />
+                      <Row label="Trades 30d" value={w.trades30d == null ? 'N/A' : w.trades30d.toLocaleString()} cls="text-white font-semibold" />
                       <Row icon={<Clock className="w-3 h-3" />} label="Avg hold" value={fmtHold(w.avgHoldHours)} cls="text-white font-semibold" />
                       <Row label="Last active" value={fmtAgo(w.lastActive)} cls="text-slate-300 font-medium" />
                     </dl>
@@ -235,7 +235,7 @@ export default function WhaleComparePage() {
               <span className="text-[11px] text-slate-500">tokens ≥2 of these wallets bought</span>
             </div>
             {result.overlap.length === 0 ? (
-              <p className="text-sm text-slate-500">No overlapping tokens in the recent activity window — these wallets are trading different things.</p>
+              <p className="text-sm text-slate-500">No overlapping tokens in the recent activity window. These wallets are trading different things.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {result.overlap.map((o) => (

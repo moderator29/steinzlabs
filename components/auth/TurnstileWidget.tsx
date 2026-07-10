@@ -136,7 +136,7 @@ export function TurnstileWidget({ onSuccess, onError, onExpire, theme = 'light' 
           onClick={() => { setUnreachable(false); window.location.reload(); }}
           style={{ marginTop: 8, fontSize: '12px', color: '#93c5fd', textDecoration: 'underline', background: 'none', border: 0, cursor: 'pointer' }}
         >
-          Security check didn’t load — tap to retry
+          Security check didn’t load. Tap to retry
         </button>
       )}
     </div>

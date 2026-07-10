@@ -13,7 +13,7 @@ export const smartMoneyFlowsHowItWorks: HowItWorksContent = {
   ],
   howToUse: [
     'Open Smart Money Flows from the Whale Tracker tab bar.',
-    'Pick a window — 24h for fresh momentum, 7d or 30d for sustained conviction.',
+    'Pick a window: 24h for fresh momentum, 7d or 30d for sustained conviction.',
     'Filter by chain to focus on one network, or leave it on All chains.',
     'Read the board top-down: green net-in means accumulation, red net-out means distribution, and the split bar shows the buy-versus-sell balance.',
     'Toggle Show stables/majors when you want to include cash and blue-chip rotation in the ranking.',
@@ -22,7 +22,7 @@ export const smartMoneyFlowsHowItWorks: HowItWorksContent = {
     'Knowing what proven wallets are collectively accumulating before it trends is the core smart-money edge, and this board turns thousands of individual trades into one ranked, readable signal.',
     'The net inflow-minus-outflow view separates real conviction from noise: a token many whales are net-buying is a very different signal from one with a single large print, and the split bar and whale count make that obvious.',
     'Demoting stablecoins and majors by default keeps the board focused on the tokens where whale attention actually means something, instead of being dominated by cash rotation.',
-    'Reach for it to spot early accumulation, to confirm that a token you are watching has real smart-money support, or to catch distribution before a top — then pair it with the Convergence Radar and token pages to act.',
+    'Reach for it to spot early accumulation, to confirm that a token you are watching has real smart-money support, or to catch distribution before a top, then pair it with the Convergence Radar and token pages to act.',
   ],
   whatsNew: [
     {

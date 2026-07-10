@@ -62,7 +62,7 @@ export default function TreasuryPage() {
         <button
           onClick={loadWallets}
           disabled={loading}
-          className="flex items-center gap-2 text-xs border border-[#1E2433] text-gray-300 hover:text-white px-3 py-2 rounded-lg hover:border-[#2E3443] transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 text-xs disabled:opacity-50 nl-button nl-button--ghost"
         >
           {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
           Refresh
@@ -75,7 +75,7 @@ export default function TreasuryPage() {
           { label: 'USDC / Stablecoins',  value: formatUSD(totalUsdc) },
           { label: 'Active Chains',        value: wallets.length.toString() },
         ].map(k => (
-          <div key={k.label} className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
+          <div key={k.label} className="nl-glass rounded-2xl p-4">
             <div className="text-xs text-gray-400 mb-2">{k.label}</div>
             <div className="text-2xl font-bold text-white">{k.value}</div>
           </div>
@@ -100,7 +100,7 @@ export default function TreasuryPage() {
       {!loading && wallets.length > 0 && (
         <div className="space-y-3">
           {wallets.map(w => (
-            <div key={w.address} className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
+            <div key={w.address} className="nl-glass rounded-2xl p-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-[#0066FF]/10 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -125,7 +125,7 @@ export default function TreasuryPage() {
                   <div className="text-xs text-gray-400">Total value</div>
                 </div>
               </div>
-              <div className="mt-3 pt-3 border-t border-[#1E2433] grid grid-cols-3 gap-4 text-center text-xs">
+              <div className="mt-3 pt-3 border-t border-white/10 grid grid-cols-3 gap-4 text-center text-xs">
                 <div>
                   <div className="text-gray-500 mb-0.5">{w.nativeSymbol} Balance</div>
                   <div className="text-white font-mono font-medium">{w.nativeBalance.toFixed(4)} {w.nativeSymbol}</div>

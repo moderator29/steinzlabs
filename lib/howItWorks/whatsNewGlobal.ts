@@ -8,6 +8,31 @@ import type { WhatsNewEntry } from '@/lib/howItWorks/types';
 export const GLOBAL_WHATS_NEW: WhatsNewEntry[] = [
   {
     date: 'July 2026',
+    tag: 'NEW',
+    text: 'Feed is here: a social feed on your dashboard where you post text, one image and a few topic tags, follow the people you rate, and switch between a trending Signal view and a Pack view of who you follow.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'NEW',
+    text: 'Gifting lets you send real crypto straight from your wallet to anyone on a post or profile, non-custodially, across Ethereum, Base, BNB Chain, Robinhood Chain and Solana, so a good call can be rewarded on the spot.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'NEW',
+    text: 'News now tags every headline bullish or bearish and shows a live market mood banner, and a bell toggle opts you into a twice-daily crypto news digest on Telegram or email.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'NEW',
+    text: 'The Markets tab adds a real-world-asset board with equities and commodities quotes in a familiar iOS Stocks style, right beside your crypto markets.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'NEW',
+    text: 'Robinhood Chain is now supported, so you can hold, send and gift native ETH on it non-custodially, with in-app swap routing on the way as aggregators list the network.',
+  },
+  {
+    date: 'July 2026',
     tag: 'IMPROVED',
     text: 'Safer trading: Swap now blocks known honeypot and high risk tokens before you sign, and refuses trades from sanctioned wallets, so a dangerous token cannot be bought by mistake.',
   },

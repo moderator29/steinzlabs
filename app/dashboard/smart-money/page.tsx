@@ -9,9 +9,9 @@
 import {
   Star, TrendingUp, Eye, Bell, Plus, Copy, Activity, Clock, ChevronRight, Search,
   RefreshCw, TrendingDown, AlertTriangle, X, Shield,
-  Whale as Fish,
-} from '@/components/icons/brand';
-import { Trophy, DollarSign, Target, Users, Zap, Loader2, Flame, ArrowUpRight, SortAsc, Award, Building2, Settings2, Radio } from 'lucide-react';
+  Fish,
+  Trophy, DollarSign, Target, Users, Zap, Loader2, Flame, ArrowUpRight, SortAsc, Award, Building2, Settings2, Radio,
+} from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { smartMoneyHowItWorks } from '@/lib/howItWorks/content/smart-money';
@@ -196,7 +196,7 @@ export default function SmartMoneyPage() {
           addLocalNotification({
             type: 'whale_alert',
             title: `Convergence Signal: ${signal.symbol || signal.token}`,
-            message: `${signal.walletCount} smart-money wallets entered ${signal.symbol || signal.token} — ${signal.totalVolume} volume (${signal.timeWindow})`,
+            message: `${signal.walletCount} smart-money wallets entered ${signal.symbol || signal.token}, ${signal.totalVolume} volume (${signal.timeWindow})`,
           });
         }
       }
@@ -690,7 +690,7 @@ export default function SmartMoneyPage() {
           <div className="w-full sm:max-w-sm bg-[#0D1117] border border-white/[0.08] rounded-t-2xl sm:rounded-2xl p-5 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <div className="text-sm font-bold text-white">Paper Trade — {paperTrade.name}</div>
+                <div className="text-sm font-bold text-white">Paper Trade: {paperTrade.name}</div>
                 <div className="text-[10px] text-gray-500 mt-0.5">Simulate copying this wallet&apos;s strategy</div>
               </div>
               <button onClick={() => setPaperTrade(null)} className="p-1.5 hover:bg-white/[0.06] rounded-lg">✕</button>

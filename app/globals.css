@@ -2306,3 +2306,13 @@ html {
  {
   background: rgba(226, 232, 240, 0.9) !important;
 }
+
+/* Utility — hide the horizontal scrollbar on the home sub-tab strip while
+   keeping it scrollable on narrow screens (six tabs never fit at 360px). */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

@@ -13,7 +13,7 @@ const ROWS: [string, string][] = [['Liquidity', '$8.4M'], ['Holders', '12,847'],
 
 export function HeroRight() {
   // A11Y3: when prefers-reduced-motion is set, freeze every animation
-  // to its final state. The card content stays visible — we just don't
+  // to its final state. The card content stays visible; we just don't
   // float, slide, or pulse anything.
   const reduced = useReducedMotion();
   return (
@@ -34,7 +34,7 @@ export function HeroRight() {
         </motion.div>
       ))}
 
-      {/* Main VTX card — float wrapper then 3D tilt wrapper */}
+      {/* Main VTX card: float wrapper then 3D tilt wrapper */}
       <div className="absolute" style={{ top: 48, left: '50%', transform: 'translateX(-50%)' }}>
         <motion.div
           animate={reduced ? undefined : { y: [0, -12, 0] }}

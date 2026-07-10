@@ -74,7 +74,7 @@ export async function enableBackgroundSniping(params: {
   try {
     ownerPk = await decryptPrivateKey(params.encryptedKey, params.password);
   } catch {
-    throw new Error('Wrong wallet password — could not authorize the session.');
+    throw new Error('Wrong wallet password. Could not authorize the session.');
   }
   const { buildSessionKeyApproval } = await import('./sessionKeyAA');
   const { approval, kernelAddress } = await buildSessionKeyApproval({

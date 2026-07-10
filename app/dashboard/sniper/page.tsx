@@ -6,8 +6,6 @@ import Link from 'next/link';
 import * as Sentry from '@sentry/nextjs';
 import {
   AlertTriangle, Play, Pause, ExternalLink, Plus, TrendingUp, Trash2,
-} from '@/components/icons/brand';
-import {
   Crosshair, Loader2, Lock, Power, Zap, Target, Search, RefreshCw, Radar, Clock, Bell, ShieldAlert,
 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
@@ -417,7 +415,7 @@ export default function SniperPage() {
                 </div>
                 <p className="text-[11px] sm:text-xs text-white/50">Sub-2s execution · EVM · MEV-protected · Shadow Guardian gated</p>
               </div>
-              <Link href="/dashboard/launch-radar" title="Launch Radar — new launches worth watching" className="ms-auto shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-[#00C8FF] bg-[#0066FF]/10 border border-[#0066FF]/30 hover:border-[#0066FF]/50 transition-colors">
+              <Link href="/dashboard/launch-radar" title="Launch Radar: new launches worth watching" className="ms-auto shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-[#00C8FF] bg-[#0066FF]/10 border border-[#0066FF]/30 hover:border-[#0066FF]/50 transition-colors">
                 <Radar className="w-3.5 h-3.5" /> Launch Radar
               </Link>
               <HowItWorksButton content={sniperHowItWorks} className="shrink-0" />
@@ -465,7 +463,7 @@ export default function SniperPage() {
               label="Avg Speed"
               value={(() => {
                 const times = executions.map((e) => e.execution_time_ms).filter((t): t is number => t != null && t > 0);
-                if (!times.length) return '—';
+                if (!times.length) return '-';
                 const avg = Math.round(times.reduce((s, t) => s + t, 0) / times.length);
                 return avg < 1000 ? `${avg}ms` : `${(avg / 1000).toFixed(2)}s`;
               })()}
@@ -717,7 +715,7 @@ function DiscoverTab({
           </button>
           <button
             onClick={() => setOgMode(!ogMode)}
-            title="OG — first token we've seen for this ticker (first seen on Naka, not first ever)"
+            title="OG: first token we've seen for this ticker (first seen on Naka, not first ever)"
             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition ${
               ogMode ? 'bg-amber-500/15 border-amber-500/45 text-amber-200' : 'bg-white/[0.04] border-white/10 text-white/60 hover:text-white'
             }`}
@@ -871,13 +869,13 @@ function PositionsTab({ executions }: { executions: ExecutionRow[] }) {
       {open.length > 0 && (
         <div className="nl-glass rounded-xl p-3 grid grid-cols-2 md:grid-cols-4 gap-2.5">
           <Field label="Open positions">{open.length}</Field>
-          <Field label="Invested">{openStats.invested > 0 ? fmtUSD(openStats.invested).replace('+', '') : '—'}</Field>
+          <Field label="Invested">{openStats.invested > 0 ? fmtUSD(openStats.invested).replace('+', '') : '-'}</Field>
           <Field label={`Live value${openStats.priced < open.length ? ` (${openStats.priced}/${open.length} priced)` : ''}`}>
-            {openStats.priced > 0 ? fmtUSD(openStats.value).replace('+', '') : '—'}
+            {openStats.priced > 0 ? fmtUSD(openStats.value).replace('+', '') : '-'}
           </Field>
           <Field label="Unrealized PnL">
             <span className={openStats.priced === 0 ? 'text-white/60' : openStats.unrealized >= 0 ? 'text-emerald-300' : 'text-red-300'}>
-              {openStats.priced > 0 ? fmtUSD(openStats.unrealized) : '—'}
+              {openStats.priced > 0 ? fmtUSD(openStats.unrealized) : '-'}
             </span>
           </Field>
         </div>
@@ -926,7 +924,7 @@ function PositionRow({ e, mark, realized }: { e: ExecutionRow; mark: number | nu
       </div>
       {realized ? (
         <div className={`text-right shrink-0 font-bold ${pnl != null && pnl > 0 ? 'text-emerald-300' : pnl != null && pnl < 0 ? 'text-red-300' : 'text-white/60'}`}>
-          <div className="text-sm">{pnl != null ? fmtUSD(pnl) : '—'}</div>
+          <div className="text-sm">{pnl != null ? fmtUSD(pnl) : '-'}</div>
           <div className="text-[10px] font-medium text-white/40">{pnl != null && spent > 0 ? `${((pnl / spent) * 100).toFixed(1)}%` : 'settling…'}</div>
         </div>
       ) : uPnl != null ? (
@@ -1101,10 +1099,10 @@ function SniperCard({ s, onPause, onDelete }: { s: SniperCriteriaRow; onPause: (
             })}
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
-            <Field label="Per snipe">${s.amount_per_snipe_usd?.toFixed(0) ?? '—'}</Field>
-            <Field label="Daily cap">${s.daily_max_spend_usd?.toFixed(0) ?? '—'} · {s.daily_max_snipes ?? '—'} max</Field>
+            <Field label="Per snipe">${s.amount_per_snipe_usd?.toFixed(0) ?? '-'}</Field>
+            <Field label="Daily cap">${s.daily_max_spend_usd?.toFixed(0) ?? '-'} · {s.daily_max_snipes ?? '-'} max</Field>
             <Field label="Slippage">{(s.max_slippage_bps / 100).toFixed(1)}%</Field>
-            <Field label="TP / SL">{s.take_profit_pct ? `+${s.take_profit_pct}%` : '—'} / {s.stop_loss_pct ? `-${s.stop_loss_pct}%` : '—'}</Field>
+            <Field label="TP / SL">{s.take_profit_pct ? `+${s.take_profit_pct}%` : '-'} / {s.stop_loss_pct ? `-${s.stop_loss_pct}%` : '-'}</Field>
           </div>
           {(s.launchpads_allowed?.length ?? 0) > 0 && (
             <div className="mt-3 flex items-center gap-1 flex-wrap">
@@ -1166,8 +1164,8 @@ function HistoryTab({ executions, chainFilter, freshIds }: { executions: Executi
               const isFresh = freshIds.has(e.id);
               return (
                 <tr key={e.id} className={`border-t border-white/5 hover:bg-white/[0.02] ${isFresh ? 'naka-fresh-row' : ''}`}>
-                  <td className="px-4 py-3 font-medium">{e.token_symbol ?? '—'}</td>
-                  <td className="px-4 py-3">{cfg ? <span className="inline-flex items-center gap-1.5"><img src={cfg.logo} alt="" className="w-4 h-4 rounded-full" /> {cfg.symbol}</span> : (e.chain ?? '—')}</td>
+                  <td className="px-4 py-3 font-medium">{e.token_symbol ?? '-'}</td>
+                  <td className="px-4 py-3">{cfg ? <span className="inline-flex items-center gap-1.5"><img src={cfg.logo} alt="" className="w-4 h-4 rounded-full" /> {cfg.symbol}</span> : (e.chain ?? '-')}</td>
                   <td className="px-4 py-3 text-white/80 whitespace-nowrap">
                     {e.buy_amount_usd != null
                       ? fmtUSD(Number(e.buy_amount_usd)).replace('+', '')
@@ -1175,16 +1173,16 @@ function HistoryTab({ executions, chainFilter, freshIds }: { executions: Executi
                         ? `${e.amount_native} ${cfg?.symbol ?? ''}`.trim()
                         : e.amount_sol != null
                           ? `${e.amount_sol} SOL`
-                          : '—'}
+                          : '-'}
                   </td>
                   <td className="px-4 py-3"><span className={`text-xs font-bold uppercase tracking-wider ${e.status === 'confirmed' ? 'text-emerald-300' : e.status === 'failed' ? 'text-red-300' : 'text-amber-300'}`}>{e.status}</span></td>
-                  <td className={`px-4 py-3 font-bold ${pnl != null && pnl > 0 ? 'text-emerald-300' : pnl != null && pnl < 0 ? 'text-red-300' : 'text-white/60'}`}>{pnl != null ? fmtUSD(pnl) : '—'}</td>
-                  <td className="px-4 py-3 text-white/60 text-xs">{e.execution_time_ms ? `${e.execution_time_ms}ms` : '—'}</td>
+                  <td className={`px-4 py-3 font-bold ${pnl != null && pnl > 0 ? 'text-emerald-300' : pnl != null && pnl < 0 ? 'text-red-300' : 'text-white/60'}`}>{pnl != null ? fmtUSD(pnl) : '-'}</td>
+                  <td className="px-4 py-3 text-white/60 text-xs">{e.execution_time_ms ? `${e.execution_time_ms}ms` : '-'}</td>
                   <td className="px-4 py-3 text-white/60 text-xs">{timeAgo(e.executed_at)}</td>
                   <td className="px-4 py-3">
                     {e.tx_hash && cfg ? (
                       <a href={`${cfg.explorerTxBase}${e.tx_hash}`} target="_blank" rel="noopener noreferrer" className="text-blue-300 hover:text-blue-200 inline-flex items-center gap-1 text-xs font-medium">View <ExternalLink className="w-3 h-3" /></a>
-                    ) : '—'}
+                    ) : '-'}
                   </td>
                 </tr>
               );

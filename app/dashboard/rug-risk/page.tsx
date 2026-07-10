@@ -61,7 +61,7 @@ export default function RugRiskPage() {
         <h1 className="text-lg font-bold flex items-center gap-2"><ShieldAlert className="w-5 h-5 text-[#0066FF]" /> Rug-Risk Composite</h1>
       </div>
       <p className="text-xs text-slate-400 mb-4">
-        One honest read of a token&rsquo;s live rug-<span className="text-white">enabling</span> conditions — liquidity fragility, how much real liquidity backs the FDV, and the deployer&rsquo;s track record. Not a timing prediction: we score present, measurable conditions and show every factor. Unavailable factors show — and lower the confidence.
+        One honest read of a token&rsquo;s live rug-<span className="text-white">enabling</span> conditions: liquidity fragility, how much real liquidity backs the FDV, and the deployer&rsquo;s track record. Not a timing prediction: we score present, measurable conditions and show every factor. Unavailable factors show, and lower the confidence.
       </p>
 
       <div className="flex gap-1.5 mb-3 overflow-x-auto">

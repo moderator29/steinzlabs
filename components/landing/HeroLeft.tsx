@@ -61,7 +61,7 @@ export function HeroLeft() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
-      {/* Animated logo — sized responsively. 112 on phones so it doesn't eat
+      {/* Animated logo: sized responsively. 112 on phones so it doesn't eat
           the screen at 375px; 160 from sm+ for brand impact. */}
       <div className="block sm:hidden">
         <SteinzLogo size={112} animated={true} />
@@ -71,7 +71,7 @@ export function HeroLeft() {
       </div>
 
       {/* Wordmark */}
-      {/* AAA contrast fix — was #1a2855 (2.8:1 on hero gradient). */}
+      {/* AAA contrast fix: was #1a2855 (2.8:1 on hero gradient). */}
       <p className="mt-3 text-[11px] font-bold uppercase"
         style={{ letterSpacing: 8, color: 'var(--nl-text-muted,#B4C0E0)' }}>
         NAKA LABS
@@ -85,7 +85,7 @@ export function HeroLeft() {
       </h1>
 
       {/* Sub */}
-      {/* AAA contrast fix — was #2e3f70 (3.2:1 on hero, fails AAA). */}
+      {/* AAA contrast fix: was #2e3f70 (3.2:1 on hero, fails AAA). */}
       <p className="mt-5 max-w-[500px] text-[17px] leading-relaxed"
         style={{ color: 'var(--nl-text-secondary,#8FA3FF)' }}>
         Protect every transaction. Track every whale. Trade with institutional intelligence.
@@ -122,7 +122,7 @@ export function HeroLeft() {
         </Link>
       </div>
 
-      {/* Live "Ask the Chain" hero prompt — the signature AI surface, right
+      {/* Live "Ask the Chain" hero prompt: the signature AI surface, right
           on the homepage so visitors feel the product before they sign up. */}
       <AskChainHero />
 

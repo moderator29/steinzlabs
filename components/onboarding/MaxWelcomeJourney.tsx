@@ -30,13 +30,13 @@ const STEPS = [
     icon: Crown,
     eyebrow: 'Membership unlocked',
     title: 'Welcome to Naka Labs MAX',
-    body: 'You hold the highest tier on the platform. Every tool, every signal, every edge — unlocked, with no limits.',
+    body: 'You hold the highest tier on the platform. Every tool, every signal, every edge, unlocked with no limits.',
   },
   {
     key: 'access',
     icon: Sparkles,
     eyebrow: 'Everything, unlocked',
-    title: 'All access — nothing held back',
+    title: 'All access, nothing held back',
     body: 'Copy-trading, the sniper, whale tracker, smart-money intelligence, advanced orders, unlimited VTX AI, elite holder analysis and real-time data are all on.',
   },
   {
@@ -44,7 +44,7 @@ const STEPS = [
     icon: ShieldCheck,
     eyebrow: 'Your mark',
     title: 'The gold MAX badge is yours',
-    body: 'Your profile now carries the gold Naka MAX badge across the platform — a permanent mark of top-tier membership.',
+    body: 'Your profile now carries the gold Naka MAX badge across the platform, a permanent mark of top-tier membership.',
   },
 ] as const;
 
@@ -201,7 +201,7 @@ export function MaxWelcomeJourney() {
 
             {s.key === 'badge' && founder && (
               <p className="mt-3 text-[12px] text-[#9FB0D8]">
-                Granted by your <span className="font-semibold text-[#FBBF24]">Founder Pass</span> — held on-chain, recognised automatically.
+                Granted by your <span className="font-semibold text-[#FBBF24]">Founder Pass</span>, held on-chain and recognised automatically.
               </p>
             )}
           </motion.div>

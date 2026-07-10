@@ -9,7 +9,7 @@ import { MaxWelcomeJourney } from '@/components/onboarding/MaxWelcomeJourney';
 
 export const metadata: Metadata = {
   title: 'Dashboard',
-  description: 'Real-time AI-powered crypto intelligence dashboard — track whales, scan tokens, monitor your portfolio.',
+  description: 'Real-time AI-powered crypto intelligence dashboard: track whales, scan tokens, monitor your portfolio.',
   robots: { index: false, follow: false },
 };
 

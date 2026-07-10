@@ -556,7 +556,7 @@ export function heuristicDomainScan(url: string): DomainScanResult {
     if (host === canon || host.endsWith(`.${canon}`)) {
       return {
         verdict: 'SAFE', confidenceScore: 99, isPhishing: false, isMalicious: false,
-        description: 'Canonical domain — recognized as legitimate.',
+        description: 'Canonical domain: recognized as legitimate.',
         signals: [],
       };
     }
@@ -649,9 +649,9 @@ function parseSignatureDecode(d: any): SignatureDecodeResult {
 
   const riskFlags: string[] = [];
   const lname = functionName.toLowerCase();
-  if (lname.includes('approve') || lname.includes('setapprovalforall')) riskFlags.push('Token approval — grants spending permission');
+  if (lname.includes('approve') || lname.includes('setapprovalforall')) riskFlags.push('Token approval: grants spending permission');
   if (lname.includes('transferfrom') || lname.includes('safetransferfrom')) riskFlags.push('Transfer of tokens or NFTs on your behalf');
-  if (lname.includes('delegatecall')) riskFlags.push('Delegate call — executes arbitrary code');
+  if (lname.includes('delegatecall')) riskFlags.push('Delegate call: executes arbitrary code');
   if (lname.includes('selfdestruct') || lname.includes('suicide')) riskFlags.push('Contract destruction function');
   if (lname.includes('setowner') || lname.includes('transferownership')) riskFlags.push('Ownership transfer function');
 
@@ -699,7 +699,7 @@ function localSignatureDecode(data: string): SignatureDecodeResult {
   const functionName = signature.split('(')[0];
 
   const riskFlags: string[] = [];
-  if (selector === '0x095ea7b3') riskFlags.push('Token approval — grants spending permission');
+  if (selector === '0x095ea7b3') riskFlags.push('Token approval: grants spending permission');
   if (selector === '0xa22cb465') riskFlags.push('NFT approval for all tokens');
   if (selector === '0x23b872dd') riskFlags.push('Transfer tokens on your behalf');
 
@@ -760,7 +760,7 @@ export async function simulateTransaction(
     return {
       success: false, expectedOutcome: 'Simulation unavailable',
       riskLevel: 'UNKNOWN', estimatedGas: 'Unknown',
-      riskFlags: ['Simulation unavailable — verify manually before signing'],
+      riskFlags: ['Simulation unavailable: verify manually before signing'],
       balanceChanges: [],
     };
   }

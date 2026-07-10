@@ -4,9 +4,9 @@
 import {
   Bell, Plus, Trash2, TrendingUp, Activity, X,
   Search, CheckCircle as Check, AlertTriangle,
-  Whale as Fish,
-} from '@/components/icons/brand';
-import { ToggleLeft, ToggleRight, Rocket, History } from 'lucide-react';
+  Fish,
+  ToggleLeft, ToggleRight, Rocket, History,
+} from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { alertsHowItWorks } from '@/lib/howItWorks/content/alerts';

@@ -86,7 +86,7 @@ function MarketTab({ tokenSymbol }: { chain: string; tokenAddress: string; token
         <input className={INPUT_CLS} placeholder="0.0" />
       </Field>
       <Field label={`Receive ${tokenSymbol} (est.)`}>
-        <input className={INPUT_CLS} placeholder="—" readOnly />
+        <input className={INPUT_CLS} placeholder="-" readOnly />
       </Field>
       <a
         href="/dashboard/swap"
@@ -234,7 +234,7 @@ function TrailingStopTab({ chain, tokenAddress, tokenSymbol }: { chain: string; 
   return (
     <div>
       <p className="text-xs text-slate-500 mb-3">
-        Sells {tokenSymbol} when the price falls the trailing delta below its highest point since you placed the order. Non-custodial — you confirm the swap.
+        Sells {tokenSymbol} when the price falls the trailing delta below its highest point since you placed the order. Non-custodial: you confirm the swap.
       </p>
       <Field label={`Position amount (${tokenSymbol})`}>
         <input className={INPUT_CLS} placeholder="0.0" value={amount} onChange={(e) => setAmount(e.target.value)} />

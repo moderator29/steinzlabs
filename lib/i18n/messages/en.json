@@ -65,7 +65,7 @@
       "deployerTitle": "Deployer history scoring",
       "deployerBody": "Every contract is checked against the deployer's prior tokens. Serial ruggers and high-abandonment wallets show a red banner before you can confirm.",
       "lpLockTitle": "Liquidity lock readout",
-      "lpLockBody": "Team Finance / Unicrypt / PinkLock locks parsed out of the GoPlus lp_holders payload and surfaced with unlock countdowns — no more checking a separate dashboard.",
+      "lpLockBody": "Team Finance / Unicrypt / PinkLock locks parsed out of the GoPlus lp_holders payload and surfaced with unlock countdowns, so there is no more checking a separate dashboard.",
       "auditFooter": "Audit reports for every shipped section live in /admin/audit-tracker. Nothing ships without industry-parity verification."
     },
     "faq": {
@@ -74,9 +74,9 @@
       "q2": "What chains are supported?",
       "a2": "Ethereum, Base, Arbitrum, Optimism, Polygon, BSC, Avalanche, Solana.",
       "q3": "How does the sniper bot prevent rug-pulls?",
-      "a3": "Five sequential safety gates fire on every snipe — honeypot, tax, holder concentration, liquidity depth, and a VTX AI risk assessment. Any single gate flagging blocks the snipe.",
+      "a3": "Five sequential safety gates fire on every snipe: honeypot, tax, holder concentration, liquidity depth, and a VTX AI risk assessment. Any single gate flagging blocks the snipe.",
       "q4": "What does NAKA token unlock?",
-      "a4": "Holding ≥1,227,000 NAKA unlocks the Cult chambers (Conclave / Oracle / Sanctum) — gated research, governance, and curated alpha. NAKA is not required to use the trading platform itself.",
+      "a4": "Holding ≥1,227,000 NAKA unlocks the Cult chambers (Conclave / Oracle / Sanctum): gated research, governance, and curated alpha. NAKA is not required to use the trading platform itself.",
       "q5": "How do you make money?",
       "a5": "0.4% on swaps, tiered subscriptions for Pro / Elite, and a small revenue share with builders launching through the milestone-gated launchpad.",
       "q6": "Is my data sold?",

@@ -432,7 +432,7 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
       if (!res.ok) {
         const j = await res.json().catch(() => null);
         // Make the common failures actionable rather than terse.
-        if (res.status === 429) setError("You're sending too fast — wait a few seconds and try again.");
+        if (res.status === 429) setError("You're sending too fast. Wait a few seconds and try again.");
         else if (res.status === 403) setError(j?.error ?? 'You can\'t message this user (blocked or messages disabled).');
         else setError(j?.error ?? 'Could not send.');
         return;
@@ -449,7 +449,7 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
       // Network/throw path: the draft was never cleared (we only clear on a 2xx),
       // so the user's text is intact — just surface the failure instead of the
       // message silently vanishing.
-      setError('Could not send — check your connection and try again.');
+      setError('Could not send. Check your connection and try again.');
     } finally {
       setSending(false);
     }

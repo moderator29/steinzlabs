@@ -83,18 +83,18 @@ export default function BroadcastPage() {
       )}
 
       <div className="space-y-4">
-        <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
+        <div className="nl-glass rounded-2xl p-4">
           <h3 className="text-sm font-semibold text-white mb-3">Audience</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {(Object.entries(AUDIENCE_META) as [Audience, typeof AUDIENCE_META[Audience]][]).map(([key, val]) => {
               const c = counts[key];
               return (
                 <button key={key} onClick={() => setAudience(key)}
-                  className={`flex items-start gap-3 p-3 rounded-xl border text-start transition-all ${audience === key ? 'border-[#0066FF] bg-[#0066FF]/10' : 'border-[#1E2433] hover:border-[#2E3443]'}`}>
+                  className={`flex items-start gap-3 p-3 rounded-xl border text-start transition-all ${audience === key ? 'border-[#0066FF] bg-[#0066FF]/10' : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.1]'}`}>
                   <Users className={`w-4 h-4 mt-0.5 flex-shrink-0 ${audience === key ? 'text-[#0066FF]' : 'text-gray-500'}`} />
                   <div>
                     <div className={`text-xs font-semibold ${audience === key ? 'text-white' : 'text-gray-300'}`}>{val.label}</div>
-                    <div className="text-[10px] text-gray-500">{c === null ? '—' : c.toLocaleString()} recipients — {val.desc}</div>
+                    <div className="text-[10px] text-gray-500">{c === null ? '—' : c.toLocaleString()} recipients - {val.desc}</div>
                   </div>
                 </button>
               );
@@ -102,12 +102,12 @@ export default function BroadcastPage() {
           </div>
         </div>
 
-        <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 space-y-3">
+        <div className="nl-glass rounded-2xl p-4 space-y-3">
           <h3 className="text-sm font-semibold text-white">Email Content</h3>
           <div>
             <label className="text-xs text-gray-400 mb-1 block">Subject Line</label>
             <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Enter email subject..."
-              className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40" />
+              className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors" />
           </div>
           <div>
             <div className="flex items-center justify-between mb-1">
@@ -117,13 +117,13 @@ export default function BroadcastPage() {
               </button>
             </div>
             {preview ? (
-              <div className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg p-3 min-h-[200px] text-xs text-gray-300 whitespace-pre-wrap leading-relaxed">
+              <div className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl p-3 min-h-[200px] text-xs text-gray-300 whitespace-pre-wrap leading-relaxed">
                 {body || <span className="text-gray-600">No content to preview</span>}
               </div>
             ) : (
               <textarea value={body} onChange={e => setBody(e.target.value)} rows={10}
                 placeholder="Write your email body here. Supports Markdown formatting..."
-                className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40 resize-none font-mono" />
+                className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors resize-none font-mono" />
             )}
           </div>
         </div>
@@ -141,7 +141,7 @@ export default function BroadcastPage() {
         </div>
 
         <button onClick={send} disabled={!confirmed || !subject.trim() || !body.trim() || status === 'sending'}
-          className="w-full flex items-center justify-center gap-2 bg-[#0066FF] hover:bg-[#0818CC] disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-xl text-sm font-semibold transition-colors">
+          className="w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed naka-button-primary">
           {status === 'sending' ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : <><Send className="w-4 h-4" /> Send Broadcast</>}
         </button>
       </div>

@@ -129,8 +129,8 @@ export function notifyWalletCreated(walletName: string, chain?: string): void {
     type: 'wallet_created',
     title: 'Wallet Created',
     message: chainStr
-      ? `Your ${chainStr} wallet has been created. Back up your 12-word recovery phrase now — if you lose it, your funds are gone forever.`
-      : `Your wallet "${walletName}" has been created. Back up your 12-word recovery phrase now — if you lose it, your funds are gone forever.`,
+      ? `Your ${chainStr} wallet has been created. Back up your 12-word recovery phrase now. If you lose it, your funds are gone forever.`
+      : `Your wallet "${walletName}" has been created. Back up your 12-word recovery phrase now. If you lose it, your funds are gone forever.`,
   });
 }
 

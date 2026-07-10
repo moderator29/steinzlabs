@@ -120,7 +120,7 @@ export default function ContextEventCard({ event }: { event: ContextEvent }) {
 
       {/* Signal bar + View Proof */}
       <div className="flex flex-wrap items-center gap-y-2">
-        <div className="flex items-center gap-2 min-w-0 flex-wrap" title="Signal confidence — how reliable this event's source is.">
+        <div className="flex items-center gap-2 min-w-0 flex-wrap" title="Signal confidence: how reliable this event's source is.">
           <span className="text-[9px] font-semibold text-slate-500 uppercase flex-shrink-0">Signal</span>
           <div className="w-20 bg-white/20 rounded-full h-1.5 flex-shrink-0">
             <div

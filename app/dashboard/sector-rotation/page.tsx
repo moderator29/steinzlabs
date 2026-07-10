@@ -29,7 +29,7 @@ function Row({ s }: { s: Sector }) {
         <div className="text-[10px] text-slate-500">
           {fmtUsd(s.marketCap)} mcap · {fmtUsd(s.volume24h)} vol
           {s.turnover != null && s.turnover > 0 && (
-            <> · <span title="24h volume ÷ market cap — how actively the sector is trading">{(s.turnover * 100).toFixed(1)}% turnover</span></>
+            <> · <span title="24h volume ÷ market cap: how actively the sector is trading">{(s.turnover * 100).toFixed(1)}% turnover</span></>
           )}
         </div>
       </div>
@@ -86,7 +86,7 @@ export default function SectorRotationPage() {
       )}
 
       {!loading && (!data || (data.rotatingIn.length === 0)) && (
-        <div className="nl-glass rounded-2xl p-6 text-center text-slate-400 text-sm">Sector data is briefly unavailable — check back in a minute.</div>
+        <div className="nl-glass rounded-2xl p-6 text-center text-slate-400 text-sm">Sector data is briefly unavailable. Check back in a minute.</div>
       )}
     </div>
   );

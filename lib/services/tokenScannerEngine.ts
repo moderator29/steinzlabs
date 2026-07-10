@@ -400,7 +400,7 @@ function buildEvmChecks(f: FanoutEvm): { checks: ScanCheck[]; reconciliation: st
   const gpUnavailable = (id: string, label: string, category: CheckCategory, severity: Severity): ScanCheck => ({
     id, label, category, severity, status: 'unavailable',
     evidence: f.secErr instanceof SecurityRateLimitError
-      ? 'Contract-flag provider rate-limited — could not verify'
+      ? 'Contract-flag provider rate-limited: could not verify'
       : 'Contract-flag analysis unavailable for this token/chain',
     source: 'GoPlus',
   });
@@ -434,8 +434,8 @@ function buildEvmChecks(f: FanoutEvm): { checks: ScanCheck[]; reconciliation: st
   } else {
     honeypotStatus = 'unavailable';
     honeypotEvidence = f.chainSupportsHoneypot
-      ? 'No tradable pool to simulate and GoPlus omitted the dynamic honeypot flag — sellability could not be verified'
-      : 'Live sell-simulation not supported on this chain and GoPlus omitted the dynamic flag — sellability could not be verified';
+      ? 'No tradable pool to simulate and GoPlus omitted the dynamic honeypot flag: sellability could not be verified'
+      : 'Live sell-simulation not supported on this chain and GoPlus omitted the dynamic flag: sellability could not be verified';
   }
   add({ id: 'honeypot', label: 'Sellable (not a honeypot)', category: 'Trading', severity: 'critical', status: honeypotStatus, evidence: honeypotEvidence, source: honeypotSource });
   if (gpHoneypot != null && simHoneypot != null && gpHoneypot !== simHoneypot) {
@@ -450,7 +450,7 @@ function buildEvmChecks(f: FanoutEvm): { checks: ScanCheck[]; reconciliation: st
   }
   if (cannotSell === true) {
     add({ id: 'cannot_sell_all', label: 'Can sell entire balance', category: 'Trading', severity: 'critical',
-      status: 'fail', evidence: 'GoPlus: cannot_sell_all — holders cannot fully exit their position', source: 'GoPlus' });
+      status: 'fail', evidence: 'GoPlus: cannot_sell_all, holders cannot fully exit their position', source: 'GoPlus' });
   }
 
   // ── TAXES (prefer live sim, cross-check static) ─────────────────────────────
@@ -463,7 +463,7 @@ function buildEvmChecks(f: FanoutEvm): { checks: ScanCheck[]; reconciliation: st
   const taxSource = simBuy != null || simSell != null ? 'Live Simulation' : (gpBuy != null || gpSell != null ? 'GoPlus' : 'unavailable');
   let taxNote: string | null = null;
   if (gpSell != null && simSell != null && Math.abs(gpSell - simSell) > 0.03) {
-    taxNote = `Static sell tax ${(gpSell * 100).toFixed(1)}% vs live-simulated ${(simSell * 100).toFixed(1)}% — live value shown.`;
+    taxNote = `Static sell tax ${(gpSell * 100).toFixed(1)}% vs live-simulated ${(simSell * 100).toFixed(1)}%. Live value shown.`;
     recon.push(`Sell tax differs between sources: GoPlus ${(gpSell * 100).toFixed(1)}%, live sim ${(simSell * 100).toFixed(1)}%.`);
   }
 
@@ -490,7 +490,7 @@ function buildEvmChecks(f: FanoutEvm): { checks: ScanCheck[]; reconciliation: st
   if (goplusOk && present(t.is_open_source)) {
     add({ id: 'open_source', label: 'Source code verified', category: 'Contract', severity: 'high',
       status: flag(t.is_open_source) ? 'pass' : 'fail',
-      evidence: flag(t.is_open_source) ? 'Verified/open-source contract on the block explorer' : 'Contract source is NOT verified — logic cannot be audited', source: 'GoPlus' });
+      evidence: flag(t.is_open_source) ? 'Verified/open-source contract on the block explorer' : 'Contract source is NOT verified: logic cannot be audited', source: 'GoPlus' });
   } else if (!goplusOk) {
     add(gpUnavailable('open_source', 'Source code verified', 'Contract', 'high'));
   }
@@ -498,13 +498,13 @@ function buildEvmChecks(f: FanoutEvm): { checks: ScanCheck[]; reconciliation: st
   if (goplusOk && present(t.is_mintable)) {
     add({ id: 'mintable', label: 'Supply not mintable', category: 'Contract', severity: 'medium',
       status: flag(t.is_mintable) ? 'fail' : 'pass',
-      evidence: flag(t.is_mintable) ? 'GoPlus: mint function present — owner can inflate supply' : 'No mint function — supply is fixed', source: 'GoPlus' });
+      evidence: flag(t.is_mintable) ? 'GoPlus: mint function present, owner can inflate supply' : 'No mint function: supply is fixed', source: 'GoPlus' });
   }
 
   if (goplusOk && present(t.is_proxy)) {
     add({ id: 'proxy', label: 'Not an upgradeable proxy', category: 'Contract', severity: 'medium',
       status: flag(t.is_proxy) ? 'warn' : 'pass',
-      evidence: flag(t.is_proxy) ? 'GoPlus: proxy/upgradeable — implementation logic can be swapped by the admin' : 'Non-proxy — logic is immutable', source: 'GoPlus' });
+      evidence: flag(t.is_proxy) ? 'GoPlus: proxy/upgradeable, implementation logic can be swapped by the admin' : 'Non-proxy: logic is immutable', source: 'GoPlus' });
   }
 
   const owner = String(t.owner_address ?? '');
@@ -516,19 +516,19 @@ function buildEvmChecks(f: FanoutEvm): { checks: ScanCheck[]; reconciliation: st
     add({ id: 'can_take_back_ownership', label: 'Ownership cannot be reclaimed', category: 'Ownership',
       severity: canReclaim ? 'critical' : 'medium',
       status: canReclaim ? 'fail' : renounced ? 'pass' : 'warn',
-      evidence: canReclaim ? 'GoPlus: ownership can be re-claimed after renouncing — rug vector' : renounced ? 'Ownership renounced (owner = zero address)' : `Owner retained (${owner ? owner.slice(0, 8) + '…' : 'active'}); no reclaim backdoor detected`,
+      evidence: canReclaim ? 'GoPlus: ownership can be re-claimed after renouncing, a rug vector' : renounced ? 'Ownership renounced (owner = zero address)' : `Owner retained (${owner ? owner.slice(0, 8) + '…' : 'active'}); no reclaim backdoor detected`,
       source: 'GoPlus' });
   }
 
   if (goplusOk && present(t.hidden_owner)) {
     add({ id: 'hidden_owner', label: 'No hidden owner', category: 'Ownership', severity: 'critical',
       status: flag(t.hidden_owner) ? 'fail' : 'pass',
-      evidence: flag(t.hidden_owner) ? 'GoPlus: hidden owner detected — real control is concealed' : 'No hidden owner detected', source: 'GoPlus' });
+      evidence: flag(t.hidden_owner) ? 'GoPlus: hidden owner detected, real control is concealed' : 'No hidden owner detected', source: 'GoPlus' });
   }
   if (goplusOk && present(t.owner_change_balance)) {
     add({ id: 'owner_change_balance', label: 'Owner cannot modify balances', category: 'Ownership', severity: 'critical',
       status: flag(t.owner_change_balance) ? 'fail' : 'pass',
-      evidence: flag(t.owner_change_balance) ? 'GoPlus: owner can arbitrarily change balances — direct theft risk' : 'Owner cannot alter holder balances', source: 'GoPlus' });
+      evidence: flag(t.owner_change_balance) ? 'GoPlus: owner can arbitrarily change balances, a direct theft risk' : 'Owner cannot alter holder balances', source: 'GoPlus' });
   }
   if (goplusOk && present(t.selfdestruct)) {
     add({ id: 'selfdestruct', label: 'No self-destruct', category: 'Contract', severity: 'critical',
@@ -596,7 +596,7 @@ function buildEvmChecks(f: FanoutEvm): { checks: ScanCheck[]; reconciliation: st
     lpAnalysis = { status, lockedOrBurnedPct: pctLocked, detail, source: 'GoPlus' };
     add({ id: 'lp_locked', label: 'LP locked or burned', category: 'Liquidity',
       severity: status === 'fail' ? 'high' : 'medium', status,
-      evidence: `${pctLocked}% of LP secured (${detail}) — unsecured LP can be pulled by the owner`, source: 'GoPlus' });
+      evidence: `${pctLocked}% of LP secured (${detail}). Unsecured LP can be pulled by the owner`, source: 'GoPlus' });
   } else if (goplusOk) {
     // No LP-holder data — mark unavailable rather than implying it's unlocked.
     add({ id: 'lp_locked', label: 'LP locked or burned', category: 'Liquidity', severity: 'medium', status: 'unavailable',
@@ -617,7 +617,7 @@ function buildEvmChecks(f: FanoutEvm): { checks: ScanCheck[]; reconciliation: st
       add({ id: 'dev_holding', label: 'Dev wallet not over-weighted', category: 'Holders',
         severity: cp > 0.05 ? 'high' : 'medium',
         status: cp > 0.05 ? 'fail' : cp > 0.02 ? 'warn' : 'pass',
-        evidence: `Creator wallet holds ${(cp * 100).toFixed(1)}% of supply — dump risk`, source: 'GoPlus' });
+        evidence: `Creator wallet holds ${(cp * 100).toFixed(1)}% of supply: dump risk`, source: 'GoPlus' });
     }
   }
 
@@ -658,8 +658,8 @@ function buildSolanaChecks(f: FanoutSol): { checks: ScanCheck[]; reconciliation:
     add({ id: 'mintable', label: 'Mint authority revoked', category: 'Contract', severity: 'high',
       status: mintable ? 'fail' : 'pass',
       evidence: mintable
-        ? `Active mint authority — supply can be inflated${bMint === true && gpMint === true ? ' (confirmed by two sources)' : ''}`
-        : 'Mint authority revoked — supply is fixed',
+        ? `Active mint authority: supply can be inflated${bMint === true && gpMint === true ? ' (confirmed by two sources)' : ''}`
+        : 'Mint authority revoked: supply is fixed',
       source: gpMint != null && bMint != null ? 'GoPlus + Birdeye' : gpMint != null ? 'GoPlus' : 'Birdeye' });
     if (gpMint != null && bMint != null && gpMint !== bMint) {
       recon.push(`Mint-authority signals disagree (GoPlus=${gpMint}, Birdeye=${bMint}); treated as risk.`);
@@ -676,7 +676,7 @@ function buildSolanaChecks(f: FanoutSol): { checks: ScanCheck[]; reconciliation:
   if (gpFreeze != null || bFreeze != null) {
     add({ id: 'freezable', label: 'Freeze authority revoked', category: 'Contract', severity: 'high',
       status: freezable ? 'fail' : 'pass',
-      evidence: freezable ? 'Active freeze authority — token accounts can be frozen (transfers blocked)' : 'Freeze authority revoked',
+      evidence: freezable ? 'Active freeze authority: token accounts can be frozen (transfers blocked)' : 'Freeze authority revoked',
       source: gpFreeze != null && bFreeze != null ? 'GoPlus + Birdeye' : gpFreeze != null ? 'GoPlus' : 'Birdeye' });
   } else {
     add({ id: 'freezable', label: 'Freeze authority revoked', category: 'Contract', severity: 'high', status: 'unavailable',
@@ -688,7 +688,7 @@ function buildSolanaChecks(f: FanoutSol): { checks: ScanCheck[]; reconciliation:
     const nt = statusObj(t.non_transferable);
     add({ id: 'cannot_sell_all', label: 'Token is transferable', category: 'Trading', severity: 'critical',
       status: nt ? 'fail' : 'pass',
-      evidence: nt ? 'GoPlus: token is non-transferable — cannot be sold/moved' : 'Token transfers are enabled', source: 'GoPlus' });
+      evidence: nt ? 'GoPlus: token is non-transferable, cannot be sold/moved' : 'Token transfers are enabled', source: 'GoPlus' });
   }
 
   // METADATA MUTABLE / CLOSABLE
@@ -710,7 +710,7 @@ function buildSolanaChecks(f: FanoutSol): { checks: ScanCheck[]; reconciliation:
     lpAnalysis = { status: burned ? 'pass' : 'warn', lockedOrBurnedPct: burned ? 100 : null, detail: burned ? 'LP tokens burned' : 'LP not reported as burned', source: 'Birdeye' };
     add({ id: 'lp_locked', label: 'LP burned', category: 'Liquidity', severity: 'medium',
       status: burned ? 'pass' : 'warn',
-      evidence: burned ? 'Birdeye: LP tokens are burned — liquidity cannot be pulled' : 'Birdeye: LP is not burned — pull risk if unlocked', source: 'Birdeye' });
+      evidence: burned ? 'Birdeye: LP tokens are burned, liquidity cannot be pulled' : 'Birdeye: LP is not burned, pull risk if unlocked', source: 'Birdeye' });
   } else {
     add({ id: 'lp_locked', label: 'LP burned', category: 'Liquidity', severity: 'medium', status: 'unavailable',
       evidence: 'LP burn state unavailable from on-chain source', source: 'Birdeye' });
@@ -841,7 +841,7 @@ export async function runDeepScan(target: ResolvedTarget): Promise<ScanResult> {
         id: 'lp_fdv', label: 'Liquidity backs valuation', category: 'Market',
         severity: 'medium',
         status: ratio >= 0.1 ? 'pass' : ratio >= 0.03 ? 'warn' : 'fail',
-        evidence: `Liquidity is ${(ratio * 100).toFixed(1)}% of the $${Math.round(fdv).toLocaleString()} FDV${ratio < 0.03 ? ' — thin backing = exit-liquidity risk' : ''}`,
+        evidence: `Liquidity is ${(ratio * 100).toFixed(1)}% of the $${Math.round(fdv).toLocaleString()} FDV${ratio < 0.03 ? ': thin backing = exit-liquidity risk' : ''}`,
         source: 'DexScreener',
       });
     }
@@ -853,7 +853,7 @@ export async function runDeepScan(target: ResolvedTarget): Promise<ScanResult> {
   } else {
     checks.push({
       id: 'liquidity', label: 'Sufficient liquidity', category: 'Market', severity: 'high', status: 'unavailable',
-      evidence: 'No DEX pair found — token may be unlisted, pre-launch, or on an unsupported venue', source: 'DexScreener',
+      evidence: 'No DEX pair found: token may be unlisted, pre-launch, or on an unsupported venue', source: 'DexScreener',
     });
   }
 

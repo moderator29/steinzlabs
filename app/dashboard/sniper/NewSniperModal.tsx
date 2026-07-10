@@ -293,7 +293,7 @@ export function NewSniperModal({ onClose, onSaved, userId, prefillToken }: Props
               {/* Wallet source — Naka built-in vs external */}
               <Panel>
                 <Field label="Wallet" hint={walletMode === 'builtin'
-                  ? 'Your in-app Naka wallet signs each snipe (you confirm with your wallet password). Non-custodial — keys never leave your browser.'
+                  ? 'Your in-app Naka wallet signs each snipe (you confirm with your wallet password). Non-custodial: keys never leave your browser.'
                   : 'A connected external wallet (MetaMask / Phantom) signs via its authorized session key.'}>
                   <div className="grid grid-cols-2 gap-2">
                     {([
@@ -335,7 +335,7 @@ export function NewSniperModal({ onClose, onSaved, userId, prefillToken }: Props
 
               {/* Chains */}
               <Panel>
-                <Field label="Chains" required hint="EVM-only — non-custodial session-key automation. The first chain's defaults populate priority fee.">
+                <Field label="Chains" required hint="EVM-only, non-custodial session-key automation. The first chain's defaults populate priority fee.">
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {EVM_SNIPER_CHAINS.map(c => {
                       const cfg = CHAIN_CONFIGS[c];
@@ -370,7 +370,7 @@ export function NewSniperModal({ onClose, onSaved, userId, prefillToken }: Props
 
                 {trigger === 'whale_buy' && (
                   <div className="mt-3">
-                    <Field label="Dev / Whale Address" required hint="Mirror this wallet — snipe whatever it buys.">
+                    <Field label="Dev / Whale Address" required hint="Mirror this wallet: snipe whatever it buys.">
                       <input value={whaleAddress} onChange={e => setWhaleAddress(e.target.value)} placeholder="0x… or solana address" className={INPUT_CLS + ' font-mono text-sm'} />
                     </Field>
                   </div>
@@ -464,7 +464,7 @@ export function NewSniperModal({ onClose, onSaved, userId, prefillToken }: Props
                   />
                   <ToggleRow
                     label="Auto-Execute"
-                    hint="On a match: the Naka wallet auto-buys while it's unlocked and Naka is open (non-custodial — keys stay in your browser); otherwise it's staged for one-tap approval. External wallets always need your one-tap sign. Off = alert only."
+                    hint="On a match: the Naka wallet auto-buys while it's unlocked and Naka is open (non-custodial, keys stay in your browser); otherwise it's staged for one-tap approval. External wallets always need your one-tap sign. Off = alert only."
                     checked={autoExecute}
                     onChange={setAutoExecute}
                     icon={Zap}
@@ -587,11 +587,11 @@ export function NewSniperModal({ onClose, onSaved, userId, prefillToken }: Props
                 {trigger === 'price_target' && <ReviewRow k="Price target" v={`$${priceTarget}`} />}
                 <ReviewRow k="Amount / snipe" v={`$${amountUsd}`} />
                 <ReviewRow k="Slippage" v={`${slippagePct}%`} />
-                <ReviewRow k="Priority fee" v={priorityFee != null ? String(priorityFee) : '—'} />
+                <ReviewRow k="Priority fee" v={priorityFee != null ? String(priorityFee) : '-'} />
                 <ReviewRow k="Anti-MEV" v={mevProtect ? 'on' : 'off'} />
-                <ReviewRow k="Take profit" v={tp === '' ? '—' : `+${tp}%`} />
-                <ReviewRow k="Stop loss" v={sl === '' ? '—' : `-${sl}%`} />
-                <ReviewRow k="Trailing stop" v={trailingStop === '' ? '—' : `${trailingStop}%`} />
+                <ReviewRow k="Take profit" v={tp === '' ? '-' : `+${tp}%`} />
+                <ReviewRow k="Stop loss" v={sl === '' ? '-' : `-${sl}%`} />
+                <ReviewRow k="Trailing stop" v={trailingStop === '' ? '-' : `${trailingStop}%`} />
                 <ReviewRow k="Auto-sell on target" v={autoSellOnTarget ? 'yes' : 'no'} />
                 <ReviewRow k="Daily cap" v={`${dailyMaxSnipes} snipes · $${dailyMaxSpend}`} />
                 <ReviewRow k="Auto-execute" v={autoExecute ? 'yes' : 'manual confirm'} highlight={autoExecute} />

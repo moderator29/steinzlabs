@@ -92,7 +92,7 @@ export default function AdminSettingsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-white">Platform Settings</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Feature flags — polled by frontend every 30 seconds</p>
+          <p className="text-xs text-gray-500 mt-0.5">Feature flags - polled by frontend every 30 seconds</p>
         </div>
         <div className="flex items-center gap-3">
           {maintenanceOn && (
@@ -106,7 +106,7 @@ export default function AdminSettingsPage() {
             </div>
           )}
           <button onClick={save} disabled={saving}
-            className="flex items-center gap-2 text-xs bg-[#0066FF] hover:bg-[#0818CC] disabled:opacity-50 text-white px-3 py-2 rounded-lg transition-colors font-medium">
+            className="flex items-center gap-2 text-xs disabled:opacity-50 naka-button-primary">
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : saved ? <StatusDot status="active" size="sm" /> : <Save className="w-3.5 h-3.5" />}
             {saved ? 'Saved!' : 'Save Changes'}
           </button>
@@ -116,7 +116,7 @@ export default function AdminSettingsPage() {
       <div className="flex gap-1.5 mb-4 flex-wrap">
         {CATEGORIES.map(c => (
           <button key={c} onClick={() => setCategory(c)}
-            className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${category === c ? 'bg-[#0066FF] text-white' : 'text-gray-400 hover:text-white border border-[#1E2433] hover:border-[#2E3443]'}`}>
+            className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${category === c ? 'bg-[#0066FF]/15 text-[#0066FF] font-semibold border border-[#0066FF]/30' : 'text-gray-400 hover:text-white border border-white/[0.08] hover:border-white/[0.15]'}`}>
             {c}
           </button>
         ))}
@@ -124,7 +124,7 @@ export default function AdminSettingsPage() {
 
       <div className="space-y-2">
         {filtered.map(flag => (
-          <div key={flag.key} className={`bg-[#141824] border rounded-xl p-4 transition-all ${flag.key === 'maintenance_mode' && flag.enabled ? 'border-orange-500/30' : 'border-[#1E2433]'}`}>
+          <div key={flag.key} className={`nl-glass rounded-2xl p-4 transition-all ${flag.key === 'maintenance_mode' && flag.enabled ? 'border-orange-500/30' : ''}`}>
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 flex-1">
                 <StatusDot status={flag.enabled ? 'active' : 'inactive'} pulse={flag.enabled} />

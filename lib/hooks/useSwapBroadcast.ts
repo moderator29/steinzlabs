@@ -267,7 +267,7 @@ export function useSwapBroadcast() {
       try {
         pk = await decryptPrivateKey(storedWallet.encryptedKey, pwd);
       } catch {
-        throw new Error('Failed to decrypt wallet key — wrong password, or this wallet predates AES-256-GCM (re-import the seed phrase from the Wallet page).');
+        throw new Error('Failed to decrypt wallet key: wrong password, or this wallet predates AES-256-GCM (re-import the seed phrase from the Wallet page).');
       }
 
       const { ethers } = await import('ethers');

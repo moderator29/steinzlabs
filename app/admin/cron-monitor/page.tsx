@@ -80,10 +80,10 @@ export default function CronMonitorPage() {
         {loading && rows.length === 0 ? (
           <div className="flex items-center gap-2 text-slate-400"><Loader2 className="w-4 h-4 animate-spin" /> Loading crons…</div>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-white/[0.06] bg-white/[0.02]">
+          <div className="overflow-x-auto nl-glass rounded-2xl">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wider text-slate-500 border-b border-white/[0.06]">
+                <tr className="text-left text-[11px] uppercase tracking-wider text-slate-500 border-b border-white/10">
                   <th className="px-4 py-3">Cron</th>
                   <th className="px-3 py-3">Status</th>
                   <th className="px-3 py-3">Last run</th>
@@ -95,7 +95,7 @@ export default function CronMonitorPage() {
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.name} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                  <tr key={r.name} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors">
                     <td className="px-4 py-2.5 font-mono text-xs">{r.name}{r.paused && <span className="ms-2 text-[10px] text-amber-300">PAUSED</span>}</td>
                     <td className="px-3 py-2.5">
                       {r.lastStatus === 'success' ? (

@@ -10,7 +10,7 @@ function KpiCard({ icon: Icon, label, value, change, changeType }: {
   icon: React.ElementType; label: string; value: string; change?: string; changeType?: 'up' | 'down' | 'neutral';
 }) {
   return (
-    <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
+    <div className="nl-glass rounded-2xl p-4">
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs text-gray-400 font-medium">{label}</span>
         <div className="w-7 h-7 bg-[#0066FF]/10 rounded-lg flex items-center justify-center">
@@ -82,7 +82,7 @@ export default function AdminDashboard() {
         </div>
         <div className="flex items-center gap-3">
           <StatusDot status="active" label="All systems operational" pulse />
-          <button onClick={load} disabled={loading} className="flex items-center gap-2 text-xs text-gray-400 hover:text-white border border-[#1E2433] rounded-lg px-3 py-1.5 hover:border-[#2E3443] transition-colors">
+          <button onClick={load} disabled={loading} className="nl-button nl-button--ghost flex items-center gap-2 text-xs">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
@@ -97,24 +97,24 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
+        <div className="nl-glass rounded-2xl p-4">
           <h3 className="text-sm font-semibold text-white mb-4">User Growth (30d)</h3>
           <MicroArea data={CHART_DATA} xKey="day" yKey="users" color="#0066FF" height={160} />
         </div>
-        <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
+        <div className="nl-glass rounded-2xl p-4">
           <h3 className="text-sm font-semibold text-white mb-4">Revenue (30d)</h3>
           <MicroBar data={CHART_DATA} xKey="day" yKey="revenue" color="#0066FF" height={160} formatY={(v) => formatUSD(v)} />
         </div>
       </div>
 
-      <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4">
+      <div className="nl-glass rounded-2xl p-4">
         <h3 className="text-sm font-semibold text-white mb-4">Recent Signups</h3>
         <div className="space-y-2">
           {activity.length === 0 && !loading && (
             <p className="text-xs text-gray-500 py-4 text-center">No recent activity</p>
           )}
           {activity.map((a, i) => (
-            <div key={i} className="flex items-center gap-3 py-2 border-b border-[#1E2433] last:border-0">
+            <div key={i} className="flex items-center gap-3 py-2 border-b border-white/5 last:border-0">
               <StatusDot status="active" size="sm" pulse />
               <span className="text-xs text-white font-medium w-36 flex-shrink-0">{a.event}</span>
               <span className="text-xs text-gray-400 flex-1">{a.detail}</span>

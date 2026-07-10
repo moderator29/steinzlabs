@@ -35,19 +35,19 @@ interface Cluster {
 interface DetailResponse { cluster: Cluster; members: Member[]; edges: Edge[]; labels: Label[] }
 
 const ARCHETYPE_META: Record<string, { label: string; Icon: typeof Crown; tone: string; narrative: string }> = {
-  alpha_hive:       { label: 'Alpha Hive',       Icon: Crown,       tone: 'from-amber-400 to-yellow-500',   narrative: 'Coordinated smart-money wallets acting in concert — they frequently trade the same tokens within minutes.' },
+  alpha_hive:       { label: 'Alpha Hive',       Icon: Crown,       tone: 'from-amber-400 to-yellow-500',   narrative: 'Coordinated smart-money wallets acting in concert. They frequently trade the same tokens within minutes.' },
   sybil_farm:       { label: 'Sybil Farm',       Icon: ShieldAlert, tone: 'from-red-400 to-pink-500',       narrative: 'Mass-funded uniform wallets. Almost certainly airdrop-farming or sybil-attacking a protocol.' },
   insider_ring:     { label: 'Insider Ring',     Icon: Sparkles,    tone: 'from-purple-400 to-fuchsia-500', narrative: 'Tight pre-launch cluster with shared funding and coordinated accumulation.' },
   smart_money_pack: { label: 'Smart Money Pack', Icon: Brain,       tone: 'from-emerald-400 to-teal-500',   narrative: 'Independent wallets with a high overlap of profitable trades.' },
-  bot_swarm:        { label: 'Bot Swarm',        Icon: Bot,         tone: 'from-sky-400 to-cyan-500',       narrative: 'Automated wallets firing coordinated transactions — MEV / sniping / arbitrage.' },
-  institutional:    { label: 'Institutional',    Icon: Layers,      tone: 'from-slate-400 to-blue-500',     narrative: 'High-value internal transfers — exchange or fund operational wallets.' },
+  bot_swarm:        { label: 'Bot Swarm',        Icon: Bot,         tone: 'from-sky-400 to-cyan-500',       narrative: 'Automated wallets firing coordinated transactions: MEV / sniping / arbitrage.' },
+  institutional:    { label: 'Institutional',    Icon: Layers,      tone: 'from-slate-400 to-blue-500',     narrative: 'High-value internal transfers: exchange or fund operational wallets.' },
   whale_syndicate:  { label: 'Whale Syndicate',  Icon: TrendingUp,  tone: 'from-blue-400 to-indigo-500',    narrative: 'Large-balance wallets coordinating big moves. Market-moving collective.' },
   unknown:          { label: 'Unclassified',     Icon: Activity,    tone: 'from-slate-500 to-slate-700',    narrative: 'Cluster detected; archetype not yet determined.' },
 };
 
 function short(a: string): string { return a.length > 14 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a; }
 function fmtUsd(v: number | null): string {
-  if (!v || !isFinite(v)) return '—';
+  if (!v || !isFinite(v)) return '-';
   const abs = Math.abs(v);
   if (abs >= 1e9) return `$${(abs / 1e9).toFixed(2)}B`;
   if (abs >= 1e6) return `$${(abs / 1e6).toFixed(2)}M`;
@@ -163,10 +163,10 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mt-5">
-            <Metric label="Whale Score" value={cluster.whale_score ? `${Math.round(Number(cluster.whale_score))}/100` : '—'} color="text-emerald-400" />
+            <Metric label="Whale Score" value={cluster.whale_score ? `${Math.round(Number(cluster.whale_score))}/100` : '-'} color="text-emerald-400" />
             <Metric label="Members" value={members.length.toLocaleString()} />
             <Metric label="Edges" value={edges.length.toLocaleString()} />
-            <Metric label="Edge Confidence" value={edges.length ? `${(avgConf * 100).toFixed(0)}%` : '—'} />
+            <Metric label="Edge Confidence" value={edges.length ? `${(avgConf * 100).toFixed(0)}%` : '-'} />
             <Metric label="Total Value" value={fmtUsd(totalValue)} />
           </div>
 
@@ -194,7 +194,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
           />
         ) : (
           <div className="p-10 text-center nl-glass rounded-xl text-slate-500 text-sm" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
-            Graph unavailable — no edges persisted yet for this cluster.
+            Graph unavailable: no edges persisted yet for this cluster.
           </div>
         )}
       </div>
@@ -249,7 +249,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           {labels.length === 0 ? (
-            <p className="text-[11px] text-slate-500 text-center py-3">No labels yet — be the first to name this cluster.</p>
+            <p className="text-[11px] text-slate-500 text-center py-3">No labels yet. Be the first to name this cluster.</p>
           ) : (
             <div className="space-y-2">
               {labels.map((l) => {

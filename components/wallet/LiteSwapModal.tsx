@@ -202,7 +202,7 @@ export function LiteSwapModal({ open, onClose, tokenAddress, tokenSymbol, chain,
         <label className="block text-[10px] uppercase tracking-wider text-slate-300 mb-1">You receive</label>
         <div className="rounded-lg nl-glass px-3 py-2 mb-3 min-h-[42px] flex items-center justify-between">
           <span className="text-base font-mono text-white">
-            {loading ? <Loader2 className="w-4 h-4 animate-spin inline" aria-hidden /> : (outAmountStr ?? '—')}
+            {loading ? <Loader2 className="w-4 h-4 animate-spin inline" aria-hidden /> : (outAmountStr ?? '-')}
           </span>
           <span className="text-xs text-slate-300">{tokenSymbol}</span>
         </div>
@@ -244,7 +244,7 @@ export function LiteSwapModal({ open, onClose, tokenAddress, tokenSymbol, chain,
           Open in swap to sign
         </button>
         <p className="mt-2 text-[10px] text-slate-300 text-center">
-          Signing runs through the full swap page — your wallet stays non-custodial.
+          Signing runs through the full swap page. Your wallet stays non-custodial.
         </p>
       </div>
     </div>

@@ -30,7 +30,7 @@ async function openEth(): Promise<{ eth: import('@ledgerhq/hw-app-eth').default;
 /** Prompt the device + return the address at a derivation path (no on-device confirm). */
 export async function connectLedger(path = DEFAULT_LEDGER_PATH): Promise<{ address: string; path: string }> {
   if (!isWebHidSupported()) {
-    throw new Error('Hardware wallets need a WebHID browser — use Chrome, Edge, or Brave on desktop.');
+    throw new Error('Hardware wallets need a WebHID browser. Use Chrome, Edge, or Brave on desktop.');
   }
   const { eth, close } = await openEth();
   try {
@@ -53,7 +53,7 @@ export async function sendLedgerEvmTx(params: {
   tx: { to: string; value?: bigint; data?: string };
 }): Promise<string> {
   if (!isWebHidSupported()) {
-    throw new Error('Hardware wallets need a WebHID browser — use Chrome, Edge, or Brave on desktop.');
+    throw new Error('Hardware wallets need a WebHID browser. Use Chrome, Edge, or Brave on desktop.');
   }
   const { ethers } = await import('ethers');
   const provider = new ethers.JsonRpcProvider(params.rpcUrl);

@@ -206,7 +206,7 @@ export function SniperTokenDrawer({ token, onClose, onSnipe }: { token: Detected
           <div className="flex items-end justify-between">
             <div>
               <div className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">Price</div>
-              <div className="text-2xl font-extrabold">{price != null ? `$${price < 0.01 ? price.toPrecision(3) : price.toLocaleString(undefined, { maximumFractionDigits: 6 })}` : '—'}</div>
+              <div className="text-2xl font-extrabold">{price != null ? `$${price < 0.01 ? price.toPrecision(3) : price.toLocaleString(undefined, { maximumFractionDigits: 6 })}` : 'N/A'}</div>
             </div>
             <div className={`inline-flex items-center gap-1 text-sm font-bold ${change24 >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
               {change24 >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}{change24 >= 0 ? '+' : ''}{change24.toFixed(1)}%

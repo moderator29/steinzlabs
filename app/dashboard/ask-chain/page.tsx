@@ -45,7 +45,7 @@ function fmtUsdCompact(v: number): string {
 }
 
 function fmtCell(v: string | number | boolean | null, col: string): string {
-  if (v == null) return '—';
+  if (v == null) return 'N/A';
   if (typeof v === 'number') {
     if (/usd|value|pnl|net|inflow|outflow|delta/i.test(col)) return fmtUsdCompact(v);
     if (/rate/i.test(col)) return `${Math.round(v)}%`;

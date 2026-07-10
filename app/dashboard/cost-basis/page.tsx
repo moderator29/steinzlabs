@@ -88,7 +88,7 @@ export default function CostBasisPage() {
         <h1 className="text-lg font-bold flex items-center gap-2"><Receipt className="w-5 h-5 text-[#0066FF]" /> Cost Basis &amp; PnL</h1>
       </div>
       <p className="text-xs text-slate-400 mb-4">
-        The honest tax-style ledger for any wallet. Realized PnL is FIFO-matched from <span className="text-white">real DEX trades priced at trade time</span> — never guessed from today&rsquo;s price. Open positions show your real average entry and unrealized PnL where a live price exists.
+        The honest tax-style ledger for any wallet. Realized PnL is FIFO-matched from <span className="text-white">real DEX trades priced at trade time</span>, never guessed from today&rsquo;s price. Open positions show your real average entry and unrealized PnL where a live price exists.
       </p>
 
       <div className="flex gap-1.5 mb-3 overflow-x-auto">

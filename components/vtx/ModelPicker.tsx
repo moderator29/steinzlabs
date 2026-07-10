@@ -25,7 +25,7 @@ interface ModelMeta {
 
 const MODELS: ModelMeta[] = [
   { id: 'fast', label: 'Fast', hint: 'Snap answers, lighter reasoning', icon: Zap },
-  { id: 'balanced', label: 'Balanced', hint: 'Default — depth + speed', icon: Sparkles },
+  { id: 'balanced', label: 'Balanced', hint: 'Default: depth + speed', icon: Sparkles },
   { id: 'deepest', label: 'Deepest', hint: 'Long reasoning, slower', icon: Brain },
 ];
 

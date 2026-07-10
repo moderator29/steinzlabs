@@ -87,7 +87,7 @@ export function BackgroundSnipingCard() {
           </div>
           <div>
             <p className="text-sm font-bold text-white">Background sniping (set &amp; forget)</p>
-            <p className="text-[11px] text-slate-400">Auto-buy while Naka is closed — capped, expiring, revocable.</p>
+            <p className="text-[11px] text-slate-400">Auto-buy while Naka is closed: capped, expiring, revocable.</p>
           </div>
         </div>
         <span className="text-xs text-slate-400">{open ? 'Hide' : 'Set up'}</span>
@@ -96,7 +96,7 @@ export function BackgroundSnipingCard() {
       {open && !result && (
         <div className="mt-4 space-y-3">
           <p className="text-[11px] text-slate-400 leading-relaxed">
-            Your main wallet stays in your control — it only signs a one-time approval for a
+            Your main wallet stays in your control; it only signs a one-time approval for a
             limited session key (max per trade, daily cap, expiry). The server can then
             auto-buy from a smart account you fund, never your main wallet.
           </p>

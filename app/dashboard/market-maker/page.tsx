@@ -259,7 +259,7 @@ export default function MarketMakerPage() {
           <div className="mt-4 flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] px-4 py-2.5">
             <Square className="w-4 h-4 text-amber-300 shrink-0" />
             <p className="text-amber-100/90 text-[11px] sm:text-xs font-medium">
-              Global kill: pause or stop any strategy to halt it instantly. Stopped strategies never place new orders — your funded session key stays capped and revocable.
+              Global kill: pause or stop any strategy to halt it instantly. Stopped strategies never place new orders. Your funded session key stays capped and revocable.
             </p>
           </div>
         </div>
@@ -269,7 +269,7 @@ export default function MarketMakerPage() {
           <div className="flex items-start gap-3">
             <ShieldCheck className="w-5 h-5 text-blue-300 shrink-0 mt-0.5" />
             <div className="text-xs text-white/70 leading-relaxed">
-              <span className="font-semibold text-white">Market making can lose money</span> — impermanent loss, adverse
+              <span className="font-semibold text-white">Market making can lose money</span>: impermanent loss, adverse
               selection and gas can all erode capital. Returns are never guaranteed. Funds stay non-custodial: execution
               uses your capped session key, and your main keys never leave your browser.
             </div>
@@ -293,7 +293,7 @@ export default function MarketMakerPage() {
             <div className="rounded-2xl border-2 border-dashed border-white/10 bg-white/[0.02] p-12 text-center">
               <Bot className="w-12 h-12 mx-auto mb-3 text-white/30" />
               <h3 className="text-lg font-bold mb-1">No strategies yet</h3>
-              <p className="text-white/50 text-sm mb-5">No strategies yet — create one to start market making.</p>
+              <p className="text-white/50 text-sm mb-5">No strategies yet. Create one to start market making.</p>
               <button onClick={() => setShowCreate(true)} className="nl-btn-neon px-5 py-2.5 rounded-xl font-semibold text-sm inline-flex items-center gap-2">
                 <Plus className="w-4 h-4" /> New Strategy
               </button>
@@ -365,7 +365,7 @@ function StrategyCard({ s, busy, onSetStatus }: { s: Strategy; busy: boolean; on
         <Field label="Order size">{fmtUsd(s.order_size_usd)}</Field>
         <Field label={s.reference_price_mode === 'manual' ? 'Reference' : 'Market price'}>
           {s.reference_price_mode === 'manual'
-            ? (s.manual_reference_price ? fmtUsd(s.manual_reference_price) : '—')
+            ? (s.manual_reference_price ? fmtUsd(s.manual_reference_price) : '-')
             : (s.live_price != null ? fmtUsd(s.live_price) : <span className="text-white/40" title="Live price temporarily unavailable">unavailable</span>)}
         </Field>
       </div>
@@ -387,12 +387,12 @@ function StrategyCard({ s, busy, onSetStatus }: { s: Strategy; busy: boolean; on
           {inventoryTokens > 0
             ? <>{inventoryUsd != null ? fmtUsd(inventoryUsd) : `${inventoryTokens.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${s.token_symbol || ''}`}
                 {avgCost != null && <span className="block text-[10px] text-white/40 font-normal">{inventoryTokens.toLocaleString(undefined, { maximumFractionDigits: 4 })} · avg {fmtUsd(avgCost)}</span>}</>
-            : <span className="text-white/40">—</span>}
+            : <span className="text-white/40">-</span>}
         </Field>
         <Field label="Unrealized">
           {unrealized != null
             ? <span className={pnlTone(unrealized)}>{fmtSignedUsd(unrealized)}</span>
-            : <span className="text-white/40" title="Inventory could not be valued (no live price)">—</span>}
+            : <span className="text-white/40" title="Inventory could not be valued (no live price)">-</span>}
         </Field>
         <Field label="Net PnL">
           {netPnl != null
@@ -491,7 +491,7 @@ function FillsPanel({ strategyId, chain, symbol }: { strategyId: string; chain: 
           {loading && <div className="py-3 text-center text-white/40 text-xs inline-flex items-center gap-2 justify-center w-full"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading fills…</div>}
           {!loading && error && <div className="py-2 text-xs text-red-300">{error}</div>}
           {!loading && !error && fills != null && fills.length === 0 && (
-            <div className="py-3 text-center text-white/40 text-xs">No fills yet — this strategy has not executed a trade.</div>
+            <div className="py-3 text-center text-white/40 text-xs">No fills yet. This strategy has not executed a trade.</div>
           )}
           {!loading && !error && fills != null && fills.length > 0 && (
             <div className="space-y-1 max-h-56 overflow-y-auto">
@@ -504,8 +504,8 @@ function FillsPanel({ strategyId, chain, symbol }: { strategyId: string; chain: 
                       {isBuy ? <ArrowDownRight className="w-3 h-3" /> : <ArrowUpRight className="w-3 h-3" />}{f.side}
                     </span>
                     <span className="text-white/70 tabular-nums flex-1 text-right truncate">
-                      {f.amount_tokens != null ? Number(f.amount_tokens).toLocaleString(undefined, { maximumFractionDigits: 4 }) : '—'} {symbol || ''}
-                      <span className="text-white/40"> · {f.amount_usd != null ? fmtUsd(f.amount_usd) : '—'}</span>
+                      {f.amount_tokens != null ? Number(f.amount_tokens).toLocaleString(undefined, { maximumFractionDigits: 4 }) : '-'} {symbol || ''}
+                      <span className="text-white/40"> · {f.amount_usd != null ? fmtUsd(f.amount_usd) : '-'}</span>
                     </span>
                     {pnl != null && !isBuy && (
                       <span className={`tabular-nums font-semibold ${pnl > 0 ? 'text-emerald-300' : pnl < 0 ? 'text-red-300' : 'text-white/50'}`}>{fmtSignedUsd(pnl)}</span>

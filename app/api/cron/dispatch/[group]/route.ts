@@ -71,6 +71,9 @@ const GROUPS: Record<string, string[]> = {
   // editions a day (Morning / Evening).
   'twice-daily': [
     'research-daily-brief',
+    // Twice-daily crypto news roundup to users who opted in (notification_settings
+    // .news_alerts). Exits instantly when nobody has opted in.
+    'news-digest',
   ],
   // Once daily (03:00 UTC).
   daily: [

@@ -235,7 +235,7 @@ export default function FollowWhaleModal({
           {error && <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-xs">{error}</div>}
           {success && (
             <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
-              <Check className="w-4 h-4" /> Following — you'll get alerts for trades ≥ ${threshold.toLocaleString()}.
+              <Check className="w-4 h-4" /> Following. You'll get alerts for trades ≥ ${threshold.toLocaleString()}.
             </div>
           )}
 

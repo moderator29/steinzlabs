@@ -9,8 +9,8 @@ import { toast } from 'sonner';
 // Zap / Loader2 not yet in brand library; stay on lucide.
 import {
   Search, Calendar, ChevronRight, Clock, RefreshCw, TrendingUp, X, FileText,
-} from '@/components/icons/brand';
-import { BookOpen, Tag, Loader2, SlidersHorizontal } from 'lucide-react';
+  BookOpen, Tag, Loader2, SlidersHorizontal,
+} from 'lucide-react';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { TiltCard } from '@/components/brand/TiltCard';
 import { HowItWorksButton } from '@/components/common/HowItWorks';

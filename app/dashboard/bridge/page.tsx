@@ -287,11 +287,11 @@ export default function BridgePage() {
             </div>
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-400">You receive (min)</span>
-              <span className="font-mono">{quote.estimate?.toAmountMin ?? quote.estimate?.toAmount ?? '—'}</span>
+              <span className="font-mono">{quote.estimate?.toAmountMin ?? quote.estimate?.toAmount ?? '-'}</span>
             </div>
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-400">Est. duration</span>
-              <span>{quote.estimate?.executionDuration ? `${Math.round(quote.estimate.executionDuration)}s` : '—'}</span>
+              <span>{quote.estimate?.executionDuration ? `${Math.round(quote.estimate.executionDuration)}s` : '-'}</span>
             </div>
             <button
               onClick={executeBridge}

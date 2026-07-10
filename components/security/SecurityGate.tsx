@@ -229,7 +229,7 @@ export function SecurityGate({ chain, token, action, children, className = '' }:
             <span className="text-amber-200 font-bold tabular-nums">{score.score}<span className="text-amber-200/60 font-medium">/100</span></span>
           </div>
           <div className="flex-1 min-w-0">
-            <span className="text-amber-100 font-semibold">Caution — trust score below 60. </span>
+            <span className="text-amber-100 font-semibold">Caution: trust score below 60. </span>
             <span className="text-amber-100/80">Review the risk before you {ACTION_VERBS[action]}.</span>
           </div>
           <button
@@ -333,7 +333,7 @@ function RiskModal({ score, analysis, chain, token, action, isHighRisk, onAcknow
   // surface those verbatim.
   const flags: string[] = [];
   const ts = analysis?.tokenSecurity;
-  if (ts?.isHoneypot) flags.push('Honeypot detected — sells may fail');
+  if (ts?.isHoneypot) flags.push('Honeypot detected: sells may fail');
   if (ts?.cannotSellAll) flags.push('Cannot sell entire balance');
   if (ts?.cannotBuy) flags.push('Buy is currently disabled by the contract');
   if (parsePctNumber(ts?.buyTax) > 10) flags.push(`High buy tax: ${ts!.buyTax}`);
@@ -429,7 +429,7 @@ function RiskModal({ score, analysis, chain, token, action, isHighRisk, onAcknow
               onClick={onAcknowledge}
               className="text-xs font-semibold text-white bg-red-600 hover:bg-red-500 px-4 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-400"
             >
-              I understand the risk — let me {ACTION_VERBS[action]} anyway
+              I understand the risk, let me {ACTION_VERBS[action]} anyway
             </button>
           ) : (
             <button

@@ -18,7 +18,7 @@ export const whaleLookalikesHowItWorks: HowItWorksContent = {
   why: [
     'When you find one wallet worth watching, its look-alikes are the fastest way to widen the net to a whole cohort that trades the same way.',
     'Behavioral matching surfaces coordinated or copycat wallets that a pure balance ranking would never place next to each other.',
-    'Reach for it when you want to build a watchlist around a style — a patient accumulator, a fast scalper, a momentum degen — rather than a single address.',
+    'Reach for it when you want to build a watchlist around a style (a patient accumulator, a fast scalper, a momentum degen) rather than a single address.',
   ],
   whatsNew: [
     {

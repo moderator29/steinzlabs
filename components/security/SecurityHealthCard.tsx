@@ -95,7 +95,7 @@ export function SecurityHealthCard({ has2fa = false }: { has2fa?: boolean }) {
           )}
           {health && health.score == null && (
             <p className="text-xs mt-1.5 text-slate-400">
-              Not scored yet — run an approval or token scan and your real security health appears here. We never show a &ldquo;clean&rdquo; score for a wallet that hasn&rsquo;t been scanned.
+              Not scored yet. Run an approval or token scan and your real security health appears here. We never show a &ldquo;clean&rdquo; score for a wallet that hasn&rsquo;t been scanned.
             </p>
           )}
         </div>

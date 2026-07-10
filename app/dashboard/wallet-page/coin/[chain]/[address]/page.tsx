@@ -155,7 +155,7 @@ export default function WalletCoinPage({ params }: { params: Promise<RouteParams
 
       {/* Price */}
       <div className="text-center py-6">
-        <div className="text-3xl font-bold tabular-nums">{loading ? '—' : formatPrice(price)}</div>
+        <div className="text-3xl font-bold tabular-nums">{loading ? '-' : formatPrice(price)}</div>
         <div className={`inline-flex items-center gap-1 text-sm font-semibold mt-1 ${isNegative ? 'text-red-400' : 'text-emerald-400'}`}>
           {isNegative ? '↓' : '↑'}
           <span className="font-mono">

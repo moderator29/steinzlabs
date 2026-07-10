@@ -54,7 +54,7 @@ function validAddressForChain(chain: string, addr: string): boolean {
 }
 
 function fmtPrice(n: number): string {
-  if (!(n > 0)) return '—';
+  if (!(n > 0)) return '-';
   if (n >= 1) return `$${n.toLocaleString(undefined, { maximumFractionDigits: 4 })}`;
   return `$${n.toPrecision(4)}`;
 }
@@ -193,7 +193,7 @@ export function CreateStrategyModal({ onClose, onSaved }: Props) {
         <div className="flex items-center justify-between p-5 border-b border-white/10 sticky top-0 z-10 bg-[var(--nl-canvas-base,#050816)]/80 backdrop-blur">
           <div>
             <h2 className="text-xl font-bold flex items-center gap-2"><Bot className="w-5 h-5 text-[var(--nl-blue,#0066FF)]" /> New Strategy</h2>
-            <p className="text-xs text-white/50 mt-0.5">Configure a grid market-making strategy. Created paused — nothing trades until you activate.</p>
+            <p className="text-xs text-white/50 mt-0.5">Configure a grid market-making strategy. Created paused: nothing trades until you activate.</p>
           </div>
           <button onClick={onClose} aria-label="Close strategy editor" className="nl-button nl-button--ghost !p-2"><X className="w-5 h-5" aria-hidden="true" /></button>
         </div>
@@ -242,7 +242,7 @@ export function CreateStrategyModal({ onClose, onSaved }: Props) {
 
               {/* Strategy type */}
               <Panel>
-                <Field label="Strategy Type" hint="Grid & Range are live. Presence (volume) is intentionally not offered — single-account self-trading is wash trading.">
+                <Field label="Strategy Type" hint="Grid & Range are live. Presence (volume) is intentionally not offered: single-account self-trading is wash trading.">
                   <div className="grid grid-cols-3 gap-2">
                     {([
                       { id: 'grid' as const, label: 'Grid', sub: 'Live', disabled: false },
@@ -255,7 +255,7 @@ export function CreateStrategyModal({ onClose, onSaved }: Props) {
                         disabled={o.disabled}
                         onClick={() => !o.disabled && setStrategyType(o.id)}
                         className={`${SEG_CLS(strategyType === o.id)} text-center ${o.disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
-                        title={o.disabled ? 'Not offered — single-account self-trading is wash trading' : undefined}
+                        title={o.disabled ? 'Not offered: single-account self-trading is wash trading' : undefined}
                       >
                         <div className={`text-sm font-semibold ${strategyType === o.id ? 'text-blue-100' : 'text-white/80'}`}>{o.label}</div>
                         <div className="text-[10px] uppercase tracking-wide text-white/40">{o.sub}</div>
@@ -388,7 +388,7 @@ export function CreateStrategyModal({ onClose, onSaved }: Props) {
         <div className="px-5 pb-5">
           <p className="text-[11px] text-white/50 flex items-start gap-1.5">
             <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-400" />
-            New strategies are created paused — activate when your kernel is funded on this chain.
+            New strategies are created paused. Activate when your kernel is funded on this chain.
           </p>
         </div>
       </div>

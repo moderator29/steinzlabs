@@ -71,11 +71,11 @@ interface ScanResult {
 }
 
 const TIER_COPY: Record<RiskTier, string> = {
-  Safe: 'Passed all critical checks — no security red flags found',
-  Low: 'Minor concerns only — no critical security flags',
-  Medium: 'Some real risks detected — proceed with care',
-  High: 'Significant risks found — high caution advised',
-  Critical: 'Critical risk detected — avoid this token',
+  Safe: 'Passed all critical checks: no security red flags found',
+  Low: 'Minor concerns only: no critical security flags',
+  Medium: 'Some real risks detected, proceed with care',
+  High: 'Significant risks found, high caution advised',
+  Critical: 'Critical risk detected: avoid this token',
 };
 
 const CHAINS = [
@@ -132,7 +132,7 @@ export default function TokenScannerPage() {
 
       // 200 with an error field = honest "could not verify" (no source returned data).
       if (data.error || data.couldNotVerify) {
-        setError(data.error || 'Could not verify this token — no security source returned data.');
+        setError(data.error || 'Could not verify this token. No security source returned data.');
         return;
       }
 

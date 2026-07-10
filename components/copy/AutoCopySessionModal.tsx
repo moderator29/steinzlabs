@@ -192,7 +192,7 @@ export function AutoCopySessionModal({ onClose }: { onClose: () => void }) {
               <div className="flex items-start gap-2 p-3 rounded-xl bg-[#0066FF]/10 border border-[#0066FF]/25">
                 <ShieldCheck className="w-4 h-4 text-[#8FA3FF] shrink-0 mt-0.5" />
                 <p className="text-[11px] text-slate-300 leading-relaxed">
-                  Mirrors trades 24/7 — even with the app closed — within the caps you sign below.
+                  Mirrors trades 24/7, even with the app closed, within the caps you sign below.
                   A scoped session key (never your main wallet) executes the swaps; fund it with only
                   the budget you want automated and revoke anytime.
                 </p>
@@ -222,7 +222,7 @@ export function AutoCopySessionModal({ onClose }: { onClose: () => void }) {
                   <span className="text-xs font-mono">{hours}h</span>
                 </div>
                 <input type="range" min={1} max={168} step={1} value={hours} onChange={(e) => setHours(parseInt(e.target.value, 10))} className="w-full accent-[#0066FF] mt-1" />
-                <p className="text-[10px] text-slate-500 mt-1">Auto-copy stops when this expires — re-authorize to extend (max 7 days).</p>
+                <p className="text-[10px] text-slate-500 mt-1">Auto-copy stops when this expires. Re-authorize to extend (max 7 days).</p>
               </div>
 
               {error && <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-xs">{error}</div>}
@@ -236,7 +236,7 @@ export function AutoCopySessionModal({ onClose }: { onClose: () => void }) {
               <div className="flex items-start gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
                 <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <p className="text-[11px] text-emerald-200 leading-relaxed">
-                  Authorized. Final step — fund the session wallet with USDC on <span className="capitalize font-semibold">{created.chain}</span>.
+                  Authorized. Final step: fund the session wallet with USDC on <span className="capitalize font-semibold">{created.chain}</span>.
                   Auto-copy buys spend from this balance; it can never exceed what you deposit.
                 </p>
               </div>

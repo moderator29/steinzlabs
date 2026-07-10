@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import { verifyCron, logCronExecution } from "../_shared";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { canonicalAction } from "@/lib/whales/labels";
+import { whaleAlertDisplayName, shortWhaleAddress } from "@/lib/whales/naming";
 import { normalizeAddress } from "@/lib/utils/addressNormalize";
 import { sendWhaleAlert } from "@/lib/services/resend";
 import { sendTelegramNotification } from "@/lib/telegram/notify";
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
     };
 
     // Cache whale stats per address for the rich email enrichment + AI take.
-    type WhaleStat = { label: string | null; whale_score: number | null; archetype: string | null; entity_type: string | null; active_days_7d: number | null };
+    type WhaleStat = { label: string | null; whale_score: number | null; archetype: string | null; entity_type: string | null; active_days_7d: number | null; naka_number: number | null };
     const whaleCache = new Map<string, WhaleStat | null>();
     const resolveWhale = async (address: string, chain: string): Promise<WhaleStat | null> => {
       // Normalize so a checksummed (mixed-case) EVM follow matches the lowercase
@@ -112,7 +113,7 @@ export async function GET(request: NextRequest) {
       const key = `${chain}:${addr}`;
       if (whaleCache.has(key)) return whaleCache.get(key) ?? null;
       const { data } = await sb.from('whales')
-        .select('label, whale_score, archetype, entity_type, active_days_7d')
+        .select('label, whale_score, archetype, entity_type, active_days_7d, naka_number')
         .eq('address', addr).eq('chain', chain).maybeSingle();
       whaleCache.set(key, (data as WhaleStat | null) ?? null);
       return (data as WhaleStat | null) ?? null;
@@ -169,7 +170,22 @@ export async function GET(request: NextRequest) {
       const wantsTelegram = channels.includes("telegram");
       const wantsPush = channels.includes("push");
       const userEmail = wantsEmail ? await resolveEmail(f.user_id) : null;
-      const whaleName = f.label || `${f.whale_address.slice(0, 6)}…${f.whale_address.slice(-4)}`;
+
+      // Resolve the whale's real stats once per follow (cached) so the display
+      // name is consistent across ALL channels — in-app bell, Telegram, email.
+      // The name layers: curated entity label (Binance / MM / bridge) → the
+      // whale's stored name (follow label or whales.label) → a deterministic
+      // "Naka Whale #N" (same wallet → same number here and in the Whale
+      // Tracker the alert links to). A bare 0x… is never the primary identity.
+      const whale = await resolveWhale(f.whale_address, f.chain);
+      const whaleName = whaleAlertDisplayName({
+        address: f.whale_address,
+        chain: f.chain,
+        followLabel: f.label,
+        whaleLabel: whale?.label ?? null,
+        nakaNumber: whale?.naka_number ?? null,
+      });
+      const whaleShort = shortWhaleAddress(f.whale_address);
 
       // Notify the most recent N; the watermark still advances past all scanned.
       const toNotify = rows.slice(-MAX_ALERTS_PER_FOLLOW);
@@ -201,8 +217,7 @@ export async function GET(request: NextRequest) {
         if (wantsEmail && userEmail) {
           // Enrich with the whale's real stats and a GROUNDED one-liner (built
           // only from real fields — archetype, activity, score — never invented).
-          const w = await resolveWhale(f.whale_address, f.chain);
-          const chainCap = f.chain.charAt(0).toUpperCase() + f.chain.slice(1);
+          const w = whale;
           let aiTake: string | null = null;
           if (w) {
             const arche = (w.archetype || w.entity_type || 'wallet').replace(/_/g, ' ');
@@ -221,6 +236,7 @@ export async function GET(request: NextRequest) {
             toEntity: dir === "buy" ? whaleName : a.counterparty_label ?? undefined,
             txHash: a.tx_hash,
             whaleName,
+            whaleShort,
             whaleAddress: f.whale_address,
             chain: f.chain,
             whaleScore: w?.whale_score ?? null,

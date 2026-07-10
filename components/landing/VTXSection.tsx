@@ -17,7 +17,7 @@ const STEPS = [
     num: '02',
     icon: Layers,
     title: '7-Source Analysis',
-    body: 'Price, security, social sentiment, on-chain history, entity intelligence — cross-referenced and synthesized in real time.',
+    body: 'Price, security, social sentiment, on-chain history, entity intelligence, cross-referenced and synthesized in real time.',
     pills: ['Price', 'Security', 'Social', 'On-Chain', 'Entity', 'Market', 'Wallet'],
   },
   {
@@ -63,7 +63,7 @@ export function VTXSection() {
                 className="relative rounded-2xl p-7 h-full flex flex-col gap-4"
                 style={{ background: 'rgba(6,6,15,.6)', border: '1px solid rgba(26,58,204,.12)' }}
               >
-                {/* Step number — subtle top-right */}
+                {/* Step number: subtle top-right */}
                 <span
                   className="absolute top-5 right-6 font-black select-none"
                   style={{ fontSize: 48, color: 'rgba(26,58,204,.18)', lineHeight: 1 }}

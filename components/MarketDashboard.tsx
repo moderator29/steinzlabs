@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, SlidersHorizontal, X, TrendingUp, TrendingDown, Loader2, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { useWatchlist } from '@/hooks/market/useWatchlist';
 import { resolveTokenChain } from '@/lib/market/tokenChainResolver';
 
 interface CoinRow {
@@ -116,6 +117,15 @@ function MiniSparkline({ data, isPositive }: { data: number[]; isPositive: boole
 
 export default function MarketDashboard() {
   const router = useRouter();
+  const { user } = useAuth();
+  // Watchlist is server-owned: the /api/market/watchlist route derives the
+  // user from the session and writes user_id itself. The previous inline
+  // `supabase.from('watchlist').insert({ token_id })` omitted user_id, so
+  // every insert failed (user_id is NOT NULL + RLS `auth.uid() = user_id`),
+  // the optimistic star rolled back, and clicking appeared to "do nothing".
+  const { watchlist, isWatched, toggleWatchlist } = useWatchlist(user?.id ?? null, {
+    onRequireAuth: () => router.push('/login?from=/dashboard'),
+  });
   const [tab, setTab] = useState<'prices' | 'watchlist'>('prices');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
@@ -127,25 +137,10 @@ export default function MarketDashboard() {
   const [searchResults, setSearchResults] = useState<CoinRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
-  const [watchlist, setWatchlist] = useState<string[]>([]);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const coinCache = useRef<Map<string, CoinRow>>(new Map());
 
   useEffect(() => { setMounted(true); }, []);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('steinz_watchlist');
-      if (stored) setWatchlist(JSON.parse(stored));
-    } catch { /* ignore */ }
-    void Promise.resolve(supabase.from('watchlist').select('token_id')).then(({ data }) => {
-      if (data && data.length > 0) {
-        const ids = data.map((r: { token_id: string }) => r.token_id);
-        setWatchlist(ids);
-        try { localStorage.setItem('steinz_watchlist', JSON.stringify(ids)); } catch { /* ignore */ }
-      }
-    }).catch((err: unknown) => console.error('[MarketDashboard] Watchlist load failed:', err instanceof Error ? err.message : err));
-  }, []);
 
   const fetchCoins = useCallback(async () => {
     setLoading(true);
@@ -261,33 +256,13 @@ export default function MarketDashboard() {
     router.push(`/dashboard/market/${chain}/${coin.id || coin.symbol.toLowerCase()}`);
   };
 
-  // Audit M1 #3 — was fire-and-forget. UI flipped optimistically, the
-  // localStorage and React state both updated, then if Supabase failed
-  // the next page reload (which prefers the remote watchlist) showed
-  // the stale state. Users lost trust ("I starred this and it
-  // disappeared!"). Now we await the Supabase result and roll back
-  // local state if it fails. Industry parity: CoinMarketCap shows a
-  // brief "syncing" indicator and snaps back on failure.
-  const toggleWatchlist = async (e: React.MouseEvent, coinId: string) => {
+  // Optimistic toggle backed by the shared useWatchlist hook, which POSTs to
+  // /api/market/watchlist (server derives + writes user_id) and rolls back on
+  // failure. stopPropagation keeps the star from also triggering the row's
+  // navigate-to-token tap; a signed-out click prompts sign-in via onRequireAuth.
+  const handleToggleWatch = (e: React.MouseEvent, coinId: string) => {
     e.stopPropagation();
-    const wasIn = watchlist.includes(coinId);
-    const next = wasIn ? watchlist.filter((id) => id !== coinId) : [...watchlist, coinId];
-    // Optimistic local update so the UI is instantly responsive.
-    setWatchlist(next);
-    try { localStorage.setItem('steinz_watchlist', JSON.stringify(next)); } catch { /* storage disabled */ }
-    try {
-      const op = wasIn
-        ? supabase.from('watchlist').delete().eq('token_id', coinId)
-        : supabase.from('watchlist').insert({ token_id: coinId });
-      const { error } = await op;
-      if (error) throw error;
-    } catch (err) {
-      // Roll back — local state matches whatever truth-of-record
-      // Supabase returned (or didn't).
-      console.error('[MarketDashboard] Watchlist sync failed, rolling back:', err instanceof Error ? err.message : err);
-      setWatchlist(watchlist);
-      try { localStorage.setItem('steinz_watchlist', JSON.stringify(watchlist)); } catch { /* storage disabled */ }
-    }
+    void toggleWatchlist(coinId);
   };
 
   const activeFilterCount =
@@ -426,7 +401,7 @@ export default function MarketDashboard() {
                         <div className="text-[10px] text-gray-500 font-mono">{coin.symbol}</div>
                       </div>
                     </div>
-                    <button onClick={e=>toggleWatchlist(e,coin.id)} className="p-1 hover:scale-110 transition-transform">
+                    <button onClick={e=>handleToggleWatch(e,coin.id)} className="p-1 hover:scale-110 transition-transform">
                       <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
                     </button>
                   </div>
@@ -470,7 +445,7 @@ export default function MarketDashboard() {
               </div>
             ) : displayCoins.map((coin,i)=>{
               const pos = coin.change24h >= 0;
-              const inWl = watchlist.includes(coin.id);
+              const inWl = isWatched(coin.id);
               return (
                 <button key={`${coin.id}-${i}`} onClick={()=>handleCoinTap(coin)}
                   className="w-full flex items-center gap-3 px-4 py-3.5 bg-[#111827] hover:bg-white/[0.03] transition-colors border-b border-white/[0.04] last:border-b-0 text-start">
@@ -503,7 +478,7 @@ export default function MarketDashboard() {
                       {pos?'+':''}{coin.change24h.toFixed(2)}%
                     </div>
                   </div>
-                  <button onClick={e=>toggleWatchlist(e,coin.id)}
+                  <button onClick={e=>handleToggleWatch(e,coin.id)}
                     className="flex-shrink-0 p-1 rounded transition-colors hover:bg-white/[0.06]"
                     aria-label={inWl?'Remove from watchlist':'Add to watchlist'}>
                     <Star className={`w-4 h-4 transition-colors ${inWl?'text-yellow-400 fill-yellow-400':'text-gray-600'}`} />

@@ -83,7 +83,7 @@ export default function TokenLensPage() {
 
       <div className="text-center mb-4">
         <h1 className="text-2xl font-bold">Is smart money in this token?</h1>
-        <p className="text-slate-400 text-sm mt-1">Paste a token — see which tracked whales hold it, their net position, and when they entered.</p>
+        <p className="text-slate-400 text-sm mt-1">Paste a token: see which tracked whales hold it, their net position, and when they entered.</p>
       </div>
 
       <form onSubmit={(e) => { e.preventDefault(); run(input, win); }} className="nl-glass rounded-2xl p-2 flex items-center gap-2 mb-3">

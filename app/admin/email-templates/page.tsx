@@ -183,34 +183,34 @@ export default function EmailTemplatesPage() {
           <p className="text-xs text-gray-500 mt-0.5">Manage transactional and marketing email templates</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={load} disabled={loading} className="p-2 text-gray-400 hover:text-white border border-[#1E2433] rounded-lg hover:border-[#2E3443] transition-colors">
+          <button onClick={load} disabled={loading} className="p-2 nl-button nl-button--ghost">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
           <button onClick={() => setShowNew(s => !s)}
-            className="flex items-center gap-2 text-xs bg-[#0066FF] hover:bg-[#0818CC] text-white px-3 py-2 rounded-lg font-medium transition-colors">
+            className="flex items-center gap-2 text-xs naka-button-primary">
             <Plus className="w-3.5 h-3.5" /> New Template
           </button>
         </div>
       </div>
 
       {showNew && (
-        <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 mb-4 space-y-3">
+        <div className="nl-glass rounded-2xl p-4 mb-4 space-y-3">
           <h3 className="text-sm font-semibold text-white">New Template</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input value={newForm.name} onChange={e => setNewForm(f => ({ ...f, name: e.target.value }))} placeholder="Template name"
-              className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40" />
+              className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors" />
             <select value={newForm.type} onChange={e => setNewForm(f => ({ ...f, type: e.target.value as TemplateType }))}
-              className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
+              className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors">
               {(['transactional', 'marketing', 'system'] as TemplateType[]).map(t => <option key={t}>{t}</option>)}
             </select>
           </div>
           <input value={newForm.subject} onChange={e => setNewForm(f => ({ ...f, subject: e.target.value }))} placeholder="Subject"
-            className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40" />
+            className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors" />
           <textarea value={newForm.body} onChange={e => setNewForm(f => ({ ...f, body: e.target.value }))} rows={4} placeholder="Body (use {{variable}} for placeholders)"
-            className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40 resize-none" />
+            className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white font-mono placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors resize-none" />
           <div className="flex gap-2">
-            <button onClick={() => setShowNew(false)} className="text-xs text-gray-400 hover:text-white px-3 py-2">Cancel</button>
-            <button onClick={createNew} disabled={saving} className="bg-[#0066FF] hover:bg-[#0818CC] text-white text-xs px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50">
+            <button onClick={() => setShowNew(false)} className="text-xs nl-button nl-button--ghost">Cancel</button>
+            <button onClick={createNew} disabled={saving} className="text-xs disabled:opacity-50 naka-button-primary">
               {saving ? 'Creating...' : 'Create'}
             </button>
           </div>
@@ -237,7 +237,7 @@ export default function EmailTemplatesPage() {
           <div className="col-span-2 space-y-2">
             {templates.map(t => (
               <div key={t.id} onClick={() => setSelected(t)}
-                className={`bg-[#141824] border rounded-xl p-3 cursor-pointer transition-all ${selected?.id === t.id ? 'border-[#0066FF]/40' : 'border-[#1E2433] hover:border-[#2E3443]'}`}>
+                className={`nl-glass nl-glass--interactive rounded-2xl p-3 cursor-pointer transition-all ${selected?.id === t.id ? 'border-[#0066FF]/40' : ''}`}>
                 <div className="flex items-start justify-between gap-2 mb-1.5">
                   <span className="text-xs font-semibold text-white">{t.name}</span>
                   <button onClick={e => { e.stopPropagation(); remove(t.id); }} className="text-red-500/30 hover:text-red-400 transition-colors flex-shrink-0">
@@ -253,10 +253,10 @@ export default function EmailTemplatesPage() {
             ))}
           </div>
 
-          <div className="col-span-3 bg-[#141824] border border-[#1E2433] rounded-xl flex flex-col overflow-hidden">
+          <div className="col-span-3 nl-glass rounded-2xl flex flex-col overflow-hidden">
             {selected ? (
               <>
-                <div className="p-4 border-b border-[#1E2433] flex items-center justify-between gap-3">
+                <div className="p-4 border-b border-white/10 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <Mail className="w-4 h-4 text-[#0066FF]" />
                     <span className="text-sm font-semibold text-white">{selected.name}</span>
@@ -264,7 +264,7 @@ export default function EmailTemplatesPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <button onClick={() => setMode(m => m === 'edit' ? 'preview' : 'edit')}
-                      className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white border border-[#1E2433] px-2.5 py-1.5 rounded-lg transition-colors">
+                      className="flex items-center gap-1.5 text-xs nl-button nl-button--ghost">
                       {mode === 'edit' ? <><Eye className="w-3.5 h-3.5" /> Preview</> : <><Code className="w-3.5 h-3.5" /> Edit</>}
                     </button>
                     <label className="flex items-center gap-1.5 cursor-pointer">
@@ -273,7 +273,7 @@ export default function EmailTemplatesPage() {
                         className="accent-[#0066FF]" />
                       <span className="text-xs text-gray-300">Active</span>
                     </label>
-                    <button onClick={save} disabled={saving} className="flex items-center gap-1.5 bg-[#0066FF] hover:bg-[#0818CC] text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-50">
+                    <button onClick={save} disabled={saving} className="flex items-center gap-1.5 text-xs disabled:opacity-50 naka-button-primary">
                       {saved ? <><Check className="w-3.5 h-3.5" /> Saved</> : <><Save className="w-3.5 h-3.5" /> {saving ? 'Saving...' : 'Save'}</>}
                     </button>
                   </div>
@@ -284,12 +284,12 @@ export default function EmailTemplatesPage() {
                       <div>
                         <label className="text-[10px] text-gray-500 uppercase font-medium block mb-1">Subject</label>
                         <input value={selected.subject} onChange={e => setSelected(s => s ? { ...s, subject: e.target.value } : s)}
-                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40" />
+                          className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors" />
                       </div>
                       <div>
                         <label className="text-[10px] text-gray-500 uppercase font-medium block mb-1">Body</label>
                         <textarea value={selected.body} onChange={e => setSelected(s => s ? { ...s, body: e.target.value } : s)} rows={10}
-                          className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40 resize-none" />
+                          className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white font-mono placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors resize-none" />
                       </div>
                       <div>
                         <label className="text-[10px] text-gray-500 uppercase font-medium block mb-1.5">Variables detected</label>
@@ -302,11 +302,11 @@ export default function EmailTemplatesPage() {
                     </>
                   ) : (
                     <>
-                      <div className="bg-[#0A0E1A] rounded-lg p-3">
+                      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3">
                         <div className="text-[10px] text-gray-500 mb-1">Subject</div>
                         <div className="text-sm text-white" dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.subject.replace(/\{\{(\w+)\}\}/g, (_, v) => `<span class="bg-yellow-400/20 text-yellow-300 px-1 rounded">[${v}]</span>`)) }} />
                       </div>
-                      <div className="bg-[#0A0E1A] rounded-lg p-3">
+                      <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3">
                         <div className="text-[10px] text-gray-500 mb-2">Body preview</div>
                         <div className="text-xs text-gray-300 whitespace-pre-wrap leading-relaxed" dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewBody) }} />
                       </div>

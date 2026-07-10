@@ -68,7 +68,7 @@ export default function AdminCultPage() {
       </p>
 
       <div className="grid sm:grid-cols-2 gap-4 mb-6">
-        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+        <div className="nl-glass rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-1">
             <ShieldCheck className="w-4 h-4 text-[#8FA3FF]" />
             <span className="text-xs uppercase tracking-wider text-slate-400 font-semibold">
@@ -85,7 +85,7 @@ export default function AdminCultPage() {
           </p>
         </div>
 
-        <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+        <div className="nl-glass rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-1">
             <Users className="w-4 h-4 text-[#8FA3FF]" />
             <span className="text-xs uppercase tracking-wider text-slate-400 font-semibold">
@@ -105,7 +105,7 @@ export default function AdminCultPage() {
 
       <Link
         href="/admin/users?tier=naka_cult"
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#0066FF] to-[#7C3AED] text-sm font-bold text-white"
+        className="inline-flex items-center gap-2 naka-button-primary"
       >
         View cult members
         <ArrowRight className="w-4 h-4" />

@@ -186,6 +186,43 @@ export async function sendAlertDigestEmail(
   return sendEmail(to, `Naka digest — ${alerts.length} alert${alerts.length === 1 ? '' : 's'}`, html);
 }
 
+export async function sendNewsDigestEmail(
+  to: string,
+  firstName: string | null,
+  items: Array<{ title: string; url: string; source: string; summary?: string }>,
+): Promise<boolean> {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://nakalabs.xyz';
+  const escape = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const top = items.slice(0, 6);
+  const rows = top
+    .map((it) => {
+      const title = escape(it.title);
+      const src = escape(it.source);
+      const summary = it.summary ? escape(it.summary.slice(0, 140)) : '';
+      const url = escape(it.url);
+      return `<tr><td style="padding:12px 0;border-bottom:1px solid #1e293b;">
+        <a href="${url}" style="color:#fff;text-decoration:none;font-weight:600;font-size:14px;line-height:1.4;">${title}</a>
+        ${summary ? `<br/><span style="color:#94a3b8;font-size:12px;line-height:1.5;">${summary}</span>` : ''}
+        <br/><span style="color:#64748b;font-size:11px;">${src}</span>
+      </td></tr>`;
+    })
+    .join('');
+  const hi = firstName ? `Hi ${escape(firstName)},` : 'Hi,';
+  const body = `
+    <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#cbd5e1;">${hi}</p>
+    <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#cbd5e1;">Today's top crypto headlines from across the wire.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">${rows}</table>
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr><td align="center">
+        <a href="${appUrl}/dashboard" style="display:inline-block;padding:12px 32px;background-color:#0066FF;color:#fff;text-decoration:none;font-size:14px;font-weight:600;border-radius:10px;">Open the News feed</a>
+      </td></tr>
+    </table>
+    <p style="margin:24px 0 0;font-size:11px;color:#64748b;">Turn off news alerts anytime in your <a href="${appUrl}/dashboard/settings" style="color:#4D6BFF;text-decoration:none;">notification settings</a>.</p>`;
+  const html = brandedEmailWrapper('Crypto news digest', 'Top headlines', body);
+  return sendEmail(to, `Naka Labs — ${top.length} top crypto headline${top.length === 1 ? '' : 's'}`, html);
+}
+
 export async function sendPasswordResetEmail(
   to: string,
   resetUrl: string,

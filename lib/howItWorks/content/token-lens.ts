@@ -6,10 +6,10 @@ export const tokenLensHowItWorks: HowItWorksContent = {
   howItWorks: [
     'You enter a token by its symbol or its contract address, and the lens scans the whale-activity pipeline for every tracked whale that traded that token inside the window you choose.',
     'For each whale it totals how much they bought and sold, works out their net position, counts their trades, and records when they first entered and last acted, so you can tell a fresh entry from a wallet that has been in for weeks.',
-    'Each whale is enriched with its reputation from the directory — label, archetype, and win rate — so you are not just seeing that a wallet is in the token, but how good that wallet actually is.',
+    'Each whale is enriched with its reputation from the directory (label, archetype, and win rate) so you are not just seeing that a wallet is in the token, but how good that wallet actually is.',
     'A summary at the top rolls it all up: how many whales are involved, the combined net flow, and how many are accumulating versus distributing, which is the fastest read on whether smart money is entering or exiting.',
     'The list is ranked by the size of each whale’s net position, so the wallets moving the most conviction sit at the top, and you can switch the window between twenty-four hours, seven days, and thirty days.',
-    'Everything is real on-chain data — only whales that genuinely traded the token appear, with honest blanks where a reputation value is unknown.',
+    'Everything is real on-chain data: only whales that genuinely traded the token appear, with honest blanks where a reputation value is unknown.',
   ],
   howToUse: [
     'Open Token Whale Lens from the Whale Tracker tab bar, or arrive here by drilling in from Smart Money Flows or the Convergence Radar.',
@@ -28,7 +28,7 @@ export const tokenLensHowItWorks: HowItWorksContent = {
     {
       date: 'July 2026',
       tag: 'NEW',
-      text: 'Token Whale Lens launched: scan any token to see which tracked whales hold it, their net position and entry timing, with an accumulating-versus-distributing summary — all from real whale activity.',
+      text: 'Token Whale Lens launched: scan any token to see which tracked whales hold it, their net position and entry timing, with an accumulating-versus-distributing summary, all from real whale activity.',
     },
   ],
 };

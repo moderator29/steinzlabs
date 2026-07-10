@@ -22,7 +22,7 @@ export default function OnboardingAnalyticsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 max-w-5xl mx-auto">
+    <div className="min-h-screen nl-aurora-bg p-4 sm:p-6 max-w-5xl mx-auto">
       <h1 className="text-xl sm:text-2xl font-bold text-white mb-1">Onboarding analytics</h1>
       <p className="text-[12px] text-slate-400 mb-5">Funnel over the last 30 days. Variants A/B compared side by side.</p>
 
@@ -35,10 +35,10 @@ export default function OnboardingAnalyticsPage() {
             <VariantCard label="Variant B" v={data.variants.b} />
           </div>
 
-          <div className="rounded-2xl nl-glass overflow-hidden">
+          <div className="rounded-2xl nl-glass overflow-hidden overflow-x-auto">
             <table className="w-full text-[12px]">
               <thead>
-                <tr className="text-start text-slate-400 uppercase text-[10px] bg-white/[0.03]">
+                <tr className="text-start text-slate-400 uppercase text-[10px] border-b border-white/10">
                   <th className="px-3 py-2">Card</th>
                   <th className="px-3 py-2 text-end">Viewed</th>
                   <th className="px-3 py-2 text-end">Next</th>
@@ -52,7 +52,7 @@ export default function OnboardingAnalyticsPage() {
                 {data.cards.map((c) => {
                   const dropoff = c.viewed > 0 ? Math.round((1 - c.next / c.viewed) * 100) : 0;
                   return (
-                    <tr key={c.card_index} className="border-t border-white/[0.05]">
+                    <tr key={c.card_index} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors">
                       <td className="px-3 py-2 text-white font-semibold">{c.card_index}</td>
                       <td className="px-3 py-2 text-end tabular-nums">{c.viewed}</td>
                       <td className="px-3 py-2 text-end tabular-nums">{c.next}</td>

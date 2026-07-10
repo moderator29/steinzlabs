@@ -93,7 +93,7 @@ export default function ClusterGraph({
         linkDirectionalParticles={0}
         nodeRelSize={4}
         nodeVal={(n: any) => 1 + Math.min(6, n.degree)}
-        nodeLabel={(n: any) => `${n.label} — degree ${n.degree}${n.isHub ? ' (HUB)' : ''}`}
+        nodeLabel={(n: any) => `${n.label}: degree ${n.degree}${n.isHub ? ' (HUB)' : ''}`}
         nodeCanvasObject={(node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
           const r = 3 + Math.min(8, node.degree) * 0.9;
           // Fill

@@ -158,28 +158,28 @@ export default function FeaturedTokensPage() {
           <p className="text-xs text-gray-500 mt-0.5">Curated tokens shown in the featured section and discovery feed</p>
         </div>
         <button onClick={() => setShowForm(s => !s)}
-          className="flex items-center gap-2 text-xs bg-[#0066FF] hover:bg-[#0818CC] text-white px-3 py-2 rounded-lg font-medium transition-colors">
+          className="naka-button-primary flex items-center gap-2 text-xs">
           <Plus className="w-3.5 h-3.5" /> Add Token
         </button>
       </div>
 
       {showForm && (
-        <div className="bg-[#141824] border border-[#1E2433] rounded-xl p-4 mb-4 space-y-3">
+        <div className="nl-glass rounded-2xl p-4 mb-4 space-y-3">
           <h3 className="text-sm font-semibold text-white">New Featured Token</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input value={form.symbol} onChange={e => setForm(f => ({ ...f, symbol: e.target.value.toUpperCase() }))} placeholder="Symbol (e.g. PEPE)"
-              className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40" />
+              className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white font-mono placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors" />
             <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Token name"
-              className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40" />
+              className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors" />
             <input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Contract address"
-              className="bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2.5 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40" />
+              className="bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white font-mono placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors" />
             <div className="flex gap-2">
               <select value={form.chain} onChange={e => setForm(f => ({ ...f, chain: e.target.value }))}
-                className="flex-1 bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
+                className="flex-1 bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors">
                 {CHAINS.map(c => <option key={c}>{c}</option>)}
               </select>
               <select value={form.badge} onChange={e => setForm(f => ({ ...f, badge: e.target.value }))}
-                className="flex-1 bg-[#0A0E1A] border border-[#1E2433] rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
+                className="flex-1 bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors">
                 {BADGES.map(b => <option key={b} value={b}>{b || 'No badge'}</option>)}
               </select>
             </div>
@@ -190,21 +190,21 @@ export default function FeaturedTokensPage() {
               <span className="text-xs text-gray-300">Active (visible to users)</span>
             </label>
             <div className="flex-1" />
-            <button onClick={() => setShowForm(false)} className="text-xs text-gray-400 hover:text-white px-3 py-2">Cancel</button>
+            <button onClick={() => setShowForm(false)} className="nl-button nl-button--ghost text-xs">Cancel</button>
             <button onClick={add} disabled={saving}
-              className="flex items-center gap-2 bg-[#0066FF] hover:bg-[#0818CC] disabled:opacity-50 text-white text-xs px-4 py-2 rounded-lg font-medium transition-colors">
+              className="naka-button-primary flex items-center gap-2 text-xs disabled:opacity-50">
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Star className="w-3.5 h-3.5" />} Add Featured
             </button>
           </div>
         </div>
       )}
 
-      <div className="bg-[#141824] border border-[#1E2433] rounded-xl overflow-hidden overflow-x-auto">
-        <div className="p-3 border-b border-[#1E2433]">
+      <div className="nl-glass rounded-2xl overflow-hidden overflow-x-auto">
+        <div className="p-3 border-b border-white/10">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search tokens..."
-              className="w-full bg-[#0A0E1A] border border-[#1E2433] rounded-lg ps-9 pe-4 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#0066FF]/40" />
+              className="w-full bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl ps-9 pe-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#0066FF]/50 transition-colors" />
           </div>
         </div>
 
@@ -220,14 +220,14 @@ export default function FeaturedTokensPage() {
           </div>
         ) : (
           <table className="w-full text-xs min-w-[700px]">
-            <thead className="border-b border-[#1E2433]">
+            <thead className="border-b border-white/10">
               <tr>{['Order', 'Token', 'Chain', 'Address', 'Badge', 'Status', 'Actions'].map(h => (
-                <th key={h} className="px-4 py-2.5 text-start text-gray-500 font-medium">{h}</th>
+                <th key={h} className="px-4 py-2.5 text-start text-gray-400 font-medium">{h}</th>
               ))}</tr>
             </thead>
             <tbody>
               {filtered.map(t => (
-                <tr key={t.id} className="border-b border-[#1E2433] last:border-0 hover:bg-[#1E2433]/30">
+                <tr key={t.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.03] transition-colors">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
                       <GripVertical className="w-3.5 h-3.5 text-gray-600 cursor-grab" />

@@ -104,7 +104,7 @@ export default function AlertsCenterPage() {
 
       <div className="text-center mb-4">
         <h1 className="text-2xl font-bold">All your alerts, one place</h1>
-        <p className="text-slate-400 text-sm mt-1">Every alert you’ve set, across the whole platform — see, pause, or remove them.</p>
+        <p className="text-slate-400 text-sm mt-1">Every alert you’ve set, across the whole platform: see, pause, or remove them.</p>
       </div>
 
       {counts && (

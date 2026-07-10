@@ -9,7 +9,7 @@ We will acknowledge receipt within 72 hours and aim to provide a substantive upd
 - A description of the vulnerability and the affected component
 - Steps to reproduce, ideally with a minimal proof of concept
 - The impact you believe an attacker could achieve
-- Your assessment of severity (Critical / High / Medium / Low) — we will calibrate
+- Your assessment of severity (Critical / High / Medium / Low), which we will calibrate
 - Whether you would like credit in the public advisory
 
 ## Scope
@@ -24,10 +24,10 @@ In scope:
 - Smart contracts and on-chain integrations
 
 Out of scope:
-- Third-party services we depend on (CoinGecko, Alchemy, Helius, Anthropic, 0x, Jupiter, GoPlus, Supabase) — please report directly to those vendors
+- Third-party services we depend on (CoinGecko, Alchemy, Helius, Anthropic, 0x, Jupiter, GoPlus, Supabase): please report directly to those vendors
 - Social engineering of staff
 - Physical attacks
-- Denial of service via traffic flooding (we will accept reports of logic-level DoS — for example, a single request that consumes disproportionate resources)
+- Denial of service via traffic flooding (we will accept reports of logic-level DoS, for example, a single request that consumes disproportionate resources)
 - Issues that require an already-compromised user device or browser session
 - Theoretical risks without a demonstrable exploit
 

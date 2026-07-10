@@ -69,7 +69,7 @@ export function DcaBotsPanel() {
     } else {
       // A bot that fails to cancel keeps buying on schedule with the
       // user's money — make the failure explicit.
-      toast.error(await failReason(res, "Couldn't cancel DCA bot — it may still run"));
+      toast.error(await failReason(res, "Couldn't cancel DCA bot. It may still run"));
     }
   }
 

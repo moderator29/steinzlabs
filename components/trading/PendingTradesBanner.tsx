@@ -264,7 +264,7 @@ export function PendingTradesBanner() {
                   {(honeypot || trustWarn) && (
                     <div className="mt-1 text-xs text-amber-400">
                       {honeypot
-                        ? "Honeypot flag present — review before confirming."
+                        ? "Honeypot flag present. Review before confirming."
                         : `Low trust score ${trade.security_trust_score}/100.`}
                     </div>
                   )}

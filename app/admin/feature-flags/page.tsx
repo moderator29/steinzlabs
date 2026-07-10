@@ -63,7 +63,7 @@ export default function FeatureFlagsPage() {
   };
 
   return (
-    <div className="min-h-screen text-white p-6">
+    <div className="min-h-screen nl-aurora-bg text-white p-6">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-xl font-bold mb-1">Feature Flags</h1>
         <p className="text-sm text-slate-400 mb-6">Toggleable surfaces + rollout %. Every change is logged to admin_audit_log.</p>
@@ -75,7 +75,7 @@ export default function FeatureFlagsPage() {
         ) : (
           <ul className="space-y-2">
             {flags.map((f) => (
-              <li key={f.key} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+              <li key={f.key} className="nl-glass rounded-2xl p-4">
                 <div className="flex items-start gap-3">
                   <button
                     type="button"
@@ -100,7 +100,7 @@ export default function FeatureFlagsPage() {
                           max={100}
                           value={f.rollout_pct}
                           onChange={(e) => void setRollout(f.key, Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
-                          className="w-14 nl-glass rounded px-2 py-0.5 text-slate-200"
+                          className="w-14 bg-[#0A0E1A]/60 border border-white/[0.08] rounded-xl px-2 py-0.5 text-white focus:outline-none focus:border-[#0066FF]/50 transition-colors"
                         />
                         %
                       </label>

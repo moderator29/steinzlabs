@@ -148,12 +148,12 @@ function inferArchetype(
 }
 
 const ARCHETYPE_FALLBACK_NAMES: Record<Archetype, { name: string; narrative: string }> = {
-  alpha_hive:        { name: 'Alpha Hive',          narrative: 'Coordinated smart-money wallets acting in concert — they frequently trade the same tokens within minutes.' },
+  alpha_hive:        { name: 'Alpha Hive',          narrative: 'Coordinated smart-money wallets acting in concert; they frequently trade the same tokens within minutes.' },
   sybil_farm:        { name: 'Sybil Farm',          narrative: 'Mass-funded uniform wallets. Almost certainly airdrop-farming or sybil-attacking a protocol.' },
   insider_ring:      { name: 'Insider Ring',        narrative: 'Tight pre-launch cluster with shared funding and coordinated accumulation before public awareness.' },
   smart_money_pack:  { name: 'Smart Money Pack',    narrative: 'Independent wallets with a high overlap of profitable trades.' },
-  bot_swarm:         { name: 'Bot Swarm',           narrative: 'Automated wallets firing coordinated transactions — likely MEV, sniping, or arbitrage.' },
-  institutional:     { name: 'Institutional Ring',  narrative: 'High-value internal transfers — exchange or fund operational wallets.' },
+  bot_swarm:         { name: 'Bot Swarm',           narrative: 'Automated wallets firing coordinated transactions, likely MEV, sniping, or arbitrage.' },
+  institutional:     { name: 'Institutional Ring',  narrative: 'High-value internal transfers: exchange or fund operational wallets.' },
   whale_syndicate:   { name: 'Whale Syndicate',     narrative: 'Large-balance wallets coordinating big moves. Market-moving collective.' },
   unknown:           { name: 'Unnamed Cluster',     narrative: 'Cluster detected; archetype not yet determined.' },
 };

@@ -1,8 +1,6 @@
 'use client';
 
-// Naka Labs brand icons — broad swap. ArrowDownUp, Zap stay on lucide (not yet in brand).
-import { ChevronDown, Settings, Search, X, AlertTriangle, RefreshCw, ExternalLink, Info, Wallet, CheckCircle } from '@/components/icons/brand';
-import { ArrowDownUp, Zap, Loader2 } from 'lucide-react';
+import { ChevronDown, Settings, Search, X, AlertTriangle, RefreshCw, ExternalLink, Info, Wallet, CheckCircle, ArrowDownUp, Zap, Loader2 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -28,6 +26,8 @@ import { RouteComparison } from '@/components/swap/RouteComparison';
 import SwapDuneStrip from '@/components/trading/SwapDuneStrip';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { swapHowItWorks } from '@/lib/howItWorks/content/swap';
+import { CHAIN_META } from '@/lib/chains/chainMeta';
+import { isDexRoutingSupported } from '@/lib/chains/evmRpc';
 
 // §12 — Safari private mode and some locked-down enterprise browsers
 // throw SecurityError on every localStorage read. The swap signing path
@@ -75,6 +75,11 @@ const CHAINS = [
   { id: 'polygon', label: 'Polygon', symbol: 'MATIC', color: '#8247E5', dex: 'QuickSwap' },
   { id: 'avalanche', label: 'AVAX', symbol: 'AVAX', color: '#E84142', dex: 'TraderJoe' },
   { id: 'arbitrum', label: 'Arbitrum', symbol: 'ETH', color: '#28A0F0', dex: 'Camelot' },
+  // Robinhood Chain — Arbitrum-Orbit L2, native gas ETH. Live for holding /
+  // receiving / native ETH send; DEX routing is not wired yet, so the swap
+  // surface degrades honestly (see isDexRoutingSupported gate below) instead
+  // of attempting a quote that would fail.
+  { id: 'robinhood', label: CHAIN_META.robinhood.label, symbol: 'ETH', color: CHAIN_META.robinhood.color, dex: 'Native ETH' },
 ];
 
 interface TokenInfo {
@@ -455,7 +460,7 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
             </>
           )}
           {filtered.length === 0 && importedForChain.length === 0 && remoteFiltered.length === 0 && !looksLikeAddress && !remoteSearching ? (
-            <p className="text-center text-sm text-gray-500 py-10">No tokens found — try pasting the contract address</p>
+            <p className="text-center text-sm text-gray-500 py-10">No tokens found. Try pasting the contract address</p>
           ) : (
             filtered.map(t => (
               <button
@@ -1025,7 +1030,7 @@ export default function SwapPage() {
           setQuoteData(null);
           setQuoteError(
             data?.code === 'UNRESOLVED_TOKEN'
-              ? `This pair isn't tradeable on ${c} — try the token's contract address.`
+              ? `This pair isn't tradeable on ${c}. Try the token's contract address.`
               : data?.error || 'No route found for this pair. Try a different amount or network.'
           );
         }
@@ -1033,7 +1038,7 @@ export default function SwapPage() {
         console.error('[Swap] Price fetch failed:', err);
         setToAmount('');
         setQuoteData(null);
-        setQuoteError('Quote service unreachable — check your connection and retry.');
+        setQuoteError('Quote service unreachable. Check your connection and retry.');
       }
       setFetchingQuote(false);
     }, 400);
@@ -1269,7 +1274,7 @@ export default function SwapPage() {
           // Solana keypair + versioned-tx flow (Phantom path above).
           throw new Error(
             chain === 'solana'
-              ? 'Swapping on Solana with the built-in Naka wallet isn’t supported yet — connect Phantom for Solana swaps.'
+              ? 'Swapping on Solana with the built-in Naka wallet isn’t supported yet. Connect Phantom for Solana swaps.'
               : 'The router did not return a transaction to sign. Refresh the quote and try again.',
           );
         }
@@ -1319,7 +1324,7 @@ export default function SwapPage() {
         try {
           pk = await decryptPrivateKey(storedWallet.encryptedKey, pwd);
         } catch {
-          throw new Error('Failed to decrypt wallet key — wrong password, or this wallet predates AES-256-GCM (re-import the seed phrase from the Wallet page).');
+          throw new Error('Failed to decrypt wallet key: wrong password, or this wallet predates AES-256-GCM (re-import the seed phrase from the Wallet page).');
         }
         const chainRpcs: Record<string, string> = {
           ethereum: 'https://eth.llamarpc.com',
@@ -1423,6 +1428,11 @@ export default function SwapPage() {
   const priceImpact = quoteData?.priceImpact ?? null;
   const hasQuote = fromAmount && toAmount && parseFloat(fromAmount) > 0;
   const rate = hasQuote ? (parseFloat(toAmount) / parseFloat(fromAmount)) : 0;
+  // Honest capability gate — some chains are live for native ETH send but have
+  // no DEX aggregator coverage yet (Robinhood Chain). When routing isn't
+  // supported we don't quote or render a broken swap; we show the degraded
+  // panel below and point the user at the wallet's native send/receive.
+  const dexSupported = isDexRoutingSupported(chain);
   // Honest route attribution — the venue is whatever aggregator actually
   // quoted (0x on EVM, Jupiter on Solana), not a hardcoded per-chain DEX name.
   const routeLabel = quoteData?.provider === 'jupiter' ? 'Jupiter' : quoteData?.provider === '0x' ? '0x' : chain === 'solana' ? 'Jupiter' : '0x';
@@ -1582,11 +1592,46 @@ export default function SwapPage() {
                 if (!c) return;
                 setChain(c.id);
                 setFromToken(c.symbol);
+                // A chain with no DEX routing (Robinhood Chain) has nothing to
+                // quote — clear the trade fields and let the degraded panel
+                // explain the honest state rather than firing a doomed request.
+                if (!isDexRoutingSupported(c.id)) {
+                  setToAmount('');
+                  setQuoteData(null);
+                  setQuoteError('');
+                  return;
+                }
                 simulateQuote(fromAmount, c.symbol, toToken, c.id);
               }}
             />
           </div>
 
+          {!dexSupported ? (
+            <div
+              className="nl-glass rounded-2xl p-6 text-center shadow-2xl"
+              style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 26px rgba(0,102,255,.18), 0 18px 50px rgba(0,0,0,.45)' }}
+            >
+              <div
+                className="w-12 h-12 mx-auto rounded-full flex items-center justify-center mb-4"
+                style={{ backgroundColor: CHAIN_META.robinhood.color + '1A', border: `1px solid ${CHAIN_META.robinhood.color}55` }}
+              >
+                <Info className="w-5 h-5" style={{ color: CHAIN_META.robinhood.color }} aria-hidden="true" />
+              </div>
+              <h3 className="text-base font-bold text-white mb-2">
+                DEX routing on {CHAIN_META.robinhood.label} is coming
+              </h3>
+              <p className="text-sm text-gray-400 leading-relaxed max-w-sm mx-auto">
+                You can hold, receive, and send ETH on {CHAIN_META.robinhood.label} today from your wallet.
+              </p>
+              <button
+                onClick={() => router.push('/dashboard/wallet-page')}
+                className="nl-button mt-5 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold"
+              >
+                <Wallet className="w-4 h-4" aria-hidden="true" /> Open Wallet
+              </button>
+            </div>
+          ) : (
+          <>
           <SettingsPanel
             slippage={slippage}
             setSlippage={setSlippage}
@@ -1770,10 +1815,10 @@ export default function SwapPage() {
                   <span className="text-xs font-medium text-white">Gasless Mode</span>
                   <p className="text-[10px] text-gray-500">
                     {gaslessEnabled && isGaslessAvailable
-                      ? 'No gas fees — cost absorbed into trade'
+                      ? 'No gas fees: cost absorbed into trade'
                       : !isGaslessAvailable && gaslessEnabled
                         ? `Not available for native tokens. Standard swap.`
-                        : 'Standard swap — you pay network gas'}
+                        : 'Standard swap: you pay network gas'}
                   </p>
                 </div>
               </div>
@@ -1977,6 +2022,8 @@ export default function SwapPage() {
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: activeChain.color }} />
             <span className="text-[11px]">Routed via {routeLabel} aggregation</span>
           </div>
+          </>
+          )}
         </div>
       </div>
 

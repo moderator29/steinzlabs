@@ -1,6 +1,8 @@
 import 'server-only';
 import { Alchemy, Network, TokenMetadataResponse, AssetTransfersCategory, TokenBalanceType } from 'alchemy-sdk';
 import { cache, cacheKey, TTL, withCache } from '../api/cache-manager';
+import { normalizeChainId } from '../chains/chainMeta';
+import { getEvmRpcUrl } from '../chains/evmRpc';
 
 /**
  * Alchemy EVM Chain Data Service
@@ -25,21 +27,48 @@ const NETWORK_MAP: Record<string, Network> = {
   ...(Network.BNB_MAINNET ? { bsc: Network.BNB_MAINNET, bnb: Network.BNB_MAINNET } : {}),
 };
 
+// EVM chains Alchemy serves over HTTP but the alchemy-sdk `Network` enum has
+// no entry for yet (e.g. Robinhood Chain). We reach them via the SDK's `url`
+// override so eth_* + enhanced APIs hit the RIGHT chain instead of silently
+// falling back to Ethereum mainnet. Values are canonical chain ids.
+const SDK_URL_OVERRIDE_CHAINS = new Set<string>(['robinhood']);
+
 /** Returns true if the chain name is supported by Alchemy. */
 function isAlchemySupported(chain: string): boolean {
   return chain.toLowerCase() in NETWORK_MAP;
 }
 
-// Cache Alchemy client instances per network
+// Cache Alchemy client instances per network / url-override chain
 const clients = new Map<string, Alchemy>();
 
 function getAlchemy(chain: string): Alchemy {
-  const network = NETWORK_MAP[chain.toLowerCase()] ?? Network.ETH_MAINNET;
-  const key = network;
-  if (!clients.has(key)) {
-    clients.set(key, new Alchemy({ apiKey: API_KEY, network }));
+  const c = chain.toLowerCase();
+  const network = NETWORK_MAP[c];
+  if (network) {
+    if (!clients.has(network)) {
+      clients.set(network, new Alchemy({ apiKey: API_KEY, network }));
+    }
+    return clients.get(network)!;
   }
-  return clients.get(key)!;
+
+  // Chain not in the SDK enum but reachable via a known endpoint — point the
+  // SDK at it with a `url` override (native balance works even with no key via
+  // the public RPC fallback; enhanced APIs need the Alchemy endpoint).
+  const canonical = normalizeChainId(c);
+  if (SDK_URL_OVERRIDE_CHAINS.has(canonical)) {
+    const url = getEvmRpcUrl(canonical);
+    const key = `url:${canonical}`;
+    if (url && !clients.has(key)) {
+      clients.set(key, new Alchemy({ apiKey: API_KEY, network: Network.ETH_MAINNET, url }));
+    }
+    if (clients.has(key)) return clients.get(key)!;
+  }
+
+  // Unknown chain — preserve legacy behavior (Ethereum mainnet default).
+  if (!clients.has(Network.ETH_MAINNET)) {
+    clients.set(Network.ETH_MAINNET, new Alchemy({ apiKey: API_KEY, network: Network.ETH_MAINNET }));
+  }
+  return clients.get(Network.ETH_MAINNET)!;
 }
 
 /**
@@ -783,6 +812,8 @@ const ALCHEMY_HTTP: Record<string, string | undefined> = {
   bnb: 'bnb-mainnet',
   avalanche: 'avax-mainnet',
   avax: 'avax-mainnet',
+  // Robinhood Chain (Arbitrum-Orbit L2, native ETH, chain id 4663).
+  robinhood: 'robinhood-mainnet',
 };
 
 /**
