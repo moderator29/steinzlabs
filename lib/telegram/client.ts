@@ -149,6 +149,63 @@ export async function sendTelegramTyping(chatId: number | string): Promise<void>
   } catch { /* best effort */ }
 }
 
+// Command list shown in Telegram's native "Menu" button (bottom-left of the
+// chat) and the "/" autocomplete. Single source of truth, registered via
+// setMyCommands so users always have a one-tap command deck.
+const BOT_COMMANDS: { command: string; description: string }[] = [
+  { command: "start", description: "Open the Naka Labs command deck" },
+  { command: "menu", description: "Show the button menu" },
+  { command: "price", description: "Live price card, e.g. /price BTC" },
+  { command: "chart", description: "Price chart, e.g. /chart ETH 7" },
+  { command: "trending", description: "Top trending coins" },
+  { command: "gainers", description: "Top 24h gainers" },
+  { command: "feargreed", description: "Crypto Fear and Greed index" },
+  { command: "whales", description: "Top whales by 30d PnL" },
+  { command: "info", description: "Full token info, e.g. /info SOL" },
+  { command: "security", description: "Rug check a contract address" },
+  { command: "alerts", description: "Your active price alerts" },
+  { command: "portfolio", description: "Your connected wallets" },
+  { command: "help", description: "All commands" },
+];
+
+/** Register the slash-command menu (Telegram "Menu" button + autocomplete). */
+export async function setTelegramCommands(): Promise<boolean> {
+  const t = token();
+  if (!t) return false;
+  try {
+    const res = await fetchWithRetry(`${API_BASE}/bot${t}/setMyCommands`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ commands: BOT_COMMANDS }),
+      source: "telegram.setMyCommands",
+      timeoutMs: 5000,
+      retries: 1,
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** Make the chat "Menu" button open the native command list. */
+export async function setTelegramMenuButton(): Promise<boolean> {
+  const t = token();
+  if (!t) return false;
+  try {
+    const res = await fetchWithRetry(`${API_BASE}/bot${t}/setChatMenuButton`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ menu_button: { type: "commands" } }),
+      source: "telegram.setChatMenuButton",
+      timeoutMs: 5000,
+      retries: 1,
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function setTelegramWebhook(url: string, secret: string): Promise<boolean> {
   const t = token();
   if (!t) return false;

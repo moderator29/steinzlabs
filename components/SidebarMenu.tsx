@@ -45,10 +45,11 @@ const NAV_CATEGORIES: NavCategory[] = [
     title: 'Home',
     items: [
       { icon: LayoutGrid, label: 'Overview', path: '/dashboard' },
-      { icon: Rss, label: 'Feed', path: '/dashboard?subtab=wire' },
-      { icon: Radio, label: 'Context', path: '/dashboard?subtab=context' },
+      { icon: Rss, label: 'The Wire', path: '/dashboard?subtab=wire' },
+      { icon: Radio, label: 'Context Feed', path: '/dashboard?subtab=context' },
       { icon: Newspaper, label: 'News', path: '/dashboard?subtab=news' },
-      { icon: LineChart, label: 'Markets', path: '/dashboard?subtab=markets' },
+      { icon: CandlestickChart, label: 'Stocks', path: '/dashboard?subtab=stocks' },
+      { icon: LineChart, label: 'Market', path: '/dashboard?subtab=markets' },
       { icon: Sparkles, label: 'Prediction', path: '/dashboard?subtab=prediction' },
     ],
   },
@@ -228,7 +229,7 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
             className="flex items-center gap-3 rounded-xl px-1 py-1 -mx-1 transition-opacity hover:opacity-80"
           >
             <SteinzLogo size={34} animated={false} />
-            <span className="font-heading text-base font-bold tracking-tight text-white">NAKA LABS</span>
+            <span className="font-heading text-lg font-bold tracking-tight text-white [text-shadow:0_0_18px_rgba(0,102,255,0.45)]">NAKA LABS</span>
           </button>
           <div className="flex items-center gap-2">
             <button
@@ -243,10 +244,16 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
         </header>
 
         {/* ── Grouped nav ───────────────────────────────────────────────── */}
-        <nav className="mt-8 grid grid-cols-1 gap-x-10 gap-y-7 sm:grid-cols-2">
-          {groups.map((category) => (
-            <section key={category.title}>
-              <h3 className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-500">
+        {/* Each group sits in its own brand-glass panel with a soft neon ring,
+            and fades up in a gentle stagger so the menu "breathes" open. */}
+        <nav className="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {groups.map((category, gi) => (
+            <section
+              key={category.title}
+              className="nl-glass rounded-2xl p-2.5 animate-slide-up"
+              style={{ animationDelay: `${Math.min(gi * 45, 320)}ms`, animationFillMode: 'both' }}
+            >
+              <h3 className="mb-1.5 px-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7fa8ff]/70">
                 {category.title}
               </h3>
               <div className="space-y-0.5">
@@ -380,16 +387,18 @@ const SidebarNavItem = memo(function SidebarNavItem({
       onMouseEnter={onHover}
       className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-start text-[13px] transition-all duration-150 ${
         isActive
-          ? 'bg-[#0066FF]/[0.10] font-medium text-white'
-          : 'text-gray-400 hover:bg-white/[0.04] hover:text-white'
+          ? 'bg-[#0066FF]/[0.14] font-medium text-white ring-1 ring-inset ring-[#0066FF]/40 shadow-[0_0_18px_rgba(0,102,255,0.28)]'
+          : 'text-gray-400 hover:bg-white/[0.05] hover:text-white'
       }`}
     >
       {isActive && (
-        <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-[#0066FF]" />
+        <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-[#1E90FF] shadow-[0_0_10px_rgba(30,144,255,0.8)]" />
       )}
       <span
-        className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-colors ${
-          isActive ? 'bg-[#0066FF]/[0.14] text-[#0066FF]' : 'bg-white/[0.03] text-gray-400 group-hover:text-gray-200'
+        className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-all ${
+          isActive
+            ? 'bg-gradient-to-br from-[#1E90FF]/30 to-[#0066FF]/20 text-[#8fb6ff] shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]'
+            : 'bg-white/[0.03] text-gray-400 group-hover:text-gray-200 group-hover:bg-[#0066FF]/[0.08]'
         }`}
       >
         <Icon className="h-4 w-4" />
