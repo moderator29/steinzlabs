@@ -72,11 +72,12 @@ export function HeroSection() {
           Track whales, snipe launches, and trade across every major chain, with a security scan on every move. Non-custodial by design.
         </p>
 
-        {/* CTAs: filled neon primary + outlined secondary */}
-        <div className="mt-9 flex items-center gap-3 flex-wrap justify-center">
+        {/* CTAs: filled neon primary + outlined secondary. Equal-width and
+            stacked on mobile, inline on desktop, so they always line up. */}
+        <div className="mt-9 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full max-w-xs sm:max-w-none sm:w-auto">
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-2 font-bold text-sm text-white rounded-full transition-all hover:scale-[1.03] active:scale-[0.98]"
+            className="inline-flex items-center justify-center gap-2 font-bold text-sm text-white rounded-full transition-all hover:scale-[1.03] active:scale-[0.98] w-full sm:w-auto"
             style={{
               padding: '15px 34px',
               background: 'linear-gradient(135deg,#0066FF,#1E90FF)',
@@ -88,7 +89,7 @@ export function HeroSection() {
 
           <Link
             href="/docs"
-            className="inline-flex items-center gap-2 font-bold text-sm rounded-full transition-all hover:text-white"
+            className="inline-flex items-center justify-center gap-2 font-bold text-sm rounded-full transition-all hover:text-white w-full sm:w-auto"
             style={{
               padding: '15px 34px',
               color: '#B4C0E0',
@@ -103,12 +104,16 @@ export function HeroSection() {
         {/* Live "Ask the chain" prompt: the signature AI surface up front. */}
         <AskChainHero />
 
-        {/* Honest stat chips */}
-        <div className="mt-12 flex items-center flex-wrap justify-center gap-x-8 gap-y-4">
-          {CHIPS.map((c) => (
-            <div key={c.label} className="flex flex-col items-center">
+        {/* Honest stat chips: a tidy 2x2 grid on mobile, a single spec row on
+            desktop with thin dividers. No 3+1 wrap. */}
+        <div className="mt-12 w-full max-w-xs sm:max-w-2xl grid grid-cols-2 sm:grid-cols-4 gap-y-7">
+          {CHIPS.map((c, i) => (
+            <div
+              key={c.label}
+              className={`flex flex-col items-center px-2 ${i > 0 ? 'sm:border-s sm:border-white/10' : ''}`}
+            >
               <span className="text-2xl font-black text-white leading-none tabular-nums">{c.value}</span>
-              <span className="mt-1 text-[11px] uppercase tracking-wider" style={{ color: '#6d85ff' }}>{c.label}</span>
+              <span className="mt-1.5 text-[11px] uppercase tracking-wider text-center" style={{ color: '#6d85ff' }}>{c.label}</span>
             </div>
           ))}
         </div>

@@ -10,7 +10,7 @@ export function CTASection() {
   const reduced = useReducedMotion();
 
   return (
-    <section className="relative py-24 sm:py-28 px-5 overflow-hidden">
+    <section className="relative py-20 sm:py-24 px-5 overflow-hidden">
       {/* Soft pulsing blue glow */}
       <motion.div
         aria-hidden
