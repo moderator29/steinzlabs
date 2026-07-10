@@ -33,6 +33,7 @@ import SteinzLogo from '@/components/ui/SteinzLogo';
 // Dominance / Chains Tracked.
 import { RenderWidgets } from '@/components/dashboard/RenderWidgets';
 import { DailyPulseSummary } from '@/components/dashboard/DailyPulseSummary';
+import { ShippedBanner } from '@/components/dashboard/ShippedBanner';
 import { FirstRunTour } from '@/components/dashboard/FirstRunTour';
 
 const ContextFeed    = lazy(() => import('@/components/ContextFeed'));
@@ -578,6 +579,7 @@ export default function Dashboard() {
         // from the widget registry. The DailyPulseSummary below fills the old
         // empty "what's moving" area with a real 24h whale/watchlist summary.
         <>
+          <ShippedBanner />
           <OverviewHero name={heroName} />
           <DailyPulseSummary />
           <RenderWidgets />

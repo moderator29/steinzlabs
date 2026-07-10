@@ -21,8 +21,6 @@ import { normalizeAddress } from '@/lib/utils/addressNormalize';
  * Non-custodial, no writes. Honest empty states — never fabricated rows.
  */
 
-const BLUE_STRIDE = '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)';
-
 interface SimilarToken {
   address: string;
   symbol: string;
@@ -178,7 +176,7 @@ export function RelatedTokensPanels({ address, chain, symbol }: RelatedTokensPan
 
   if (loading) {
     return (
-      <div className="nl-glass rounded-2xl p-6 flex items-center justify-center gap-2" style={{ boxShadow: BLUE_STRIDE }}>
+      <div className="nl-glass rounded-2xl p-6 flex items-center justify-center gap-2">
         <Loader2 className="w-4 h-4 animate-spin text-[#0066FF]" />
         <span className="text-[11px] text-gray-500">Loading related tokens and wallets...</span>
       </div>
@@ -207,7 +205,7 @@ export function RelatedTokensPanels({ address, chain, symbol }: RelatedTokensPan
   return (
     <>
       {/* ── SIMILAR TOKENS ──────────────────────────────────────────── */}
-      <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: BLUE_STRIDE }}>
+      <div className="nl-glass rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-1">
           <div className="w-7 h-7 bg-[#0066FF]/20 rounded-lg flex items-center justify-center flex-shrink-0">
             <Coins className="w-4 h-4 text-[#0066FF]" />
@@ -269,7 +267,7 @@ export function RelatedTokensPanels({ address, chain, symbol }: RelatedTokensPan
       </div>
 
       {/* ── RELATED WALLETS ─────────────────────────────────────────── */}
-      <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: BLUE_STRIDE }}>
+      <div className="nl-glass rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <div className="w-7 h-7 bg-[#0066FF]/20 rounded-lg flex items-center justify-center flex-shrink-0">
             <Users className="w-4 h-4 text-[#0066FF]" />

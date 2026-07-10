@@ -136,7 +136,7 @@ export default function ApprovalsPage() {
       )}
 
       {data && data.approvals && (
-        <div className="nl-glass rounded-xl px-4 py-3 mb-4 flex items-center gap-6 text-sm" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+        <div className="nl-glass rounded-xl px-4 py-3 mb-4 flex items-center gap-6 text-sm">
           <span>Active: <span className="font-bold">{data.approvals.length}</span></span>
           <span>Unlimited: <span className="font-bold text-amber-300">{data.unlimitedCount ?? 0}</span></span>
           <span>Danger: <span className="font-bold text-red-300">{data.dangerCount ?? 0}</span></span>
@@ -145,7 +145,7 @@ export default function ApprovalsPage() {
 
       <div className="space-y-2">
         {data?.approvals?.map((row) => (
-          <div key={`${row.tokenAddress}-${row.spender}`} className="nl-glass rounded-xl px-4 py-3 flex items-center justify-between gap-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+          <div key={`${row.tokenAddress}-${row.spender}`} className="nl-glass rounded-xl px-4 py-3 flex items-center justify-between gap-3">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold">{row.tokenSymbol || row.tokenName || 'Unknown'}</span>

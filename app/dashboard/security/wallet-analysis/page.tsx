@@ -62,7 +62,7 @@ function WalletAnalysisInner() {
         <h2 className="text-sm font-bold">Wallet Analysis</h2>
       </div>
 
-      <div className="nl-glass rounded-2xl p-4 nl-fade-up nl-fade-up-1" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+      <div className="nl-glass rounded-2xl p-4 nl-fade-up nl-fade-up-1">
         <label htmlFor="wa-input" className="block text-[10px] uppercase tracking-wider text-gray-500 mb-2">
           Wallet or token contract address
         </label>
@@ -108,7 +108,7 @@ function WalletAnalysisInner() {
       {target && (
         <Link
           href={`/dashboard/wallet-intelligence?address=${encodeURIComponent(target)}`}
-          className="nl-glass nl-glass--interactive flex items-center justify-between rounded-2xl p-4 transition-colors" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
+          className="nl-glass nl-glass--interactive flex items-center justify-between rounded-2xl p-4 transition-colors"
         >
           <div>
             <div className="text-sm font-semibold">Full alpha report</div>
@@ -119,7 +119,7 @@ function WalletAnalysisInner() {
       )}
 
       {!target && (
-        <div className="nl-glass rounded-2xl p-8 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+        <div className="nl-glass rounded-2xl p-8 text-center">
           <Wallet className="w-10 h-10 text-gray-700 mx-auto mb-2" aria-hidden="true" />
           <p className="text-xs text-gray-500">Run a Shadow Guardian scan on any wallet or token. Results include honeypot, ownership, taxes, blacklist, and AI verdict.</p>
         </div>

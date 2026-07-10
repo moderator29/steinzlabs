@@ -196,7 +196,7 @@ function RecentTransactions({ transactions, chain, walletAddress }: { transactio
   }
 
   return (
-    <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+    <div className="nl-glass rounded-2xl p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Activity className="w-4 h-4 text-[#7C3AED]" />
@@ -813,7 +813,7 @@ export default function WalletIntelligencePage() {
 
         {activeTab === 'wallet' && (
           <>
-            <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+            <div className="nl-glass rounded-2xl p-4">
               <h2 className="font-bold text-sm mb-2">Analyze Any Wallet</h2>
               <p className="text-[10px] text-gray-500 mb-3">Get AI-powered insights on any wallet address across chains</p>
 
@@ -873,7 +873,7 @@ export default function WalletIntelligencePage() {
 
             {walletData && !loading && (
               <>
-                <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+                <div className="nl-glass rounded-2xl p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center">
@@ -1015,7 +1015,7 @@ export default function WalletIntelligencePage() {
                 )}
 
                 {/* All Holdings */}
-                <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+                <div className="nl-glass rounded-2xl p-4">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-bold text-sm">All Holdings</h3>
                     <span className="text-[10px] text-gray-500">{walletData.holdings.length} tokens</span>
@@ -1087,7 +1087,7 @@ export default function WalletIntelligencePage() {
 
                 {/* ─── Full DNA-Level AI Analysis ─── */}
                 {aiLoading && (
-                  <div className="nl-glass rounded-2xl p-6 flex items-center gap-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+                  <div className="nl-glass rounded-2xl p-6 flex items-center gap-3">
                     <Loader2 className="w-5 h-5 text-[#0066FF] animate-spin flex-shrink-0" />
                     <div>
                       <div className="text-sm font-semibold">Running AI Analysis...</div>
@@ -1099,18 +1099,18 @@ export default function WalletIntelligencePage() {
                   <>
                     {/* Score + Grade */}
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="nl-glass rounded-2xl p-4 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+                      <div className="nl-glass rounded-2xl p-4 text-center">
                         <div className="text-4xl font-black mb-1" style={{ color: scoreColor(aiAnalysis.overallScore) }}>{aiAnalysis.overallScore}</div>
                         <div className="text-[10px] text-gray-500 uppercase tracking-widest">Overall Score</div>
                       </div>
-                      <div className="nl-glass rounded-2xl p-4 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+                      <div className="nl-glass rounded-2xl p-4 text-center">
                         <div className="text-4xl font-black mb-1 text-[#F59E0B]">{aiAnalysis.portfolioGrade}</div>
                         <div className="text-[10px] text-gray-500 uppercase tracking-widest">Portfolio Grade</div>
                       </div>
                     </div>
 
                     {/* Trading Style + Classification */}
-                    <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+                    <div className="nl-glass rounded-2xl p-4">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${walletClassification.color}20` }}>
                           <Brain className="w-5 h-5" style={{ color: walletClassification.color }} />
@@ -1136,7 +1136,7 @@ export default function WalletIntelligencePage() {
 
                     {/* Performance Metrics Bars */}
                     {aiAnalysis.metrics && (
-                      <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+                      <div className="nl-glass rounded-2xl p-4">
                         <div className="flex items-center gap-2 mb-3">
                           <PieChart className="w-4 h-4 text-[#0066FF]" />
                           <h3 className="font-bold text-sm">Performance Metrics</h3>
@@ -1170,7 +1170,7 @@ export default function WalletIntelligencePage() {
 
                     {/* Key Insight */}
                     {aiAnalysis.topInsight && (
-                      <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+                      <div className="nl-glass rounded-2xl p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <Zap className="w-4 h-4 text-[#0066FF]" />
                           <h3 className="font-bold text-sm">Key Insight</h3>
@@ -1215,7 +1215,7 @@ export default function WalletIntelligencePage() {
 
                     {/* AI Recommendations */}
                     {aiAnalysis.recommendations && aiAnalysis.recommendations.length > 0 && (
-                      <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+                      <div className="nl-glass rounded-2xl p-4">
                         <div className="flex items-center gap-2 mb-3">
                           <TrendingUp className="w-4 h-4 text-[#7C3AED]" />
                           <h3 className="font-bold text-sm">AI Recommendations</h3>
@@ -1235,7 +1235,7 @@ export default function WalletIntelligencePage() {
 
                     {/* Risk Assessment */}
                     {aiAnalysis.riskAssessment && (
-                      <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+                      <div className="nl-glass rounded-2xl p-4">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <Shield className="w-4 h-4 text-[#EF4444]" />
@@ -1260,7 +1260,7 @@ export default function WalletIntelligencePage() {
 
                     {/* Activity Pattern */}
                     {aiAnalysis.activityPattern && (
-                      <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+                      <div className="nl-glass rounded-2xl p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <Activity className="w-4 h-4 text-[#0066FF]" />
                           <h3 className="font-bold text-sm">Activity Pattern</h3>
@@ -1272,7 +1272,7 @@ export default function WalletIntelligencePage() {
 
                     {/* Notable Behaviors */}
                     {aiAnalysis.notableBehaviors && aiAnalysis.notableBehaviors.length > 0 && (
-                      <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+                      <div className="nl-glass rounded-2xl p-4">
                         <div className="flex items-center gap-2 mb-3">
                           <Brain className="w-4 h-4 text-[#7C3AED]" />
                           <h3 className="font-bold text-sm">Notable Behaviors</h3>
@@ -1290,7 +1290,7 @@ export default function WalletIntelligencePage() {
 
                     {/* Market Outlook */}
                     {aiAnalysis.marketOutlook && (
-                      <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+                      <div className="nl-glass rounded-2xl p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <TrendingUp className="w-4 h-4 text-[#10B981]" />
                           <h3 className="font-bold text-sm">Market Outlook</h3>
@@ -1324,7 +1324,7 @@ export default function WalletIntelligencePage() {
 
         {activeTab === 'contract' && (
           <>
-            <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+            <div className="nl-glass rounded-2xl p-4">
               <h2 className="font-bold text-sm mb-2">Analyze Smart Contract</h2>
               <p className="text-[10px] text-gray-500 mb-3">Scan any token contract for security risks, honeypot detection, and tax analysis</p>
 
@@ -1384,7 +1384,7 @@ export default function WalletIntelligencePage() {
 
             {contractResult && !contractLoading && (
               <>
-                <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+                <div className="nl-glass rounded-2xl p-4">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${contractResult.safetyColor}20` }}>
@@ -1441,7 +1441,7 @@ export default function WalletIntelligencePage() {
                 </div>
 
                 {contractResult.dexData && (
-                  <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+                  <div className="nl-glass rounded-2xl p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <TrendingUp className="w-4 h-4 text-[#0066FF]" />
                       <h3 className="font-bold text-sm">Market Data</h3>
@@ -1511,7 +1511,7 @@ export default function WalletIntelligencePage() {
                   </div>
                 )}
 
-                <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+                <div className="nl-glass rounded-2xl p-4">
                   <h3 className="font-bold text-sm mb-3">Security Checks</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {contractResult.checks.map((check, i) => (
@@ -1529,7 +1529,7 @@ export default function WalletIntelligencePage() {
                   </div>
                 </div>
 
-                <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+                <div className="nl-glass rounded-2xl p-4">
                   <h3 className="font-bold text-sm mb-3">Contract Details</h3>
                   <div className="space-y-2">
                     {[

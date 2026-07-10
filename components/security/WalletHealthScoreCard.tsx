@@ -136,7 +136,7 @@ export function WalletHealthScoreCard({
 
   if (loading) {
     return (
-      <div className="nl-glass rounded-2xl p-5" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+      <div className="nl-glass rounded-2xl p-5">
         <div className="flex items-center gap-3 text-xs text-gray-400">
           <Loader2 className="w-4 h-4 animate-spin text-[#0066FF]" aria-hidden="true" />
           Computing wallet health from live signals…

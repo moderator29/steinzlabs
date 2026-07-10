@@ -253,7 +253,7 @@ export default function TokenScannerPage() {
         {result && !scanning && (
           <>
             <TiltCard className="nl-fade-up">
-            <div className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+            <div className="nl-glass rounded-2xl p-4">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <h2 className="text-base font-bold">{result.name}</h2>
@@ -352,7 +352,7 @@ export default function TokenScannerPage() {
             </div>
 
             {result.dexData && (
-              <div className="nl-glass rounded-2xl p-4 nl-fade-up" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+              <div className="nl-glass rounded-2xl p-4 nl-fade-up">
                 <h3 className="font-bold text-sm mb-3">Market Data</h3>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="bg-white/[0.03] rounded-xl p-2.5">
@@ -400,7 +400,7 @@ export default function TokenScannerPage() {
               </div>
             )}
 
-            <div className="nl-glass rounded-2xl p-4 nl-fade-up" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+            <div className="nl-glass rounded-2xl p-4 nl-fade-up">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-sm">Security Checks</h3>
                 <span className="text-[10px] text-gray-500">{result.checks.length} checks · every flag shows its real signal</span>
@@ -459,7 +459,7 @@ export default function TokenScannerPage() {
               )}
             </div>
 
-            <div className="nl-glass rounded-2xl p-4 nl-fade-up" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+            <div className="nl-glass rounded-2xl p-4 nl-fade-up">
               <h3 className="font-bold text-sm mb-3">Contract Details</h3>
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between">
@@ -497,7 +497,7 @@ export default function TokenScannerPage() {
               </div>
             </div>
 
-            <div className="nl-glass rounded-2xl p-4 bg-gradient-to-br from-[#0066FF]/5 to-transparent nl-fade-up" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+            <div className="nl-glass rounded-2xl p-4 bg-gradient-to-br from-[#0066FF]/5 to-transparent nl-fade-up">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-7 h-7 bg-[#0066FF]/20 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Brain className="w-4 h-4 text-[#0066FF]" />

@@ -74,7 +74,7 @@ export default function NetworkMetricsPage() {
           ))}
         </div>
 
-        <div className="nl-glass rounded-xl p-4 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+        <div className="nl-glass rounded-xl p-4 text-center">
           <div className="w-16 h-16 bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 rounded-full flex items-center justify-center mx-auto mb-2">
             <Globe className="w-8 h-8 text-[#0066FF]" />
           </div>
@@ -94,7 +94,7 @@ export default function NetworkMetricsPage() {
             { icon: HardDrive, label: 'Latest Block', value: m.blocks, color: '#0066FF' },
             { icon: Globe, label: 'Status', value: statusLabel, color: statusColor },
           ].map((item) => (
-            <div key={item.label} className="nl-glass rounded-xl p-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+            <div key={item.label} className="nl-glass rounded-xl p-3">
               <div className="flex items-center gap-1.5 mb-1">
                 <item.icon className="w-3.5 h-3.5" style={{ color: item.color }} />
                 <span className="text-[10px] text-gray-500">{item.label}</span>
@@ -104,7 +104,7 @@ export default function NetworkMetricsPage() {
           ))}
         </div>
 
-        <div className="nl-glass rounded-xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+        <div className="nl-glass rounded-xl p-4">
           <h3 className="font-bold text-sm mb-3">Network Stats</h3>
           <div className="space-y-3">
             <div className="flex justify-between py-2 border-b border-white/5">

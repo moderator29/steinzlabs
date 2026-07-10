@@ -1,18 +1,55 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { X, Bell, MousePointerClick, Bot, Lock, AlertTriangle } from "lucide-react";
+import { X, Bell, MousePointerClick, Bot, Lock, AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth, effectiveTier } from "@/lib/hooks/useAuth";
 import { useWallet } from "@/lib/hooks/useWallet";
 
 type Mode = "alerts_only" | "oneclick" | "auto_copy";
+type Direction = "both" | "buy" | "sell";
+
+export interface EditableRule {
+  id: string;
+  whale_address: string;
+  chain: string;
+  mode: Mode | null;
+  max_per_trade_usd: number;
+  daily_cap_usd: number;
+  pct_of_whale: number | null;
+  tp_pct: number | null;
+  sl_pct: number | null;
+  max_slippage_bps: number;
+  copy_direction?: Direction | null;
+  min_trade_size_usd?: number | null;
+  tokens_allowlist?: string[] | null;
+  tokens_blacklist?: string[] | null;
+  // Carried through edit so re-saving a rule preserves its live on/off + pause
+  // state (the upsert would otherwise reset them to the create defaults).
+  enabled?: boolean;
+  paused?: boolean;
+}
 
 interface Props {
   initialWhaleAddress?: string;
   initialChain?: string;
+  initialLabel?: string;
+  /** When set the modal edits an existing rule (whale + chain are locked). */
+  initialRule?: EditableRule | null;
   onClose: () => void;
   onSaved: () => void;
+}
+
+// Split a comma/newline/space separated address blob into a clean array.
+function parseAddresses(raw: string): string[] {
+  return Array.from(
+    new Set(
+      raw
+        .split(/[\s,]+/)
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
+  );
 }
 
 const MODE_META: Record<Mode, { title: string; sub: string; icon: typeof Bell; required: "free" | "pro" | "max" }> = {
@@ -41,9 +78,12 @@ const TIER_RANK: Record<string, number> = { free: 0, mini: 1, pro: 2, max: 3 };
 export default function NewCopyRuleModal({
   initialWhaleAddress = "",
   initialChain = "ethereum",
+  initialLabel = "",
+  initialRule = null,
   onClose,
   onSaved,
 }: Props) {
+  const isEdit = !!initialRule;
   const { user } = useAuth();
   const tier = useMemo(
     () =>
@@ -62,16 +102,30 @@ export default function NewCopyRuleModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const [mode, setMode] = useState<Mode>("oneclick");
-  const [whale, setWhale] = useState(initialWhaleAddress);
-  const [chain, setChain] = useState(initialChain);
-  const [maxPerTrade, setMaxPerTrade] = useState("100");
-  const [dailyCap, setDailyCap] = useState("500");
-  const [sizingMode, setSizingMode] = useState<"fixed" | "pct">("fixed");
-  const [pctOfWhale, setPctOfWhale] = useState("5");
-  const [tpPct, setTpPct] = useState("");
-  const [slPct, setSlPct] = useState("");
-  const [slippageBps, setSlippageBps] = useState("200");
+  const [mode, setMode] = useState<Mode>(initialRule?.mode ?? "oneclick");
+  const [whale, setWhale] = useState(initialRule?.whale_address ?? initialWhaleAddress);
+  const [chain, setChain] = useState(initialRule?.chain ?? initialChain);
+  const [maxPerTrade, setMaxPerTrade] = useState(initialRule ? String(initialRule.max_per_trade_usd) : "100");
+  const [dailyCap, setDailyCap] = useState(initialRule ? String(initialRule.daily_cap_usd) : "500");
+  const [sizingMode, setSizingMode] = useState<"fixed" | "pct">(
+    initialRule?.pct_of_whale != null ? "pct" : "fixed",
+  );
+  const [pctOfWhale, setPctOfWhale] = useState(initialRule?.pct_of_whale != null ? String(initialRule.pct_of_whale) : "5");
+  const [tpPct, setTpPct] = useState(initialRule?.tp_pct != null ? String(initialRule.tp_pct) : "");
+  const [slPct, setSlPct] = useState(initialRule?.sl_pct != null ? String(initialRule.sl_pct) : "");
+  const [slippageBps, setSlippageBps] = useState(initialRule ? String(initialRule.max_slippage_bps) : "200");
+  const [direction, setDirection] = useState<Direction>(initialRule?.copy_direction ?? "both");
+  const [minTradeSize, setMinTradeSize] = useState(
+    initialRule?.min_trade_size_usd != null ? String(initialRule.min_trade_size_usd) : "",
+  );
+  const [allowText, setAllowText] = useState((initialRule?.tokens_allowlist ?? []).join("\n"));
+  const [blockText, setBlockText] = useState((initialRule?.tokens_blacklist ?? []).join("\n"));
+  const [showFilters, setShowFilters] = useState(
+    !!(initialRule && ((initialRule.copy_direction && initialRule.copy_direction !== "both") ||
+      initialRule.min_trade_size_usd != null ||
+      (initialRule.tokens_allowlist?.length ?? 0) > 0 ||
+      (initialRule.tokens_blacklist?.length ?? 0) > 0)),
+  );
   const [saving, setSaving] = useState(false);
 
   const modeAllowed = TIER_RANK[tier] >= TIER_RANK[MODE_META[mode].required];
@@ -122,6 +176,14 @@ export default function NewCopyRuleModal({
     if (!Number.isFinite(slip) || slip <= 0 || slip > 5000) {
       return toast.error("Slippage must be 1–5000 bps");
     }
+    let minSize: number | null = null;
+    if (minTradeSize.trim()) {
+      const m = Number(minTradeSize);
+      if (!Number.isFinite(m) || m < 0) return toast.error("Min whale trade size must be ≥ 0");
+      minSize = m;
+    }
+    const allowlist = parseAddresses(allowText);
+    const blocklist = parseAddresses(blockText);
 
     setSaving(true);
     try {
@@ -138,6 +200,13 @@ export default function NewCopyRuleModal({
           tp_pct: tp,
           sl_pct: sl,
           max_slippage_bps: slip,
+          copy_direction: direction,
+          min_trade_size_usd: minSize,
+          tokens_allowlist: allowlist,
+          tokens_blacklist: blocklist,
+          // On edit, preserve the rule's current enabled/paused rather than
+          // letting the create defaults flip them back on.
+          ...(isEdit ? { enabled: initialRule?.enabled ?? true, paused: initialRule?.paused ?? false } : {}),
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -145,7 +214,7 @@ export default function NewCopyRuleModal({
         toast.error(json?.error ?? "Failed to save rule");
         return;
       }
-      toast.success("Rule saved");
+      toast.success(isEdit ? "Rule updated" : "Rule saved");
       onSaved();
       onClose();
     } finally {
@@ -157,9 +226,11 @@ export default function NewCopyRuleModal({
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-[#0F1320] border border-white/10 shadow-2xl">
         <div className="flex items-center justify-between p-4 border-b border-white/10">
-          <div>
-            <h2 className="text-base font-semibold text-white">New copy rule</h2>
-            <p className="text-xs text-white/50 mt-0.5">Mirror a whale on your terms.</p>
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-white">{isEdit ? "Edit copy rule" : "New copy rule"}</h2>
+            <p className="text-xs text-white/50 mt-0.5 truncate">
+              {initialLabel ? `Mirror ${initialLabel} on your terms.` : "Mirror a whale on your terms."}
+            </p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded hover:bg-white/5 text-white/60">
             <X size={16} />
@@ -201,11 +272,12 @@ export default function NewCopyRuleModal({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Whale address" value={whale} onChange={setWhale} placeholder="0x… / mint" mono />
+            <Field label="Whale address" value={whale} onChange={setWhale} placeholder="0x… / mint" mono disabled={isEdit} />
             <SelectField
               label="Chain"
               value={chain}
               onChange={setChain}
+              disabled={isEdit}
               options={["ethereum", "solana", "bsc", "base", "arbitrum", "optimism", "polygon", "avalanche"]}
             />
           </div>
@@ -255,6 +327,64 @@ export default function NewCopyRuleModal({
             <Field label="Stop-loss %" value={slPct} onChange={setSlPct} type="number" placeholder="e.g. 25" />
             <Field label="Slippage (bps)" value={slippageBps} onChange={setSlippageBps} type="number" />
           </div>
+
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowFilters((v) => !v)}
+              className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-white/50 font-semibold hover:text-white/80"
+            >
+              {showFilters ? <ChevronDown size={13} /> : <ChevronRight size={13} />} Filters
+              <span className="text-white/30 normal-case tracking-normal font-normal">optional</span>
+            </button>
+
+            {showFilters && (
+              <div className="mt-3 space-y-4">
+                <div>
+                  <label className="text-[11px] uppercase tracking-wide text-white/50 font-semibold">Direction</label>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {([
+                      ["both", "Buys + sells"],
+                      ["buy", "Buys only"],
+                      ["sell", "Sells only"],
+                    ] as [Direction, string][]).map(([d, lbl]) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setDirection(d)}
+                        className={`rounded-lg border p-2 text-xs font-medium transition ${
+                          direction === d ? "border-blue-400/60 bg-blue-500/15 text-blue-100" : "border-white/10 bg-white/[0.03] text-white/60"
+                        }`}
+                      >
+                        {lbl}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <Field
+                  label="Min whale trade size ($)"
+                  value={minTradeSize}
+                  onChange={setMinTradeSize}
+                  type="number"
+                  placeholder="e.g. 5000 — skip smaller moves"
+                />
+
+                <TextAreaField
+                  label="Only copy these tokens (allow-list)"
+                  value={allowText}
+                  onChange={setAllowText}
+                  placeholder="One token address per line. Leave empty to allow all."
+                />
+                <TextAreaField
+                  label="Never copy these tokens (block-list)"
+                  value={blockText}
+                  onChange={setBlockText}
+                  placeholder="One token address per line."
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="p-4 border-t border-white/10 flex items-center justify-end gap-2">
@@ -279,6 +409,7 @@ function Field(props: {
   placeholder?: string;
   type?: string;
   mono?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <label className="block">
@@ -288,7 +419,8 @@ function Field(props: {
         value={props.value}
         onChange={(e) => props.onChange(e.target.value)}
         placeholder={props.placeholder}
-        className={`mt-1 w-full rounded-lg bg-white/[0.04] border border-white/10 focus:border-blue-400/60 px-2.5 py-1.5 text-sm text-white outline-none ${
+        disabled={props.disabled}
+        className={`mt-1 w-full rounded-lg bg-white/[0.04] border border-white/10 focus:border-blue-400/60 px-2.5 py-1.5 text-sm text-white outline-none disabled:opacity-60 disabled:cursor-not-allowed ${
           props.mono ? "font-mono" : ""
         }`}
       />
@@ -296,14 +428,30 @@ function Field(props: {
   );
 }
 
-function SelectField(props: { label: string; value: string; onChange: (v: string) => void; options: string[] }) {
+function TextAreaField(props: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  return (
+    <label className="block">
+      <span className="text-[11px] uppercase tracking-wide text-white/50 font-semibold">{props.label}</span>
+      <textarea
+        value={props.value}
+        onChange={(e) => props.onChange(e.target.value)}
+        placeholder={props.placeholder}
+        rows={2}
+        className="mt-1 w-full rounded-lg bg-white/[0.04] border border-white/10 focus:border-blue-400/60 px-2.5 py-1.5 text-sm text-white outline-none font-mono resize-y"
+      />
+    </label>
+  );
+}
+
+function SelectField(props: { label: string; value: string; onChange: (v: string) => void; options: string[]; disabled?: boolean }) {
   return (
     <label className="block">
       <span className="text-[11px] uppercase tracking-wide text-white/50 font-semibold">{props.label}</span>
       <select
         value={props.value}
         onChange={(e) => props.onChange(e.target.value)}
-        className="mt-1 w-full rounded-lg bg-white/[0.04] border border-white/10 focus:border-blue-400/60 px-2.5 py-1.5 text-sm text-white outline-none capitalize"
+        disabled={props.disabled}
+        className="mt-1 w-full rounded-lg bg-white/[0.04] border border-white/10 focus:border-blue-400/60 px-2.5 py-1.5 text-sm text-white outline-none capitalize disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {props.options.map((o) => (
           <option key={o} value={o} className="bg-[#0F1320]">{o}</option>

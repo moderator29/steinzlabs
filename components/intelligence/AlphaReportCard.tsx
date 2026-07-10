@@ -17,7 +17,6 @@ export function AlphaReportCard({ report }: { report: AlphaReportView }) {
   return (
     <div
       className="nl-glass rounded-2xl p-5 overflow-hidden relative"
-      style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">

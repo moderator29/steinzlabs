@@ -120,7 +120,7 @@ export default function ConnectedDappsPage() {
               <div className="rounded-xl border border-red-500/30 bg-red-500/[0.05] p-4 text-sm text-red-200">{error}</div>
             )}
             {!loading && !error && sessions.length === 0 && (
-              <div className="nl-glass rounded-xl p-6 text-sm text-slate-400 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+              <div className="nl-glass rounded-xl p-6 text-sm text-slate-400 text-center">
                 No open WalletConnect sessions. You&apos;re only connected to Naka Labs.
               </div>
             )}
@@ -139,7 +139,7 @@ export default function ConnectedDappsPage() {
                 </div>
                 <ul className="space-y-2">
                   {sessions.map((s) => (
-                    <li key={s.topic} className="flex items-center gap-3 nl-glass rounded-xl p-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+                    <li key={s.topic} className="flex items-center gap-3 nl-glass rounded-xl p-3">
                       {s.peerIcon ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={s.peerIcon} alt="" className="w-9 h-9 rounded-lg object-cover bg-white/5" />

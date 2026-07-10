@@ -20,8 +20,25 @@ const TAG_STYLES: Record<WhatsNewTag, string> = {
   FIXED: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
 };
 
+/** Event other surfaces (e.g. the dashboard Shipped banner) fire to open the panel. */
+export const OPEN_WHATS_NEW_EVENT = 'naka:open-whats-new';
+
+/** Open the global What's new panel from anywhere in the app shell. */
+export function openGlobalWhatsNew() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(OPEN_WHATS_NEW_EVENT));
+  }
+}
+
 export function GlobalWhatsNewButton() {
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const openPanel = () => setOpen(true);
+    window.addEventListener(OPEN_WHATS_NEW_EVENT, openPanel);
+    return () => window.removeEventListener(OPEN_WHATS_NEW_EVENT, openPanel);
+  }, []);
+
   return (
     <>
       <button
