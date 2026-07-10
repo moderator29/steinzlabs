@@ -1,17 +1,14 @@
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { LandingNav } from '@/components/landing/LandingNav';
 import { HeroSection } from '@/components/landing/HeroSection';
-import { FeatureCardsSection } from '@/components/landing/FeatureCardsSection';
+import { FeatureCarousel } from '@/components/landing/FeatureCarousel';
 import { VTXSection } from '@/components/landing/VTXSection';
-import { FeatureShowcase } from '@/components/landing/FeatureShowcase';
 import { StatsSection } from '@/components/landing/StatsSection';
 import { SecurityShowcase } from '@/components/landing/SecurityShowcase';
 import { FAQSection } from '@/components/landing/FAQSection';
 import { CTASection } from '@/components/landing/CTASection';
 import { Disclaimer } from '@/components/landing/Disclaimer';
 import { LandingFooter } from '@/components/landing/LandingFooter';
-import { SocialSection } from '@/components/landing/SocialSection';
-import { OnboardingMention } from '@/components/landing/OnboardingMention';
 import type { Metadata } from 'next';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://nakalabs.xyz';
@@ -19,9 +16,9 @@ const OG_IMAGE = `${SITE_URL}/og-default.png`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: 'Naka Labs — On-chain intelligence + non-custodial trading',
+  title: 'Naka Labs: On-chain intelligence + non-custodial trading',
   description:
-    'Track whales, snipe new launches, copy proven traders, and trade across EVM + Solana with built-in honeypot, tax, and liquidity-lock checks. Non-custodial — your keys, your trades.',
+    'Track whales, snipe new launches, copy proven traders, and trade across EVM + Solana with built-in honeypot, tax, and liquidity-lock checks. Non-custodial. Your keys, your trades.',
   alternates: { canonical: '/' },
   keywords: [
     'on-chain intelligence',
@@ -37,7 +34,7 @@ export const metadata: Metadata = {
     type: 'website',
     siteName: 'Naka Labs',
     url: SITE_URL,
-    title: 'Naka Labs — On-chain intelligence + non-custodial trading',
+    title: 'Naka Labs: On-chain intelligence + non-custodial trading',
     description:
       'Whale tracking, sniper bot, copy trading, and AI-assisted research. Non-custodial across 8 chains.',
     images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: 'Naka Labs' }],
@@ -99,13 +96,10 @@ export default function LandingPage() {
       <div className="min-h-screen text-white overflow-x-hidden">
         <LandingNav />
         <HeroSection />
-        <FeatureCardsSection />
+        <FeatureCarousel />
         <VTXSection />
-        <FeatureShowcase />
-        <SecurityShowcase />
-        <SocialSection />
-        <OnboardingMention />
         <StatsSection />
+        <SecurityShowcase />
         <FAQSection />
         <CTASection />
         <Disclaimer />

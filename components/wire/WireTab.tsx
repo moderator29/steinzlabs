@@ -307,6 +307,53 @@ export default function WireTab({ onGift, author, reposts }: WireTabProps) {
     }
   }, []);
 
+  // Muted authors: load the viewer's mute set once, drive the post menu label,
+  // and hide a muted author's wires from the feed immediately on mute.
+  const [mutedIds, setMutedIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!user) { setMutedIds(new Set()); return; }
+    let cancelled = false;
+    fetch('/api/wire/mute')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelled && Array.isArray(d?.muted)) setMutedIds(new Set(d.muted)); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [user]);
+
+  const handleMute = useCallback(async (post: WirePost, mute: boolean) => {
+    const authorId = post.author_id;
+    if (!authorId) return;
+    let snapshot: WirePost[] = [];
+    setMutedIds((prev) => {
+      const n = new Set(prev);
+      if (mute) n.add(authorId); else n.delete(authorId);
+      return n;
+    });
+    if (mute) {
+      setPosts((prev) => {
+        snapshot = prev;
+        // Drop the muted author's own wires and their reposts from the feed.
+        return prev.filter((p) => p.author_id !== authorId && p.original?.author_id !== authorId);
+      });
+    }
+    try {
+      const res = await fetch('/api/wire/mute', {
+        method: mute ? 'POST' : 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: authorId }),
+      });
+      if (!res.ok) throw new Error('mute failed');
+    } catch {
+      // Roll back the optimistic changes on failure.
+      setMutedIds((prev) => {
+        const n = new Set(prev);
+        if (mute) n.delete(authorId); else n.add(authorId);
+        return n;
+      });
+      if (mute && snapshot.length) setPosts(snapshot);
+    }
+  }, [user]);
+
   return (
     <div className="w-full max-w-2xl mx-auto space-y-4">
       {/* Sign-in prompt (logged-out). Logged-in users post via the + button
@@ -489,6 +536,8 @@ export default function WireTab({ onGift, author, reposts }: WireTabProps) {
                 onRepost={handleRepost}
                 onGift={handleGift}
                 onDelete={handleDelete}
+                onMute={user ? handleMute : undefined}
+                muted={mutedIds.has(p.original?.author_id ?? p.author_id)}
                 onComment={p.repost_of ? undefined : handleComment}
                 onHashtag={handleHashtag}
                 threadOpen={openThreadId === p.id}

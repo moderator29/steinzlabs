@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Heart, Repeat2, Gift, Trash2, Repeat, MessageCircle, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Heart, Repeat2, Gift, Trash2, Repeat, MessageCircle, X, ChevronLeft, ChevronRight, MoreHorizontal, VolumeX, Volume2 } from 'lucide-react';
 import { VerifiedGoldBadge } from '@/components/ui/VerifiedGoldBadge';
 import { wireTopicLabel } from '@/lib/wire/topics';
 
@@ -56,6 +56,10 @@ export interface WirePostCardProps {
   onRepost: (post: WirePost) => void;
   onGift: (post: WirePost) => void;
   onDelete?: (post: WirePost) => void;
+  /** Mute / unmute the wire's author (hides their wires from the viewer's feed). */
+  onMute?: (post: WirePost, mute: boolean) => void;
+  /** Whether the viewer has this author muted (drives the menu label). */
+  muted?: boolean;
   /** Opens the reply thread for this wire. Omit to hide the Comment button. */
   onComment?: (post: WirePost) => void;
   /** Marks the thread as currently open (highlights the Comment button). */
@@ -306,12 +310,14 @@ export function WirePostCard({
   onRepost,
   onGift,
   onDelete,
+  onMute,
+  muted,
   onComment,
   threadOpen,
   compact,
   onHashtag,
 }: WirePostCardProps) {
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const isRepost = !!post.repost_of;
   // The wire actually shown / acted upon. For a repost this is the original —
@@ -369,17 +375,52 @@ export function WirePostCard({
             <time className="text-white/45 text-sm" dateTime={shown.created_at} title={new Date(shown.created_at).toLocaleString()}>
               {relativeTime(shown.created_at)}
             </time>
-            {isOwn && onDelete ? (
-              <button
-                type="button"
-                onClick={() => (confirmDelete ? onDelete(shown) : setConfirmDelete(true))}
-                onBlur={() => setConfirmDelete(false)}
-                className="ms-auto text-white/30 hover:text-red-400 transition p-1 rounded-md"
-                aria-label={confirmDelete ? 'Confirm delete wire' : 'Delete wire'}
-                title={confirmDelete ? 'Click again to delete' : 'Delete'}
-              >
-                {confirmDelete ? <span className="text-[11px] text-red-400 font-medium px-1">Delete?</span> : <Trash2 className="w-4 h-4" />}
-              </button>
+            {(isOwn && onDelete) || (!isOwn && onMute && author?.id) ? (
+              <div className="ms-auto relative">
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen((o) => !o)}
+                  className="text-white/30 hover:text-white transition p-1 rounded-md"
+                  aria-label="More options"
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
+                >
+                  <MoreHorizontal className="w-[18px] h-[18px]" />
+                </button>
+                {menuOpen ? (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Close menu"
+                      className="fixed inset-0 z-10 cursor-default"
+                      onClick={() => setMenuOpen(false)}
+                    />
+                    <div role="menu" className="absolute right-0 z-20 mt-1 w-52 nl-glass rounded-xl p-1 shadow-[0_16px_50px_rgba(0,0,0,0.55)]">
+                      {isOwn && onDelete ? (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => { setMenuOpen(false); onDelete(shown); }}
+                          className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-rose-300 hover:bg-rose-500/10 transition text-left"
+                        >
+                          <Trash2 className="w-4 h-4 flex-shrink-0" /> Delete wire
+                        </button>
+                      ) : null}
+                      {!isOwn && onMute && author?.id ? (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => { setMenuOpen(false); onMute(shown, !muted); }}
+                          className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-white/80 hover:bg-white/[0.06] hover:text-white transition text-left"
+                        >
+                          {muted ? <Volume2 className="w-4 h-4 flex-shrink-0" /> : <VolumeX className="w-4 h-4 flex-shrink-0" />}
+                          <span className="truncate">{muted ? 'Unmute' : 'Mute'} {handle || name}</span>
+                        </button>
+                      ) : null}
+                    </div>
+                  </>
+                ) : null}
+              </div>
             ) : null}
           </div>
 

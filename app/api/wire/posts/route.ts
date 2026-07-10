@@ -160,6 +160,13 @@ export async function GET(req: NextRequest) {
   // liked/reposted state, never to widen access.
   const viewer = await getAuthenticatedUser(req);
 
+  // Muted authors are hidden from the viewer's feeds (main / signal / pack).
+  // We deliberately do NOT filter an explicit ?author= or ?reposts= timeline,
+  // so visiting a muted user's profile still works, exactly like X. Empty for
+  // signed-out viewers.
+  const mutedIds = viewer ? await getMutedIds(sb, viewer.id) : [];
+  const mutedList = mutedIds.length ? `(${mutedIds.join(',')})` : null;
+
   // ── Signal: trending by real engagement over the last 48h ───────────────
   if (feed === 'signal') {
     const WINDOW_HOURS = 48;
@@ -175,6 +182,7 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(CANDIDATE_CAP);
     if (topicFilter.length) sq = sq.overlaps('tags', topicFilter);
+    if (mutedList) sq = sq.not('author_id', 'in', mutedList);
 
     const { data, error } = await sq;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -231,6 +239,7 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(PAGE_SIZE);
     if (topicFilter.length) pq = pq.overlaps('tags', topicFilter);
+    if (mutedList) pq = pq.not('author_id', 'in', mutedList);
     if (cursor) pq = pq.lt('created_at', cursor);
 
     const { data, error } = await pq;
@@ -283,6 +292,8 @@ export async function GET(req: NextRequest) {
     q = q.eq('author_id', author);
   }
   if (topicFilter.length) q = q.overlaps('tags', topicFilter);
+  // Hide muted authors from the main feed, but not from a single-author timeline.
+  if (mutedList && !author) q = q.not('author_id', 'in', mutedList);
   if (cursor) q = q.lt('created_at', cursor);
 
   const { data, error } = await q;
@@ -292,6 +303,12 @@ export async function GET(req: NextRequest) {
   const annotated = await annotate(sb, posts, viewer?.id);
   const nextCursor = posts.length === PAGE_SIZE ? posts[posts.length - 1]?.created_at ?? null : null;
   return NextResponse.json({ posts: annotated, nextCursor });
+}
+
+/** The set of user ids this viewer has muted (hidden from their feeds). */
+async function getMutedIds(sb: ReturnType<typeof getSupabaseAdmin>, viewerId: string): Promise<string[]> {
+  const { data } = await sb.from('wire_mutes').select('muted_id').eq('muter_id', viewerId);
+  return (data ?? []).map((r: { muted_id: string }) => r.muted_id).filter(Boolean);
 }
 
 /**
