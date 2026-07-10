@@ -4,6 +4,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import {
   Loader2, ImagePlus, X, Sparkles, ChevronDown, Check,
   Coins, Building2, Bot, BrainCircuit, Blocks, TrendingUp, Laugh, Hexagon, Globe,
+  Plus, DollarSign, LineChart, ArrowUpRight, ArrowDownRight,
   type LucideIcon,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -11,7 +12,7 @@ import { WIRE_TOPICS, WIRE_MAX_TAGS } from '@/lib/wire/topics';
 import type { WirePost } from './WirePostCard';
 
 /**
- * WireComposer — the post box for creating a wire.
+ * WireComposer - the post box for creating a wire.
  *
  * Textarea with a live 0/600 counter, up to FOUR image uploads (each
  * client-validated < 1MB, images only, stored in the public `wire-media` bucket
@@ -31,7 +32,7 @@ import type { WirePost } from './WirePostCard';
 
 const MAX = 600;
 const MAX_IMAGES = 4;
-const MAX_IMAGE_BYTES = 1_048_576; // 1MB — mirrors the wire-media bucket cap
+const MAX_IMAGE_BYTES = 1_048_576; // 1MB - mirrors the wire-media bucket cap
 const ALLOWED_MIME: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
@@ -64,7 +65,7 @@ export interface WireComposerProps {
   displayName?: string | null;
   /** @handle shown under the display name in page mode (X-style identity row). */
   username?: string | null;
-  /** Session user id — the storage upload folder must be <uid>/ (owner-scoped). */
+  /** Session user id - the storage upload folder must be <uid>/ (owner-scoped). */
   userId?: string | null;
   /** Called with the freshly created wire so the parent can prepend it. */
   onPosted: (post: WirePost) => void;
@@ -72,7 +73,7 @@ export interface WireComposerProps {
   large?: boolean;
   /** Render without the outer glass card (the compose page supplies its own). */
   bare?: boolean;
-  /** Hide the inline Post button — the page renders Post in its own top bar. */
+  /** Hide the inline Post button - the page renders Post in its own top bar. */
   hideInlinePost?: boolean;
   /** Live enabled/spinner state for a host-rendered Post button. */
   onStateChange?: (s: { canPost: boolean; submitting: boolean }) => void;
@@ -92,6 +93,49 @@ export const WireComposer = forwardRef<WireComposerHandle, WireComposerProps>(fu
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Attachment tray: attach a $cashtag price chip helper, a prediction call, or
+  // media to the wire before posting.
+  const [trayOpen, setTrayOpen] = useState(false);
+  const [showPrice, setShowPrice] = useState(false);
+  const [priceSymbol, setPriceSymbol] = useState('');
+  const [showPredForm, setShowPredForm] = useState(false);
+  const [predSymbol, setPredSymbol] = useState('');
+  const [predDirection, setPredDirection] = useState<'above' | 'below'>('above');
+  const [predTarget, setPredTarget] = useState('');
+  const [predHorizon, setPredHorizon] = useState(3600);
+  // The staged call, attached to the wire after it is created.
+  const [prediction, setPrediction] = useState<
+    { symbol: string; direction: 'above' | 'below'; target: number; horizonSeconds: number } | null
+  >(null);
+
+  const HORIZONS: { label: string; seconds: number }[] = [
+    { label: '1h', seconds: 3600 },
+    { label: '4h', seconds: 4 * 3600 },
+    { label: '24h', seconds: 24 * 3600 },
+    { label: '7d', seconds: 7 * 24 * 3600 },
+  ];
+
+  const insertCashtag = () => {
+    const sym = priceSymbol.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!sym) return;
+    setBody((b) => {
+      const next = `${b.trimEnd()}${b.trim() ? ' ' : ''}$${sym} `.slice(0, MAX);
+      return next;
+    });
+    setPriceSymbol('');
+    setShowPrice(false);
+  };
+
+  const stagePrediction = () => {
+    const sym = predSymbol.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const target = parseFloat(predTarget);
+    if (!sym || !Number.isFinite(target) || target <= 0) return;
+    setPrediction({ symbol: sym, direction: predDirection, target, horizonSeconds: predHorizon });
+    setShowPredForm(false);
+    setPredSymbol('');
+    setPredTarget('');
+  };
 
   const len = body.length;
   const over = len > MAX;
@@ -183,7 +227,7 @@ export const WireComposer = forwardRef<WireComposerHandle, WireComposerProps>(fu
   /**
    * Optional AI draft helper. Sends the current draft (which may be empty, a
    * pasted ticker / contract, or rough notes) to /api/wire/ai-draft and drops
-   * the returned clean draft straight into the editable textarea — the user
+   * the returned clean draft straight into the editable textarea - the user
    * still reviews, edits and posts manually. Suggested topics are merged into
    * the picker (respecting the 3-tag cap) but never auto-submitted. If the AI
    * layer is unavailable we surface an honest message and posting is untouched.
@@ -245,11 +289,40 @@ export const WireComposer = forwardRef<WireComposerHandle, WireComposerProps>(fu
         return;
       }
       const { post } = await res.json();
+
+      // Attach a staged prediction call to the freshly created wire. If the
+      // attach fails, the wire still posts - we just surface an honest note.
+      if (post && prediction) {
+        try {
+          const pr = await fetch('/api/wire/predictions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              postId: post.id,
+              symbol: prediction.symbol,
+              direction: prediction.direction,
+              target: prediction.target,
+              horizonSeconds: prediction.horizonSeconds,
+            }),
+          });
+          if (pr.ok) {
+            const { prediction: attached } = await pr.json();
+            if (attached) post.prediction = attached;
+          }
+        } catch {
+          /* wire is posted; the call just did not attach */
+        }
+      }
+
       if (post) onPosted(post);
       setBody('');
       setTags([]);
       setShowTags(false);
       setMediaUrls([]);
+      setPrediction(null);
+      setTrayOpen(false);
+      setShowPrice(false);
+      setShowPredForm(false);
     } catch {
       setError('Network error. Try again.');
     } finally {
@@ -308,7 +381,7 @@ export const WireComposer = forwardRef<WireComposerHandle, WireComposerProps>(fu
             }`}
           />
 
-          {/* Thumbnail row — up to 4 attached images + an add tile */}
+          {/* Thumbnail row - up to 4 attached images + an add tile */}
           {mediaUrls.length > 0 || uploading ? (
             <div className="mt-3 flex flex-wrap gap-2">
               {mediaUrls.map((url) => (
@@ -367,7 +440,7 @@ export const WireComposer = forwardRef<WireComposerHandle, WireComposerProps>(fu
             </div>
           ) : null}
 
-          {/* Topic picker — a single "Options" trigger that pulls out a vertical,
+          {/* Topic picker - a single "Options" trigger that pulls out a vertical,
               icon-led list (like the Context Feed chain picker). Multi-select up
               to 3; the list stays open so several can be added, and closes on the
               trigger or a tap outside. */}
@@ -431,6 +504,145 @@ export const WireComposer = forwardRef<WireComposerHandle, WireComposerProps>(fu
             ) : null}
           </div>
 
+          {/* Attachment tray - Price chip / Prediction call / Media */}
+          {trayOpen ? (
+            <div className="mt-3 nl-glass rounded-xl p-2 flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => { setShowPrice((s) => !s); setShowPredForm(false); }}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition border ${
+                  showPrice ? 'border-[#0066FF]/50 bg-[#0066FF]/15 text-[#8fb6ff]' : 'border-white/12 text-white/70 hover:text-white hover:border-white/25'
+                }`}
+              >
+                <DollarSign className="w-3.5 h-3.5" /> Price chip
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowPredForm((s) => !s); setShowPrice(false); }}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition border ${
+                  showPredForm ? 'border-[#0066FF]/50 bg-[#0066FF]/15 text-[#8fb6ff]' : 'border-white/12 text-white/70 hover:text-white hover:border-white/25'
+                }`}
+              >
+                <LineChart className="w-3.5 h-3.5" /> Prediction
+              </button>
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading || mediaUrls.length >= MAX_IMAGES}
+                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition border border-white/12 text-white/70 hover:text-white hover:border-white/25 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ImagePlus className="w-3.5 h-3.5" /> Media
+              </button>
+            </div>
+          ) : null}
+
+          {/* Price chip helper - type a ticker to drop a $SYMBOL into the body */}
+          {trayOpen && showPrice ? (
+            <div className="mt-2 flex items-center gap-2">
+              <div className="inline-flex items-center gap-1 nl-glass rounded-lg px-2 py-1.5 flex-1 min-w-0">
+                <span className="text-white/40 text-sm">$</span>
+                <input
+                  value={priceSymbol}
+                  onChange={(e) => setPriceSymbol(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); insertCashtag(); } }}
+                  placeholder="BTC"
+                  maxLength={10}
+                  className="bg-transparent outline-none text-sm text-white placeholder:text-white/30 w-full uppercase"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={insertCashtag}
+                disabled={!priceSymbol.trim()}
+                className="naka-button-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add
+              </button>
+            </div>
+          ) : null}
+
+          {/* Prediction call mini-form */}
+          {trayOpen && showPredForm ? (
+            <div className="mt-2 nl-glass rounded-xl p-3 space-y-2.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center gap-1 nl-glass rounded-lg px-2 py-1.5">
+                  <span className="text-white/40 text-sm">$</span>
+                  <input
+                    value={predSymbol}
+                    onChange={(e) => setPredSymbol(e.target.value.toUpperCase())}
+                    placeholder="BTC"
+                    maxLength={10}
+                    className="bg-transparent outline-none text-sm text-white placeholder:text-white/30 w-16 uppercase"
+                  />
+                </div>
+                <div className="inline-flex rounded-lg nl-glass p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setPredDirection('above')}
+                    className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition ${predDirection === 'above' ? 'bg-emerald-500/20 text-emerald-300' : 'text-white/55 hover:text-white'}`}
+                  >
+                    <ArrowUpRight className="w-3.5 h-3.5" /> Above
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPredDirection('below')}
+                    className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition ${predDirection === 'below' ? 'bg-rose-500/20 text-rose-300' : 'text-white/55 hover:text-white'}`}
+                  >
+                    <ArrowDownRight className="w-3.5 h-3.5" /> Below
+                  </button>
+                </div>
+                <div className="inline-flex items-center gap-1 nl-glass rounded-lg px-2 py-1.5 flex-1 min-w-[6rem]">
+                  <span className="text-white/40 text-sm">$</span>
+                  <input
+                    value={predTarget}
+                    onChange={(e) => setPredTarget(e.target.value.replace(/[^0-9.]/g, ''))}
+                    inputMode="decimal"
+                    placeholder="Target"
+                    className="bg-transparent outline-none text-sm text-white placeholder:text-white/30 w-full tabular-nums"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="inline-flex rounded-lg nl-glass p-0.5">
+                  {HORIZONS.map((h) => (
+                    <button
+                      key={h.seconds}
+                      type="button"
+                      onClick={() => setPredHorizon(h.seconds)}
+                      className={`rounded-md px-2.5 py-1 text-xs font-semibold transition tabular-nums ${predHorizon === h.seconds ? 'bg-[#0066FF]/20 text-[#8fb6ff]' : 'text-white/55 hover:text-white'}`}
+                    >
+                      {h.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={stagePrediction}
+                  disabled={!predSymbol.trim() || !predTarget.trim()}
+                  className="naka-button-primary text-sm ms-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Attach call
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {/* Staged prediction chip */}
+          {prediction ? (
+            <div className="mt-2 inline-flex items-center gap-2 rounded-lg border border-[#0066FF]/40 bg-[#0066FF]/12 px-3 py-1.5 text-xs font-medium text-[#8fb6ff]">
+              <LineChart className="w-3.5 h-3.5" />
+              <span className="tabular-nums">
+                ${prediction.symbol} {prediction.direction} ${prediction.target}
+              </span>
+              <span className="text-white/40">
+                · {HORIZONS.find((h) => h.seconds === prediction.horizonSeconds)?.label ?? ''}
+              </span>
+              <button type="button" onClick={() => setPrediction(null)} aria-label="Remove call" className="text-white/50 hover:text-white transition">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : null}
+
           {error ? <div className="mt-2 text-xs text-red-400" role="alert">{error}</div> : null}
           {aiError ? <div className="mt-2 text-xs text-amber-400/90" role="status">{aiError}</div> : null}
 
@@ -443,6 +655,16 @@ export const WireComposer = forwardRef<WireComposerHandle, WireComposerProps>(fu
               className="hidden"
               onChange={onPickFile}
             />
+            <button
+              type="button"
+              onClick={() => setTrayOpen((t) => !t)}
+              className={`p-2 rounded-lg transition hover:bg-[#0066FF]/12 ${trayOpen ? 'text-[#4d94ff] rotate-45' : 'text-white/45 hover:text-[#4d94ff]'}`}
+              aria-label="Attachment tray"
+              aria-expanded={trayOpen}
+              title="Attach price, prediction or media"
+            >
+              <Plus className="w-[18px] h-[18px] transition-transform" />
+            </button>
             <button
               type="button"
               onClick={() => fileRef.current?.click()}

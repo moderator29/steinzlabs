@@ -9,6 +9,21 @@ export const GLOBAL_WHATS_NEW: WhatsNewEntry[] = [
   {
     date: 'July 2026',
     tag: 'NEW',
+    text: 'The Wire goes full SocialFi: cashtags like $SOL and $BTC become live price chips anyone can tap, on-chain tips and gifts land on any wire with the earned value shown on the post, and a transparent 0 to 100 Signal score ranks the feed on real activity.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'NEW',
+    text: 'Inline predictions on The Wire let you attach a call, for example SOL below a target within the hour, that others tap to agree with, tied into Naka Predict.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'IMPROVED',
+    text: 'The Wire adds Latest, Signal and Pack feeds with auto-applying topic filters, relay reposts, side-panel reply threads, public share links you can post anywhere, and Posts, Replies, Media, Reposts and Gifts tabs on every profile.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'NEW',
     text: 'The Wire is your X style timeline: post to the whole platform, add hashtags people can tap and follow, let AI draft or sharpen a post before you send, and gift crypto straight onto any post you rate.',
   },
   {

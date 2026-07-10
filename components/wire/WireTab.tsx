@@ -5,13 +5,13 @@ import Link from 'next/link';
 import { Clock, Loader2, Plus, Settings2, Sparkles, TrendingUp, Users, X } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { WirePostCard, type WirePost } from './WirePostCard';
-import { WireThread } from './WireThread';
+import { WireThreadPanel } from './WireThreadPanel';
 import { WIRE_TOPICS } from '@/lib/wire/topics';
 
 type FeedKind = 'latest' | 'signal' | 'pack';
 
 /**
- * WireTab — the full Wire feed tab.
+ * WireTab - the full Wire feed tab.
  *
  * Logged-in users see the composer at the top; logged-out users see a sign-in
  * prompt. Below is the live, cursor-paginated feed of wires. Like and repost
@@ -34,6 +34,10 @@ export interface WireTabProps {
   author?: string;
   /** Optional: render a single user's reposts. */
   reposts?: string;
+  /** Optional: render a single user's replies (profile Replies sub-tab). */
+  repliesBy?: string;
+  /** Optional: render a single author's media wires (profile Media sub-tab). */
+  mediaAuthor?: string;
 }
 
 /** Update any post matching `id`, including an `original` nested inside a repost. */
@@ -48,11 +52,12 @@ function patchPost(posts: WirePost[], id: string, patch: (p: WirePost) => WirePo
   });
 }
 
-export default function WireTab({ onGift, author, reposts }: WireTabProps) {
+export default function WireTab({ onGift, author, reposts, repliesBy, mediaAuthor }: WireTabProps) {
   const { user, loading: authLoading } = useAuth();
   // The main feed (global) shows the Signal/Pack tabs + catalogue chips. Profile
-  // views (author / reposts) reuse this component without that chrome.
-  const isMainFeed = !author && !reposts;
+  // views (author / reposts / replies / media) reuse this component without that
+  // chrome.
+  const isMainFeed = !author && !reposts && !repliesBy && !mediaAuthor;
 
   const [posts, setPosts] = useState<WirePost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,7 +75,7 @@ export default function WireTab({ onGift, author, reposts }: WireTabProps) {
   // it, and closes the picker; tapping All returns to the full feed.
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  // A hashtag the viewer tapped inside a wire body — filters the visible feed
+  // A hashtag the viewer tapped inside a wire body - filters the visible feed
   // to wires that mention it. Freeform, so it's applied client-side.
   const [activeHashtag, setActiveHashtag] = useState<string | null>(null);
   const [reason, setReason] = useState<string | null>(null);
@@ -82,7 +87,12 @@ export default function WireTab({ onGift, author, reposts }: WireTabProps) {
     (c?: string | null) => {
       const qs = new URLSearchParams();
       if (author) qs.set('author', author);
+      if (mediaAuthor) {
+        qs.set('author', mediaAuthor);
+        qs.set('media', '1');
+      }
       if (reposts) qs.set('reposts', reposts);
+      if (repliesBy) qs.set('repliesBy', repliesBy);
       // Latest is the general feed: the route returns it when no `feed` param is
       // present, so we only send `feed` for Signal / Pack.
       if (isMainFeed && feed !== 'latest') qs.set('feed', feed);
@@ -91,7 +101,7 @@ export default function WireTab({ onGift, author, reposts }: WireTabProps) {
       const s = qs.toString();
       return `/api/wire/posts${s ? `?${s}` : ''}`;
     },
-    [author, reposts, isMainFeed, feed, selectedTopics],
+    [author, reposts, repliesBy, mediaAuthor, isMainFeed, feed, selectedTopics],
   );
 
   const load = useCallback(async () => {
@@ -171,7 +181,7 @@ export default function WireTab({ onGift, author, reposts }: WireTabProps) {
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  // Freeform hashtag filter, applied over the loaded page (real data only —
+  // Freeform hashtag filter, applied over the loaded page (real data only -
   // matches the raw #token in the body or a catalogue tag on the wire).
   const visiblePosts = useMemo(() => {
     if (!activeHashtag) return posts;
@@ -357,7 +367,7 @@ export default function WireTab({ onGift, author, reposts }: WireTabProps) {
   return (
     <div className="w-full max-w-2xl mx-auto space-y-4">
       {/* Sign-in prompt (logged-out). Logged-in users post via the + button
-          docked at the bottom-right of the feed area — see the FAB below. */}
+          docked at the bottom-right of the feed area - see the FAB below. */}
       {isMainFeed && !authLoading && !user ? (
         <div className="nl-glass rounded-2xl p-6 text-center">
           <div className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-3" style={{ background: 'linear-gradient(135deg,#0066FF33,#5566FF33)' }}>
@@ -397,7 +407,7 @@ export default function WireTab({ onGift, author, reposts }: WireTabProps) {
               ))}
             </div>
 
-            {/* The Wire settings — opens the slim topic-filter panel */}
+            {/* The Wire settings - opens the slim topic-filter panel */}
             <button
               type="button"
               onClick={() => setSettingsOpen((s) => !s)}
@@ -520,7 +530,15 @@ export default function WireTab({ onGift, author, reposts }: WireTabProps) {
             <>
               <p className="text-white/70 font-medium">No wires yet</p>
               <p className="text-white/45 text-sm mt-1">
-                {reposts ? 'No reposts to show.' : author ? 'Nothing posted here yet.' : 'Be the first to post on The Wire.'}
+                {reposts
+                  ? 'No relays to show.'
+                  : repliesBy
+                    ? 'No replies yet.'
+                    : mediaAuthor
+                      ? 'No media wires yet.'
+                      : author
+                        ? 'Nothing posted here yet.'
+                        : 'Be the first to post on The Wire.'}
               </p>
             </>
           )}
@@ -542,16 +560,6 @@ export default function WireTab({ onGift, author, reposts }: WireTabProps) {
                 onHashtag={handleHashtag}
                 threadOpen={openThreadId === p.id}
               />
-              {openThreadId === p.id ? (
-                <WireThread
-                  postId={p.id}
-                  currentUserId={user?.id ?? null}
-                  authorAvatarUrl={(user as any)?.avatar_url ?? null}
-                  authorDisplayName={user?.first_name || user?.username || 'You'}
-                  onGift={handleGift}
-                  onCountDelta={(d) => bumpReplyCount(p.id, d)}
-                />
-              ) : null}
             </div>
           ))}
 
@@ -570,7 +578,33 @@ export default function WireTab({ onGift, author, reposts }: WireTabProps) {
         </div>
       )}
 
-      {/* Floating "+" — docked at the bottom-right of the feed area. Opens the
+      {/* Reply thread - opens as a right-side panel (desktop/tablet) or a
+          full-screen sheet (mobile) only when the comment icon is tapped. */}
+      {openThreadId
+        ? (() => {
+            const openPost = posts.find((p) => p.id === openThreadId);
+            if (!openPost) return null;
+            return (
+              <WireThreadPanel
+                post={openPost}
+                currentUserId={user?.id ?? null}
+                authorAvatarUrl={(user as any)?.avatar_url ?? null}
+                authorDisplayName={user?.first_name || user?.username || 'You'}
+                onClose={() => setOpenThreadId(null)}
+                onLike={handleLike}
+                onRepost={handleRepost}
+                onGift={handleGift}
+                onDelete={handleDelete}
+                onMute={user ? handleMute : undefined}
+                muted={mutedIds.has(openPost.original?.author_id ?? openPost.author_id)}
+                onHashtag={handleHashtag}
+                onCountDelta={(d) => bumpReplyCount(openThreadId, d)}
+              />
+            );
+          })()
+        : null}
+
+      {/* Floating "+" - docked at the bottom-right of the feed area. Opens the
           dedicated, full-screen compose page. Main feed + signed-in only; sits
           above the dashboard bottom nav. Deep neon-blue to match the platform's
           primary buttons. */}
