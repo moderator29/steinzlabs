@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Loader2, Plus, Settings2, Sparkles, TrendingUp, Users, X } from 'lucide-react';
+import { Clock, Loader2, Plus, Settings2, Sparkles, TrendingUp, Users, X } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { WirePostCard, type WirePost } from './WirePostCard';
 import { WireThread } from './WireThread';
 import { WIRE_TOPICS } from '@/lib/wire/topics';
 
-type FeedKind = 'signal' | 'pack';
+type FeedKind = 'latest' | 'signal' | 'pack';
 
 /**
  * WireTab — the full Wire feed tab.
@@ -60,9 +60,14 @@ export default function WireTab({ onGift, author, reposts }: WireTabProps) {
   const [error, setError] = useState<string | null>(null);
   const [cursor, setCursor] = useState<string | null>(null);
   const [done, setDone] = useState(false);
-  const [feed, setFeed] = useState<FeedKind>('signal');
-  // Catalogue topics the viewer wants to see, chosen in the Wire settings
-  // panel. Empty = the general Wire (no topic filter → posts land in Signal).
+  // The default landing feed is Latest: the reliable general Wire (every
+  // top-level wire, newest first, no time window). Signal (48h trending) and
+  // Pack (people you follow) are opt-in tabs. Landing on Latest means the Wire
+  // always shows existing wires instead of going empty when nothing is trending.
+  const [feed, setFeed] = useState<FeedKind>('latest');
+  // Catalogue topic the viewer wants to see, chosen in the Wire settings panel.
+  // Empty = the general Wire (no topic filter). One tap selects a topic, applies
+  // it, and closes the picker; tapping All returns to the full feed.
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   // A hashtag the viewer tapped inside a wire body — filters the visible feed
@@ -78,7 +83,9 @@ export default function WireTab({ onGift, author, reposts }: WireTabProps) {
       const qs = new URLSearchParams();
       if (author) qs.set('author', author);
       if (reposts) qs.set('reposts', reposts);
-      if (isMainFeed) qs.set('feed', feed);
+      // Latest is the general feed: the route returns it when no `feed` param is
+      // present, so we only send `feed` for Signal / Pack.
+      if (isMainFeed && feed !== 'latest') qs.set('feed', feed);
       if (isMainFeed && selectedTopics.length) qs.set('tags', selectedTopics.join(','));
       if (c) qs.set('cursor', c);
       const s = qs.toString();
@@ -141,10 +148,21 @@ export default function WireTab({ onGift, author, reposts }: WireTabProps) {
     }
   }, [buildUrl, cursor, done, loadingMore]);
 
-  const toggleTopic = useCallback((value: string) => {
-    setSelectedTopics((prev) =>
-      prev.includes(value) ? prev.filter((t) => t !== value) : [...prev, value],
-    );
+  // Tapping a topic applies it immediately and closes the picker (single active
+  // topic). Tapping the already-active topic clears it, returning to the full
+  // feed. selectedTopics is a dependency of buildUrl, so the feed reloads on its
+  // own the moment this state changes (auto-apply).
+  const selectTopic = useCallback((value: string) => {
+    setSelectedTopics((prev) => (prev.length === 1 && prev[0] === value ? [] : [value]));
+    setSettingsOpen(false);
+    setOpenThreadId(null);
+  }, []);
+
+  // The "All" pseudo-chip: no topic filter. Applies and closes the picker.
+  const clearTopics = useCallback(() => {
+    setSelectedTopics([]);
+    setSettingsOpen(false);
+    setOpenThreadId(null);
   }, []);
 
   const handleHashtag = useCallback((tag: string) => {
@@ -310,6 +328,7 @@ export default function WireTab({ onGift, author, reposts }: WireTabProps) {
           <div className="flex items-center gap-1.5">
             <div className="flex items-center gap-1 nl-glass rounded-2xl p-1 flex-1 min-w-0">
               {([
+                { key: 'latest' as FeedKind, label: 'Latest', Icon: Clock },
                 { key: 'signal' as FeedKind, label: 'Signal', Icon: TrendingUp },
                 { key: 'pack' as FeedKind, label: 'Pack', Icon: Users },
               ]).map(({ key, label, Icon }) => (
@@ -320,13 +339,13 @@ export default function WireTab({ onGift, author, reposts }: WireTabProps) {
                     setFeed(key);
                     setOpenThreadId(null);
                   }}
-                  className={`flex-1 inline-flex items-center justify-center gap-1.5 text-sm font-medium py-2 rounded-xl transition ${
+                  className={`flex-1 min-w-0 inline-flex items-center justify-center gap-1 text-[13px] font-medium py-2 rounded-xl transition ${
                     feed === key ? 'bg-[#0066FF]/15 text-white border border-[#0066FF]/40' : 'text-white/55 hover:text-white'
                   }`}
                   aria-pressed={feed === key}
                 >
-                  <Icon className="w-4 h-4" />
-                  {label}
+                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  <span className="truncate">{label}</span>
                 </button>
               ))}
             </div>
@@ -351,31 +370,31 @@ export default function WireTab({ onGift, author, reposts }: WireTabProps) {
             </button>
           </div>
 
-          {/* Slim, glass, rectangular topic-filter panel (only when open) */}
+          {/* Slim, glass topic-filter panel (only when open). One tap on a topic
+              applies it and closes the panel; "All" clears the filter. */}
           {settingsOpen ? (
             <div className="mt-2 nl-glass rounded-xl p-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-white/60">Show topics on The Wire</span>
-                {selectedTopics.length ? (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedTopics([])}
-                    className="text-[11px] text-[#4d94ff] hover:underline"
-                  >
-                    Clear
-                  </button>
-                ) : (
-                  <span className="text-[11px] text-white/35">All topics</span>
-                )}
-              </div>
+              <span className="block text-xs font-medium text-white/60 mb-2">Filter The Wire by topic</span>
               <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={clearTopics}
+                  className={`text-[11px] font-medium px-2.5 py-1 rounded-md border transition ${
+                    selectedTopics.length === 0
+                      ? 'bg-[#0066FF]/20 text-[#4d94ff] border-[#0066FF]/50'
+                      : 'text-white/55 border-white/12 hover:text-white hover:border-white/25'
+                  }`}
+                  aria-pressed={selectedTopics.length === 0}
+                >
+                  All
+                </button>
                 {WIRE_TOPICS.map((t) => {
                   const active = selectedTopics.includes(t.value);
                   return (
                     <button
                       key={t.value}
                       type="button"
-                      onClick={() => toggleTopic(t.value)}
+                      onClick={() => selectTopic(t.value)}
                       className={`text-[11px] font-medium px-2.5 py-1 rounded-md border transition ${
                         active
                           ? 'bg-[#0066FF]/20 text-[#4d94ff] border-[#0066FF]/50'
@@ -443,12 +462,12 @@ export default function WireTab({ onGift, author, reposts }: WireTabProps) {
           ) : isMainFeed && feed === 'pack' ? (
             <>
               <p className="text-white/70 font-medium">Nothing from your Pack yet</p>
-              <p className="text-white/45 text-sm mt-1">{selectedTopics.length ? 'No posts under these topics from people you follow.' : 'People you follow have not posted yet.'}</p>
+              <p className="text-white/45 text-sm mt-1">{selectedTopics.length ? 'No posts under this topic from people you follow.' : 'People you follow have not posted yet.'}</p>
             </>
           ) : isMainFeed && selectedTopics.length ? (
             <>
-              <p className="text-white/70 font-medium">No wires under these topics</p>
-              <p className="text-white/45 text-sm mt-1">Adjust your topics in The Wire settings.</p>
+              <p className="text-white/70 font-medium">No wires under this topic yet</p>
+              <p className="text-white/45 text-sm mt-1">Pick another topic, or choose All to see everything.</p>
             </>
           ) : (
             <>

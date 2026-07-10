@@ -15,6 +15,7 @@ import { LivePulse } from './LivePulse';
 import { QuickPlay } from './QuickPlay';
 import { DailyBonus } from './DailyBonus';
 import { ResultCelebration, type Celebration } from './ResultCelebration';
+import { CategoryTabs, CategoryComingSoon, type PredictCategory } from './PredictCategories';
 
 type View = 'live' | 'leaderboard' | 'mine';
 
@@ -29,6 +30,7 @@ export default function LivePredict() {
   const { user, loading: authLoading } = useAuth();
   const signedIn = !!user;
 
+  const [category, setCategory] = useState<PredictCategory>('crypto');
   const [view, setView] = useState<View>('live');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -192,9 +194,12 @@ export default function LivePredict() {
   const streak = me.data?.stats?.currentStreak ?? 0;
 
   return (
-    <div className="nl-aurora-bg relative space-y-4">
-      {/* Header strip */}
-      <div className="flex flex-wrap items-center gap-2.5">
+    <div className="nl-aurora-bg relative min-w-0 space-y-4">
+      {/* Category selector: Crypto is live, the rest open soon */}
+      <CategoryTabs category={category} onChange={setCategory} />
+
+      {/* Account header strip: Naka Points + streak + daily bonus */}
+      <div className="flex min-w-0 flex-wrap items-center gap-2.5">
         <div className="inline-flex items-center gap-2 rounded-full border border-[#0066FF]/30 bg-[#0066FF]/[0.12] px-3 py-1.5">
           <Coins className="w-4 h-4 text-[#9FD0FF]" />
           <span className="text-sm font-bold tabular-nums text-white">
@@ -212,80 +217,90 @@ export default function LivePredict() {
         )}
 
         {signedIn && <DailyBonus now={now} onClaimed={handleDailyClaimed} />}
-
-        {/* segmented control */}
-        <div className="ms-auto inline-flex rounded-full border border-white/[0.08] bg-white/[0.03] p-0.5">
-          {TABS.map((t) => {
-            const active = view === t.id;
-            return (
-              <button
-                key={t.id}
-                onClick={() => setView(t.id)}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
-                  active ? 'bg-[#0066FF] text-white shadow-[0_0_16px_rgba(0,102,255,0.4)]' : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                <t.Icon className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{t.label}</span>
-              </button>
-            );
-          })}
-        </div>
       </div>
 
-      {/* flash banner */}
-      {flash && (
-        <div
-          className={`rounded-xl px-3.5 py-2.5 text-sm border ${
-            flash.tone === 'ok'
-              ? 'border-emerald-400/30 bg-emerald-500/[0.1] text-emerald-300'
-              : 'border-rose-400/30 bg-rose-500/[0.1] text-rose-300'
-          }`}
-        >
-          {flash.msg}
-        </div>
-      )}
+      {category === 'crypto' ? (
+        <>
+          {/* Board view tabs: full-width segmented, scrolls if cramped */}
+          <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="inline-flex min-w-full gap-1 rounded-full border border-white/[0.08] bg-white/[0.03] p-1">
+              {TABS.map((t) => {
+                const active = view === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setView(t.id)}
+                    aria-pressed={active}
+                    className={`inline-flex flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 py-2 text-xs font-semibold transition-all ${
+                      active ? 'bg-[#0066FF] text-white shadow-[0_0_16px_rgba(0,102,255,0.4)]' : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <t.Icon className="w-3.5 h-3.5" />
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-      {/* Views */}
-      {view === 'live' && (
-        <LiveView
-          markets={marketList}
-          featured={featured}
-          featuredPrice={featuredPrice}
-          others={others}
-          results={results}
-          now={now}
-          me={me.data}
-          signedIn={signedIn}
-          submitting={submitting}
-          loading={markets.loading}
-          error={markets.error}
-          selectedId={featured?.id ?? null}
-          onSelect={setSelectedId}
-          onEnter={handleEnter}
-          onEnterMarket={handleEnterMarket}
-          onSignIn={goSignIn}
-        />
-      )}
+          {/* flash banner */}
+          {flash && (
+            <div
+              className={`rounded-xl px-3.5 py-2.5 text-sm border ${
+                flash.tone === 'ok'
+                  ? 'border-emerald-400/30 bg-emerald-500/[0.1] text-emerald-300'
+                  : 'border-rose-400/30 bg-rose-500/[0.1] text-rose-300'
+              }`}
+            >
+              {flash.msg}
+            </div>
+          )}
 
-      {view === 'leaderboard' && (
-        <LeaderboardView
-          leaders={leaderboard.data?.leaders ?? null}
-          loading={leaderboard.loading}
-          error={leaderboard.error}
-          currentUserId={user?.id ?? null}
-        />
-      )}
+          {/* Views */}
+          {view === 'live' && (
+            <LiveView
+              markets={marketList}
+              featured={featured}
+              featuredPrice={featuredPrice}
+              others={others}
+              results={results}
+              now={now}
+              me={me.data}
+              signedIn={signedIn}
+              submitting={submitting}
+              loading={markets.loading}
+              error={markets.error}
+              selectedId={featured?.id ?? null}
+              onSelect={setSelectedId}
+              onEnter={handleEnter}
+              onEnterMarket={handleEnterMarket}
+              onSignIn={goSignIn}
+            />
+          )}
 
-      {view === 'mine' && (
-        <MyPredictionsView
-          me={me.data}
-          loading={me.loading}
-          error={me.error}
-          signedIn={signedIn}
-          now={now}
-          onSignIn={goSignIn}
-        />
+          {view === 'leaderboard' && (
+            <LeaderboardView
+              leaders={leaderboard.data?.leaders ?? null}
+              loading={leaderboard.loading}
+              error={leaderboard.error}
+              currentUserId={user?.id ?? null}
+            />
+          )}
+
+          {view === 'mine' && (
+            <MyPredictionsView
+              me={me.data}
+              loading={me.loading}
+              error={me.error}
+              signedIn={signedIn}
+              now={now}
+              onSignIn={goSignIn}
+            />
+          )}
+        </>
+      ) : (
+        <CategoryComingSoon category={category} />
       )}
 
       {!authLoading && (
