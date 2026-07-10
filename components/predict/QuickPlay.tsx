@@ -80,12 +80,12 @@ export function QuickPlay({ markets, now, me, signedIn, submitting, onEnter, onS
       {/* header: label + token switcher */}
       <div className="flex items-center justify-between gap-2">
         <div className="inline-flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#0066FF]/20 border border-[#0066FF]/40 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#9FD0FF]">
+          <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#0066FF]/20 border border-[#0066FF]/40 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#9FD0FF]">
             <Zap className="w-3.5 h-3.5" /> Quick Play
           </span>
           <LivePulse label="60s" />
         </div>
-        <div className="inline-flex rounded-full border border-white/[0.08] bg-black/20 p-0.5">
+        <div className="inline-flex gap-1 rounded-xl border border-white/[0.08] bg-black/20 p-1">
           {TOKENS.map((t) => {
             const active = t === token;
             const live = liveTokens.has(t);
@@ -94,7 +94,7 @@ export function QuickPlay({ markets, now, me, signedIn, submitting, onEnter, onS
                 key={t}
                 type="button"
                 onClick={() => setToken(t)}
-                className={`relative inline-flex items-center gap-1 rounded-full pl-1 pr-2.5 py-0.5 text-[11px] font-bold transition-all ${
+                className={`relative inline-flex items-center gap-1 rounded-lg pl-1 pr-2.5 py-1 text-[11px] font-bold transition-all active:scale-[0.96] ${
                   active ? 'bg-[#0066FF] text-white shadow-[0_0_14px_rgba(0,102,255,0.5)]' : 'text-gray-400 hover:text-white'
                 }`}
               >
@@ -170,7 +170,7 @@ export function QuickPlay({ markets, now, me, signedIn, submitting, onEnter, onS
                     type="button"
                     onClick={() => setStake(c)}
                     disabled={points != null && c > points}
-                    className={`flex-1 h-8 rounded-lg text-xs font-bold tabular-nums border transition-all disabled:opacity-30 ${
+                    className={`flex-1 h-8 rounded-xl text-xs font-bold tabular-nums border transition-all active:scale-[0.96] disabled:opacity-30 ${
                       stake === c
                         ? 'bg-[#0066FF]/25 border-[#0066FF]/60 text-white shadow-[0_0_12px_rgba(0,102,255,0.3)]'
                         : 'bg-white/[0.03] border-white/[0.08] text-gray-300 hover:border-white/25'
@@ -224,20 +224,19 @@ function TapButton({
 }) {
   const emerald = side === 'yes';
   const tone = emerald
-    ? 'border-emerald-400/60 bg-emerald-500/[0.16] text-emerald-300 hover:bg-emerald-500/[0.26] hover:shadow-[0_0_28px_rgba(16,185,129,0.4)] active:scale-[0.98]'
-    : 'border-rose-400/60 bg-rose-500/[0.16] text-rose-300 hover:bg-rose-500/[0.26] hover:shadow-[0_0_28px_rgba(244,63,94,0.4)] active:scale-[0.98]';
+    ? 'border-emerald-400/60 bg-emerald-500/[0.16] text-emerald-300 hover:bg-emerald-500/[0.26] hover:shadow-[0_0_28px_rgba(16,185,129,0.4)] active:scale-[0.96] active:bg-emerald-500/[0.32]'
+    : 'border-rose-400/60 bg-rose-500/[0.16] text-rose-300 hover:bg-rose-500/[0.26] hover:shadow-[0_0_28px_rgba(244,63,94,0.4)] active:scale-[0.96] active:bg-rose-500/[0.32]';
   return (
     <button
       type="button"
       onClick={onTap}
       disabled={disabled}
-      className={`flex h-16 sm:h-20 items-center justify-center gap-2 rounded-2xl border text-lg font-extrabold tracking-wide transition-all disabled:cursor-not-allowed disabled:opacity-50 ${tone}`}
+      className={`flex h-16 sm:h-20 items-center justify-center gap-2 rounded-xl border text-lg font-extrabold tracking-wide transition-all disabled:cursor-not-allowed disabled:opacity-50 ${tone}`}
     >
       {pending ? (
         <Loader2 className="w-6 h-6 animate-spin" />
       ) : (
         <>
-          <span aria-hidden>{emerald ? '🟢' : '🔴'}</span>
           <Icon className="w-6 h-6" />
           {label}
         </>
@@ -259,8 +258,9 @@ function LockedPosition({ entry, closed }: { entry: Entry; closed: boolean }) {
         <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-gray-300">
           <Lock className="w-3.5 h-3.5" /> You’re in
         </span>
-        <span className={`text-sm font-extrabold ${up ? 'text-emerald-400' : 'text-rose-400'}`}>
-          {up ? '🟢 UP' : '🔴 DOWN'} · {entry.multiplier.toFixed(2)}x
+        <span className={`inline-flex items-center gap-1 text-sm font-extrabold ${up ? 'text-emerald-400' : 'text-rose-400'}`}>
+          {up ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+          {up ? 'UP' : 'DOWN'} · {entry.multiplier.toFixed(2)}x
         </span>
       </div>
       <div className="mt-1.5 flex items-end justify-between">

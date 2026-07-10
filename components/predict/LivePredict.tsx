@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Activity, AlertTriangle, Coins, Flame, Trophy, User } from 'lucide-react';
+import { Activity, AlertTriangle, Coins, Flame, Sparkles, Target, Trophy, User } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import type { EnterResponse, Market, MeResponse, ResolvedMarket, Side } from './types';
 import { useLeaderboard, useMarkets, useMe, useNow, usePrices } from './hooks';
@@ -195,21 +195,37 @@ export default function LivePredict() {
 
   return (
     <div className="nl-aurora-bg relative min-w-0 space-y-4">
-      {/* Category selector: Crypto is live, the rest open soon */}
+      {/* Page header: brand title + BETA badge. Signals this is a beta feature. */}
+      <header className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <div className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-[#0066FF]/40 bg-[#0066FF]/[0.14] shadow-[0_0_16px_rgba(0,102,255,0.3)]">
+              <Target className="h-4 w-4 text-[#9FD0FF]" />
+            </div>
+            <h2 className="truncate text-lg font-extrabold tracking-tight text-white">Naka Predict</h2>
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-emerald-400/40 bg-emerald-500/[0.12] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]">
+              <Sparkles className="h-3 w-3" /> Beta
+            </span>
+          </div>
+          <p className="mt-1 text-[11px] text-gray-400">Live crypto prediction markets · free to play</p>
+        </div>
+      </header>
+
+      {/* Category filter: crypto only for now, rest gated out at the UI layer */}
       <CategoryTabs category={category} onChange={setCategory} />
 
       {/* Account header strip: Naka Points + streak + daily bonus */}
       <div className="flex min-w-0 flex-wrap items-center gap-2.5">
-        <div className="inline-flex items-center gap-2 rounded-full border border-[#0066FF]/30 bg-[#0066FF]/[0.12] px-3 py-1.5">
+        <div className="inline-flex items-center gap-2 rounded-xl border border-[#0066FF]/30 bg-[#0066FF]/[0.12] px-3 py-1.5">
           <Coins className="w-4 h-4 text-[#9FD0FF]" />
           <span className="text-sm font-bold tabular-nums text-white">
-            {signedIn ? formatPoints(displayPoints) : '—'}
+            {signedIn ? formatPoints(displayPoints) : '-'}
           </span>
           <span className="text-[11px] text-[#9FD0FF]">Naka Points</span>
         </div>
 
         {signedIn && streak > 0 && (
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-orange-400/30 bg-orange-400/[0.1] px-3 py-1.5">
+          <div className="inline-flex items-center gap-1.5 rounded-xl border border-orange-400/30 bg-orange-400/[0.1] px-3 py-1.5">
             <Flame className="w-4 h-4 text-orange-400" />
             <span className="text-sm font-bold tabular-nums text-white">{streak}</span>
             <span className="text-[11px] text-orange-300">streak</span>
@@ -221,9 +237,9 @@ export default function LivePredict() {
 
       {category === 'crypto' ? (
         <>
-          {/* Board view tabs: full-width segmented, scrolls if cramped */}
+          {/* Board view tabs: rectangle segmented control, scrolls if cramped */}
           <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            <div className="inline-flex min-w-full gap-1 rounded-full border border-white/[0.08] bg-white/[0.03] p-1">
+            <div className="inline-flex min-w-full gap-1 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-1">
               {TABS.map((t) => {
                 const active = view === t.id;
                 return (
@@ -232,7 +248,7 @@ export default function LivePredict() {
                     type="button"
                     onClick={() => setView(t.id)}
                     aria-pressed={active}
-                    className={`inline-flex flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 py-2 text-xs font-semibold transition-all ${
+                    className={`inline-flex flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold transition-all active:scale-[0.97] ${
                       active ? 'bg-[#0066FF] text-white shadow-[0_0_16px_rgba(0,102,255,0.4)]' : 'text-gray-400 hover:text-white'
                     }`}
                   >
@@ -421,7 +437,7 @@ function LiveView({
 function FeaturedEmpty({ error }: { error: boolean }) {
   return (
     <div className="nl-glass rounded-3xl px-5 py-14 text-center">
-      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#0066FF]/10 mb-3">
+      <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[#0066FF]/10 mb-3">
         {error ? <AlertTriangle className="w-6 h-6 text-amber-400" /> : <Activity className="w-6 h-6 text-[#9FD0FF]" />}
       </div>
       <h3 className="text-base font-semibold text-white">

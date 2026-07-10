@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendTelegramMessage, answerCallbackQuery, type TelegramUpdate } from "@/lib/telegram/client";
+import { renderMenu, isMenuNode, type MenuLinked } from "@/lib/telegram/menu";
 import { checkTier, type Tier } from "@/lib/subscriptions/tierCheck";
 import { safeCompareStrings } from "@/lib/security/webhookAuth";
 
@@ -131,81 +132,10 @@ function tierBadge(tier: Tier): string {
   return tier === "max" ? "🔥 MAX" : tier === "pro" ? "⭐ PRO" : tier === "mini" ? "✨ MINI" : "🆓 FREE";
 }
 
-// The command deck. A tap-first inline menu (like the best TG bots): live
-// market data one tap away, deep app features as buttons, and the full text
-// command list one tap deeper. Tasteful single emoji per button, no walls of
-// text, no em-dashes.
-function menuKeyboard(linked: LinkedUser | null) {
-  const rows: { text: string; callback_data?: string; url?: string }[][] = [
-    [
-      { text: "📈 Trending", callback_data: "menu:trending" },
-      { text: "🚀 Gainers", callback_data: "menu:gainers" },
-    ],
-    [
-      { text: "🐳 Top Whales", callback_data: "menu:whales" },
-      { text: "😱 Fear & Greed", callback_data: "menu:feargreed" },
-    ],
-    [
-      { text: "💰 BTC", callback_data: "menu:price:BTC" },
-      { text: "💰 ETH", callback_data: "menu:price:ETH" },
-      { text: "💰 SOL", callback_data: "menu:price:SOL" },
-    ],
-    [
-      { text: "🎯 Predict", url: `${APP_URL}/dashboard?subtab=prediction` },
-      { text: "🧠 VTX AI", url: `${APP_URL}/dashboard/vtx-ai` },
-    ],
-    [
-      { text: "🤝 Copy Trading", url: `${APP_URL}/dashboard/copy-trading` },
-      { text: "🔫 Sniper", url: `${APP_URL}/dashboard/sniper` },
-    ],
-    [
-      { text: "🔔 Alerts", url: `${APP_URL}/dashboard/alerts` },
-      { text: "💼 Portfolio", url: `${APP_URL}/dashboard/portfolio` },
-    ],
-    [OPEN_APP_BTN, SETTINGS_BTN],
-  ];
-  if (!linked || linked.tier === "free" || linked.tier === "mini") rows.push([UPGRADE_BTN]);
-  rows.push([
-    { text: "📋 All commands", callback_data: "commands" },
-    { text: "🆘 Support", url: `${APP_URL}/support` },
-  ]);
-  return rows;
-}
-
-async function sendHelp(chatId: number, linked: LinkedUser | null): Promise<void> {
-  const tierLine = linked ? `Plan: *${tierBadge(linked.tier)}*` : "_Not linked yet. Send_ `/link <code>` _from Settings._";
-  const text =
-    `*🐺 Naka Labs*\n${tierLine}\n\n` +
-    `Your command deck. Tap anything below for live data, or type a command like \`/price BTC\`.`;
-  await sendTelegramMessage(chatId, text, { reply_markup: { inline_keyboard: menuKeyboard(linked) } });
-}
-
-// The full text command reference, one tap behind the "All commands" button so
-// the main menu stays clean.
-async function sendCommandList(chatId: number, linked: LinkedUser | null): Promise<void> {
-  const tierLine = linked ? `Plan: *${tierBadge(linked.tier)}*` : "_Not linked yet_";
-  const text =
-    `*📋 Naka Labs commands*\n${tierLine}\n\n` +
-    `*🔓 Free*\n` +
-    `\`/price BTC\` live price card\n` +
-    `\`/chart ETH 7\` price chart (1, 7, 30, 365d)\n` +
-    `\`/info SOL\` full token info\n` +
-    `\`/security <addr>\` GoPlus rug check\n` +
-    `\`/trending\` top trending coins\n` +
-    `\`/gainers\` top 24h gainers\n` +
-    `\`/feargreed\` market sentiment index\n` +
-    `\`/whales\` top 10 whales by 30d PnL\n` +
-    `\`/alerts\` your active price alerts\n` +
-    `\`/setalert BTC 100000\` alert at or above price\n` +
-    `\`/setalert ETH <3000\` alert at or below price\n` +
-    `\`/portfolio\` your connected wallets\n\n` +
-    `*✨ MINI*  \`/whale <addr>\` full wallet intelligence\n` +
-    `*⭐ PRO*  \`/copy <addr>\` copy trading controls\n` +
-    `*🔥 MAX*  \`/snipe <token>\` sniper bot config\n\n` +
-    `*Account*  \`/start\` · \`/help\` · \`/status\` · \`/link <code>\` · \`/unlink\``;
-  await sendTelegramMessage(chatId, text, {
-    reply_markup: { inline_keyboard: [[{ text: "🔙 Back to menu", callback_data: "help" }], [OPEN_APP_BTN]] },
-  });
+// Adapt the webhook's LinkedUser to the shape the menu module consumes. Null
+// stays null so the menu can render its "not linked yet" state.
+function toMenuLinked(linked: LinkedUser | null): MenuLinked | null {
+  return linked ? { userId: linked.user_id, tier: linked.tier, expired: linked.expired } : null;
 }
 
 function tierGateMsg(needed: Tier): string {
@@ -268,16 +198,16 @@ export async function POST(request: NextRequest) {
     // refresh:<command>:<args…>. Any unknown action acks the spinner
     // and noops so old buttons still degrade gracefully.
     const data = cq.data ?? "";
-    if (data === "help") {
-      const linked = await getLinkedUser(cbChatId);
+    const cbMessageId = cq.message?.message_id ?? null;
+    // nav:<node> — Rosebot-style in-place navigation. Rewrite the current
+    // bubble into the requested main-menu / submenu screen. Legacy callbacks
+    // "help" and "commands" (from older messages still in users' chats) map
+    // onto the new deck so no button ever dead-ends.
+    if (data.startsWith("nav:") || data === "help" || data === "commands") {
+      const node = data === "help" ? "home" : data === "commands" ? "help" : data.slice(4);
       await answerCallbackQuery(cq.id);
-      await sendHelp(cbChatId, linked);
-      return NextResponse.json({ ok: true });
-    }
-    if (data === "commands") {
       const linked = await getLinkedUser(cbChatId);
-      await answerCallbackQuery(cq.id);
-      await sendCommandList(cbChatId, linked);
+      await renderMenu(cbChatId, cbMessageId, isMenuNode(node) ? node : "home", toMenuLinked(linked));
       return NextResponse.json({ ok: true });
     }
     const [action, ...rest] = data.split(":");
@@ -309,23 +239,15 @@ export async function POST(request: NextRequest) {
   const ctx = { chatId, args: cmd.args, rawText: text };
 
   // ─── Account commands (no link required) ─────────────────────────────
-  if (cmd.name === "start") {
-    if (linked) {
-      await sendHelp(chatId, linked);
-    } else {
-      await sendTelegramMessage(
-        chatId,
-        `*Welcome to Naka Labs* 🐺\n\n` +
-          `Your on-chain intelligence co-pilot: live prices, charts, whales, alerts and copy trades, all from Telegram. Tap anything below to start. No account needed for market data.\n\n` +
-          `To unlock alerts and trading, link your account: open Settings, go to Notifications, Telegram, generate a 6-digit code, then send \`/link 123456\`.`,
-        { reply_markup: { inline_keyboard: menuKeyboard(linked) } },
-      );
-    }
+  if (cmd.name === "start" || cmd.name === "menu") {
+    // Fresh send (no message to edit) of the branded main deck. All further
+    // navigation happens by editing this same bubble (see nav:* above).
+    await renderMenu(chatId, null, "home", toMenuLinked(linked));
     return NextResponse.json({ ok: true });
   }
 
-  if (cmd.name === "help" || cmd.name === "menu") {
-    await sendHelp(chatId, linked);
+  if (cmd.name === "help") {
+    await renderMenu(chatId, null, "help", toMenuLinked(linked));
     return NextResponse.json({ ok: true });
   }
 

@@ -66,7 +66,7 @@ export function StakeControl({ market, points, signedIn, submitting, onEnter, on
             key={c}
             type="button"
             onClick={() => setStake(c)}
-            className={`flex-1 h-9 rounded-xl text-sm font-semibold tabular-nums border transition-all ${
+            className={`flex-1 h-9 rounded-xl text-sm font-semibold tabular-nums border transition-all active:scale-[0.96] ${
               stake === c
                 ? 'bg-[#0066FF]/20 border-[#0066FF]/55 text-white shadow-[0_0_16px_rgba(0,102,255,0.25)]'
                 : 'bg-white/[0.03] border-white/[0.08] text-gray-300 hover:border-white/20'
@@ -79,7 +79,7 @@ export function StakeControl({ market, points, signedIn, submitting, onEnter, on
           type="button"
           onClick={() => setStake(maxStake || 0)}
           disabled={!signedIn || maxStake <= 0}
-          className="flex-1 h-9 rounded-xl text-sm font-semibold border border-white/[0.08] bg-white/[0.03] text-gray-300 hover:border-white/20 disabled:opacity-40 transition-all"
+          className="flex-1 h-9 rounded-xl text-sm font-semibold border border-white/[0.08] bg-white/[0.03] text-gray-300 hover:border-white/20 active:scale-[0.96] disabled:opacity-40 transition-all"
         >
           Max
         </button>
@@ -164,7 +164,7 @@ function SideCard({
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      className={`relative rounded-2xl border px-4 py-3 text-left transition-all ${selected ? base.on : base.off}`}
+      className={`relative rounded-xl border px-4 py-3 text-left transition-all active:scale-[0.97] ${selected ? base.on : base.off}`}
     >
       <div className="flex items-center justify-between">
         <span className={`text-sm font-extrabold tracking-wide ${base.text}`}>{label}</span>

@@ -98,6 +98,60 @@ export async function sendTelegramMessage(
   }
 }
 
+/**
+ * Edit an existing message in place (Rosebot-style menu -> submenu -> back
+ * navigation). Buttons that call this rewrite the same chat bubble rather than
+ * spamming a new message per tap. Telegram returns HTTP 400 "message is not
+ * modified" when the new text + markup are byte-identical to the current ones
+ * (e.g. a user taps the same tab twice): that is a no-op, not a failure, so we
+ * treat it as success. Any other failure is logged and reported false so the
+ * caller can fall back to a fresh send.
+ */
+export async function editTelegramMessage(
+  chatId: number | string,
+  messageId: number,
+  text: string,
+  opts: {
+    parse_mode?: "Markdown" | "HTML";
+    disable_web_page_preview?: boolean;
+    reply_markup?: { inline_keyboard: Array<Array<{ text: string; url?: string; callback_data?: string }>> };
+  } = {},
+): Promise<boolean> {
+  const t = token();
+  if (!t) {
+    console.warn("[telegram] TELEGRAM_BOT_TOKEN not set; skipping edit");
+    return false;
+  }
+  try {
+    const res = await fetchWithRetry(`${API_BASE}/bot${t}/editMessageText`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId,
+        text,
+        parse_mode: opts.parse_mode ?? "HTML",
+        disable_web_page_preview: opts.disable_web_page_preview ?? true,
+        ...(opts.reply_markup ? { reply_markup: opts.reply_markup } : {}),
+      }),
+      source: "telegram.editMessageText",
+      timeoutMs: 5000,
+      retries: 1,
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      // "message is not modified" — identical re-tap. Not an error.
+      if (res.status === 400 && /not modified/i.test(body)) return true;
+      console.error(`[telegram.edit] HTTP ${res.status}: ${body.slice(0, 200)}`);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[telegram.edit] failed:", err);
+    return false;
+  }
+}
+
 export async function sendTelegramPhoto(
   chatId: number | string,
   photoUrl: string,
