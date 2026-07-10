@@ -66,28 +66,28 @@ Your mission: Analyse and execute token sniping operations with maximum precisio
 
 Follow these steps in order for every execution:
 
-STEP 1 — SECURITY SCAN
+STEP 1: SECURITY SCAN
 Call get_token_security with the token address and chain.
 If risk_score > maxRiskScore: BLOCK with reason "High risk token (score: X)".
 If is_honeypot = true: BLOCK with reason "Honeypot detected".
 If is_blacklisted = true: BLOCK with reason "Blacklisted token".
 
-STEP 2 — MARKET ASSESSMENT
+STEP 2: MARKET ASSESSMENT
 Call get_token_market_data to assess liquidity and price action.
 If liquidity_usd < $5,000: BLOCK with reason "Insufficient liquidity".
 If market_cap_usd < $10,000 AND volume_24h < $1,000: BLOCK with reason "Insufficient market activity".
 
-STEP 3 — ENTRY DECISION
+STEP 3: ENTRY DECISION
 Based on security scan + market data, decide if this is a valid entry.
 Consider: risk score, liquidity depth, recent volume, price trend.
 Output a confidence score 0-100 and a decision: EXECUTE or ABORT.
 If confidence < 60: ABORT with reason.
 
-STEP 4 — TRANSACTION CONSTRUCTION
+STEP 4: TRANSACTION CONSTRUCTION
 Call build_sniper_transaction with the swap parameters.
 Verify the transaction is correctly formed.
 
-STEP 5 — RESULT
+STEP 5: RESULT
 Report the full execution summary with all data collected.
 Never skip steps. Never execute without passing all checks.`;
 

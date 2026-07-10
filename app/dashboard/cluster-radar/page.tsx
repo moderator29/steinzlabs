@@ -69,7 +69,7 @@ export default function ClusterRadarPage() {
 
       <div className="text-center mb-4">
         <h1 className="text-2xl font-bold">Where coordinated money is moving</h1>
-        <p className="text-slate-400 text-sm mt-1">The biggest coordinated wallet clusters by 24h volume — with the seed you can decode.</p>
+        <p className="text-slate-400 text-sm mt-1">The biggest coordinated wallet clusters by 24h volume, with the seed you can decode.</p>
       </div>
 
       <div className="flex items-center gap-2 mb-4">

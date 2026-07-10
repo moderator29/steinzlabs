@@ -50,7 +50,7 @@ export const P2B_TOOLS: Anthropic.Tool[] = [
     input_schema: {
       type: 'object' as const,
       properties: {
-        symbols: { type: 'array', items: { type: 'string' }, description: 'Token symbols or CoinGecko slugs (e.g. ["bitcoin","ethereum","solana"]) — 2 to 5 entries' },
+        symbols: { type: 'array', items: { type: 'string' }, description: 'Token symbols or CoinGecko slugs (e.g. ["bitcoin","ethereum","solana"]); 2 to 5 entries' },
       },
       required: ['symbols'],
     },
@@ -107,7 +107,7 @@ export const P2B_TOOLS: Anthropic.Tool[] = [
   },
   {
     name: 'transaction_simulator',
-    description: 'Dry-run a transaction via Alchemy alchemy_simulateExecution — returns state diff, balance changes, expected logs. Use for "what would happen if I send this tx" / before signing risky calldata.',
+    description: 'Dry-run a transaction via Alchemy alchemy_simulateExecution: returns state diff, balance changes, expected logs. Use for "what would happen if I send this tx" / before signing risky calldata.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -428,12 +428,12 @@ async function portfolioRebalanceSuggestion(userId: string | null): Promise<stri
     current_pct: Number(h.pct.toFixed(1)),
     target_pct: 25,
     trim_usd: Number((h.usd_value - total * 0.25).toFixed(2)),
-    reason: `${h.symbol} is ${h.pct.toFixed(0)}% of portfolio — single-name concentration risk above 40%.`,
+    reason: `${h.symbol} is ${h.pct.toFixed(0)}% of portfolio: single-name concentration risk above 40%.`,
   }));
   return JSON.stringify({
     total_usd: Number(total.toFixed(2)),
     holdings: holdings.length,
-    rebalance_suggestions: recs.length > 0 ? recs : ['Portfolio is well-diversified — no single position >40% of total value.'],
+    rebalance_suggestions: recs.length > 0 ? recs : ['Portfolio is well-diversified: no single position >40% of total value.'],
   });
 }
 

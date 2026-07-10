@@ -863,11 +863,11 @@ function ContractAnalyzerInner() {
                 ) : (
                   <p className="text-xs text-gray-300 leading-relaxed">
                     {result.overallScore >= 80
-                      ? `Contract scored ${result.overallScore}/100 — ${result.riskFlags.length === 0 ? 'no risk flags detected' : `${result.riskFlags.length} minor flag(s) noted`}. Appears safe for interaction, though DYOR always applies.`
+                      ? `Contract scored ${result.overallScore}/100: ${result.riskFlags.length === 0 ? 'no risk flags detected' : `${result.riskFlags.length} minor flag(s) noted`}. Appears safe for interaction, though DYOR always applies.`
                       : result.overallScore >= 55
                       ? `Contract scored ${result.overallScore}/100 with ${result.riskFlags.length} risk flag(s). ${result.tokenSecurity?.isHoneypot ? 'Honeypot pattern identified. ' : ''}Exercise caution before interacting.`
                       : result.overallScore >= 35
-                      ? `Significant issues — score ${result.overallScore}/100. ${result.riskFlags.slice(0, 2).join('. ')}. High caution advised.`
+                      ? `Significant issues: score ${result.overallScore}/100. ${result.riskFlags.slice(0, 2).join('. ')}. High caution advised.`
                       : `CRITICAL RISK (${result.overallScore}/100): ${result.riskFlags.slice(0, 3).join('. ')}. Do not interact.`
                     }
                   </p>

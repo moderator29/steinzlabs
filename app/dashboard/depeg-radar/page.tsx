@@ -55,7 +55,7 @@ export default function DepegRadarPage() {
 
       {!loading && pegs && (
         <div className={`nl-glass rounded-xl p-3 mb-3 text-sm ${anyDepeg ? 'text-red-300' : worst && worst.status === 'watch' ? 'text-amber-300' : 'text-emerald-300'}`}>
-          {anyDepeg ? '⚠️ A stablecoin is off peg by more than 1% — review before using it as a base pair.'
+          {anyDepeg ? '⚠️ A stablecoin is off peg by more than 1%. Review before using it as a base pair.'
             : worst && worst.status === 'watch' ? `Slight drift: ${worst.symbol} is ${fmtDev(worst.deviationBps)} off peg.`
             : 'All monitored stablecoins are on peg.'}
         </div>
@@ -84,7 +84,7 @@ export default function DepegRadarPage() {
           })}
         </div>
       ) : (
-        <p className="text-center text-sm text-slate-500 py-12">Price source is unavailable right now — try again shortly.</p>
+        <p className="text-center text-sm text-slate-500 py-12">Price source is unavailable right now. Try again shortly.</p>
       )}
     </div>
   );

@@ -94,7 +94,7 @@ export default function RotationPage() {
 
       <div className="text-center mb-4">
         <h1 className="text-2xl font-bold">Where attention is rotating</h1>
-        <p className="text-slate-400 text-sm mt-1">Not where smart money IS — where it’s moving TO. Net-flow change vs the prior window.</p>
+        <p className="text-slate-400 text-sm mt-1">Not where smart money IS, but where it’s moving TO. Net-flow change vs the prior window.</p>
       </div>
 
       {/* Controls */}

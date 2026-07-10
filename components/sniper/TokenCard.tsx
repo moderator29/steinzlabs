@@ -125,12 +125,12 @@ export function TokenCard({
         <Stat
           icon={Activity}
           label="Fee"
-          value={t.tax != null ? `${t.tax}%` : '—'}
+          value={t.tax != null ? `${t.tax}%` : '-'}
         />
         <Stat
           icon={Activity}
           label="24h"
-          value={t.priceChange24h != null ? `${t.priceChange24h > 0 ? '+' : ''}${t.priceChange24h.toFixed(1)}%` : '—'}
+          value={t.priceChange24h != null ? `${t.priceChange24h > 0 ? '+' : ''}${t.priceChange24h.toFixed(1)}%` : '-'}
         />
       </div>
 
@@ -145,7 +145,7 @@ export function TokenCard({
         <button
           onClick={(e) => { e.stopPropagation(); onSnipe(t); }}
           disabled={snipeBlocked}
-          title={snipeBlocked ? 'Blocked by Shadow Guardian — failed security checks' : 'Quick buy / snipe this token'}
+          title={snipeBlocked ? 'Blocked by Shadow Guardian: failed security checks' : 'Quick buy / snipe this token'}
           className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition border ${
             snipeBlocked
               ? 'bg-red-500/10 border-red-500/30 text-red-300/70 cursor-not-allowed'
@@ -157,7 +157,7 @@ export function TokenCard({
         </button>
         <button
           onClick={openDna}
-          title="DNA — open in Contract Analyzer"
+          title="DNA: open in Contract Analyzer"
           className="nl-button nl-button--ghost shrink-0 px-3 py-2 rounded-xl text-xs font-bold"
         >
           <Dna className="w-3.5 h-3.5" /> DNA

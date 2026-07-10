@@ -17,7 +17,7 @@ class ShadowGuardian {
       if (goplusSec.status === 'fulfilled' && goplusSec.value) {
         const sec = goplusSec.value;
         if (sec.isHoneypot) {
-          return { allowed: false, blocked: true, riskScore: 10, reason: 'HONEYPOT', recommendation: 'BLOCKED', message: 'TRADE BLOCKED: Token is a honeypot — you cannot sell.' };
+          return { allowed: false, blocked: true, riskScore: 10, reason: 'HONEYPOT', recommendation: 'BLOCKED', message: 'TRADE BLOCKED: Token is a honeypot. You cannot sell.' };
         }
         if (sec.sellTax > 0.5) {
           return { allowed: false, blocked: true, riskScore: 9, reason: 'EXTREME_TAX', recommendation: 'BLOCKED', message: `TRADE BLOCKED: Sell tax is ${(sec.sellTax * 100).toFixed(0)}%` };

@@ -25,7 +25,8 @@
 
 import { use, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { Star, Bell, Share2, Brain, X, Maximize2, Minimize2, CandlestickChart as CandleIcon, LineChart as LineIcon, AreaChart as AreaIcon, BarChart3, Settings2 } from "lucide-react";
+import { Star, Bell, Share2, Brain, X, Maximize2, Minimize2, CandlestickChart as CandleIcon, LineChart as LineIcon, AreaChart as AreaIcon, BarChart3, Settings2, ArrowLeftRight } from "lucide-react";
+import { useRouter } from "next/navigation";
 import SocialVelocityPill from "@/components/market/SocialVelocityPill";
 import DuneIntelligenceStrip from "@/components/market/DuneIntelligenceStrip";
 import TokenIntelligencePanel from "@/components/market/TokenIntelligencePanel";
@@ -195,10 +196,13 @@ function writeIndicators(tokenKey: string, value: IndicatorConfig): void {
 
 export default function CoinDetailPage({ params }: { params: Promise<RouteParams> }) {
   const { chain, address } = use(params);
+  const router = useRouter();
   const { user } = useAuth();
   const { theme } = useTheme();
   const { detail, loading } = useTokenDetail(address);
-  const { isWatched, toggleWatchlist } = useWatchlist(user?.id ?? null);
+  const { isWatched, toggleWatchlist } = useWatchlist(user?.id ?? null, {
+    onRequireAuth: () => router.push(`/login?from=/dashboard/market/${chain}/${address}`),
+  });
   const [showAlert, setShowAlert] = useState(false);
   const [showIntel, setShowIntel] = useState(false);
   // Per-token timeframe persistence — keyed on chain:address so BTC at
@@ -294,6 +298,12 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
   const name = detail?.name ?? address;
   const logo = detail?.image?.small;
   const watched = isWatched(address);
+  // Cross-feature quick-link: open Swap pre-filled to buy this token. The
+  // swap route reads ?buyToken=<addr|symbol>&chain=<chain>; it resolves an
+  // EVM contract via /api/swap/token-meta, so pass the raw address for EVM
+  // and the ticker otherwise (a CoinGecko slug wouldn't resolve to a symbol).
+  const isEvmAddress = /^0x[a-fA-F0-9]{40}$/.test(address);
+  const swapHref = `/dashboard/swap?buyToken=${encodeURIComponent(isEvmAddress ? address : symbol)}&chain=${encodeURIComponent(chain)}`;
   // Bug #1 — only route to the real TradingView (Binance/Bybit) widget when
   // we have a VERIFIED CEX symbol. Guessing BINANCE:{SYM}USDT for an
   // unlisted coin would render "Invalid symbol" or, worse, a same-ticker
@@ -411,6 +421,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
               <Brain size={13} /> Intel
             </button>
             <IconBtn title={watched ? "Unwatch" : "Watch"} onClick={() => toggleWatchlist(address)} icon={<Star size={16} className={watched ? 'fill-yellow-400 text-yellow-400' : ''} />} />
+            <IconBtn title={`Swap ${symbol}`} onClick={() => router.push(swapHref)} icon={<ArrowLeftRight size={16} />} />
             <IconBtn title="Alerts" onClick={() => setShowAlert(true)} icon={<Bell size={16} />} />
             <IconBtn
               title="Share"

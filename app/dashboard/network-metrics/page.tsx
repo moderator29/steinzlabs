@@ -140,7 +140,7 @@ export default function NetworkMetricsPage() {
 
         {!loading && !responding && (
           <p className="text-[11px] text-gray-500 text-center px-2">
-            No live data returned for {selectedChain} on the last poll. Figures show as “N/A” until the RPC responds — try Refresh.
+            No live data returned for {selectedChain} on the last poll. Figures show as “N/A” until the RPC responds. Try Refresh.
           </p>
         )}
       </div>

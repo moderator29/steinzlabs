@@ -105,7 +105,7 @@ export default function LaunchpadPage() {
             Every project is verified, every milestone is enforced, and every investor is protected. Funds release only when builders deliver.
           </p>
           <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 font-semibold">
-            Apply to Launch — coming soon
+            Apply to Launch: coming soon
           </span>
         </div>
 

@@ -229,7 +229,7 @@ function SecurityPanel({ event }: { event: ProofEvent }) {
           </div>
         </div>
       )}
-      <p className="text-[9px] text-gray-500 mt-2">Live safety scan · liquidity-lock + holder concentration · not a guarantee — DYOR.</p>
+      <p className="text-[9px] text-gray-500 mt-2">Live safety scan · liquidity-lock + holder concentration · not a guarantee. DYOR.</p>
     </div>
   );
 }
@@ -491,7 +491,7 @@ export default function ViewProofPage() {
                   editorialize ("institutional-grade", slippage guarantees,
                   "passes our security checks") about data we never measured. */}
               <p>
-                {event.tokenSymbol} on {chainId} chain — {event.sentiment?.toLowerCase()} signal.
+                {event.tokenSymbol} on {chainId} chain: {event.sentiment?.toLowerCase()} signal.
                 {event.tokenPrice ? ` Price ${event.tokenPrice}.` : ''}
                 {event.tokenPriceChange24h ? ` 24h change ${event.tokenPriceChange24h > 0 ? '+' : ''}${event.tokenPriceChange24h.toFixed(2)}%.` : ''}
               </p>
@@ -530,7 +530,7 @@ export default function ViewProofPage() {
                   <div className="flex justify-between"><span className="text-gray-500">Value</span><span className="font-semibold text-white">${event.valueUsd?.toLocaleString()}</span></div>
                 </div>
               </div>
-              <p className="text-[10px] text-gray-500">Derived from live on-chain price/volume/liquidity metrics — not a security audit, and not financial advice.</p>
+              <p className="text-[10px] text-gray-500">Derived from live on-chain price/volume/liquidity metrics. Not a security audit, and not financial advice.</p>
             </div>
           </div>
         )}
@@ -694,7 +694,7 @@ export default function ViewProofPage() {
               if (!swap) {
                 return (
                   <div className="nl-glass rounded-xl p-3 border border-amber-400/30 text-[11px] text-amber-300">
-                    Swap unavailable — this signal doesn&apos;t carry a
+                    Swap unavailable. This signal doesn&apos;t carry a
                     resolvable token. Open the full swap if you want to pick
                     a token manually.
                   </div>
@@ -738,7 +738,7 @@ export default function ViewProofPage() {
             <h3 className="font-bold text-sm">Your Take</h3>
           </div>
           <p className="text-[11px] text-gray-500 mb-3 leading-relaxed">
-            Mark your own read — a personal note, not aggregated community data or a trade. Use Swap above to act.
+            Mark your own read: a personal note, not aggregated community data or a trade. Use Swap above to act.
           </p>
           <div className="grid grid-cols-2 gap-2 mb-2">
             <button

@@ -460,7 +460,7 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
             </>
           )}
           {filtered.length === 0 && importedForChain.length === 0 && remoteFiltered.length === 0 && !looksLikeAddress && !remoteSearching ? (
-            <p className="text-center text-sm text-gray-500 py-10">No tokens found — try pasting the contract address</p>
+            <p className="text-center text-sm text-gray-500 py-10">No tokens found. Try pasting the contract address</p>
           ) : (
             filtered.map(t => (
               <button
@@ -1030,7 +1030,7 @@ export default function SwapPage() {
           setQuoteData(null);
           setQuoteError(
             data?.code === 'UNRESOLVED_TOKEN'
-              ? `This pair isn't tradeable on ${c} — try the token's contract address.`
+              ? `This pair isn't tradeable on ${c}. Try the token's contract address.`
               : data?.error || 'No route found for this pair. Try a different amount or network.'
           );
         }
@@ -1038,7 +1038,7 @@ export default function SwapPage() {
         console.error('[Swap] Price fetch failed:', err);
         setToAmount('');
         setQuoteData(null);
-        setQuoteError('Quote service unreachable — check your connection and retry.');
+        setQuoteError('Quote service unreachable. Check your connection and retry.');
       }
       setFetchingQuote(false);
     }, 400);
@@ -1274,7 +1274,7 @@ export default function SwapPage() {
           // Solana keypair + versioned-tx flow (Phantom path above).
           throw new Error(
             chain === 'solana'
-              ? 'Swapping on Solana with the built-in Naka wallet isn’t supported yet — connect Phantom for Solana swaps.'
+              ? 'Swapping on Solana with the built-in Naka wallet isn’t supported yet. Connect Phantom for Solana swaps.'
               : 'The router did not return a transaction to sign. Refresh the quote and try again.',
           );
         }
@@ -1324,7 +1324,7 @@ export default function SwapPage() {
         try {
           pk = await decryptPrivateKey(storedWallet.encryptedKey, pwd);
         } catch {
-          throw new Error('Failed to decrypt wallet key — wrong password, or this wallet predates AES-256-GCM (re-import the seed phrase from the Wallet page).');
+          throw new Error('Failed to decrypt wallet key: wrong password, or this wallet predates AES-256-GCM (re-import the seed phrase from the Wallet page).');
         }
         const chainRpcs: Record<string, string> = {
           ethereum: 'https://eth.llamarpc.com',
@@ -1815,10 +1815,10 @@ export default function SwapPage() {
                   <span className="text-xs font-medium text-white">Gasless Mode</span>
                   <p className="text-[10px] text-gray-500">
                     {gaslessEnabled && isGaslessAvailable
-                      ? 'No gas fees — cost absorbed into trade'
+                      ? 'No gas fees: cost absorbed into trade'
                       : !isGaslessAvailable && gaslessEnabled
                         ? `Not available for native tokens. Standard swap.`
-                        : 'Standard swap — you pay network gas'}
+                        : 'Standard swap: you pay network gas'}
                   </p>
                 </div>
               </div>

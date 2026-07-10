@@ -42,8 +42,8 @@ function fmtUsd(n: number | null): string {
 const VERDICT_META: Record<Verdict, { label: string; color: string }> = {
   strong: { label: 'Strong smart-money signal', color: '#10B981' },
   mixed: { label: 'Mixed signals', color: '#FFD86B' },
-  caution: { label: 'Caution — red flags present', color: '#FF1744' },
-  thin: { label: 'Thin coverage — little data', color: '#64748b' },
+  caution: { label: 'Caution: red flags present', color: '#FF1744' },
+  thin: { label: 'Thin coverage: little data', color: '#64748b' },
 };
 
 function Panel({ icon, title, children, href }: { icon: React.ReactNode; title: string; children: React.ReactNode; href?: string }) {
@@ -97,7 +97,7 @@ export default function TokenXrayPage() {
 
       <div className="text-center mb-4">
         <h1 className="text-2xl font-bold">Every smart-money signal, one screen</h1>
-        <p className="text-slate-400 text-sm mt-1">Paste a token — convergence, whales, flow, wash-trade, buyer age, and a plain verdict.</p>
+        <p className="text-slate-400 text-sm mt-1">Paste a token: convergence, whales, flow, wash-trade, buyer age, and a plain verdict.</p>
       </div>
 
       <form onSubmit={(e) => { e.preventDefault(); run(input); }} className="nl-glass rounded-2xl p-2 flex items-center gap-2 mb-4">

@@ -79,7 +79,7 @@ function explorerUrl(chain: string, hash: string): string {
 }
 
 function fmt(n: number | undefined, max = 6): string {
-  if (n === undefined || !Number.isFinite(n)) return '—';
+  if (n === undefined || !Number.isFinite(n)) return 'N/A';
   return n.toLocaleString('en-US', { maximumFractionDigits: max });
 }
 
@@ -199,7 +199,7 @@ export default function SwapBatchCard({
     <div>
       {/* Note above the card */}
       <p className="text-[12px] leading-relaxed text-gray-400 mb-3 px-1">
-        Confirm each swap separately — a fresh quote is fetched at sign time, so
+        Confirm each swap separately. A fresh quote is fetched at sign time, so
         execution prices may shift slightly.
       </p>
 
@@ -319,7 +319,7 @@ export default function SwapBatchCard({
               <div className="flex items-center justify-between text-[12px]">
                 <span className="text-gray-500">Minimum received</span>
                 <span className="text-gray-200 font-mono tabular-nums">
-                  {active.status === 'quoting' ? '—' : `${fmt(active.quote?.minReceived)} ${activeLeg.toToken}`}
+                  {active.status === 'quoting' ? '…' : `${fmt(active.quote?.minReceived)} ${activeLeg.toToken}`}
                 </span>
               </div>
               <div className="flex items-center justify-between text-[12px]">
@@ -329,7 +329,7 @@ export default function SwapBatchCard({
               <div className="flex items-center justify-between text-[12px]">
                 <span className="text-gray-500">Price impact</span>
                 <span className={`font-semibold tabular-nums ${impactColor(active.quote?.priceImpactPct ?? 0)}`}>
-                  {active.status === 'quoting' ? '—' : `${(active.quote?.priceImpactPct ?? 0).toFixed(2)}%`}
+                  {active.status === 'quoting' ? '…' : `${(active.quote?.priceImpactPct ?? 0).toFixed(2)}%`}
                 </span>
               </div>
             </div>

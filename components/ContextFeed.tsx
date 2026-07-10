@@ -779,7 +779,7 @@ export default function ContextFeed() {
                   <a
                     href="/dashboard/security/portfolio-risk"
                     className="mb-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#0066FF]/10 border border-[#0066FF]/30 text-[10px] font-bold uppercase tracking-wide text-[#8FA3FF] hover:bg-[#0066FF]/15 hover:border-[#0066FF]/50"
-                    aria-label={`${c.wallet_count} smart wallets bought ${sym} in the last 24 hours — check portfolio risk`}
+                    aria-label={`${c.wallet_count} smart wallets bought ${sym} in the last 24 hours. Check portfolio risk`}
                   >
                     <span aria-hidden>◈</span>
                     <span>{c.wallet_count} smart wallets bought ${sym} (24h)</span>
@@ -842,7 +842,7 @@ export default function ContextFeed() {
                   the desktop layout identical and parks the wrapped
                   mobile button on the right edge of its row. */}
               <div className="flex flex-wrap items-center gap-y-2">
-                <div className="flex items-center gap-2 min-w-0 flex-wrap" title="Signal confidence — how reliable this event's source is, separate from token-level Trust Score.">
+                <div className="flex items-center gap-2 min-w-0 flex-wrap" title="Signal confidence: how reliable this event's source is, separate from token-level Trust Score.">
                   <span className="text-[9px] font-semibold text-slate-500 uppercase flex-shrink-0">Signal</span>
                   <div className="w-20 bg-white/20 rounded-full h-1.5 flex-shrink-0">
                     <div

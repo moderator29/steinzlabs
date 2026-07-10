@@ -56,8 +56,8 @@ export function OrderHistoryPanel() {
           <tr key={r.id} className="border-b border-slate-800/50 hover:bg-white/[0.02]">
             <td className="px-3 py-2 text-[10px] uppercase text-slate-400">{r.type}</td>
             <td className="px-3 py-2 text-slate-300">{r.pair}</td>
-            <td className="px-3 py-2 font-mono text-slate-300">{r.amount ?? "—"}</td>
-            <td className="px-3 py-2 font-mono text-slate-300">{r.price !== null ? `$${r.price}` : "—"}</td>
+            <td className="px-3 py-2 font-mono text-slate-300">{r.amount ?? "-"}</td>
+            <td className="px-3 py-2 font-mono text-slate-300">{r.price !== null ? `$${r.price}` : "-"}</td>
             <td className={`px-3 py-2 text-[10px] uppercase ${
               r.status === "executed" || r.status.startsWith("triggered") || r.status === "success"
                 ? "text-green-400"

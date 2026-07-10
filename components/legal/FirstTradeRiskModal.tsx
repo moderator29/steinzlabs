@@ -88,7 +88,7 @@ export default function FirstTradeRiskModal({ open, onConfirm, onCancel }: Props
               <span className="text-amber-400 shrink-0">•</span>
               <span>
                 Crypto trades are <span className="font-semibold">irreversible</span>. Once
-                signed, no one — including Naka Labs — can claw the funds back.
+                signed, no one, including Naka Labs, can claw the funds back.
               </span>
             </li>
             <li className="flex gap-2">
@@ -102,7 +102,7 @@ export default function FirstTradeRiskModal({ open, onConfirm, onCancel }: Props
               <span className="text-amber-400 shrink-0">•</span>
               <span>
                 Naka Labs is <span className="font-semibold">non-custodial</span>. Your
-                wallet, your keys, your responsibility — we route the swap, you sign it.
+                wallet, your keys, your responsibility. We route the swap, you sign it.
               </span>
             </li>
             <li className="flex gap-2">
@@ -152,7 +152,7 @@ export default function FirstTradeRiskModal({ open, onConfirm, onCancel }: Props
               }}
               className="flex-1 px-3 py-2 rounded-lg bg-gradient-to-r from-[#0066FF] to-[#7C3AED] text-xs font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed enabled:hover:scale-[1.02] transition-transform"
             >
-              I understand — continue
+              I understand, continue
             </button>
           </div>
         </div>

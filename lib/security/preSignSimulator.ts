@@ -94,14 +94,14 @@ export async function preSignSimulate(req: SimRequest, transport: SimTransport):
     if (!receive) {
       return {
         ok: false,
-        reason: `Honeypot pattern — simulation completed but no ${expected.symbol} received.`,
+        reason: `Honeypot pattern: simulation completed but no ${expected.symbol} received.`,
         code: 'honeypot',
       };
     }
     if (receive.amount < expected.minAmount) {
       return {
         ok: false,
-        reason: `Slippage breached — would receive ${receive.amount.toFixed(6)} ${expected.symbol}, minimum was ${expected.minAmount}.`,
+        reason: `Slippage breached: would receive ${receive.amount.toFixed(6)} ${expected.symbol}, minimum was ${expected.minAmount}.`,
         code: 'slippage-breached',
       };
     }

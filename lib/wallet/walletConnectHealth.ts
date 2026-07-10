@@ -69,12 +69,12 @@ export function getWalletConnectHealth(): WalletConnectHealth {
 
   if (!HAS_APPKIT) {
     status = 'error';
-    notes.push('NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID is not set — WalletConnect is disabled. Add it to the environment and redeploy.');
+    notes.push('NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID is not set. WalletConnect is disabled. Add it to the environment and redeploy.');
   } else {
     notes.push(`WalletConnect project configured (…${projectIdTail}).`);
     if (!appKitInitialized) {
       status = 'warn';
-      notes.push('AppKit has not initialized yet on this page — open the connect modal once, or reload.');
+      notes.push('AppKit has not initialized yet on this page. Open the connect modal once, or reload.');
     }
     if (!originMatches) {
       status = 'warn';

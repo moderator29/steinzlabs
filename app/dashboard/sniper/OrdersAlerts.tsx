@@ -59,7 +59,7 @@ export function LimitOrdersTab() {
               {o.trigger_direction === 'above' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold truncate">{o.from_token_symbol ?? '—'} → {o.to_token_symbol ?? '—'} <span className="text-[10px] uppercase tracking-wider text-white/40">{o.chain}</span></div>
+              <div className="text-sm font-bold truncate">{o.from_token_symbol ?? 'N/A'} → {o.to_token_symbol ?? 'N/A'} <span className="text-[10px] uppercase tracking-wider text-white/40">{o.chain}</span></div>
               <div className="text-[11px] text-white/50">{fmtUSD(o.from_amount)} when price {o.trigger_direction} ${o.trigger_price_usd} · {timeAgo(o.created_at)}</div>
             </div>
             <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border shrink-0 ${active ? 'text-blue-300 bg-blue-500/15 border-blue-500/30' : o.status === 'filled' ? 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30' : 'text-white/50 bg-white/5 border-white/10'}`}>{o.status}</span>
@@ -129,7 +129,7 @@ export function AlertsTab() {
         <div className="rounded-xl border-2 border-dashed border-white/10 p-12 text-center">
           <Bell className="w-10 h-10 mx-auto mb-3 text-white/25" />
           <h3 className="text-base font-bold mb-1">No alerts set</h3>
-          <p className="text-white/50 text-sm">Open a token and tap “Set Alert” to get pinged on price moves — in your notifications and (optionally) with a sound.</p>
+          <p className="text-white/50 text-sm">Open a token and tap “Set Alert” to get pinged on price moves, in your notifications and (optionally) with a sound.</p>
         </div>
       ) : (
         <div className="grid gap-2">

@@ -77,7 +77,7 @@ export default function SmartMoneyFlowsPage() {
 
       <div className="text-center mb-4">
         <h1 className="text-2xl font-bold">What smart money is accumulating</h1>
-        <p className="text-slate-400 text-sm mt-1">Net buying vs selling across the tracked whale directory — ranked by size.</p>
+        <p className="text-slate-400 text-sm mt-1">Net buying vs selling across the tracked whale directory, ranked by size.</p>
       </div>
 
       {/* Controls */}

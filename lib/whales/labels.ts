@@ -196,7 +196,7 @@ export function classifyAddress(address: string, chain: string): ClassificationR
  */
 export const LABEL_META: Record<WhaleLabel, { short: string; color: string; tooltip: string }> = {
   cex:          { short: 'CEX',          color: '#F59E0B', tooltip: 'Centralized-exchange hot wallet (deposits / withdrawals).' },
-  mm:           { short: 'MM',           color: '#8B5CF6', tooltip: 'Market maker — Wintermute / Jump / Cumberland / GSR class.' },
+  mm:           { short: 'MM',           color: '#8B5CF6', tooltip: 'Market maker: Wintermute / Jump / Cumberland / GSR class.' },
   smart_money:  { short: 'Smart Money',  color: '#10B981', tooltip: 'Wallet with realized PnL > $100k AND > 70% win rate.' },
   bot:          { short: 'Bot',          color: '#06B6D4', tooltip: 'High-frequency or arbitrage bot.' },
   insider:      { short: 'Insider',      color: '#EF4444', tooltip: 'Wallet that received tokens before public launch / unlock.' },

@@ -153,7 +153,7 @@ export async function signEvmRequest(params: {
   if (m === 'eth_sign') {
     // Blind-signing primitive — rejected outright (audit #47 H2). Not advertised
     // in EVM_METHODS, but reject defensively in case a dApp requests it anyway.
-    throw new Error('eth_sign is disabled — it allows blind-signing of arbitrary data.');
+    throw new Error('eth_sign is disabled: it allows blind-signing of arbitrary data.');
   }
   if (m === 'eth_signTypedData' || m === 'eth_signTypedData_v4') {
     // params: [address, typedDataJSON]

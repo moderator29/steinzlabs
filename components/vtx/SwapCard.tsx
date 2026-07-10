@@ -450,12 +450,12 @@ export function SwapCard({ swap, walletAddress, onCancel, source = 'vtx' }: Prop
       <div className="px-4 pb-4 space-y-1.5">
         <div className="flex items-center justify-between text-[11px]">
           <span className="text-gray-500">Rate</span>
-          <span className="text-gray-300 font-mono">{stage === 'quoting' ? '—' : quote.rate}</span>
+          <span className="text-gray-300 font-mono">{stage === 'quoting' ? '-' : quote.rate}</span>
         </div>
         <div className="flex items-center justify-between text-[11px]">
           <span className="text-gray-500">Price Impact</span>
           <span className={`font-semibold ${impactColor}`}>
-            {stage === 'quoting' ? '—' : `${quote.priceImpact.toFixed(2)}%`}
+            {stage === 'quoting' ? '-' : `${quote.priceImpact.toFixed(2)}%`}
           </span>
         </div>
         <div className="flex items-center justify-between text-[11px]">
@@ -492,7 +492,7 @@ export function SwapCard({ swap, walletAddress, onCancel, source = 'vtx' }: Prop
             <span className="text-[12px] font-semibold text-white">Connect a wallet to swap</span>
           </div>
           <p className="mt-1 text-[11px] leading-relaxed text-gray-400">
-            Swaps are non-custodial — you hold your keys and nothing moves until you sign.
+            Swaps are non-custodial: you hold your keys and nothing moves until you sign.
           </p>
           <div className="mt-3 flex flex-col sm:flex-row gap-2">
             <button
@@ -522,7 +522,7 @@ export function SwapCard({ swap, walletAddress, onCancel, source = 'vtx' }: Prop
               </div>
               <div className="text-[11px] text-amber-200/80 leading-relaxed mt-0.5">
                 You need {quote.fromAmount} {quote.fromToken}
-                {balance !== null ? <> — you have {balance.toFixed(6)} {quote.fromToken}</> : null}.
+                {balance !== null ? <>, you have {balance.toFixed(6)} {quote.fromToken}</> : null}.
                 Deposit into your wallet and try the swap again.
               </div>
             </div>
@@ -540,7 +540,7 @@ export function SwapCard({ swap, walletAddress, onCancel, source = 'vtx' }: Prop
             className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-amber-500/15 hover:bg-amber-500/20 border border-amber-500/30 text-amber-200 text-[12px] font-semibold transition-colors"
           >
             {copied ? (
-              <><Check size={13} /> Address copied — paste in your exchange/wallet to deposit</>
+              <><Check size={13} /> Address copied. Paste in your exchange/wallet to deposit</>
             ) : (
               <><Copy size={13} /> Copy wallet address to deposit</>
             )}

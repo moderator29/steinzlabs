@@ -282,7 +282,7 @@ function TrendDrawer({ card, onClose }: { card: TrendCard; onClose: () => void }
               convergence + whale-move signals for this chain. */}
           <div className="mb-4">
             <AiInsightCard
-              title="Why is this moving — VTX"
+              title="Why is this moving: VTX"
               text={why?.narrative ?? (card.insight ?? '')}
               streaming={!!why?.narrative}
               loading={whyLoading}

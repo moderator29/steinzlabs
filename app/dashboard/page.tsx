@@ -6,8 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Brand icon library — gradient-glowing platform icons. Missing specialty
 // icons fall back to lucide-react (hybrid pattern used elsewhere on main).
 import {
-  Wallet, User, TrendingDown, Activity, BarChart3,
-  Home, MessageSquare, Zap, ArrowUpRight, ArrowDownRight, Search, Menu, X,
+  Wallet, User,
+  Home, MessageSquare, Search, Menu, X,
   LayoutGrid, Rss, Radio, Newspaper, LineChart, Sparkles,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -30,13 +30,14 @@ import SteinzLogo from '@/components/ui/SteinzLogo';
 // above them. User feedback called it visual noise. The four full-size KPI
 // cards rendered below already cover Total Market Cap / 24h Volume / BTC
 // Dominance / Chains Tracked.
-import { TopGainersCard } from '@/components/dashboard/TopGainersCard';
 import { RenderWidgets } from '@/components/dashboard/RenderWidgets';
-import { HeatingUpCard } from '@/components/dashboard/HeatingUpCard';
 import { FirstRunTour } from '@/components/dashboard/FirstRunTour';
 
 const ContextFeed    = lazy(() => import('@/components/ContextFeed'));
-const MarketDashboard = lazy(() => import('@/components/MarketDashboard'));
+// The single canonical markets front — the SAME component renders at
+// /dashboard/market so the two surfaces can never drift. Owns the market
+// stat strip, Top Gainers + Heating Up, the token list, and the RWA board.
+const MarketsView = lazy(() => import('@/components/market/MarketsView'));
 const WalletTab   = lazy(() => import('@/components/WalletTab'));
 const ProfileTab  = lazy(() => import('@/components/ProfileTab'));
 // New home sub-tab surfaces. These live at exact agreed paths and are owned
@@ -47,7 +48,6 @@ const WireTab  = lazy(() => import('@/components/wire/WireTab'));
 const GiftSheet = lazy(() => import('@/components/wire/GiftSheet').then(m => ({ default: m.GiftSheet })));
 const GiftSuccessCard = lazy(() => import('@/components/wire/GiftSuccessCard').then(m => ({ default: m.GiftSuccessCard })));
 const NewsTab  = lazy(() => import('@/components/news/NewsTab'));
-const RwaBoard = lazy(() => import('@/components/markets/RwaBoard'));
 
 // Sub-tab ordering + typing for the home feed. Kept as a const tuple so the
 // union type, the deep-link parser and the tab-bar UI can never drift apart.
@@ -175,40 +175,6 @@ class TabErrorBoundary extends Component<{ children: ReactNode }, { hasError: bo
     return this.props.children;
   }
 }
-
-const StatCard = memo(function StatCard({ label, value, change, icon: Icon, trend }: {
-  label: string;
-  value: string;
-  change: string;
-  icon: React.ElementType;
-  trend: 'up' | 'down' | 'neutral';
-}) {
-  // Compact Trust-Wallet / CoinGecko-style stat cell. Single row on desktop,
-  // still single-row on mobile (the grid drops to 2 columns on small screens).
-  // Migrated to .cult-card primitive (Phase A ascension) — keeps the same
-  // density but adds the brand gradient halo on hover.
-  return (
-    <div className="cult-card px-3 py-2.5">
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-1.5">
-          <div className="p-1 rounded-md bg-[#0066FF]/[0.10]">
-            <Icon className="w-3.5 h-3.5" />
-          </div>
-          <span className="text-[10px] text-[#B4C0E0] tracking-wide">{label}</span>
-        </div>
-        {change ? (
-          <div className={`flex items-center gap-0.5 text-[10px] font-medium ${
-            trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-red-400' : 'text-gray-500'
-          }`}>
-            {trend === 'up' ? <ArrowUpRight className="w-2.5 h-2.5" /> : trend === 'down' ? <ArrowDownRight className="w-2.5 h-2.5" /> : null}
-            {change}
-          </div>
-        ) : null}
-      </div>
-      <div className="text-[15px] sm:text-base font-bold text-white font-mono tracking-tight">{value}</div>
-    </div>
-  );
-});
 
 const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNav: string; onNavChange: (id: string) => void }) {
   const navItems = [
@@ -535,11 +501,6 @@ export default function Dashboard() {
     postId?: string | null;
   } | null>(null);
   const [giftSuccess, setGiftSuccess] = useState<GiftSuccessData | null>(null);
-  const [marketStats, setMarketStats] = useState<{
-    totalMarketCap: string; totalVolume: string; btcDominance: string;
-    marketCapChange: string; volumeChange: string; dominanceChange: string;
-    activeCoins: string;
-  } | null>(null);
 
   const handleNavChange = useCallback((id: string) => {
     setActiveNav(id);
@@ -581,43 +542,9 @@ export default function Dashboard() {
     return () => { cancelled = true; };
   }, [user]);
 
-  useEffect(() => {
-    const fetchMarketStats = async () => {
-      try {
-        // Route through our unified service-layer endpoint so we share the
-        // cache + rate-limit + usage counter with everything else.
-        const res = await fetch('/api/dashboard/market-globals', {
-          signal: AbortSignal.timeout(10_000),
-          cache: 'no-store',
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const mc = data.totalMarketCap || 0;
-          const vol = data.totalVolume || 0;
-          const btcDom = data.btcDominance || 0;
-          const mcChange = data.marketCapChange24h || 0;
-          const active = Number(data.chainsTracked) || 0;
-          setMarketStats({
-            totalMarketCap: mc >= 1e12 ? `$${(mc / 1e12).toFixed(2)}T` : `$${(mc / 1e9).toFixed(1)}B`,
-            totalVolume: vol >= 1e12 ? `$${(vol / 1e12).toFixed(2)}T` : `$${(vol / 1e9).toFixed(1)}B`,
-            btcDominance: `${btcDom.toFixed(1)}%`,
-            marketCapChange: `${mcChange >= 0 ? '+' : ''}${mcChange.toFixed(1)}%`,
-            // Volume change 24h and dominance change aren't returned by the
-            // CoinGecko /global endpoint on the demo plan, so we intentionally
-            // leave them empty rather than fabricate a value.
-            volumeChange: '',
-            dominanceChange: '',
-            activeCoins: active > 1000 ? `${Math.round(active / 100) / 10}k+` : String(active),
-          });
-        }
-      } catch (err) {
-        console.error('[dashboard] Fetch market stats failed:', err);
-      }
-    };
-    fetchMarketStats();
-    const interval = setInterval(fetchMarketStats, 120000);
-    return () => clearInterval(interval);
-  }, []);
+  // The global market-stats strip now lives inside MarketsView (rendered on
+  // the Markets sub-tab + /dashboard/market), so the dashboard shell no longer
+  // fetches market globals itself.
 
   if (authLoading) {
     return <DashboardAuthLoadingGate />;
@@ -627,35 +554,6 @@ export default function Dashboard() {
 
   const showHomeTabs = activeNav === 'home';
 
-  const stats = marketStats ? [
-    { label: 'Total Market Cap', value: marketStats.totalMarketCap, change: marketStats.marketCapChange, icon: BarChart3, trend: (parseFloat(marketStats.marketCapChange) >= 0 ? 'up' : 'down') as 'up' | 'down' | 'neutral' },
-    { label: '24h Volume', value: marketStats.totalVolume, change: '', icon: Activity, trend: 'neutral' as const },
-    { label: 'BTC Dominance', value: marketStats.btcDominance, change: '', icon: TrendingDown, trend: 'neutral' as const },
-    { label: 'Active Coins', value: marketStats.activeCoins, change: 'Live', icon: Zap, trend: 'up' as const },
-  ] : [
-    { label: 'Total Market Cap', value: '...', change: '', icon: BarChart3, trend: 'neutral' as const },
-    { label: '24h Volume', value: '...', change: '', icon: Activity, trend: 'neutral' as const },
-    { label: 'BTC Dominance', value: '...', change: '', icon: TrendingDown, trend: 'neutral' as const },
-    { label: 'Active Coins', value: '…', change: '', icon: Zap, trend: 'neutral' as const },
-  ];
-
-  // Global market-stats bar — MOVED here out of the always-on home header so
-  // it now lives only at the top of the Markets tab, not on Overview.
-  const marketStatsBar = (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-5">
-      {stats.map((stat, i) => (
-        <motion.div
-          key={stat.label}
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.2, delay: i * 0.06 }}
-        >
-          <StatCard {...stat} />
-        </motion.div>
-      ))}
-    </div>
-  );
-
   const heroName = user.first_name || user.username || (user.email ? user.email.split('@')[0] : '');
 
   const renderContent = () => {
@@ -664,22 +562,10 @@ export default function Dashboard() {
         return (
           <div className="space-y-5">
             <SubTabHelpHeader label="Markets" content={rwaHowItWorks} />
-            {/* Global market-stats bar now lives at the top of Markets. */}
-            {marketStatsBar}
-            {/* Top Gainers (60%) + Heating Up (40%) — CoinGecko-grade market
-                overview. Stacks single-column on mobile, splits on lg. */}
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
-              <div className="lg:col-span-3">
-                <TopGainersCard />
-              </div>
-              <div className="lg:col-span-2">
-                <HeatingUpCard />
-              </div>
-            </div>
-            <MarketDashboard />
-            {/* RWA / TradFi section beneath the crypto markets. Owned by a
-                sibling agent at components/markets/RwaBoard.tsx. */}
-            <RwaBoard />
+            {/* Single canonical markets front — the SAME MarketsView renders
+                at /dashboard/market. Owns the market stat strip, Top Gainers +
+                Heating Up, the token list, and the RWA board. */}
+            <MarketsView />
           </div>
         );
       }

@@ -50,14 +50,14 @@ export function CryptoPaymentModal({ tier, onClose, onActivated }: Props) {
       const data = await res.json();
       if (!res.ok) {
         setError(data.code === 'NOT_CONFIGURED'
-          ? 'Payments are being set up — check back shortly.'
+          ? 'Payments are being set up. Check back shortly.'
           : (data.error || 'Could not start payment'));
         return;
       }
       setIntent(data);
       setStatus('waiting');
     } catch {
-      setError('Network error — try again.');
+      setError('Network error. Try again.');
     } finally {
       setLoading(false);
     }
@@ -98,7 +98,7 @@ export function CryptoPaymentModal({ tier, onClose, onActivated }: Props) {
         style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 24px rgba(0,102,255,.18)' }}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-white">Pay with USDC — {tier.toUpperCase()}</h3>
+          <h3 className="font-bold text-white">Pay with USDC: {tier.toUpperCase()}</h3>
           <button onClick={onClose} aria-label="Close" className="p-1.5 hover:bg-white/10 rounded-lg">
             <X className="w-4 h-4 text-gray-400" />
           </button>
@@ -146,7 +146,7 @@ export function CryptoPaymentModal({ tier, onClose, onActivated }: Props) {
                 <p className="text-xs text-gray-400 leading-relaxed">
                   Send <span className="text-white font-semibold">exactly {intent.amount} USDC</span> on{' '}
                   <span className="text-white font-semibold">{intent.chainLabel}</span> to the address below. The
-                  exact amount is how we match your payment — send it precisely.
+                  exact amount is how we match your payment. Send it precisely.
                 </p>
 
                 <div className="rounded-xl bg-[#060A12] border border-white/[0.06] p-3">
@@ -171,7 +171,7 @@ export function CryptoPaymentModal({ tier, onClose, onActivated }: Props) {
 
                 <div className="flex items-center gap-2 text-xs text-gray-500">
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0066FF]" />
-                  Waiting for your transfer — this confirms automatically within a few minutes of sending.
+                  Waiting for your transfer. This confirms automatically within a few minutes of sending.
                 </div>
               </div>
             )}

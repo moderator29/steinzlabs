@@ -195,12 +195,12 @@ async function signBuiltin(trade: PendingTradeForSigning): Promise<InlineSignRes
   // not the EVM one.
   if (chain === 'solana') {
     if (!wallet.encryptedMnemonic) {
-      throw new Error("This built-in wallet can't sign Solana trades — re-import its seed phrase from the Wallet page.");
+      throw new Error("This built-in wallet can't sign Solana trades. Re-import its seed phrase from the Wallet page.");
     }
     // Require the derived Solana address so the safety guard below is
     // unconditional — never fall back to the EVM address as a Solana taker.
     if (!wallet.solanaAddress) {
-      throw new Error("This wallet has no Solana address derived — re-import its seed phrase from the Wallet page.");
+      throw new Error("This wallet has no Solana address derived. Re-import its seed phrase from the Wallet page.");
     }
     let mnemonic = "";
     try {

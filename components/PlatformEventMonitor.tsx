@@ -76,7 +76,7 @@ async function checkSmartMoney(): Promise<void> {
       addLocalNotification({
         type: 'whale_alert',
         title: `Smart Money Convergence: ${signal.symbol || signal.token}`,
-        message: `${signal.walletCount} top wallets entered ${signal.symbol || signal.token} — ${signal.totalVolume} combined volume (${signal.timeWindow})`,
+        message: `${signal.walletCount} top wallets entered ${signal.symbol || signal.token}, ${signal.totalVolume} combined volume (${signal.timeWindow})`,
       });
     }
   } catch {
@@ -115,7 +115,7 @@ async function checkWhaleTracker(): Promise<void> {
       addLocalNotification({
         type: 'whale_alert',
         title: `MEGA Whale Active: ${whale.name}`,
-        message: `${whale.shortAddress || whale.name} is active on ${whale.chain} — ${whale.volumeStr} tracked volume`,
+        message: `${whale.shortAddress || whale.name} is active on ${whale.chain}, ${whale.volumeStr} tracked volume`,
       });
     }
   } catch {

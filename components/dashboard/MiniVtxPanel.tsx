@@ -192,7 +192,7 @@ export function MiniVtxPanel({
                 handleSubmit();
               }
             }}
-            placeholder="Ask VTX anything — paste a token, a wallet, or a thesis…"
+            placeholder="Ask VTX anything: paste a token, a wallet, or a thesis…"
             rows={2}
             className="w-full px-4 pt-3.5 pb-2 pe-12 bg-transparent text-[14px] text-white placeholder-slate-600 resize-none focus:outline-none leading-relaxed"
           />

@@ -26,7 +26,7 @@ export default function DashboardError({ error, reset }: { error: Error & { dige
         <div>
           <h2 className="text-base font-semibold text-white">Something went wrong</h2>
           <p className="text-sm text-slate-400 mt-1">
-            This tab hit an error. Your data is safe — try again or return home.
+            This tab hit an error. Your data is safe. Try again or return home.
           </p>
           {error.digest ? (
             <p className="text-[10px] text-slate-500 mt-2 font-mono">ref: {error.digest}</p>

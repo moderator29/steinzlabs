@@ -345,7 +345,7 @@ export function GuardianBadges({ audit, loading }: { audit: TokenAudit | null; l
         <Shield className="w-2.5 h-2.5" />{audit.score}
       </span>
       {audit.honeypot && (
-        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase border text-red-300 bg-red-500/15 border-red-500/40" title="Honeypot — cannot sell">
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase border text-red-300 bg-red-500/15 border-red-500/40" title="Honeypot: cannot sell">
           <AlertTriangle className="w-2.5 h-2.5" />Honeypot
         </span>
       )}

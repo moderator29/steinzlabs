@@ -39,7 +39,8 @@ export interface NewsItem {
   tags: string[];
 }
 
-const CACHE_TTL = 120_000; // 120s
+const CACHE_TTL = 60_000; // 60s — the client polls every 30s, so a 60s server
+// cache keeps fresh headlines flowing within a minute without hammering sources.
 const MAX_ITEMS = 40;
 const PER_SOURCE_TIMEOUT = 7_000; // 7s per source
 const SUMMARY_MAX = 240;

@@ -232,7 +232,7 @@ export default function NotificationSettingsPanel({ userId }: Props) {
           description={
             hasExtendedSchema
               ? 'Receive triggered events and the optional weekly digest by email.'
-              : 'Pending — apply the notification_quiet_hours migration to enable.'
+              : 'Pending: apply the notification_quiet_hours migration to enable.'
           }
           enabled={!!settings.email_enabled}
           onToggle={() => void update({ email_enabled: !settings.email_enabled })}
@@ -245,7 +245,7 @@ export default function NotificationSettingsPanel({ userId }: Props) {
           description={
             hasExtendedSchema
               ? 'Push alerts to your linked Telegram. Link it in Profile > Telegram first.'
-              : 'Pending — apply the notification_quiet_hours migration to enable.'
+              : 'Pending: apply the notification_quiet_hours migration to enable.'
           }
           enabled={!!settings.telegram_enabled}
           onToggle={() => void update({ telegram_enabled: !settings.telegram_enabled })}

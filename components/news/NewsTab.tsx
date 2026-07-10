@@ -429,36 +429,55 @@ export default function NewsTab() {
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [sourceFilter, setSourceFilter] = useState<string>('all');
 
-  const load = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setStatus('loading');
+  const load = useCallback(async (isRefresh = false, silent = false) => {
+    if (!silent) {
+      if (isRefresh) setRefreshing(true);
+      else setStatus('loading');
+    }
     try {
       const res = await fetch('/api/news', { cache: 'no-store' });
       const data: NewsResponse = await res.json().catch(() => ({}));
       const list = Array.isArray(data.items) ? data.items : [];
       if (!res.ok || list.length === 0) {
-        // No fabricated fallback — honest empty/error.
+        // No fabricated fallback — honest empty/error. A failed silent refresh
+        // keeps the last good list on screen rather than blanking it.
         if (list.length === 0) {
-          setItems([]);
-          setStatus('error');
+          if (!silent) {
+            setItems([]);
+            setStatus('error');
+          }
           return;
         }
       }
       setItems(list);
       setStale(Boolean(data.stale));
-      setVisible(PAGE_SIZE);
-      setSourceFilter('all');
+      if (!silent) {
+        setVisible(PAGE_SIZE);
+        setSourceFilter('all');
+      }
       setStatus('ready');
     } catch {
-      setItems([]);
-      setStatus('error');
+      if (!silent) {
+        setItems([]);
+        setStatus('error');
+      }
     } finally {
-      setRefreshing(false);
+      if (!silent) setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  // Keep the feed live: silently pull fresh headlines every 30s (no spinner,
+  // preserves the reader's scroll/filter; a failed poll keeps the current list).
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      void load(true, true);
+    }, 30_000);
+    return () => clearInterval(id);
   }, [load]);
 
   const sources = sourcesOf(items);

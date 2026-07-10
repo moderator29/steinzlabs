@@ -113,7 +113,7 @@ export default function CopyTradingPage() {
       });
       const body = await res.json().catch(() => ({}));
       if (res.ok) {
-        toast.success("Copy trade submitted — confirm it in your wallet.");
+        toast.success("Copy trade submitted. Confirm it in your wallet.");
         router.replace("/dashboard/copy-trading");
         load();
       } else {
@@ -195,7 +195,7 @@ export default function CopyTradingPage() {
     } else {
       // Critical: a rule that fails to delete is still live and mirroring
       // trades with the user's funds — say so explicitly.
-      toast.error(await failReason(res, "Couldn't remove rule — it's still active"));
+      toast.error(await failReason(res, "Couldn't remove rule, it's still active"));
     }
   }
 
@@ -390,7 +390,7 @@ export default function CopyTradingPage() {
           <Shield size={14} className="text-blue-300 flex-shrink-0 mt-0.5" />
           <div className="text-[11px] text-blue-200/80 leading-relaxed">
             <p className="font-semibold text-blue-200 mb-1">Non-custodial by design.</p>
-            One-Click and Auto-Copy still need your browser to sign — Naka Labs never holds keys. Auto-Copy users opt into auto-confirmation while the dashboard is open.
+            One-Click and Auto-Copy still need your browser to sign. Naka Labs never holds keys. Auto-Copy users opt into auto-confirmation while the dashboard is open.
           </div>
         </div>
       </div>

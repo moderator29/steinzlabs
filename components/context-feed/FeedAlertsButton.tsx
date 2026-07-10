@@ -133,7 +133,7 @@ export function FeedAlertsButton() {
             {loading ? (
               <div className="text-[11px] text-slate-500">Loading…</div>
             ) : alerts.length === 0 ? (
-              <div className="text-[11px] text-slate-500 italic">No alerts yet. Create one above — matches arrive in your notifications.</div>
+              <div className="text-[11px] text-slate-500 italic">No alerts yet. Create one above and matches arrive in your notifications.</div>
             ) : alerts.map((a) => (
               <div key={a.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-white/[0.03] border border-[#0066FF]/15">
                 <span className="flex-1 min-w-0 text-[11px] text-slate-200 truncate">{a.label}</span>

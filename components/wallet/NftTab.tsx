@@ -81,7 +81,7 @@ export function NftTab({ evmAddress, solanaAddress }: Props) {
         });
         setNfts(deduped);
       } catch {
-        if (!cancelled) setError('Could not load NFTs — try again.');
+        if (!cancelled) setError('Could not load NFTs. Try again.');
       }
     })();
     return () => { cancelled = true; };

@@ -64,7 +64,7 @@ export default function WhaleLookalikesPage() {
 
       <div className="text-center mb-4">
         <h1 className="text-2xl font-bold">Wallets with the same DNA</h1>
-        <p className="text-slate-400 text-sm mt-1">Enter a whale and find the wallets that trade just like it — matched on real behavior, not follows.</p>
+        <p className="text-slate-400 text-sm mt-1">Enter a whale and find the wallets that trade just like it, matched on real behavior, not follows.</p>
       </div>
 
       <form onSubmit={(e) => { e.preventDefault(); run(input); }} className="nl-glass rounded-2xl p-2 flex items-center gap-2 mb-4">

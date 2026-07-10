@@ -149,7 +149,7 @@ export function TelegramConnectCard() {
             <div className="text-end">
               <div className="text-gray-500">Since</div>
               <div className="text-gray-300">
-                {status.linkedAt ? new Date(status.linkedAt).toLocaleDateString() : "—"}
+                {status.linkedAt ? new Date(status.linkedAt).toLocaleDateString() : "N/A"}
               </div>
             </div>
           </div>

@@ -175,7 +175,7 @@ export async function authenticateWithPasskey(): Promise<
     }
     const salt = getStoredSaltBytes(candidate.id);
     if (!salt) {
-      return { ok: false, error: 'Passkey wrap is missing — re-register the passkey.' };
+      return { ok: false, error: 'Passkey wrap is missing. Re-register the passkey.' };
     }
 
     const optsWithPrf: PublicKeyCredentialRequestOptionsJSON & {

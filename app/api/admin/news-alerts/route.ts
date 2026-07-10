@@ -10,11 +10,11 @@ import { verifyAdminRequest, unauthorizedResponse } from '@/lib/auth/adminAuth';
  *
  * Reads notification_settings (news_alerts, telegram_enabled, email_enabled,
  * push_enabled) for opt-in reach, and cron_execution_log rows for the
- * 'notification-digest' cron (the job that fans news alerts out) for the last
- * send stats. Column is cron_name, not name.
+ * 'news-digest' cron (the job that fans the crypto news digest out to opted-in
+ * users) for the last send stats. Column is cron_name, not name.
  */
 
-const DIGEST_CRON = 'notification-digest';
+const DIGEST_CRON = 'news-digest';
 
 export async function GET(request: Request) {
   const adminId = await verifyAdminRequest(request);

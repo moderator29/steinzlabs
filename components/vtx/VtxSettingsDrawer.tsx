@@ -138,9 +138,9 @@ export function VtxSettingsDrawer({ open, onClose, onClearChats }: Props) {
                     onChange={(e) => setSettings({ ...settings, response_style: e.target.value as VtxSettings['response_style'] })}
                     className="w-full nl-glass rounded-lg px-3 py-2 text-sm"
                   >
-                    <option value="concise">Concise — 1-2 paragraphs</option>
-                    <option value="detailed">Detailed — standard</option>
-                    <option value="technical">Technical — for power users</option>
+                    <option value="concise">Concise: 1-2 paragraphs</option>
+                    <option value="detailed">Detailed: standard</option>
+                    <option value="technical">Technical: for power users</option>
                     <option value="beginner">Beginner-friendly</option>
                   </select>
                 </Field>
@@ -153,9 +153,9 @@ export function VtxSettingsDrawer({ open, onClose, onClearChats }: Props) {
                     onChange={(e) => setSettings({ ...settings, risk_appetite: e.target.value as VtxSettings['risk_appetite'] })}
                     className="w-full nl-glass rounded-lg px-3 py-2 text-sm"
                   >
-                    <option value="conservative">Conservative — prioritise capital preservation</option>
-                    <option value="balanced">Balanced — show both sides</option>
-                    <option value="aggressive">Aggressive — asymmetric upside</option>
+                    <option value="conservative">Conservative: prioritise capital preservation</option>
+                    <option value="balanced">Balanced: show both sides</option>
+                    <option value="aggressive">Aggressive: asymmetric upside</option>
                   </select>
                 </Field>
               </Section>
@@ -181,7 +181,7 @@ export function VtxSettingsDrawer({ open, onClose, onClearChats }: Props) {
               <Section title="Wallet access" icon={Wallet}>
                 <Toggle
                   label="Let VTX read my wallet balances"
-                  desc="VTX can see your connected wallet's coins and talk about them, and prepare swaps. It never signs — you always confirm on the swap card."
+                  desc="VTX can see your connected wallet's coins and talk about them, and prepare swaps. It never signs. You always confirm on the swap card."
                   value={settings.wallet_read_enabled}
                   onChange={(v) => setSettings({ ...settings, wallet_read_enabled: v })}
                 />

@@ -79,7 +79,7 @@ export default function WashRadarPage() {
 
       <div className="text-center mb-4">
         <h1 className="text-2xl font-bold">Is smart money buying real volume?</h1>
-        <p className="text-slate-400 text-sm mt-1">Where smart money is flowing — graded for wash-traded (fake) volume.</p>
+        <p className="text-slate-400 text-sm mt-1">Where smart money is flowing, graded for wash-traded (fake) volume.</p>
       </div>
 
       {/* Controls */}

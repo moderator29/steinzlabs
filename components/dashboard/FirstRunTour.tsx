@@ -28,7 +28,7 @@ const STEPS: Array<{
   {
     icon: Bell,
     title: 'Set your first alert',
-    body: 'Price targets, whale moves, new launches, and wallet activity — all delivered to email or Telegram with quiet-hours support.',
+    body: 'Price targets, whale moves, new launches, and wallet activity, all delivered to email or Telegram with quiet-hours support.',
     ctaHref: '/dashboard/alerts',
     ctaLabel: 'Create alert',
   },

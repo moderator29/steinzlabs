@@ -152,7 +152,7 @@ export async function showLocalTestNotification(): Promise<boolean> {
     const reg = await navigator.serviceWorker.getRegistration(SW_PATH);
     if (!reg) return false;
     await reg.showNotification('Naka Labs', {
-      body: 'Test notification — your push setup is working.',
+      body: 'Test notification: your push setup is working.',
       icon: '/logo.png',
       badge: '/logo.png',
       tag: 'naka-test',

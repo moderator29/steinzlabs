@@ -195,7 +195,7 @@ export default function PricingPage() {
           <div className="text-center mb-6">
             <h2 className="text-white font-bold text-2xl mb-2">The Founder Pass</h2>
             <p className="text-gray-400 text-sm max-w-2xl mx-auto">
-              An NFT key, held — not subscribed. Connect the wallet that holds it and Naka Labs unlocks your tier
+              An NFT key, held, not subscribed. Connect the wallet that holds it and Naka Labs unlocks your tier
               automatically, for as long as it sits in your wallet.
             </p>
           </div>
@@ -230,7 +230,7 @@ export default function PricingPage() {
                 ))}
               </div>
               <p className="text-[11px] text-gray-500 mb-4 leading-snug">
-                Unlocks the Max trading tier on the main platform — detected automatically from your wallet.
+                Unlocks the Max trading tier on the main platform, detected automatically from your wallet.
               </p>
               <button
                 onClick={() => toast.info('Connect a wallet holding the Founder Pass on the dashboard and Max unlocks automatically.')}
@@ -268,7 +268,7 @@ export default function PricingPage() {
           onClose={() => setPayTier(null)}
           onActivated={() => {
             setPayTier(null);
-            toast.success('Plan activated — welcome aboard!');
+            toast.success('Plan activated. Welcome aboard!');
             void refreshProfile();
           }}
         />

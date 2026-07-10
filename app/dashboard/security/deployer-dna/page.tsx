@@ -85,7 +85,7 @@ export default function DeployerDnaPage() {
         <h1 className="text-lg font-bold flex items-center gap-2"><Fingerprint className="w-5 h-5 text-[#0066FF]" /> Deployer DNA</h1>
       </div>
       <p className="text-xs text-slate-400 mb-4">
-        The rap sheet for a token creator. Paste a <span className="text-white">deployer wallet</span> (or a token — we resolve its creator) and see every token they&rsquo;ve shipped, how many died, and the fast-death pattern that fingerprints a serial rugger. Real on-chain history — no invented verdicts.
+        The rap sheet for a token creator. Paste a <span className="text-white">deployer wallet</span> (or a token, and we resolve its creator) and see every token they&rsquo;ve shipped, how many died, and the fast-death pattern that fingerprints a serial rugger. Real on-chain history, no invented verdicts.
       </p>
 
       <div className="flex gap-1.5 mb-3 overflow-x-auto">
@@ -139,7 +139,7 @@ export default function DeployerDnaPage() {
 
           {data.fastDeaths != null && data.fastDeaths >= 2 && (
             <div className="rounded-xl p-3 text-xs text-[#EF4444] bg-[#EF4444]/10 border border-[#EF4444]/20 flex items-center gap-2">
-              <Skull className="w-4 h-4 shrink-0" /> {data.fastDeaths} of this deployer&rsquo;s tokens died within 7 days of launch — the canonical serial-rug signature.
+              <Skull className="w-4 h-4 shrink-0" /> {data.fastDeaths} of this deployer&rsquo;s tokens died within 7 days of launch, the canonical serial-rug signature.
             </div>
           )}
 

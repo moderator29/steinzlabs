@@ -156,7 +156,7 @@ export default function NotificationSetup({ session, compact = false }: Props) {
         <span className="text-sm font-bold">Get Instant Whale Alerts</span>
       </div>
       <p className="text-[11px] text-gray-400 mb-3">
-        Know when whales move before the market reacts. Trades, convergence signals, and price alerts — right on your phone.
+        Know when whales move before the market reacts. Trades, convergence signals, and price alerts, right on your phone.
       </p>
       <button onClick={requestPermission} disabled={loading || !session}
         className="w-full bg-gradient-to-r from-[#0066FF] to-[#7C3AED] py-2.5 rounded-xl text-xs font-bold disabled:opacity-50 flex items-center justify-center gap-2">

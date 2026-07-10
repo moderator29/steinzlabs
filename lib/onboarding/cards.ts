@@ -77,7 +77,7 @@ export const ONBOARDING_CARDS: OnboardingCard[] = [
     index: 8,
     title: { a: 'Security That Protects You' },
     body: {
-      a: 'Built-in security: GoPlus rug detection, Domain Shield, Contract Analyzer, Approval Manager, Risk Scanner.\nTrade with confidence — we screen every move.',
+      a: 'Built-in security: GoPlus rug detection, Domain Shield, Contract Analyzer, Approval Manager, Risk Scanner.\nTrade with confidence: we screen every move.',
     },
     illustration: 'shield',
   },

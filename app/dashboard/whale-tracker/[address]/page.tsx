@@ -628,7 +628,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
             onClose={() => setCopyRuleOpen(false)}
             onSaved={() => {
               setCopyRuleOpen(false);
-              toast.success("Copy rule saved — alerts will fire when this whale trades.");
+              toast.success("Copy rule saved. Alerts will fire when this whale trades.");
             }}
           />
         )}

@@ -90,7 +90,7 @@ function buildRecommendations(
     recs.push('For large trades, use an aggregator with MEV protection (Jupiter, CoW Protocol).');
   }
   if (privateMempoolAvailable && activityLevel !== 'low') {
-    recs.push('Private RPC endpoint available — route through it to avoid public mempool exposure.');
+    recs.push('Private RPC endpoint available. Route through it to avoid public mempool exposure.');
   }
   if (activityLevel === 'low') {
     recs.push('Low MEV activity detected. Normal slippage settings should be sufficient.');

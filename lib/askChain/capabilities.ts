@@ -207,7 +207,7 @@ export async function runCapability(input: CapabilityInput): Promise<CapabilityR
       const isEvm = /^0x[a-fA-F0-9]{40}$/.test(token);
       const isSol = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(token);
       if (!isEvm && !isSol) {
-        return empty('token_safety', `"${token}" looks like a symbol — paste the token's contract address (0x… or a Solana mint) and I'll run a live security scan on it.`);
+        return empty('token_safety', `"${token}" looks like a symbol. Paste the token's contract address (0x… or a Solana mint) and I'll run a live security scan on it.`);
       }
       const scanChain = chain ?? (isSol ? 'solana' : 'ethereum');
       const short = `${token.slice(0, 6)}…${token.slice(-4)}`;
@@ -218,7 +218,7 @@ export async function runCapability(input: CapabilityInput): Promise<CapabilityR
         const rows: CapabilityResultRow[] = [
           { check: 'Safety rating', result: sec.safetyLevel },
           { check: 'Trust score', result: `${Math.round(sec.trustScore)}/100` },
-          { check: 'Honeypot', result: sec.isHoneypot ? 'YES — cannot sell' : 'No' },
+          { check: 'Honeypot', result: sec.isHoneypot ? 'YES: cannot sell' : 'No' },
           { check: 'Buy tax', result: `${(sec.buyTax * 100).toFixed(1)}%` },
           { check: 'Sell tax', result: `${(sec.sellTax * 100).toFixed(1)}%` },
           { check: 'Mintable supply', result: sec.isMintable ? 'Yes' : 'No' },
@@ -233,7 +233,7 @@ export async function runCapability(input: CapabilityInput): Promise<CapabilityR
           summaryHint: `Live security scan of ${short} on ${scanChain}: rated ${sec.safetyLevel}, trust ${Math.round(sec.trustScore)}/100${sec.isHoneypot ? ', flagged as a honeypot' : ''}. Buy/sell tax ${(sec.buyTax * 100).toFixed(1)}%/${(sec.sellTax * 100).toFixed(1)}%.`,
         };
       } catch {
-        return empty('token_safety', `The security provider could not scan ${short} right now — try again in a moment.`);
+        return empty('token_safety', `The security provider could not scan ${short} right now. Try again in a moment.`);
       }
     }
     case 'smart_money_flows': {

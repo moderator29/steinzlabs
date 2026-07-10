@@ -73,8 +73,8 @@ export default function MevRadarPage() {
 
       <div className="text-center mb-4">
         <h1 className="text-2xl font-bold">The invisible tax on your trades</h1>
-        <p className="text-slate-400 text-sm mt-1">How much wallets are bleeding to sandwich attacks and frontrunning — over 30 days.</p>
-        <p className="text-slate-600 text-[11px] mt-1.5">Measured from real on-chain sandwich &amp; frontrun attribution (Dune). Every figure traces to detected attacks — nothing is estimated.</p>
+        <p className="text-slate-400 text-sm mt-1">How much wallets are bleeding to sandwich attacks and frontrunning, over 30 days.</p>
+        <p className="text-slate-600 text-[11px] mt-1.5">Measured from real on-chain sandwich &amp; frontrun attribution (Dune). Every figure traces to detected attacks. Nothing is estimated.</p>
       </div>
 
       <form onSubmit={(e) => { e.preventDefault(); doLookup(input); }} className="nl-glass rounded-2xl p-2 flex items-center gap-2 mb-4">
@@ -91,7 +91,7 @@ export default function MevRadarPage() {
       {/* Lookup result */}
       {!loading && lookup && lookup.found === false && (
         <div className="nl-glass rounded-2xl p-6 text-center text-slate-400 text-sm">
-          <span className="font-mono">{short(lookup.address)}</span> isn’t in the MEV dataset — either it hasn’t been indexed or it hasn’t been hit by measurable MEV in the last 30 days.
+          <span className="font-mono">{short(lookup.address)}</span> isn’t in the MEV dataset: either it hasn’t been indexed or it hasn’t been hit by measurable MEV in the last 30 days.
         </div>
       )}
       {!loading && lookup && lookup.found && (
@@ -113,7 +113,7 @@ export default function MevRadarPage() {
         <div className="nl-glass rounded-2xl p-6 text-center text-slate-400 text-sm">
           <Sandwich className="w-8 h-8 mx-auto mb-3 text-slate-600" />
           No measurable MEV loss recorded yet. MEV Radar reads on-chain sandwich
-          &amp; frontrun attribution from Dune — as that dataset indexes each chain,
+          &amp; frontrun attribution from Dune. As that dataset indexes each chain,
           victims appear here. Check a specific wallet above any time.
         </div>
       )}

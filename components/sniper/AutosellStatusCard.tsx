@@ -32,7 +32,7 @@ interface StatusPayload {
 }
 
 function relTime(iso: string | null | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return "N/A";
   const ms = Date.now() - new Date(iso).getTime();
   if (ms < 60_000) return `${Math.floor(ms / 1000)}s ago`;
   if (ms < 3_600_000) return `${Math.floor(ms / 60_000)}m ago`;
@@ -98,7 +98,7 @@ export function AutosellStatusCard() {
   if (err && !data) {
     return (
       <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4">
-        <div className="text-xs text-red-300">Couldn&apos;t load autosell status — {err}</div>
+        <div className="text-xs text-red-300">Couldn&apos;t load autosell status: {err}</div>
       </div>
     );
   }
@@ -153,7 +153,7 @@ export function AutosellStatusCard() {
                     <span className="text-xs font-semibold text-white/90 truncate">
                       {p.token_symbol ?? short(p.token_address)}
                     </span>
-                    <span className="text-[10px] uppercase tracking-wider text-white/40">{p.chain ?? "—"}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-white/40">{p.chain ?? "N/A"}</span>
                   </div>
                   <div className="flex items-center gap-3 text-[10px] tabular-nums">
                     {peakOverEntry !== null && (
@@ -191,7 +191,7 @@ export function AutosellStatusCard() {
                     <span className="text-xs font-semibold text-white/90 truncate">
                       {t.token_symbol ?? short(t.token_address)}
                     </span>
-                    <span className="text-[10px] uppercase tracking-wider text-white/40">{t.chain ?? "—"}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-white/40">{t.chain ?? "N/A"}</span>
                   </div>
                   <div className="flex items-center gap-3 text-[10px] tabular-nums">
                     {t.pnl_usd !== null && (

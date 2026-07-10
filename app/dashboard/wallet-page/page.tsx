@@ -1349,7 +1349,7 @@ export default function WalletPage() {
                 </>
               ) : (
                 <>
-                  <h3 className="text-lg font-bold text-white mb-1">Buy with card — Coming soon</h3>
+                  <h3 className="text-lg font-bold text-white mb-1">Buy with card: Coming soon</h3>
                   <p className="text-sm text-slate-400 mb-5">
                     {onrampAddress
                       ? `Card / bank on-ramp isn't available for ${activeChain.name} yet. It's launching shortly, delivered straight to your wallet.`
@@ -1556,7 +1556,7 @@ export default function WalletPage() {
               >
                 <option value="value">By Value</option>
                 <option value="change">By Change</option>
-                <option value="alpha">A–Z</option>
+                <option value="alpha">A-Z</option>
               </select>
               <button
                 type="button"
@@ -2570,7 +2570,7 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
     try {
       if (chain.id === 'solana') {
         if (isLedger) {
-          setError('Ledger is EVM-only in Naka — switch to an EVM network to send from this wallet.');
+          setError('Ledger is EVM-only in Naka. Switch to an EVM network to send from this wallet.');
           setStep('confirm'); return;
         }
         // Native SOL transfer. Needs the seed phrase to derive the signing
@@ -2834,7 +2834,7 @@ function SendView({ onBack, wallet, chain }: { onBack: () => void; wallet: Store
                 <div className="flex justify-between"><span className="text-slate-400">Recipient</span><span className="font-mono">{shortAddr(recipient)}</span></div>
                 <div className="flex justify-between"><span className="text-slate-400">Network</span><span>{chain.name}</span></div>
                 {gasEstimateEth && <div className="flex justify-between"><span className="text-slate-400">Network fee</span><span className="font-mono">{parseFloat(gasEstimateEth).toFixed(6)} {chain.symbol}</span></div>}
-                <div className="flex justify-between"><span className="text-slate-400">Confirmations</span><span>{txStatus === 'pending' && confirmations === 0 ? '—' : confirmations}</span></div>
+                <div className="flex justify-between"><span className="text-slate-400">Confirmations</span><span>{txStatus === 'pending' && confirmations === 0 ? 'N/A' : confirmations}</span></div>
                 {txNonce != null && <div className="flex justify-between"><span className="text-slate-400">Nonce</span><span>{txNonce}</span></div>}
               </div>
             </Card>
@@ -2963,7 +2963,7 @@ function ApprovalsView({ onBack, wallet, chain }: { onBack: () => void; wallet: 
 
         <p className="text-xs text-slate-400 mb-4 leading-relaxed">
           These contracts can spend your tokens. Revoke any you don&apos;t recognize or no
-          longer use — especially <span className="text-amber-400 font-semibold">Unlimited</span> grants.
+          longer use, especially <span className="text-amber-400 font-semibold">Unlimited</span> grants.
         </p>
 
         {rows === null && (
@@ -3333,7 +3333,7 @@ function ReceiveView({
             </h2>
             <p className="text-xs leading-relaxed text-amber-100/90 mb-4">
               Your Naka wallet doesn&apos;t have a {chain.name} address derived
-              yet. Don&apos;t deposit {chain.symbol} to your EVM address —
+              yet. Don&apos;t deposit {chain.symbol} to your EVM address:
               funds sent on the wrong network are <span className="font-bold underline">lost forever</span>.
             </p>
             {chain.id === 'solana' && (
@@ -3605,7 +3605,7 @@ function AddTokenView({ onBack, tokens, onAdd }: { onBack: () => void; tokens: s
           </div>
           <div>
             <h1 className="text-xl font-heading font-bold">Add Custom Token</h1>
-            <p className="text-gray-400 text-xs">Import any token by contract — EVM or Solana</p>
+            <p className="text-gray-400 text-xs">Import any token by contract: EVM or Solana</p>
           </div>
         </div>
 
@@ -3767,7 +3767,7 @@ function FundWalletEmpty({ onFund, onManage }: { onFund: () => void; onManage: (
         <style>{`@keyframes nlFloat{0%,100%{translate:0 0}50%{translate:0 -8px}}`}</style>
       </div>
       <p className="text-slate-300 font-semibold text-base mb-1">Add funds to get started</p>
-      <p className="text-slate-500 text-sm mb-5 max-w-xs">Receive crypto to your wallet — your address works across every EVM chain, plus Solana.</p>
+      <p className="text-slate-500 text-sm mb-5 max-w-xs">Receive crypto to your wallet. Your address works across every EVM chain, plus Solana.</p>
       <button
         onClick={onFund}
         className="w-full max-w-xs py-3.5 rounded-2xl font-bold text-white text-sm"
@@ -3966,7 +3966,7 @@ function WalletSettingsView({
             setRevealError('Seed phrase could not be decrypted. Use Export Private Key instead.');
           }
         } else if (wallet.importMethod === 'private_key') {
-          setRevealError('This wallet was imported from a private key — no seed phrase available. Use Export Private Key instead.');
+          setRevealError('This wallet was imported from a private key. No seed phrase available. Use Export Private Key instead.');
         } else {
           // Legacy wallet: created before we persisted encryptedMnemonic. The
           // seed was never saved, so it's genuinely unrecoverable. Be honest.
@@ -4157,7 +4157,7 @@ function WalletSettingsView({
 
                       <div className="border-t border-slate-800/50 pt-4">
                         <p className="text-sm font-semibold text-white mb-1">Export Private Key</p>
-                        <p className="text-xs text-slate-400 mb-3">Your raw private key — import directly into MetaMask or any EVM wallet.</p>
+                        <p className="text-xs text-slate-400 mb-3">Your raw private key: import directly into MetaMask or any EVM wallet.</p>
                         <button onClick={() => handleReveal('key')} disabled={revealLoading || !revealPassword} className="w-full py-2.5 bg-slate-800 border border-slate-700 hover:bg-slate-700 rounded-xl text-xs font-bold text-slate-300 transition-colors disabled:opacity-40">
                           {revealLoading ? 'Decrypting...' : 'Export Private Key'}
                         </button>
@@ -4186,7 +4186,7 @@ function WalletSettingsView({
                         </div>
                       )}
                       {pwdError && <p className="text-xs text-red-400">{pwdError}</p>}
-                      {pwdSuccess && <p className="text-xs text-emerald-400 flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Password changed successfully — re-encrypted with AES-256-GCM</p>}
+                      {pwdSuccess && <p className="text-xs text-emerald-400 flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Password changed successfully, re-encrypted with AES-256-GCM</p>}
                       <button onClick={handleChangePassword} disabled={!oldPwd || !newPwd || !confirmPwd || pwdLoading} className="w-full py-3 bg-blue-600 hover:bg-blue-500 rounded-xl text-sm font-bold disabled:opacity-50 transition-colors">
                         {pwdLoading ? 'Re-encrypting...' : 'Update Password'}
                       </button>
@@ -4266,7 +4266,7 @@ function WalletSettingsView({
                     <>
                       <div className="p-3 nl-glass rounded-xl space-y-2">
                         <p className="text-xs font-semibold text-slate-300">Connected DApps</p>
-                        <p className="text-xs text-slate-500">No DApps connected — connection management coming in Phase 2</p>
+                        <p className="text-xs text-slate-500">No DApps connected. Connection management coming in Phase 2</p>
                       </div>
                       <div className="p-3 nl-glass rounded-xl">
                         <p className="text-xs font-semibold text-slate-300 mb-2">Wallet Info</p>
@@ -4288,7 +4288,7 @@ function WalletSettingsView({
                       ) : (
                         <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl space-y-3">
                           <p className="text-sm font-bold text-red-400">Confirm Deletion</p>
-                          <p className="text-xs text-slate-400">This removes the wallet from this device. Back up your seed phrase first — this cannot be undone.</p>
+                          <p className="text-xs text-slate-400">This removes the wallet from this device. Back up your seed phrase first. This cannot be undone.</p>
                           <div className="flex gap-2">
                             <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 bg-slate-800 rounded-xl text-xs font-semibold text-slate-300">Cancel</button>
                             <button onClick={() => { onDelete(); onBack(); }} className="flex-1 py-2.5 bg-red-500/20 border border-red-500/30 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/30 transition-colors">Delete</button>
@@ -4737,7 +4737,7 @@ function AddNetworkView({
         </div>
 
         <p className="mt-4 text-[11px] text-slate-500 leading-relaxed">
-          Disabling a chain hides its tokens and native balance from the wallet home — your assets are never touched on-chain. Re-enable anytime.
+          Disabling a chain hides its tokens and native balance from the wallet home. Your assets are never touched on-chain. Re-enable anytime.
         </p>
       </div>
     </div>
