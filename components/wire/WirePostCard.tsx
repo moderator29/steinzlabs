@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Heart, Repeat2, Gift, Trash2, Repeat, MessageCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Heart, Repeat2, Gift, Trash2, Repeat, MessageCircle, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { VerifiedGoldBadge } from '@/components/ui/VerifiedGoldBadge';
 import { wireTopicLabel } from '@/lib/wire/topics';
 
@@ -30,6 +30,8 @@ export interface WirePost {
   author_id: string;
   body: string | null;
   media_url: string | null;
+  /** Up to 4 bucket-scoped image URLs. Falls back to media_url for old rows. */
+  media_urls?: string[] | null;
   repost_of: string | null;
   reply_to: string | null;
   like_count: number | null;
@@ -60,6 +62,50 @@ export interface WirePostCardProps {
   threadOpen?: boolean;
   /** Compact rendering for replies inside a thread (tighter, smaller avatar). */
   compact?: boolean;
+  /** Clicking a #hashtag in the body filters The Wire to that tag. */
+  onHashtag?: (tag: string) => void;
+}
+
+// Matches a #hashtag token: letters, digits and underscores after the hash.
+// Unicode-aware so non-latin tags still parse. Used to split a wire body into
+// plain text and clickable hashtag chips.
+const HASHTAG_RE = /(#[\p{L}\p{N}_]+)/gu;
+
+/**
+ * Render a wire body as React nodes, turning every #hashtag into a blue,
+ * clickable link. Whitespace/newlines are preserved by the caller's
+ * `whitespace-pre-wrap`. When no handler is given, hashtags still render blue
+ * but are non-interactive.
+ */
+function renderBody(text: string, onHashtag?: (tag: string) => void): React.ReactNode[] {
+  const parts = text.split(HASHTAG_RE);
+  return parts.map((part, i) => {
+    if (i % 2 === 1) {
+      // Odd indices are the captured #hashtag tokens.
+      const tag = part.slice(1).toLowerCase();
+      if (onHashtag) {
+        return (
+          <button
+            key={i}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onHashtag(tag);
+            }}
+            className="text-[#4d94ff] hover:underline font-medium"
+          >
+            {part}
+          </button>
+        );
+      }
+      return (
+        <span key={i} className="text-[#4d94ff] font-medium">
+          {part}
+        </span>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
 }
 
 function relativeTime(iso: string): string {
@@ -110,6 +156,149 @@ function Avatar({ author, size = 44 }: { author?: WireAuthor | null; size?: numb
   );
 }
 
+/**
+ * MediaGallery — a responsive image gallery for a wire (1–4 images).
+ *
+ * Layouts: 1 = full width · 2 = side by side · 3 = one large + two stacked ·
+ * 4 = 2x2 grid. Every tile is rounded, object-cover, and never overflows the
+ * card. Tapping any image opens a lightbox with arrow / keyboard navigation.
+ */
+function MediaGallery({ urls }: { urls: string[] }) {
+  const imgs = urls.slice(0, 4);
+  const count = imgs.length;
+
+  const [open, setOpen] = useState(false);
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+      else if (e.key === 'ArrowRight') setIndex((i) => (i + 1) % count);
+      else if (e.key === 'ArrowLeft') setIndex((i) => (i - 1 + count) % count);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, count]);
+
+  if (count === 0) return null;
+
+  const openAt = (i: number) => {
+    setIndex(i);
+    setOpen(true);
+  };
+
+  const Tile = ({ url, i, className }: { url: string; i: number; className?: string }) => (
+    <button
+      type="button"
+      onClick={() => openAt(i)}
+      className={`relative block overflow-hidden bg-white/5 group ${className ?? ''}`}
+      aria-label="View image"
+    >
+      <img
+        src={url}
+        alt=""
+        loading="lazy"
+        className="w-full h-full object-cover transition group-hover:opacity-90"
+      />
+    </button>
+  );
+
+  let grid: React.ReactNode;
+  if (count === 1) {
+    grid = (
+      <div className="rounded-xl overflow-hidden border border-white/10 max-w-full">
+        <button type="button" onClick={() => openAt(0)} className="block w-full" aria-label="View image">
+          <img src={imgs[0]} alt="" loading="lazy" className="w-full max-h-[420px] object-cover" />
+        </button>
+      </div>
+    );
+  } else if (count === 2) {
+    grid = (
+      <div className="grid grid-cols-2 gap-1 rounded-xl overflow-hidden border border-white/10 h-64">
+        <Tile url={imgs[0]} i={0} />
+        <Tile url={imgs[1]} i={1} />
+      </div>
+    );
+  } else if (count === 3) {
+    grid = (
+      <div className="grid grid-cols-2 grid-rows-2 gap-1 rounded-xl overflow-hidden border border-white/10 h-72">
+        <Tile url={imgs[0]} i={0} className="row-span-2" />
+        <Tile url={imgs[1]} i={1} />
+        <Tile url={imgs[2]} i={2} />
+      </div>
+    );
+  } else {
+    grid = (
+      <div className="grid grid-cols-2 gap-1 rounded-xl overflow-hidden border border-white/10">
+        {imgs.map((u, i) => (
+          <Tile key={u} url={u} i={i} className="aspect-square" />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3">
+      {grid}
+      {open ? (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setOpen(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          {count > 1 ? (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIndex((i) => (i - 1 + count) % count);
+                }}
+                className="absolute left-3 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition"
+                aria-label="Previous image"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIndex((i) => (i + 1) % count);
+                }}
+                className="absolute right-3 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition"
+                aria-label="Next image"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            </>
+          ) : null}
+          <img
+            src={imgs[index]}
+            alt=""
+            className="max-w-full max-h-[90vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+          {count > 1 ? (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/70 text-sm tabular-nums">
+              {index + 1} / {count}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function WirePostCard({
   post,
   currentUserId,
@@ -120,6 +309,7 @@ export function WirePostCard({
   onComment,
   threadOpen,
   compact,
+  onHashtag,
 }: WirePostCardProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -151,6 +341,13 @@ export function WirePostCard({
   const handle = author?.username ? `@${author.username}` : '';
   const isOwn = !!currentUserId && shown.author_id === currentUserId;
   const tags = Array.isArray(shown.tags) ? shown.tags.filter(Boolean) : [];
+  // Prefer media_urls[]; fall back to the legacy single media_url for old rows.
+  const galleryUrls =
+    Array.isArray(shown.media_urls) && shown.media_urls.length > 0
+      ? shown.media_urls.filter(Boolean)
+      : shown.media_url
+        ? [shown.media_url]
+        : [];
 
   return (
     <article className={`nl-glass rounded-2xl ${pad}`}>
@@ -187,14 +384,13 @@ export function WirePostCard({
           </div>
 
           {shown.body ? (
-            <p className="mt-1.5 text-[15px] text-white/90 whitespace-pre-wrap break-words leading-relaxed">{shown.body}</p>
+            <p className="mt-1.5 text-[15px] text-white/90 whitespace-pre-wrap break-words leading-relaxed">
+              {renderBody(shown.body, onHashtag)}
+            </p>
           ) : null}
 
-          {shown.media_url ? (
-            <div className="mt-3 rounded-xl overflow-hidden border border-white/10 max-w-full">
-              <img src={shown.media_url} alt="" className="w-full max-h-[420px] object-cover" loading="lazy" />
-            </div>
-          ) : null}
+          <MediaGallery urls={galleryUrls} />
+
 
           {tags.length > 0 ? (
             <div className="mt-2.5 flex flex-wrap gap-1.5">

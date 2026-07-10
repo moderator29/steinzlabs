@@ -28,6 +28,7 @@ import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { swapHowItWorks } from '@/lib/howItWorks/content/swap';
 import { CHAIN_META } from '@/lib/chains/chainMeta';
 import { isDexRoutingSupported } from '@/lib/chains/evmRpc';
+import RobinhoodBridgeCard from '@/components/swap/RobinhoodBridgeCard';
 
 // §12 — Safari private mode and some locked-down enterprise browsers
 // throw SecurityError on every localStorage read. The swap signing path
@@ -196,6 +197,45 @@ function getTokenAddresses(sellSymbol: string, buySymbol: string, chainId: strin
     return TOKEN_ADDRESSES[sym]?.[chainId] || sym;
   };
   return { sellToken: resolve(sellSymbol), buyToken: resolve(buySymbol) };
+}
+
+// §usd-notional — the /api/swap/price quote returns token AMOUNTS only, not a
+// USD value, so the pay/receive "~$X" sub-labels and the ≥ $1,000 MEV
+// auto-enable had nothing real to read (they were hard-wired to null). This
+// resolves a REAL spot price for a token from the platform's existing price
+// service (/api/prices): CoinGecko by coingeckoId for curated tokens, then
+// DexScreener by contract address for imported/pasted tokens. Honest by
+// design — returns null (never 0) when no confident price exists so the UI
+// shows blank rather than a fake "$0" and the MEV threshold can't be tripped
+// by a token whose value we don't actually know.
+async function fetchTokenUsdPrice(symbol: string, chainId: string, signal?: AbortSignal): Promise<number | null> {
+  const info = getTokenInfo(symbol);
+  try {
+    if (info.coingeckoId) {
+      const res = await fetch(`/api/prices?ids=${encodeURIComponent(info.coingeckoId)}`, { signal });
+      if (res.ok) {
+        const json = await res.json();
+        const usd = json?.prices?.[info.coingeckoId]?.usd;
+        if (typeof usd === 'number' && Number.isFinite(usd) && usd > 0) return usd;
+      }
+    }
+    // Fallback: resolve by the token's on-chain address via DexScreener. This
+    // covers imported tokens (no coingeckoId) on both EVM and Solana. Native
+    // gas tokens always carry a coingeckoId above, so the sentinel address
+    // never reaches here.
+    const { sellToken: addr } = getTokenAddresses(symbol, symbol, chainId);
+    if (addr && addr !== symbol && addr.toLowerCase() !== NATIVE_TOKEN_0X.toLowerCase()) {
+      const res = await fetch(`/api/prices?address=${encodeURIComponent(addr)}`, { signal });
+      if (res.ok) {
+        const json = await res.json();
+        const price = json?.[addr]?.price;
+        if (typeof price === 'number' && Number.isFinite(price) && price > 0) return price;
+      }
+    }
+  } catch {
+    /* price service unreachable / aborted — return null, never fabricate. */
+  }
+  return null;
 }
 
 function TokenBadge({ symbol, size = 28 }: { symbol: string; size?: number }) {
@@ -1011,11 +1051,25 @@ export default function SwapPage() {
           const toAmt: number = data.toAmount;
           setToAmount(toAmt.toFixed(6));
           setQuoteError('');
+          // Real USD notional from the platform price service. Pay-leg drives
+          // the ≥ $1,000 MEV auto-enable, so it must be a genuine spot value —
+          // resolve both legs in parallel, leave null when unresolved.
+          const payAmt = parseFloat(amount);
+          const [fromPriceUsd, toPriceUsd] = await Promise.all([
+            fetchTokenUsdPrice(f, c),
+            fetchTokenUsdPrice(t, c),
+          ]);
+          const fromAmountUsd = fromPriceUsd != null && Number.isFinite(payAmt) && payAmt > 0
+            ? payAmt * fromPriceUsd
+            : null;
+          const toAmountUsd = toPriceUsd != null && toAmt > 0
+            ? toAmt * toPriceUsd
+            : null;
           setQuoteData({
             ...data,
             toAmount: toAmt,
-            fromAmountUsd: null,
-            toAmountUsd: null,
+            fromAmountUsd,
+            toAmountUsd,
             priceImpact: data.priceImpactPct != null && data.priceImpactPct !== '' ? String(data.priceImpactPct) : null,
             gasEstimateUsd: typeof data.gasEstimateUsd === 'number' ? data.gasEstimateUsd : null,
             minReceived: typeof data.minReceived === 'number'
@@ -1607,29 +1661,25 @@ export default function SwapPage() {
           </div>
 
           {!dexSupported ? (
-            <div
-              className="nl-glass rounded-2xl p-6 text-center shadow-2xl"
-              style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 26px rgba(0,102,255,.18), 0 18px 50px rgba(0,0,0,.45)' }}
-            >
-              <div
-                className="w-12 h-12 mx-auto rounded-full flex items-center justify-center mb-4"
-                style={{ backgroundColor: CHAIN_META.robinhood.color + '1A', border: `1px solid ${CHAIN_META.robinhood.color}55` }}
-              >
-                <Info className="w-5 h-5" style={{ color: CHAIN_META.robinhood.color }} aria-hidden="true" />
-              </div>
-              <h3 className="text-base font-bold text-white mb-2">
-                DEX routing on {CHAIN_META.robinhood.label} is coming
-              </h3>
-              <p className="text-sm text-gray-400 leading-relaxed max-w-sm mx-auto">
-                You can hold, receive, and send ETH on {CHAIN_META.robinhood.label} today from your wallet.
-              </p>
-              <button
-                onClick={() => router.push('/dashboard/wallet-page')}
-                className="nl-button mt-5 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold"
-              >
-                <Wallet className="w-4 h-4" aria-hidden="true" /> Open Wallet
-              </button>
-            </div>
+            // Robinhood Chain (Arbitrum Orbit L2, chain 4663) has native ETH but
+            // no DEX aggregator yet. Rather than a dead "coming soon" panel, hand
+            // the user an honest guided bridge: move ETH to Base/Ethereum and
+            // trade there. Non-custodial — real balance read + official bridge
+            // links only, no fabricated contracts. See lib/bridge/robinhood.ts.
+            <RobinhoodBridgeCard
+              address={connectedAddress ?? null}
+              onOpenWallet={() => router.push('/dashboard/wallet-page')}
+              onSwapOnChain={(destChainId) => {
+                const dest = CHAINS.find((c) => c.id === destChainId);
+                if (!dest) return;
+                setChain(dest.id);
+                setFromToken(dest.symbol);
+                setToToken('USDC');
+                setToAmount('');
+                setQuoteData(null);
+                setQuoteError('');
+              }}
+            />
           ) : (
           <>
           <SettingsPanel

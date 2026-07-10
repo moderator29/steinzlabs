@@ -265,7 +265,6 @@ export default function PortfolioPage() {
       {/* HERO */}
       <div
         className="nl-glass rounded-2xl p-6"
-        style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
       >
         <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
           Total Portfolio Value
@@ -326,7 +325,6 @@ export default function PortfolioPage() {
       {!address && !loadingIntel && (
         <div
           className="nl-glass rounded-xl p-8 text-center text-slate-400"
-          style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
         >
           Portfolio tracking begins with your first trade. Connect a wallet to get started.
         </div>
@@ -342,7 +340,6 @@ export default function PortfolioPage() {
       <div className="grid gap-4 md:grid-cols-2">
         <div
           className="nl-glass rounded-2xl p-5"
-          style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
         >
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-white">Asset Allocation</h2>
@@ -366,7 +363,6 @@ export default function PortfolioPage() {
 
         <div
           className="nl-glass rounded-2xl p-5"
-          style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
         >
           {riskyHoldings.length > 0 ? (
             <>
@@ -400,7 +396,6 @@ export default function PortfolioPage() {
       {/* TABS */}
       <div
         className="nl-glass rounded-2xl overflow-hidden"
-        style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
       >
         <div className="flex items-center border-b border-slate-800/50">
           {(

@@ -1,18 +1,21 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { ExternalLink, RefreshCw, Newspaper, AlertCircle, TrendingUp, TrendingDown, Bell, BellRing, Loader2 } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ExternalLink, RefreshCw, Newspaper, AlertCircle, TrendingUp, TrendingDown, Bell, BellRing, Loader2, ArrowUpRight } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { useNotificationSettings } from '@/lib/preferences/notificationSettings';
+import { useNotificationSettings, type NotificationSettings } from '@/lib/preferences/notificationSettings';
 
 /**
- * NewsTab — clean, premium crypto news feed for the dashboard.
+ * NewsTab — "Naka News", our own clean crypto news feed.
  *
- * Spine: /api/news (free multi-source aggregator — CoinTelegraph, WatcherGuru,
- * Decrypt, The Block, Bankless, CoinDesk, CryptoCompare, server-parsed, deduped
- * and cached). Renders a lead/breaking card, then a tidy list of glass news
- * cards with a single-select source filter row. Real data only: honest loading
- * skeletons and a "could not load" retry state, never fabricated.
+ * The /api/news aggregator still fetches from multiple upstream feeds in the
+ * background, but NONE of those provider names/logos are shown to the reader —
+ * every story is presented as Naka News. Cards render headline + summary in
+ * full (no clipped text), a "Read more" affordance that opens the real article
+ * in a new tab, and a per-user Bullish/Bearish vote persisted in localStorage.
+ * The list scrolls continuously (progressive reveal on scroll, no "Load more"
+ * button) and silently auto-refreshes every 30s. Real data only: honest loading
+ * skeletons and a retry state, never fabricated stories or vote counts.
  *
  * Exported as default. No props — self-contained.
  */
@@ -21,7 +24,7 @@ interface NewsItem {
   id: string;
   title: string;
   url: string;
-  source: string;
+  source: string; // kept in the payload but never rendered — backend only
   publishedAt: string;
   summary: string;
   imageUrl: string | null;
@@ -35,7 +38,10 @@ interface NewsResponse {
   error?: string;
 }
 
-const PAGE_SIZE = 8;
+// How many articles are revealed initially and per scroll step. The API returns
+// up to ~40 items; progressive reveal keeps the DOM light on first paint.
+const INITIAL_VISIBLE = 10;
+const SCROLL_STEP = 8;
 
 // ── helpers ───────────────────────────────────────────────────────────────
 function relativeTime(iso: string): string {
@@ -59,48 +65,93 @@ function relativeTime(iso: string): string {
     : then2.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-// Ordered, deduped source list for the filter row (preserves feed order).
-function sourcesOf(items: NewsItem[]): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const it of items) {
-    const s = (it.source || '').trim();
-    if (s && !seen.has(s)) {
-      seen.add(s);
-      out.push(s);
-    }
-  }
-  return out;
+// ── per-user vote (localStorage, honest — no fabricated community counts) ─────
+type Vote = 'bullish' | 'bearish';
+const VOTE_STORAGE_KEY = 'naka_news_votes_v1';
+
+function voteKeyOf(item: NewsItem): string {
+  return item.id || item.url;
 }
 
-// ── sentiment: an honest keyword read of the headline tone (labeled as a
-// sentiment tag, never presented as fact). Bullish / bearish / neutral. ───────
-type Sentiment = 'bullish' | 'bearish' | 'neutral';
-const BULL_WORDS = ['surge', 'rally', 'soar', 'jump', 'all time high', ' ath', 'breakout', 'adopt', 'approv', 'partnership', 'upgrade', 'bullish', 'gains', 'pump', 'record', 'inflow', 'accumulat', 'milestone', 'integrat', 'rebound', 'recover', 'green'];
-const BEAR_WORDS = ['crash', 'plunge', 'dump', 'plummet', 'hack', 'exploit', 'breach', ' ban', 'lawsuit', ' sue', 'charges', 'fraud', 'liquidat', 'sell off', 'selloff', 'bearish', 'decline', 'outflow', 'collapse', 'warning', 'slump', ' fud', 'delist', ' rug', 'loss', 'fear', 'sinks'];
-function sentimentOf(item: { title: string; summary: string }): Sentiment {
-  const t = ` ${item.title} ${item.summary} `.toLowerCase();
-  let b = 0, r = 0;
-  for (const k of BULL_WORDS) if (t.includes(k)) b++;
-  for (const k of BEAR_WORDS) if (t.includes(k)) r++;
-  if (b > r) return 'bullish';
-  if (r > b) return 'bearish';
-  return 'neutral';
+function loadVotes(): Record<string, Vote> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.localStorage.getItem(VOTE_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== 'object') return {};
+    const out: Record<string, Vote> = {};
+    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+      if (v === 'bullish' || v === 'bearish') out[k] = v;
+    }
+    return out;
+  } catch {
+    return {};
+  }
 }
-function SentimentChip({ item }: { item: NewsItem }) {
-  const s = sentimentOf(item);
-  if (s === 'neutral') return null;
-  const bull = s === 'bullish';
+
+function saveVotes(votes: Record<string, Vote>): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(VOTE_STORAGE_KEY, JSON.stringify(votes));
+  } catch {
+    /* storage full / disabled — vote simply won't persist */
+  }
+}
+
+function VoteControl({
+  vote,
+  onVote,
+}: {
+  vote: Vote | undefined;
+  onVote: (v: Vote) => void;
+}) {
   return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${
-        bull ? 'bg-emerald-500/15 text-emerald-400 ring-emerald-500/25' : 'bg-rose-500/15 text-rose-400 ring-rose-500/25'
-      }`}
-      title="Headline sentiment read"
+    <div className="inline-flex items-center gap-1.5" role="group" aria-label="Vote on this story">
+      <button
+        type="button"
+        onClick={() => onVote('bullish')}
+        aria-pressed={vote === 'bullish'}
+        title="Bullish"
+        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset transition-colors ${
+          vote === 'bullish'
+            ? 'bg-emerald-500/20 text-emerald-400 ring-emerald-500/40'
+            : 'bg-white/5 text-slate-400 ring-white/10 hover:bg-emerald-500/10 hover:text-emerald-400'
+        }`}
+      >
+        <TrendingUp className="h-3.5 w-3.5" />
+        Bullish
+      </button>
+      <button
+        type="button"
+        onClick={() => onVote('bearish')}
+        aria-pressed={vote === 'bearish'}
+        title="Bearish"
+        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset transition-colors ${
+          vote === 'bearish'
+            ? 'bg-rose-500/20 text-rose-400 ring-rose-500/40'
+            : 'bg-white/5 text-slate-400 ring-white/10 hover:bg-rose-500/10 hover:text-rose-400'
+        }`}
+      >
+        <TrendingDown className="h-3.5 w-3.5" />
+        Bearish
+      </button>
+    </div>
+  );
+}
+
+function ReadMore({ url, className }: { url: string; className?: string }) {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      className={`inline-flex items-center gap-1 text-[12px] font-semibold text-[#4d94ff] transition-colors hover:text-[#0066FF] ${className ?? ''}`}
     >
-      {bull ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-      {bull ? 'Bullish' : 'Bearish'}
-    </span>
+      Read more
+      <ArrowUpRight className="h-3.5 w-3.5" />
+    </a>
   );
 }
 
@@ -131,15 +182,15 @@ function MoodBanner() {
   const bull = fg.value >= 50;
   return (
     <div className="nl-glass mb-3 flex items-center gap-3 rounded-2xl px-4 py-3">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: `${c}22` }}>
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: `${c}22` }}>
         {bull ? <TrendingUp className="h-4 w-4" style={{ color: c }} /> : <TrendingDown className="h-4 w-4" style={{ color: c }} />}
       </div>
-      <div className="flex flex-col">
+      <div className="flex min-w-0 flex-col">
         <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Market Mood</span>
-        <span className="text-sm font-semibold text-white">{fg.label || 'Fear and Greed'}</span>
+        <span className="truncate text-sm font-semibold text-white">{fg.label || 'Fear and Greed'}</span>
       </div>
-      <div className="ml-auto flex items-center gap-2">
-        <div className="h-2 w-24 overflow-hidden rounded-full bg-white/10 sm:w-32">
+      <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="h-2 w-20 overflow-hidden rounded-full bg-white/10 sm:w-32">
           <div className="h-full rounded-full" style={{ width: `${Math.max(3, Math.min(100, fg.value))}%`, backgroundColor: c }} />
         </div>
         <span className="text-lg font-bold tabular-nums" style={{ color: c }}>{fg.value}</span>
@@ -149,50 +200,6 @@ function MoodBanner() {
 }
 
 // ── sub-components ───────────────────────────────────────────────────────────
-function SourceChip({ source }: { source: string }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-[#0066FF]/15 px-2 py-0.5 text-[11px] font-medium text-[#4d94ff] ring-1 ring-inset ring-[#0066FF]/25">
-      {source || 'News'}
-    </span>
-  );
-}
-
-function SourceFilter({
-  sources,
-  selected,
-  onSelect,
-}: {
-  sources: string[];
-  selected: string; // 'all' or a source name
-  onSelect: (s: string) => void;
-}) {
-  if (sources.length < 2) return null;
-  const options = ['all', ...sources];
-  return (
-    <div className="-mx-1 mb-3 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      {options.map((opt) => {
-        const active = selected === opt;
-        const label = opt === 'all' ? 'All' : opt;
-        return (
-          <button
-            key={opt}
-            type="button"
-            onClick={() => onSelect(opt)}
-            aria-pressed={active}
-            className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-medium ring-1 ring-inset transition-colors ${
-              active
-                ? 'bg-[#0066FF] text-white ring-[#0066FF]'
-                : 'bg-white/5 text-slate-300 ring-white/10 hover:bg-white/10 hover:text-white'
-            }`}
-          >
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 function LivePill({ stale }: { stale?: boolean }) {
   return (
     <span
@@ -227,78 +234,95 @@ function Thumb({ item, className }: { item: NewsItem; className?: string }) {
   );
 }
 
-function LeadCard({ item }: { item: NewsItem }) {
+function LeadCard({
+  item,
+  vote,
+  onVote,
+}: {
+  item: NewsItem;
+  vote: Vote | undefined;
+  onVote: (v: Vote) => void;
+}) {
   const rel = relativeTime(item.publishedAt);
   return (
-    <a
-      href={item.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="nl-glass nl-glass--interactive group block overflow-hidden rounded-2xl"
-    >
-      <div className="relative">
-        {item.imageUrl ? (
+    <article className="nl-glass overflow-hidden rounded-2xl">
+      {item.imageUrl ? (
+        <a href={item.url} target="_blank" rel="noopener noreferrer" className="group block">
           <div className="relative aspect-[16/9] w-full overflow-hidden sm:aspect-[21/9]">
             <Thumb
               item={item}
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#040814] via-[#040814]/40 to-transparent" />
           </div>
-        ) : null}
-        <div className={item.imageUrl ? 'absolute inset-x-0 bottom-0 p-5' : 'p-5'}>
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-400 ring-1 ring-inset ring-amber-500/25">
-              Breaking
-            </span>
-            <SourceChip source={item.source} />
-            <SentimentChip item={item} />
-            {rel ? <span className="text-[11px] text-slate-400">{rel}</span> : null}
-          </div>
-          <h2 className="text-lg font-semibold leading-snug text-white sm:text-xl">
+        </a>
+      ) : null}
+      <div className="p-4 sm:p-5">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-400 ring-1 ring-inset ring-amber-500/25">
+            Breaking
+          </span>
+          {rel ? <span className="text-[11px] text-slate-400">{rel}</span> : null}
+        </div>
+        <a href={item.url} target="_blank" rel="noopener noreferrer" className="group block">
+          <h2 className="text-lg font-semibold leading-snug text-white transition-colors group-hover:text-[#4d94ff] sm:text-xl">
             {item.title}
           </h2>
-          {item.summary ? (
-            <p className="mt-2 line-clamp-2 text-sm text-slate-300/90">{item.summary}</p>
-          ) : null}
+        </a>
+        {item.summary ? (
+          <p className="mt-2 text-sm leading-relaxed text-slate-300/90">{item.summary}</p>
+        ) : null}
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-white/5 pt-3">
+          <VoteControl vote={vote} onVote={onVote} />
+          <ReadMore url={item.url} />
         </div>
       </div>
-    </a>
+    </article>
   );
 }
 
-function NewsCard({ item }: { item: NewsItem }) {
+function NewsCard({
+  item,
+  vote,
+  onVote,
+}: {
+  item: NewsItem;
+  vote: Vote | undefined;
+  onVote: (v: Vote) => void;
+}) {
   const rel = relativeTime(item.publishedAt);
   return (
-    <a
-      href={item.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="nl-glass nl-glass--interactive group flex gap-4 rounded-2xl p-3.5 sm:p-4"
-    >
-      {item.imageUrl ? (
-        <div className="relative hidden h-20 w-28 shrink-0 overflow-hidden rounded-xl sm:block">
-          <Thumb
-            item={item}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-        </div>
-      ) : null}
-      <div className="min-w-0 flex-1">
-        <div className="mb-1.5 flex flex-wrap items-center gap-2">
-          <SourceChip source={item.source} />
-          <SentimentChip item={item} />
-          {rel ? <span className="text-[11px] text-slate-400">{rel}</span> : null}
-        </div>
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-white transition-colors group-hover:text-[#4d94ff] sm:text-[15px]">
-          {item.title}
-        </h3>
-        {item.summary ? (
-          <p className="mt-1 line-clamp-1 text-[13px] text-slate-400">{item.summary}</p>
+    <article className="nl-glass rounded-2xl p-3.5 sm:p-4">
+      <div className="flex gap-4">
+        {item.imageUrl ? (
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group relative hidden h-20 w-28 shrink-0 overflow-hidden rounded-xl sm:block"
+          >
+            <Thumb
+              item={item}
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+          </a>
         ) : null}
+        <div className="min-w-0 flex-1">
+          {rel ? <div className="mb-1.5 text-[11px] text-slate-400">{rel}</div> : null}
+          <a href={item.url} target="_blank" rel="noopener noreferrer" className="group block">
+            <h3 className="text-sm font-semibold leading-snug text-white transition-colors group-hover:text-[#4d94ff] sm:text-[15px]">
+              {item.title}
+            </h3>
+          </a>
+          {item.summary ? (
+            <p className="mt-1 line-clamp-3 text-[13px] leading-relaxed text-slate-400">{item.summary}</p>
+          ) : null}
+        </div>
       </div>
-      <ExternalLink className="mt-0.5 h-4 w-4 shrink-0 text-slate-500 transition-colors group-hover:text-[#4d94ff]" />
-    </a>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-white/5 pt-3">
+        <VoteControl vote={vote} onVote={onVote} />
+        <ReadMore url={item.url} />
+      </div>
+    </article>
   );
 }
 
@@ -317,24 +341,61 @@ function SkeletonLead() {
 
 function SkeletonRow() {
   return (
-    <div className="nl-glass flex animate-pulse gap-4 rounded-2xl p-4">
-      <div className="hidden h-20 w-28 shrink-0 rounded-xl bg-white/5 sm:block" />
-      <div className="flex-1 space-y-2.5 py-1">
-        <div className="h-3 w-28 rounded bg-white/10" />
-        <div className="h-4 w-5/6 rounded bg-white/10" />
-        <div className="h-3 w-2/3 rounded bg-white/5" />
+    <div className="nl-glass animate-pulse rounded-2xl p-4">
+      <div className="flex gap-4">
+        <div className="hidden h-20 w-28 shrink-0 rounded-xl bg-white/5 sm:block" />
+        <div className="flex-1 space-y-2.5 py-1">
+          <div className="h-3 w-28 rounded bg-white/10" />
+          <div className="h-4 w-5/6 rounded bg-white/10" />
+          <div className="h-3 w-2/3 rounded bg-white/5" />
+        </div>
       </div>
     </div>
   );
 }
 
 // ── main ──────────────────────────────────────────────────────────────────
+/** Small pill switch used across the news-alerts popover. */
+function ToggleSwitch({
+  checked,
+  disabled,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  disabled: boolean;
+  onChange: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      disabled={disabled}
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+        checked ? 'bg-[#0066FF]' : 'bg-white/15'
+      }`}
+    >
+      <span
+        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+          checked ? 'translate-x-[18px]' : 'translate-x-[3px]'
+        }`}
+      />
+    </button>
+  );
+}
+
 /**
- * NewsAlertToggle — opt in/out of the twice-daily news digest (email/Telegram).
- * Writes notification_settings.news_alerts via the shared hook. Only renders for
- * signed-in users; a short popover explains where the digest is delivered and
- * links to full settings. The digest itself is dispatched by the news-digest
- * cron to users whose telegram_enabled / email_enabled channel is on.
+ * NewsAlertToggle — opt in/out of the twice-daily news digest and explicitly
+ * choose its delivery channels. Writes notification_settings via the shared
+ * hook: `news_alerts` is the master switch, then two channel switches —
+ * Telegram (telegram_enabled) and Email (news_email_enabled). Email is a
+ * dedicated opt-in that is OFF by default, so Telegram-only users are never
+ * surprised by a news email. Only renders for signed-in users. The digest is
+ * dispatched by the news-digest cron to each enabled channel.
  */
 function NewsAlertToggle() {
   const { user } = useAuth();
@@ -345,13 +406,15 @@ function NewsAlertToggle() {
   if (!user) return null;
 
   const on = Boolean(settings?.news_alerts);
-  const disabled = loading || saving || !hasExtendedSchema;
+  const telegramOn = Boolean(settings?.telegram_enabled);
+  const emailOn = Boolean(settings?.news_email_enabled);
+  const baseDisabled = loading || saving || !hasExtendedSchema;
 
-  const toggle = async () => {
-    if (disabled) return;
+  const patch = async (p: Partial<NotificationSettings>) => {
+    if (baseDisabled) return;
     setSaving(true);
     try {
-      await update({ news_alerts: !on });
+      await update(p);
     } catch {
       /* hook rolls back + logs on failure */
     } finally {
@@ -379,39 +442,60 @@ function NewsAlertToggle() {
       {open ? (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-11 z-50 w-64 rounded-2xl border border-white/10 bg-[#0d1120] p-3.5 shadow-2xl">
+          <div className="absolute right-0 top-11 z-50 w-72 rounded-2xl border border-white/10 bg-[#0d1120] p-3.5 shadow-2xl">
+            {/* Master switch */}
             <div className="flex items-center justify-between">
               <span className="text-[13px] font-semibold text-white">News alerts</span>
-              <button
-                type="button"
-                onClick={toggle}
-                disabled={disabled}
-                role="switch"
-                aria-checked={on}
-                className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
-                  on ? 'bg-[#0066FF]' : 'bg-white/15'
-                }`}
-              >
-                <span
-                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
-                    on ? 'translate-x-[18px]' : 'translate-x-[3px]'
-                  }`}
+              <div className="flex items-center gap-1.5">
+                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" /> : null}
+                <ToggleSwitch
+                  checked={on}
+                  disabled={baseDisabled}
+                  onChange={() => patch({ news_alerts: !on })}
+                  label="Toggle news alerts"
                 />
-                {saving ? <Loader2 className="absolute -right-5 h-3.5 w-3.5 animate-spin text-slate-400" /> : null}
-              </button>
+              </div>
             </div>
             <p className="mt-1.5 text-[11.5px] leading-relaxed text-slate-400">
-              A twice-daily roundup of top crypto headlines, sent to your enabled channels
-              (Telegram / email).
+              A twice-daily roundup of top crypto headlines. Choose where it&apos;s delivered.
             </p>
+
+            {/* Channel switches — only meaningful when news alerts are on */}
+            <div className="mt-3 space-y-2.5 border-t border-white/10 pt-3">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className={`text-[12.5px] font-medium ${on ? 'text-slate-200' : 'text-slate-500'}`}>Telegram</span>
+                  <span className="text-[10.5px] text-slate-500">Requires a linked Telegram</span>
+                </div>
+                <ToggleSwitch
+                  checked={telegramOn}
+                  disabled={baseDisabled || !on}
+                  onChange={() => patch({ telegram_enabled: !telegramOn })}
+                  label="Toggle Telegram delivery"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className={`text-[12.5px] font-medium ${on ? 'text-slate-200' : 'text-slate-500'}`}>Email</span>
+                  <span className="text-[10.5px] text-slate-500">Off by default</span>
+                </div>
+                <ToggleSwitch
+                  checked={emailOn}
+                  disabled={baseDisabled || !on}
+                  onChange={() => patch({ news_email_enabled: !emailOn })}
+                  label="Toggle email delivery"
+                />
+              </div>
+            </div>
+
             {!hasExtendedSchema ? (
-              <p className="mt-2 text-[11px] text-amber-400/80">Syncing your settings — try again in a moment.</p>
+              <p className="mt-3 text-[11px] text-amber-400/80">Syncing your settings — try again in a moment.</p>
             ) : (
               <a
                 href="/dashboard/settings"
-                className="mt-2 inline-block text-[11.5px] font-medium text-[#4d94ff] hover:underline"
+                className="mt-3 inline-block text-[11.5px] font-medium text-[#4d94ff] hover:underline"
               >
-                Manage channels in settings →
+                Manage all channels in settings →
               </a>
             )}
           </div>
@@ -426,8 +510,25 @@ export default function NewsTab() {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [refreshing, setRefreshing] = useState(false);
   const [stale, setStale] = useState(false);
-  const [visible, setVisible] = useState(PAGE_SIZE);
-  const [sourceFilter, setSourceFilter] = useState<string>('all');
+  const [visible, setVisible] = useState(INITIAL_VISIBLE);
+  const [votes, setVotes] = useState<Record<string, Vote>>({});
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // Hydrate saved votes once on mount.
+  useEffect(() => {
+    setVotes(loadVotes());
+  }, []);
+
+  const castVote = useCallback((key: string, v: Vote) => {
+    setVotes((prev) => {
+      // Clicking the current choice again clears it (toggle off).
+      const next = { ...prev };
+      if (next[key] === v) delete next[key];
+      else next[key] = v;
+      saveVotes(next);
+      return next;
+    });
+  }, []);
 
   const load = useCallback(async (isRefresh = false, silent = false) => {
     if (!silent) {
@@ -451,10 +552,7 @@ export default function NewsTab() {
       }
       setItems(list);
       setStale(Boolean(data.stale));
-      if (!silent) {
-        setVisible(PAGE_SIZE);
-        setSourceFilter('all');
-      }
+      if (!silent) setVisible(INITIAL_VISIBLE);
       setStatus('ready');
     } catch {
       if (!silent) {
@@ -471,7 +569,7 @@ export default function NewsTab() {
   }, [load]);
 
   // Keep the feed live: silently pull fresh headlines every 30s (no spinner,
-  // preserves the reader's scroll/filter; a failed poll keeps the current list).
+  // preserves the reader's scroll; a failed poll keeps the current list).
   useEffect(() => {
     const id = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
@@ -480,32 +578,41 @@ export default function NewsTab() {
     return () => clearInterval(id);
   }, [load]);
 
-  const sources = sourcesOf(items);
-  const filtered =
-    sourceFilter === 'all' ? items : items.filter((it) => it.source === sourceFilter);
-  const lead = filtered[0];
-  const rest = filtered.slice(1, visible);
-  const hasMore = filtered.length > visible;
+  // Infinite scroll — reveal more as the sentinel enters view (no button).
+  const hasMore = items.length > visible;
+  useEffect(() => {
+    if (status !== 'ready' || !hasMore) return;
+    const node = sentinelRef.current;
+    if (!node || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setVisible((v) => Math.min(items.length, v + SCROLL_STEP));
+        }
+      },
+      { rootMargin: '600px 0px' },
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, [status, hasMore, items.length]);
 
-  const onSelectSource = useCallback((s: string) => {
-    setSourceFilter(s);
-    setVisible(PAGE_SIZE);
-  }, []);
+  const lead = items[0];
+  const rest = items.slice(1, visible);
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <div className="mx-auto w-full max-w-3xl overflow-x-hidden">
       {/* header */}
       <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0066FF]/15 ring-1 ring-inset ring-[#0066FF]/25">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0066FF]/15 ring-1 ring-inset ring-[#0066FF]/25">
             <Newspaper className="h-[18px] w-[18px] text-[#4d94ff]" />
           </div>
-          <div>
-            <h1 className="text-base font-semibold text-white">Crypto News</h1>
-            <p className="text-[11px] text-slate-400">Aggregated from top crypto sources</p>
+          <div className="min-w-0">
+            <h1 className="truncate text-base font-semibold text-white">Naka News</h1>
+            <p className="truncate text-[11px] text-slate-400">Live crypto headlines</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {status === 'ready' && items.length > 0 ? <LivePill stale={stale} /> : null}
           <NewsAlertToggle />
           <button
@@ -558,42 +665,26 @@ export default function NewsTab() {
       {status === 'ready' && items.length > 0 ? (
         <div>
           <MoodBanner />
-          <SourceFilter sources={sources} selected={sourceFilter} onSelect={onSelectSource} />
 
-          {filtered.length === 0 ? (
-            <div className="nl-glass rounded-2xl px-6 py-10 text-center">
-              <p className="text-sm font-medium text-white">No stories from this source</p>
-              <p className="mt-1 text-[13px] text-slate-400">Try another source or view all.</p>
-              <button
-                type="button"
-                onClick={() => onSelectSource('all')}
-                className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 ring-1 ring-inset ring-white/10 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                View all
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {lead ? <LeadCard item={lead} /> : null}
-              {rest.map((item) => (
-                <NewsCard key={item.id} item={item} />
-              ))}
+          <div className="space-y-3">
+            {lead ? (
+              <LeadCard item={lead} vote={votes[voteKeyOf(lead)]} onVote={(v) => castVote(voteKeyOf(lead), v)} />
+            ) : null}
+            {rest.map((item) => {
+              const k = voteKeyOf(item);
+              return <NewsCard key={item.id} item={item} vote={votes[k]} onVote={(v) => castVote(k, v)} />;
+            })}
 
-              {hasMore ? (
-                <button
-                  type="button"
-                  onClick={() => setVisible((v) => v + PAGE_SIZE)}
-                  className="w-full rounded-2xl bg-white/5 py-3 text-sm font-medium text-slate-300 ring-1 ring-inset ring-white/10 transition-colors hover:bg-white/10 hover:text-white"
-                >
-                  Load more
-                </button>
-              ) : (
-                <p className="pt-2 text-center text-[11px] text-slate-500">
-                  You&apos;re all caught up
-                </p>
-              )}
-            </div>
-          )}
+            {hasMore ? (
+              <div ref={sentinelRef} className="flex items-center justify-center py-4">
+                <Loader2 className="h-4 w-4 animate-spin text-slate-500" />
+              </div>
+            ) : (
+              <p className="pt-2 text-center text-[11px] text-slate-500">
+                You&apos;re all caught up
+              </p>
+            )}
+          </div>
         </div>
       ) : null}
     </div>

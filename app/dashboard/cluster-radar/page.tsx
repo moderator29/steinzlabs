@@ -12,6 +12,7 @@ import BackButton from '@/components/ui/BackButton';
 import { ChainLogo } from '@/components/common/ChainLogo';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
 import { clusterRadarHowItWorks } from '@/lib/howItWorks/content/cluster-radar';
+import { seedLinkHref } from '@/lib/clusters/seedLink';
 
 interface Cluster {
   seed: string; chain: string; memberCount: number; volume24hUsd: number;
@@ -85,7 +86,7 @@ export default function ClusterRadarPage() {
 
       <div className="space-y-2">
         {clusters.map((c, i) => (
-          <Link key={`${c.seed}-${c.chain}`} href={`/dashboard/whale-tracker/dna?address=${c.seed}`} className="block nl-card rounded-xl p-3 hover:border-[#0066FF]/40 transition-colors group">
+          <Link key={`${c.seed}-${c.chain}`} href={seedLinkHref(c)} className="block nl-card rounded-xl p-3 hover:border-[#0066FF]/40 transition-colors group">
             <div className="flex items-center gap-3">
               <span className="text-xs font-bold text-slate-600 w-5 text-center shrink-0">{i + 1}</span>
               <ChainLogo chain={c.chain} className="w-5 h-5 shrink-0" />

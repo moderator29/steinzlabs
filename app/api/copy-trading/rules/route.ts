@@ -49,6 +49,9 @@ interface RuleBody {
   wallet_address?: string | null;
   chains_allowed?: string[];
   tokens_blacklist?: string[];
+  tokens_allowlist?: string[];
+  copy_direction?: "both" | "buy" | "sell";
+  min_trade_size_usd?: number | null;
   min_liquidity_usd?: number;
   max_slippage_bps?: number;
   require_confirmation?: boolean;
@@ -90,6 +93,16 @@ export const POST = withTierGate("pro", async (request: NextRequest) => {
   if (!["alerts_only", "oneclick", "auto_copy"].includes(mode)) {
     return NextResponse.json({ error: "Invalid mode" }, { status: 400 });
   }
+  const direction = body.copy_direction ?? "both";
+  if (!["both", "buy", "sell"].includes(direction)) {
+    return NextResponse.json({ error: "Invalid copy_direction" }, { status: 400 });
+  }
+  if (body.min_trade_size_usd != null) {
+    const m = Number(body.min_trade_size_usd);
+    if (!Number.isFinite(m) || m < 0) {
+      return NextResponse.json({ error: "min_trade_size_usd must be >= 0" }, { status: 400 });
+    }
+  }
   // Tier gates: alerts_only is allowed at mini+, oneclick at pro+, auto_copy
   // at max. The withTierGate("pro") wrapper enforces the floor; the
   // per-mode upgrade is enforced via the user's profile tier.
@@ -125,6 +138,9 @@ export const POST = withTierGate("pro", async (request: NextRequest) => {
       wallet_address: body.wallet_address ?? null,
       chains_allowed: body.chains_allowed ?? null,
       tokens_blacklist: body.tokens_blacklist ?? null,
+      tokens_allowlist: body.tokens_allowlist ?? null,
+      copy_direction: direction,
+      min_trade_size_usd: body.min_trade_size_usd ?? null,
       min_liquidity_usd: body.min_liquidity_usd ?? 50000,
       max_slippage_bps: body.max_slippage_bps ?? 200,
       require_confirmation: body.require_confirmation ?? mode !== "auto_copy",

@@ -14,6 +14,7 @@ import 'server-only';
 
 import { dispatchP2BTool } from '@/lib/ai/vtxToolsP2B';
 import { dispatchDuneTool } from '@/lib/ai/vtxToolsDune';
+import { dispatchGoldRushTool } from '@/lib/ai/vtxToolsGoldRush';
 import { getTokenSecurity, getAddressSecurity, getDomainSecurity } from '@/lib/services/goplus';
 import {
   getTokenDetail, getTopGainers, getTrendingTokens,
@@ -815,6 +816,11 @@ async function dispatchVTXTool(
       // to "Unknown tool" only when neither recognizes the name.
       const dune = await dispatchDuneTool(toolName, toolInput, userId);
       if (dune !== null) return dune;
+      // GoldRush (Covalent) optional wallet tools — same shared-helper pattern.
+      // Returns null when the name isn't ours; no-ops to "goldrush_unconfigured"
+      // when the key is unset so the agent falls back to the RPC-backed tools.
+      const goldrush = await dispatchGoldRushTool(toolName, toolInput);
+      if (goldrush !== null) return goldrush;
       return `Unknown tool: ${toolName}`;
     }
   }

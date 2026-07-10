@@ -115,7 +115,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="min-h-screen bg-[#050816] text-white flex">
+    <div className="relative min-h-screen bg-[#050816] text-white flex overflow-x-hidden">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/60 z-20 lg:hidden" onClick={() => setSidebarOpen(false)} />
@@ -166,8 +166,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Main content — full width on mobile (the sidebar is off-canvas and
+          reserves no space); shares the row with the sticky sidebar on lg+. */}
+      <div className="flex-1 flex flex-col min-w-0 w-full">
         <header className="lg:hidden flex items-center gap-3 px-4 py-3 border-b border-white/[0.06] bg-[#0A0E1A]/80 backdrop-blur-xl">
           <button onClick={() => setSidebarOpen(true)} className="text-gray-400 hover:text-white">
             <Menu className="w-5 h-5" />
@@ -177,7 +178,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <HealthBadge />
           </div>
         </header>
-        <main className="flex-1 overflow-auto nl-aurora-bg">
+        <main className="flex-1 w-full max-w-full overflow-x-hidden overflow-y-auto nl-aurora-bg">
           {children}
         </main>
       </div>

@@ -30,6 +30,13 @@ import { WIRE_TOPIC_SET, WIRE_MAX_TAGS } from '@/lib/wire/topics';
 const AUTHOR = 'author:profiles!wire_posts_author_id_fkey(id,username,display_name,avatar_url,is_verified)';
 // Full post select including the embedded original (for reposts) and its author.
 const POST_SELECT = `*, ${AUTHOR}, original:wire_posts!wire_posts_repost_of_fkey(*, ${AUTHOR})`;
+// Create-response select — a freshly created post is always top-level (reposts
+// go through the dedicated /repost route), so it never has an `original` to
+// embed. Omitting the wire_posts->wire_posts self-join here keeps posting
+// working even if PostgREST's schema cache lags on the self-referential FK
+// (the cause of the "Could not find a relationship between 'wire_posts' and
+// 'wire_posts'" errors on create).
+const CREATE_SELECT = `*, ${AUTHOR}`;
 
 const PAGE_SIZE = 20;
 
@@ -38,14 +45,21 @@ const PAGE_SIZE = 20;
 // off-platform image that loads in every viewer's browser.
 const WIRE_MEDIA_MARKER = '/storage/v1/object/public/wire-media/';
 
+// A single bucket-scoped media URL — reused for both the legacy media_url and
+// each entry of the media_urls[] array so the storage-origin check is identical.
+const WireMediaUrl = z
+  .string()
+  .trim()
+  .url()
+  .max(2048)
+  .refine((u) => u.includes(WIRE_MEDIA_MARKER), 'Image must be uploaded to the wire');
+
 const CreateBody = z.object({
   body: z.string().trim().min(1, 'Body required').max(600, 'Max 600 characters'),
-  media_url: z
-    .string()
-    .trim()
-    .url()
-    .max(2048)
-    .refine((u) => u.includes(WIRE_MEDIA_MARKER), 'Image must be uploaded to the wire')
+  media_url: WireMediaUrl.optional().nullable(),
+  media_urls: z
+    .array(WireMediaUrl)
+    .max(4, 'Up to 4 images')
     .optional()
     .nullable(),
   repost_of: z.string().uuid().optional().nullable(),
@@ -77,11 +91,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid payload' }, { status: 400 });
   }
 
+  // Prefer the new media_urls[] (up to 4); fall back to a legacy single
+  // media_url so older clients keep working. media_url stays populated with the
+  // first image so any reader still on the single column shows something.
+  const mediaUrls =
+    parsed.data.media_urls && parsed.data.media_urls.length > 0
+      ? parsed.data.media_urls
+      : parsed.data.media_url
+        ? [parsed.data.media_url]
+        : [];
+  const primaryMediaUrl = mediaUrls[0] ?? null;
+
   const sb = getSupabaseAdmin();
   const insert = {
     author_id: user.id, // session-derived, never from the client
     body: parsed.data.body,
-    media_url: parsed.data.media_url ?? null,
+    media_url: primaryMediaUrl,
+    media_urls: mediaUrls,
     repost_of: parsed.data.repost_of ?? null,
     // Replies are created ONLY through /api/wire/posts/[id]/reply, which enforces
     // the single-level "cannot reply to a reply" rule. Never honor a client
@@ -93,11 +119,11 @@ export async function POST(req: NextRequest) {
   const { data, error } = await sb
     .from('wire_posts')
     .insert(insert)
-    .select(POST_SELECT)
+    .select(CREATE_SELECT)
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ post: { ...data, liked: false, reposted: false } });
+  return NextResponse.json({ post: { ...data, original: null, liked: false, reposted: false } });
 }
 
 export async function GET(req: NextRequest) {
@@ -107,11 +133,28 @@ export async function GET(req: NextRequest) {
   const author = params.get('author');
   const reposts = params.get('reposts');
   const feed = params.get('feed'); // 'signal' | 'pack' | null
-  const tag = params.get('tag');   // canonical topic value | null
+  const tag = params.get('tag');   // legacy single canonical topic value | null
+  const tagsParam = params.get('tags'); // comma-separated canonical topics | null
 
   if (tag && !WIRE_TOPIC_SET.has(tag)) {
     return NextResponse.json({ error: 'Unknown topic' }, { status: 400 });
   }
+
+  // The Wire settings panel lets a viewer pick several catalogue topics at
+  // once. We accept them as a comma list and filter to posts whose tags[]
+  // OVERLAP the selection (Postgres `&&`). A single legacy `tag` still works
+  // and is folded into the same filter. Unknown values are dropped, never
+  // trusted — an all-unknown selection simply means "no topic filter".
+  const topicFilter = Array.from(
+    new Set(
+      [
+        ...(tag ? [tag] : []),
+        ...(tagsParam ? tagsParam.split(',') : []),
+      ]
+        .map((t) => t.trim().toLowerCase())
+        .filter((t) => WIRE_TOPIC_SET.has(t)),
+    ),
+  );
 
   // Viewer (optional — feed is public-readable). Used only to annotate
   // liked/reposted state, never to widen access.
@@ -131,7 +174,7 @@ export async function GET(req: NextRequest) {
       .gte('created_at', since)
       .order('created_at', { ascending: false })
       .limit(CANDIDATE_CAP);
-    if (tag) sq = sq.contains('tags', [tag]);
+    if (topicFilter.length) sq = sq.overlaps('tags', topicFilter);
 
     const { data, error } = await sq;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -187,7 +230,7 @@ export async function GET(req: NextRequest) {
       .in('author_id', followingIds)
       .order('created_at', { ascending: false })
       .limit(PAGE_SIZE);
-    if (tag) pq = pq.contains('tags', [tag]);
+    if (topicFilter.length) pq = pq.overlaps('tags', topicFilter);
     if (cursor) pq = pq.lt('created_at', cursor);
 
     const { data, error } = await pq;
@@ -239,7 +282,7 @@ export async function GET(req: NextRequest) {
     }
     q = q.eq('author_id', author);
   }
-  if (tag) q = q.contains('tags', [tag]);
+  if (topicFilter.length) q = q.overlaps('tags', topicFilter);
   if (cursor) q = q.lt('created_at', cursor);
 
   const { data, error } = await q;

@@ -145,7 +145,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
 
       {/* Hero */}
       <div className="max-w-7xl mx-auto px-4 mt-6">
-        <div className="nl-glass rounded-2xl p-6" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+        <div className="nl-glass rounded-2xl p-6">
           <div className="flex items-start gap-4">
             <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${meta.tone} flex items-center justify-center shrink-0`}>
               <Icon className="w-8 h-8 text-white" />
@@ -193,7 +193,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
             onNodeClick={(addr) => window.open(`https://etherscan.io/address/${addr}`, '_blank')}
           />
         ) : (
-          <div className="p-10 text-center nl-glass rounded-xl text-slate-500 text-sm" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+          <div className="p-10 text-center nl-glass rounded-xl text-slate-500 text-sm">
             Graph unavailable: no edges persisted yet for this cluster.
           </div>
         )}
@@ -208,7 +208,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             {Object.entries(edgeTypeCount).map(([type, count]) => (
-              <div key={type} className="nl-glass rounded-xl p-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+              <div key={type} className="nl-glass rounded-xl p-3">
                 <div className="text-[10px] uppercase tracking-wider text-slate-500">{type.replace('_', ' ')}</div>
                 <div className="text-lg font-black font-mono mt-0.5">{count}</div>
               </div>
@@ -229,7 +229,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ id: st
           <span className="text-[10px] text-slate-500">submit a label → 5 net upvotes → approved + reputation points</span>
         </div>
 
-        <div className="nl-glass rounded-xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+        <div className="nl-glass rounded-xl p-4">
           <div className="flex items-center gap-2 mb-4">
             <input
               value={newLabel}
@@ -308,13 +308,22 @@ function MembersList({ members }: { members: Member[] }) {
           Members <span className="text-slate-500 text-xs">({members.length})</span>
         </h2>
       </div>
-      <div className="nl-glass rounded-xl overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+      <div className="nl-glass rounded-xl overflow-hidden">
         <div className="max-h-[400px] overflow-y-auto">
           {slice.map((m) => (
             <div key={m.address} className="flex items-center gap-3 px-4 py-2.5 border-b border-white/5 last:border-b-0 hover:bg-white/[0.03]">
               <div className={`w-2 h-2 rounded-full ${m.role === 'hub' ? 'bg-amber-400' : 'bg-emerald-400'}`} />
               <code className="flex-1 text-xs font-mono text-slate-300 truncate">{m.address}</code>
               <span className="text-[10px] text-slate-500 uppercase">{m.role || 'member'}</span>
+              {/* Cross-feature link: this wallet's cluster / on-chain intelligence page. */}
+              <Link
+                href={`/dashboard/wallet-clusters/${m.address}`}
+                className="text-slate-500 hover:text-[#8FA3FF]"
+                aria-label="Wallet intelligence"
+                title="Wallet intelligence"
+              >
+                <Network className="w-3 h-3" />
+              </Link>
               <a
                 href={`https://etherscan.io/address/${m.address}`}
                 target="_blank"

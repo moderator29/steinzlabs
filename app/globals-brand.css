@@ -83,10 +83,11 @@
     transparent 240deg,
     rgba(0, 200, 255, 0.14) 300deg,
     transparent 360deg);
-  /* Calmed: slower rotation + lower opacity so the ribbon reads as ambient
-     depth behind dense data instead of competing motion. */
-  animation: nl-aurora-drift 60s linear infinite;
-  opacity: 0.22;
+  /* Fuller, richer aurora — the owner wants the motion/glow turned back up
+     (it reads premium, not slop). Kept a smooth 34s rotation so it feels alive
+     without being frantic. */
+  animation: nl-aurora-drift 34s linear infinite;
+  opacity: 0.42;
 }
 /* Lift content above the ::before/::after aurora layers, but DO NOT touch
    fixed/sticky overlays — they manage their own stacking via Tailwind z-*
@@ -136,9 +137,9 @@
   border-radius: inherit;
   padding: 1.25px;
   background: linear-gradient(135deg,
-    rgba(0, 200, 255, 0.55) 0%,
-    rgba(0, 102, 255, 0.38) 20%,
-    rgba(0, 102, 255, 0.05) 46%,
+    rgba(0, 200, 255, 0.82) 0%,
+    rgba(0, 102, 255, 0.52) 20%,
+    rgba(0, 102, 255, 0.06) 46%,
     transparent 68%);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
@@ -193,9 +194,9 @@
   border-radius: inherit;
   padding: 1.25px;
   background: linear-gradient(135deg,
-    rgba(0, 200, 255, 0.55) 0%,
-    rgba(0, 102, 255, 0.38) 20%,
-    rgba(0, 102, 255, 0.05) 46%,
+    rgba(0, 200, 255, 0.82) 0%,
+    rgba(0, 102, 255, 0.52) 20%,
+    rgba(0, 102, 255, 0.06) 46%,
     transparent 68%);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;

@@ -243,7 +243,7 @@ export default function WalletCompareePage() {
         {/* Side panels */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[{ side: a, label: 'A' }, { side: b, label: 'B' }].map(({ side, label }) => (
-            <div key={label} className="nl-glass rounded-2xl p-4" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+            <div key={label} className="nl-glass rounded-2xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Wallet {label}</div>
                 {side.data?.address && (
@@ -301,7 +301,7 @@ export default function WalletCompareePage() {
 
         {/* Diff table */}
         {a.data && b.data && (
-          <div className="nl-glass rounded-2xl p-4 sm:p-5" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+          <div className="nl-glass rounded-2xl p-4 sm:p-5">
             <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500 mb-3">Side-by-side</div>
             <div className="overflow-x-auto">
             <table className="w-full min-w-[420px] text-start">

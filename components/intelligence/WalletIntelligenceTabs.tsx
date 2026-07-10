@@ -162,7 +162,7 @@ export function WalletIntelligenceTabs({ address }: { address: string }) {
       )}
 
       {tab === "activity" && (
-        <div className="rounded-xl nl-glass overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+        <div className="rounded-xl nl-glass overflow-hidden">
           {activity.length === 0 ? (
             <div className="py-12 text-center text-sm text-slate-500">
               No recorded activity yet. The whale-activity-poll cron populates this as new on-chain events arrive.
@@ -197,13 +197,13 @@ export function WalletIntelligenceTabs({ address }: { address: string }) {
       )}
 
       {tab === "holdings" && (
-        <div className="p-8 text-center text-sm text-slate-500 rounded-xl nl-glass" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+        <div className="p-8 text-center text-sm text-slate-500 rounded-xl nl-glass">
           Token holdings surface once the on-chain indexer ships in Session 5B-2.
         </div>
       )}
 
       {tab === "counterparties" && (
-        <div className="p-8 text-center text-sm text-slate-500 rounded-xl nl-glass" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+        <div className="p-8 text-center text-sm text-slate-500 rounded-xl nl-glass">
           Counterparty analysis uses wallet_edges data.{" "}
           <Link href={`/dashboard/wallet-clusters/${address}`} className="text-blue-400 hover:underline">
             Explore cluster →
@@ -223,7 +223,7 @@ export function WalletIntelligenceTabs({ address }: { address: string }) {
       )}
 
       {tab === "clusters" && (
-        <div className="p-6 rounded-xl nl-glass text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+        <div className="p-6 rounded-xl nl-glass text-center">
           <p className="text-sm text-slate-400 mb-3">Explore this wallet&apos;s cluster graph.</p>
           <Link
             href={`/dashboard/wallet-clusters/${address}`}

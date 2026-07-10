@@ -141,7 +141,7 @@ export default function ClusterDetailPage({ params }: { params: Promise<{ addres
         )}
 
         {tab === "members" && (
-          <div className="nl-glass rounded-xl overflow-x-auto" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+          <div className="nl-glass rounded-xl overflow-x-auto">
             <table className="w-full min-w-[560px] text-xs">
               <thead className="text-[10px] uppercase tracking-wide text-slate-500 bg-white/[0.03] border-b border-white/[0.08]">
                 <tr>

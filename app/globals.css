@@ -1556,17 +1556,9 @@ html body {
 [data-theme="light"] .naka-text-secondary { color: #333333; }
 [data-theme="light"] .naka-text-tertiary { color: #666666; }
 
-.naka-card {
-  background: rgba(15, 23, 42, 0.55);
-  border: 2px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  padding: 18px;
-  transition: border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
-}
-.naka-card:hover {
-  border-color: rgba(125, 163, 255, 0.35);
-  box-shadow: 0 6px 28px rgba(0, 102, 255, 0.08);
-}
+/* Duplicate .naka-card base definition removed — the canonical one lives near
+   the top of this file. This second copy silently overrode it with different
+   radius/border values (the duplicate-definition bug). Light-theme overrides kept. */
 [data-theme="light"] .naka-card {
   background: #ffffff;
   border-color: rgba(15, 23, 42, 0.1);

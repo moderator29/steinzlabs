@@ -136,6 +136,21 @@ export async function POST(request: NextRequest) {
     await recordBlocked("blocked_rule", "rule_paused");
     return NextResponse.json({ error: "Copy rule is paused" }, { status: 403 });
   }
+  // Direction filter — a 'buy'-only rule must not copy a sell click and vice versa.
+  const direction: "both" | "buy" | "sell" = rule.copy_direction ?? "both";
+  if ((direction === "buy" && body.action === "sell") || (direction === "sell" && body.action === "buy")) {
+    await recordBlocked("blocked_rule", "direction_filtered");
+    return NextResponse.json({ error: `Rule only copies ${direction}s` }, { status: 403 });
+  }
+  // Allow-list — when set, the token must be on it (applies to buys and sells).
+  if (
+    Array.isArray(rule.tokens_allowlist) &&
+    rule.tokens_allowlist.length > 0 &&
+    !rule.tokens_allowlist.map((t: string) => normalizeAddress(t, body.chain)).includes(normalizeAddress(body.token_address, body.chain))
+  ) {
+    await recordBlocked("blocked_rule", "token_not_allowlisted");
+    return NextResponse.json({ error: "Token is not on this rule's allow-list" }, { status: 403 });
+  }
 
   // 2. Rule guards (only meaningful for buys; sells always exit a held position)
   if (body.action === "buy") {

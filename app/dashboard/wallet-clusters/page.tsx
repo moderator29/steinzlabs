@@ -247,7 +247,7 @@ export default function WalletClustersPage() {
 
       {/* Paste-wallet analyzer */}
       <div className="max-w-7xl mx-auto px-4 mt-5">
-        <form onSubmit={runAnalysis} className="nl-glass rounded-xl p-4 flex items-start gap-3 flex-wrap" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+        <form onSubmit={runAnalysis} className="nl-glass rounded-xl p-4 flex items-start gap-3 flex-wrap">
           <Cpu className="w-5 h-5 text-[#8FA3FF] mt-0.5 shrink-0" />
           <div className="flex-1 min-w-[200px]">
             <div className="text-sm font-bold">Analyze any wallet</div>
@@ -269,7 +269,7 @@ export default function WalletClustersPage() {
         </form>
 
         {analyzeResult && (
-          <div className="mt-3 p-4 nl-glass rounded-xl" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+          <div className="mt-3 p-4 nl-glass rounded-xl">
             {analyzeResult.note && <p className="text-xs text-slate-400 mb-2">{analyzeResult.note}</p>}
             {analyzeResult.clusters && analyzeResult.clusters.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -335,7 +335,7 @@ export default function WalletClustersPage() {
 
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="nl-glass rounded-xl p-3" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+    <div className="nl-glass rounded-xl p-3">
       <div className="text-[10px] uppercase tracking-wider text-slate-500">{label}</div>
       <div className="text-base font-bold font-mono mt-0.5">{value}</div>
     </div>
@@ -352,7 +352,6 @@ function ClusterCard({ row }: { row: ClusterRow }) {
     <Link
       href={`/dashboard/wallet-clusters/cluster/${row.cluster_id}`}
       className="group nl-glass nl-glass--interactive rounded-xl p-4 transition-all"
-      style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
     >
       <div className="flex items-start gap-3">
         <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${meta.tone} flex items-center justify-center shrink-0`}>

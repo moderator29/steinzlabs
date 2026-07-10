@@ -99,7 +99,7 @@ function GiftsList({ userId }: { userId: string }) {
     return (
       <div className="nl-glass rounded-2xl p-10 text-center">
         <p className="text-white/70 font-medium">No gifts yet</p>
-        <p className="text-white/45 text-sm mt-1">Gifts received on the wire will show up here.</p>
+        <p className="text-white/45 text-sm mt-1">Gifts received on The Wire will show up here.</p>
       </div>
     );
   }

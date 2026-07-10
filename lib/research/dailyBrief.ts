@@ -189,17 +189,22 @@ function tokenCell(t: BriefToken): string {
 
 function moverRow(t: BriefToken): string {
   const p = fmtPctArrow(t.changePct);
-  // 7d change is REAL (price_change_percentage_7d_in_currency); shown as a small
-  // secondary line only when CoinGecko returned it.
-  const has7d = typeof t.change7dPct === 'number';
-  const p7 = has7d ? fmtPctArrow(t.change7dPct as number) : null;
+  // 1h and 7d changes are REAL (price_change_percentage_1h/7d_in_currency, both
+  // requested from CoinGecko). Surfaced as a small secondary line for momentum
+  // context, only when present: 1h reads near-term momentum, 7d the weekly trend.
+  const p1 = typeof t.change1hPct === 'number' ? fmtPctArrow(t.change1hPct) : null;
+  const p7 = typeof t.change7dPct === 'number' ? fmtPctArrow(t.change7dPct) : null;
+  const sub = [
+    p1 ? `1h ${p1.arrow} ${p1.text}` : '',
+    p7 ? `7d ${p7.arrow} ${p7.text}` : '',
+  ].filter(Boolean).join('  ·  ');
   return `
     <tr>
       ${tokenCell(t)}
       <td style="padding:10px 8px;text-align:right;border-bottom:1px solid rgba(255,255,255,0.06);color:#cbd5e1;font-size:13px;font-family:monospace">${fmtUsdCompact(t.price)}</td>
       <td style="padding:10px 8px;text-align:right;border-bottom:1px solid rgba(255,255,255,0.06);font-family:monospace">
         <div style="font-weight:700;font-size:13px;color:${p.color}">${p.arrow} ${p.text}</div>
-        ${p7 ? `<div style="color:#64748b;font-size:10px;font-weight:600">7d ${p7.arrow} ${p7.text}</div>` : ''}
+        ${sub ? `<div style="color:#64748b;font-size:10px;font-weight:600">${sub}</div>` : ''}
       </td>
     </tr>`;
 }
@@ -272,9 +277,12 @@ function whaleSection(moves: BriefWhaleMove[]): string {
       </div>
       <div style="color:#cbd5e1;font-weight:800;font-size:14px;font-family:monospace;white-space:nowrap">${fmtUsdCompact(m.valueUsd)}</div>
     </div>`).join('');
+  // Total tracked flow across the surfaced moves — a REAL aggregate of the same
+  // rows, so the reader sees scale at a glance without any fabricated figure.
+  const totalFlow = moves.reduce((s, m) => s + (m.valueUsd || 0), 0);
   return `
     <h3 style="color:#f1f5f9;font-size:16px;margin:28px 0 8px;display:flex;align-items:center;gap:8px">
-      <span>🐋</span> Biggest Whale Moves <span style="color:#64748b;font-size:12px;font-weight:400">last 24h</span>
+      <span>🐋</span> Biggest Whale Moves <span style="color:#64748b;font-size:12px;font-weight:400">last 24h · ${fmtUsdCompact(totalFlow)} tracked</span>
     </h3>
     ${rows}`;
 }
@@ -434,11 +442,16 @@ export async function buildDailyBrief(now: Date): Promise<DailyBrief | null> {
 
   // ── Summary (preview, dash-free) ──
   const topGain = gainers[0];
+  const topLose = losers[0];
   const summaryBits: string[] = [`Market vibe is ${vibe.label.toLowerCase()} this ${edition.label.toLowerCase()}.`];
   if (global) summaryBits.push(`Total cap ${fmtUsdCompact(global.totalMarketCapUSD)} with BTC dominance ${global.btcDominancePercent.toFixed(1)}%.`);
   if (topGain) summaryBits.push(`${topGain.symbol.toUpperCase()} leads the gainers at ${fmtPctArrow(topGain.changePct).text} up.`);
+  if (topLose) summaryBits.push(`${topLose.symbol.toUpperCase()} leads the losers at ${fmtPctArrow(topLose.changePct).text} down.`);
   if (breadthUniverse) summaryBits.push(`${advancers} of the top ${breadthUniverse} assets are green over 24h.`);
-  if (moves.length) summaryBits.push(`${moves.length} major whale moves tracked on chain.`);
+  if (moves.length) {
+    const flow = moves.reduce((s, m) => s + (m.valueUsd || 0), 0);
+    summaryBits.push(`${moves.length} major whale moves tracked on chain totaling ${fmtUsdCompact(flow)}.`);
+  }
   const summary = summaryBits.join(' ');
 
   // ── Full web story HTML ──
@@ -468,10 +481,19 @@ export async function buildDailyBrief(now: Date): Promise<DailyBrief | null> {
       </div>` : ''}` : ''}
     </div>`;
 
+  // Trending pills carry the REAL 24h change CoinGecko returns for each trending
+  // coin (data.price_change_percentage_24h.usd), shown as an arrowed chip when
+  // non-zero so the pill says more than just a ticker.
   const trendingBlock = trending.length ? `
     <h3 style="color:#f1f5f9;font-size:16px;margin:28px 0 8px">🔥 Trending Searches</h3>
     <div style="display:flex;flex-wrap:wrap;gap:8px">
-      ${trending.map(t => `<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(111,126,255,0.12);border:1px solid rgba(111,126,255,0.25);border-radius:999px;padding:6px 12px;color:#c7d2fe;font-size:13px;font-weight:600"><img src="${esc(t.image)}" width="16" height="16" style="border-radius:50%"/> ${esc(t.symbol.toUpperCase())}</span>`).join('')}
+      ${trending.map(t => {
+        const c = fmtPctArrow(t.changePct);
+        const chg = Math.abs(t.changePct) > 0.0001
+          ? ` <span style="color:${c.color};font-weight:700">${c.arrow} ${c.text}</span>`
+          : '';
+        return `<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(111,126,255,0.12);border:1px solid rgba(111,126,255,0.25);border-radius:999px;padding:6px 12px;color:#c7d2fe;font-size:13px;font-weight:600"><img src="${esc(t.image)}" width="16" height="16" style="border-radius:50%"/> ${esc(t.symbol.toUpperCase())}${chg}</span>`;
+      }).join('')}
     </div>` : '';
 
   // AI Market Read — Claude interprets ONLY the real numbers assembled above

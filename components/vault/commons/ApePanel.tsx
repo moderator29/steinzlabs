@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
-import { Flame, Trophy } from 'lucide-react';
+import { Flame, Trophy, Rocket, Skull, Coins, Hourglass } from 'lucide-react';
 
 interface Round {
   id: string;
@@ -103,7 +103,7 @@ export function ApePanel() {
       {/* The card */}
       {!round ? (
         <div className="rounded-2xl border border-white/10 bg-[#070A16]/80 p-10 text-center">
-          <div className="mb-2 text-3xl">🜂</div>
+          <div className="mb-2 flex justify-center text-[#5A647F]"><Hourglass size={28} /></div>
           <p className="text-sm text-[#8C9AC0]">No round live right now. The next coin drops soon · check back.</p>
         </div>
       ) : (
@@ -112,7 +112,7 @@ export function ApePanel() {
             {round.image_url ? (
               <Image src={round.image_url} alt="" width={48} height={48} className="rounded-full" unoptimized />
             ) : (
-              <div className="grid h-12 w-12 place-items-center rounded-full bg-white/5 text-lg">🪙</div>
+              <div className="grid h-12 w-12 place-items-center rounded-full bg-white/5 text-[#8C9AC0]"><Coins size={22} /></div>
             )}
             <div className="min-w-0 flex-1">
               <h3 className="truncate text-xl font-extrabold text-white">${round.symbol}</h3>
@@ -137,7 +137,7 @@ export function ApePanel() {
                   : 'border-emerald-500/30 bg-emerald-500/5 text-emerald-300 hover:bg-emerald-500/15 disabled:opacity-40'
               }`}
             >
-              <span className="text-2xl">🚀</span> APE
+              <Rocket size={22} /> APE
             </button>
             <button
               type="button"
@@ -150,7 +150,7 @@ export function ApePanel() {
                   : 'border-rose-500/30 bg-rose-500/5 text-rose-300 hover:bg-rose-500/15 disabled:opacity-40'
               }`}
             >
-              <span className="text-2xl">💀</span> NOPE
+              <Skull size={22} /> NOPE
             </button>
           </div>
 
@@ -179,8 +179,8 @@ export function ApePanel() {
         <div className="rounded-xl border border-white/10 bg-[#070A16]/70 px-4 py-3 text-center text-[13px]">
           <span className="text-[#8C9AC0]">Last call: </span>
           <span className="font-bold text-white">${last.symbol}</span>{' '}
-          <span className={last.outcome === 'ape' ? 'text-emerald-300' : last.outcome === 'nope' ? 'text-rose-300' : 'text-[#8C9AC0]'}>
-            {last.outcome === 'ape' ? '🚀 pumped' : last.outcome === 'nope' ? '💀 dumped' : 'flat'}
+          <span className={`inline-flex items-center gap-1 ${last.outcome === 'ape' ? 'text-emerald-300' : last.outcome === 'nope' ? 'text-rose-300' : 'text-[#8C9AC0]'}`}>
+            {last.outcome === 'ape' ? <><Rocket size={13} /> pumped</> : last.outcome === 'nope' ? <><Skull size={13} /> dumped</> : 'flat'}
             {last.move_pct != null && ` ${last.move_pct >= 0 ? '+' : ''}${last.move_pct}%`}
           </span>
         </div>
@@ -199,7 +199,7 @@ export function ApePanel() {
                 <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-white">
                   {p.name}
                 </span>
-                {p.streak > 0 && <span className="text-[11px] text-[#FF8A3D]">{p.streak}🔥</span>}
+                {p.streak > 0 && <span className="inline-flex items-center gap-0.5 text-[11px] text-[#FF8A3D]">{p.streak}<Flame size={11} /></span>}
                 <span className="text-[13px] font-bold text-[#FFD86B]">{p.points}</span>
               </li>
             ))}

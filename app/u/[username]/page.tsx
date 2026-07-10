@@ -10,6 +10,7 @@ import { UserListRow } from '@/components/social/UserListRow';
 import { TierBadge } from '@/components/ui/TierBadge';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
+import WireProfileTabs from '@/components/wire/WireProfileTabs';
 
 /**
  * /u/[username] — public profile.
@@ -50,12 +51,12 @@ interface ProfileResponse {
   } | null;
 }
 
-type Tab = 'overview' | 'following' | 'followers';
+type Tab = 'posts' | 'overview' | 'following' | 'followers';
 
 export default function PublicProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
   const [data, setData] = useState<ProfileResponse | null>(null);
-  const [tab, setTab] = useState<Tab>('overview');
+  const [tab, setTab] = useState<Tab>('posts');
   const [error, setError] = useState<string | null>(null);
   const [blocked, setBlocked] = useState<{ id: string; username: string; display_name: string | null } | null>(null);
   const [unblocking, setUnblocking] = useState(false);
@@ -243,6 +244,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
       </div>
 
       <div>
+        {tab === 'posts' && <WireProfileTabs userId={p.id} />}
         {tab === 'overview' && <OverviewTab profile={p} />}
         {tab === 'following' && <FollowListInline kind="following" userId={p.id} />}
         {tab === 'followers' && <FollowListInline kind="followers" userId={p.id} />}

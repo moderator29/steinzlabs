@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { getCultAccess } from '@/lib/cult/access';
 import { MantlePanel } from '@/components/vault/sanctum/MantlePanel';
 import { AnnalsPanel } from '@/components/vault/sanctum/AnnalsPanel';
@@ -22,8 +23,8 @@ export default async function VaultProfilePage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-5 py-10">
-      <Link href="/vault" className="text-[12px] font-semibold text-[#9FB0D8] transition hover:text-white">
-        ← Back to the Vault
+      <Link href="/vault" className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#9FB0D8] transition hover:text-white">
+        <ArrowLeft size={14} /> Back to the Vault
       </Link>
 
       <header className="flex items-center gap-4">

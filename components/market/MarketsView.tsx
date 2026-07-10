@@ -7,13 +7,17 @@ import {
 } from 'lucide-react';
 import { TopGainersCard } from '@/components/dashboard/TopGainersCard';
 import { HeatingUpCard } from '@/components/dashboard/HeatingUpCard';
+import MarketHeatmap from '@/components/market/MarketHeatmap';
+import SectorStrip from '@/components/market/SectorStrip';
 
-// The token list (search + categories + watchlist) and the RWA / TradFi
-// board are heavy, so they stay lazy — MarketsView renders on two surfaces
-// (the dashboard Markets sub-tab and the standalone /dashboard/market route)
-// and we only want to pay for these once the markets front is actually shown.
+// The token list (search + categories + watchlist) is heavy, so it stays
+// lazy — MarketsView renders on two surfaces (the dashboard Market sub-tab
+// and the standalone /dashboard/market route) and we only want to pay for it
+// once the markets front is actually shown.
+// The RWA / TradFi (stocks) board used to render here too; it now lives on its
+// own **Stocks** sub-tab (components/dashboard/StocksBoard) so this surface is
+// CRYPTO-ONLY and the two asset classes no longer compete on one screen.
 const MarketDashboard = lazy(() => import('@/components/MarketDashboard'));
-const RwaBoard = lazy(() => import('@/components/markets/RwaBoard'));
 
 interface MarketStats {
   totalMarketCap: string;
@@ -23,8 +27,8 @@ interface MarketStats {
   activeCoins: string;
 }
 
-// Compact CoinGecko-style stat cell. Mirrors the dashboard StatCard so the
-// Markets stat strip reads identically wherever MarketsView is mounted.
+// Clean, uniform stat cell — one glass primitive (nl-glass), one radius
+// (rounded-xl) shared across the whole board so the strip reads as a system.
 const StatCard = memo(function StatCard({ label, value, change, icon: Icon, trend }: {
   label: string;
   value: string;
@@ -33,13 +37,13 @@ const StatCard = memo(function StatCard({ label, value, change, icon: Icon, tren
   trend: 'up' | 'down' | 'neutral';
 }) {
   return (
-    <div className="cult-card px-3 py-2.5">
-      <div className="flex items-center justify-between mb-1">
+    <div className="nl-glass rounded-xl px-3.5 py-3">
+      <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-1.5">
           <div className="p-1 rounded-md bg-[#0066FF]/[0.10]">
-            <Icon className="w-3.5 h-3.5" />
+            <Icon className="w-3.5 h-3.5 text-[#4D6BFF]" />
           </div>
-          <span className="text-[10px] text-[#B4C0E0] tracking-wide">{label}</span>
+          <span className="text-[10px] uppercase tracking-wider text-[#B4C0E0]">{label}</span>
         </div>
         {change ? (
           <div className={`flex items-center gap-0.5 text-[10px] font-medium ${
@@ -50,7 +54,7 @@ const StatCard = memo(function StatCard({ label, value, change, icon: Icon, tren
           </div>
         ) : null}
       </div>
-      <div className="text-[15px] sm:text-base font-bold text-white font-mono tracking-tight">{value}</div>
+      <div className="text-lg sm:text-xl font-bold text-white font-mono tracking-tight">{value}</div>
     </div>
   );
 });
@@ -69,10 +73,13 @@ function MarketsSectionSpinner() {
  * Rendered in BOTH the dashboard home Markets sub-tab and the standalone
  * /dashboard/market route so the two surfaces are guaranteed identical.
  * Composes, top to bottom:
- *   1. Global market-stats strip  (BTC dominance / total mcap / 24h vol / active coins)
- *   2. Top Gainers + Heating Up   (60/40 split on lg+)
- *   3. The token list/table       (search, categories, live prices, watchlist)
- *   4. The RWA / TradFi board
+ *   1. Global market-stats strip  (total mcap / 24h vol / BTC dominance / active coins)
+ *   2. Market Heatmap             (top tokens, sized by cap, colored by 24h)
+ *   3. Top Gainers + Heating Up   (60/40 split on lg+)
+ *   4. Sector Rotation strip      (cap-weighted 24h change per sector)
+ *   5. The token list/table       (search, categories, live prices, watchlist)
+ *
+ * CRYPTO-ONLY. The RWA / TradFi (stocks) board moved to the Stocks sub-tab.
  *
  * Self-contained: it owns its own market-globals fetch so neither host
  * surface has to thread data in. Real data only — volume-change and
@@ -133,16 +140,19 @@ export default function MarketsView() {
         {stats.map((stat, i) => (
           <motion.div
             key={stat.label}
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.2, delay: i * 0.06 }}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.22, delay: i * 0.05 }}
           >
             <StatCard {...stat} />
           </motion.div>
         ))}
       </div>
 
-      {/* 2 — Top Gainers (60%) + Heating Up (40%) */}
+      {/* 2 — Market Heatmap (top tokens sized by cap, colored by 24h) */}
+      <MarketHeatmap />
+
+      {/* 3 — Top Gainers (60%) + Heating Up (40%) */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
         <div className="lg:col-span-3">
           <TopGainersCard />
@@ -152,14 +162,12 @@ export default function MarketsView() {
         </div>
       </div>
 
-      {/* 3 — Token list/table (search, categories, live prices, watchlist) */}
+      {/* 4 — Sector Rotation strip */}
+      <SectorStrip />
+
+      {/* 5 — Token list/table (search, categories, live prices, watchlist) */}
       <Suspense fallback={<MarketsSectionSpinner />}>
         <MarketDashboard />
-      </Suspense>
-
-      {/* 4 — RWA / TradFi board */}
-      <Suspense fallback={<MarketsSectionSpinner />}>
-        <RwaBoard />
       </Suspense>
     </div>
   );

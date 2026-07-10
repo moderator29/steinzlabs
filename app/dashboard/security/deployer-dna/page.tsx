@@ -100,7 +100,7 @@ export default function DeployerDnaPage() {
           <input value={addr} onChange={(e) => setAddr(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && run()}
             placeholder="Deployer wallet or token address (0x…)" className="flex-1 bg-transparent text-sm focus:outline-none placeholder-gray-600" />
         </div>
-        <button onClick={run} disabled={loading} className="px-4 rounded-xl bg-[#0066FF] text-sm font-semibold disabled:opacity-50">
+        <button onClick={run} disabled={loading} className="nl-btn-neon px-4 rounded-xl text-sm font-semibold disabled:opacity-50">
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Scan'}
         </button>
       </div>

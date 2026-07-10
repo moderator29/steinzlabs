@@ -9,6 +9,41 @@ export const GLOBAL_WHATS_NEW: WhatsNewEntry[] = [
   {
     date: 'July 2026',
     tag: 'NEW',
+    text: 'The Wire is your X style timeline: post to the whole platform, add hashtags people can tap and follow, let AI draft or sharpen a post before you send, and gift crypto straight onto any post you rate.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'NEW',
+    text: 'Naka News now runs as a live feed you can vote bullish or bearish on, with a read more link that opens the full story, so you can read the room and dig in without leaving the app.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'NEW',
+    text: 'A new Stocks tab sits next to your crypto markets, and the premium Market board adds a live heatmap and sector breakdowns so you can see what is green, what is red, and which sectors are moving at a glance.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'NEW',
+    text: 'A real Prediction board brings live Polymarket markets into the app, so you can see current odds on the events people are betting on and follow how they shift.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'NEW',
+    text: 'Robinhood Chain is fully supported with a guided bridge that walks you through moving funds onto it step by step, so getting your assets across is simple.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'IMPROVED',
+    text: 'Posts now carry multiple images, so you can share a full set of charts or screenshots in one go instead of being limited to a single picture.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'IMPROVED',
+    text: 'Cleaner email and Telegram notifications that read clearly and tell you exactly what happened and what to do next.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'NEW',
     text: 'Feed is here: a social feed on your dashboard where you post text, one image and a few topic tags, follow the people you rate, and switch between a trending Signal view and a Pack view of who you follow.',
   },
   {

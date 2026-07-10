@@ -51,6 +51,9 @@ interface CopyRuleRow {
   daily_cap_usd: number | null;
   chains_allowed: string[] | null;
   tokens_blacklist: string[] | null;
+  tokens_allowlist: string[] | null;
+  copy_direction: "both" | "buy" | "sell" | null;
+  min_trade_size_usd: number | null;
   min_liquidity_usd: number | null;
   max_slippage_bps: number | null;
   cooldown_until: string | null;
@@ -108,7 +111,8 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
     .from("user_copy_rules")
     .select(
       "user_id,whale_address,chain,mode,max_per_trade_usd,pct_of_whale," +
-        "daily_cap_usd,chains_allowed,tokens_blacklist,min_liquidity_usd," +
+        "daily_cap_usd,chains_allowed,tokens_blacklist,tokens_allowlist," +
+        "copy_direction,min_trade_size_usd,min_liquidity_usd," +
         "max_slippage_bps,cooldown_until,paused,enabled,wallet_address",
     )
     .eq("enabled", true);
@@ -180,6 +184,33 @@ export async function matchCopyEvent(event: CopyEvent): Promise<CopyMatchOutcome
       rule.tokens_blacklist &&
       event.token_address &&
       rule.tokens_blacklist.map((t) => normalizeAddress(t, event.chain)).includes(normalizeAddress(event.token_address, event.chain))
+    ) {
+      out.blocked++;
+      continue;
+    }
+    // Allow-list: when set, ONLY these tokens may be copied. A 'swap' event is
+    // treated as a buy below, so allow/block both apply to it.
+    if (
+      rule.tokens_allowlist &&
+      rule.tokens_allowlist.length > 0 &&
+      event.token_address &&
+      !rule.tokens_allowlist.map((t) => normalizeAddress(t, event.chain)).includes(normalizeAddress(event.token_address, event.chain))
+    ) {
+      out.blocked++;
+      continue;
+    }
+    // Direction filter: 'buy' copies only the whale's entries, 'sell' only exits.
+    const dir = rule.copy_direction ?? "both";
+    if ((dir === "buy" && isSell) || (dir === "sell" && !isSell)) {
+      out.blocked++;
+      continue;
+    }
+    // Min whale-trade size: ignore moves smaller than the follower cares about.
+    // Only meaningful when the event carries a USD notional; unknown sizes pass.
+    if (
+      rule.min_trade_size_usd != null &&
+      event.value_usd != null &&
+      Number(event.value_usd) < Number(rule.min_trade_size_usd)
     ) {
       out.blocked++;
       continue;

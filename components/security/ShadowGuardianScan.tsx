@@ -58,7 +58,7 @@ export function ShadowGuardianScan({ tokenAddress, onComplete }: ShadowGuardianS
 
   if (scanning) {
     return (
-      <div className="nl-glass rounded-lg p-6 text-center" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
+      <div className="nl-glass rounded-lg p-6 text-center">
         <Loader className="animate-spin mx-auto mb-4 text-[#0066FF]" size={32} />
         <p className="text-gray-300">Shadow Guardian scanning...</p>
         <p className="text-sm text-gray-500 mt-2">

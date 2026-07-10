@@ -25,7 +25,7 @@
 
 import { use, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { Star, Bell, Share2, Brain, X, Maximize2, Minimize2, CandlestickChart as CandleIcon, LineChart as LineIcon, AreaChart as AreaIcon, BarChart3, Settings2, ArrowLeftRight } from "lucide-react";
+import { Star, Bell, Share2, Brain, X, Maximize2, Minimize2, CandlestickChart as CandleIcon, LineChart as LineIcon, AreaChart as AreaIcon, BarChart3, Settings2, ArrowLeftRight, ScanSearch, Fish } from "lucide-react";
 import { useRouter } from "next/navigation";
 import SocialVelocityPill from "@/components/market/SocialVelocityPill";
 import DuneIntelligenceStrip from "@/components/market/DuneIntelligenceStrip";
@@ -304,6 +304,12 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
   // and the ticker otherwise (a CoinGecko slug wouldn't resolve to a symbol).
   const isEvmAddress = /^0x[a-fA-F0-9]{40}$/.test(address);
   const swapHref = `/dashboard/swap?buyToken=${encodeURIComponent(isEvmAddress ? address : symbol)}&chain=${encodeURIComponent(chain)}`;
+  // Cross-feature quick-links (shared token param contract:
+  // ?token=<addressOrSymbol>&chain=<chainId>). Pass the raw EVM contract when we
+  // have one, else the ticker (a CoinGecko slug wouldn't resolve intel by symbol).
+  const tokenQuery = encodeURIComponent(isEvmAddress ? address : symbol);
+  const xrayHref = `/dashboard/token-xray?token=${tokenQuery}&chain=${encodeURIComponent(chain)}`;
+  const whaleLensHref = `/dashboard/whale-tracker/token?token=${tokenQuery}&chain=${encodeURIComponent(chain)}`;
   // Bug #1 — only route to the real TradingView (Binance/Bybit) widget when
   // we have a VERIFIED CEX symbol. Guessing BINANCE:{SYM}USDT for an
   // unlisted coin would render "Invalid symbol" or, worse, a same-ticker
@@ -422,6 +428,8 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
             </button>
             <IconBtn title={watched ? "Unwatch" : "Watch"} onClick={() => toggleWatchlist(address)} icon={<Star size={16} className={watched ? 'fill-yellow-400 text-yellow-400' : ''} />} />
             <IconBtn title={`Swap ${symbol}`} onClick={() => router.push(swapHref)} icon={<ArrowLeftRight size={16} />} />
+            <IconBtn title={`Token X-Ray ${symbol}`} onClick={() => router.push(xrayHref)} icon={<ScanSearch size={16} />} />
+            <IconBtn title={`Whale activity in ${symbol}`} onClick={() => router.push(whaleLensHref)} icon={<Fish size={16} />} />
             <IconBtn title="Alerts" onClick={() => setShowAlert(true)} icon={<Bell size={16} />} />
             <IconBtn
               title="Share"
