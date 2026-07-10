@@ -28,7 +28,7 @@ export function LeaderboardView({
     return <EmptyState title="Leaderboard unavailable" body="We couldn’t reach the leaderboard right now." />;
   }
   if (!leaders || leaders.length === 0) {
-    return <EmptyState title="No predictors yet" body="Be the first to climb the board — place a prediction." />;
+    return <EmptyState title="No predictors yet" body="Be the first to climb the board. Place a prediction." />;
   }
 
   return (
