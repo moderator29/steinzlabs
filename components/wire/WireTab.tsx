@@ -588,7 +588,7 @@ export default function WireTab({ onGift, author, reposts, repliesBy, mediaAutho
               <WireThreadPanel
                 post={openPost}
                 currentUserId={user?.id ?? null}
-                authorAvatarUrl={(user as any)?.avatar_url ?? null}
+                authorAvatarUrl={(user as { avatar_url?: string | null })?.avatar_url ?? null}
                 authorDisplayName={user?.first_name || user?.username || 'You'}
                 onClose={() => setOpenThreadId(null)}
                 onLike={handleLike}

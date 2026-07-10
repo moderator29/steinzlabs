@@ -84,7 +84,7 @@ export function useSwapExecution() {
           priceImpact: typeof data?.priceImpactPct === 'string' ? parseFloat(data.priceImpactPct) || 0 : 0,
           route: data?.provider === 'jupiter' ? 'Jupiter' : '0x',
           // Platform fee is a flat 0.4% (PLATFORM_FEE_BPS=40) on the trade USD.
-          feeUSD: amountUsd * 0.004,
+          feeUSD: amountUsd * 0.005,
         });
       } else {
         const errMsg =

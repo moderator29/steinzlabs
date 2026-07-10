@@ -5,13 +5,13 @@ import { Loader2, CornerDownRight } from 'lucide-react';
 import { WirePostCard, type WirePost } from './WirePostCard';
 
 /**
- * WireThread — the reply thread for a single wire.
+ * WireThread - the reply thread for a single wire.
  *
  * Renders inline under its parent card (mobile-first, no separate route). Loads
  * replies from GET /api/wire/posts/[id]/replies, posts new replies via
  * POST /api/wire/posts/[id]/reply, and renders each reply as a compact
  * WirePostCard with its own optimistic like / repost / delete. Threads are a
- * single level deep — replies do not expose a Comment button.
+ * single level deep: replies do not expose a Comment button.
  *
  * All actions are owner-scoped server-side (author_id / user_id derived from the
  * session); this component never sends a client-supplied owner id.
@@ -114,7 +114,7 @@ export function WireThread({
       }
       setBody('');
     } catch {
-      setPostError('Network error — try again');
+      setPostError('Network error. Try again.');
     } finally {
       setPosting(false);
     }

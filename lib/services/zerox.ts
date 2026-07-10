@@ -123,6 +123,14 @@ export interface ZxTradeRecord {
 
 // ─── SWAP API ────────────────────────────────────────────────────────────────
 
+// Single source of truth for the platform swap fee in basis points. 0x v2
+// (allowance-holder / permit2 / gasless) all monetize with swapFeeRecipient +
+// swapFeeBps + swapFeeToken; the OLD v1 feeRecipient/buyTokenPercentageFee
+// params are silently ignored by the v2 endpoints, which is why the fee was
+// never actually collected on the main swap path. Default 50 bps (0.5%) to
+// match the fee shown across the product.
+export const STEINZ_FEE_BPS = String(process.env.NEXT_PUBLIC_STEINZ_FEE_BPS || '50');
+
 export async function getSwapPrice(params: {
   chainId: number;
   sellToken: string;
@@ -131,7 +139,6 @@ export async function getSwapPrice(params: {
   taker?: string;
 }): Promise<ZxPriceResponse> {
   const feeRecipient = process.env.NEXT_PUBLIC_FEE_RECIPIENT_EVM || '';
-  const feePct = process.env.NEXT_PUBLIC_STEINZ_FEE_PERCENT || '0.005';
 
   const qs = new URLSearchParams({
     chainId: String(params.chainId),
@@ -141,8 +148,10 @@ export async function getSwapPrice(params: {
   });
   if (params.taker) qs.set('taker', params.taker);
   if (feeRecipient) {
-    qs.set('feeRecipient', feeRecipient);
-    qs.set('buyTokenPercentageFee', feePct);
+    // 0x v2 monetization params (the buy token receives the fee).
+    qs.set('swapFeeRecipient', feeRecipient);
+    qs.set('swapFeeBps', STEINZ_FEE_BPS);
+    qs.set('swapFeeToken', params.buyToken);
   }
 
   const res = await fetchWithRetry(`${BASE_URL}/swap/allowance-holder/price?${qs}`, {
@@ -175,7 +184,6 @@ export async function getSwapQuote(params: {
   slippageBps?: number;
 }): Promise<ZxQuoteResponse> {
   const feeRecipient = process.env.NEXT_PUBLIC_FEE_RECIPIENT_EVM || '';
-  const feePct = process.env.NEXT_PUBLIC_STEINZ_FEE_PERCENT || '0.005';
 
   const qs = new URLSearchParams({
     chainId: String(params.chainId),
@@ -185,8 +193,11 @@ export async function getSwapQuote(params: {
     taker: params.taker,
   });
   if (feeRecipient) {
-    qs.set('feeRecipient', feeRecipient);
-    qs.set('buyTokenPercentageFee', feePct);
+    // 0x v2 monetization params (v1 feeRecipient/buyTokenPercentageFee are
+    // ignored by the allowance-holder / permit2 endpoints).
+    qs.set('swapFeeRecipient', feeRecipient);
+    qs.set('swapFeeBps', STEINZ_FEE_BPS);
+    qs.set('swapFeeToken', params.buyToken);
   }
   if (typeof params.slippageBps === 'number' && Number.isFinite(params.slippageBps)) {
     qs.set('slippageBps', String(Math.round(params.slippageBps)));
@@ -273,7 +284,7 @@ export async function getGaslessPrice(params: {
   taker: string;
 }): Promise<ZxGaslessQuoteResponse> {
   const feeRecipient = process.env.NEXT_PUBLIC_FEE_RECIPIENT_EVM || '';
-  const feeBps = process.env.NEXT_PUBLIC_STEINZ_FEE_BPS || '40';
+  const feeBps = STEINZ_FEE_BPS;
 
   const qs = new URLSearchParams({
     chainId: String(params.chainId),
@@ -308,7 +319,7 @@ export async function getGaslessQuote(params: {
   taker: string;
 }): Promise<ZxGaslessQuoteResponse> {
   const feeRecipient = process.env.NEXT_PUBLIC_FEE_RECIPIENT_EVM || '';
-  const feeBps = process.env.NEXT_PUBLIC_STEINZ_FEE_BPS || '40';
+  const feeBps = STEINZ_FEE_BPS;
 
   const qs = new URLSearchParams({
     chainId: String(params.chainId),

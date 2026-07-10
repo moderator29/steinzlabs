@@ -77,7 +77,7 @@ export function WireThreadPanel({
           className="absolute inset-0 sm:inset-y-0 sm:right-0 sm:left-auto sm:w-[440px] sm:max-w-[92vw] flex flex-col nl-glass border-s border-white/10 shadow-[0_0_60px_rgba(0,0,0,0.6)]"
         >
           <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 flex-shrink-0">
-            <MessagesSquare className="w-4.5 h-4.5 text-[#4d94ff]" />
+            <MessagesSquare className="w-[18px] h-[18px] text-[#4d94ff]" />
             <span className="font-semibold text-white text-sm">Thread</span>
             <button
               type="button"

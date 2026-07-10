@@ -148,7 +148,7 @@ export function GiftSheet({ recipient, postId, onClose, onSuccess }: GiftSheetPr
         password: sender.needsPassword ? password : undefined,
       });
 
-      // Record the gift (best-effort — the on-chain transfer already happened).
+      // Record the gift (best-effort, the on-chain transfer already happened).
       const amountUsd = usdValue != null ? Number(usdValue.toFixed(2)) : null;
       try {
         await fetch('/api/wire/gift/record', {

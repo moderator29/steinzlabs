@@ -83,6 +83,14 @@ const CHAINS = [
   { id: 'robinhood', label: CHAIN_META.robinhood.label, symbol: 'ETH', color: CHAIN_META.robinhood.color, dex: 'Native ETH' },
 ];
 
+// Compact per-network badge (short label + brand color) for cross-chain search
+// rows, so a token found on another network is clearly tagged before the user
+// picks it and the swap switches chains.
+const CHAIN_BADGE: Record<string, { label: string; color: string }> = CHAINS.reduce(
+  (m, c) => { m[c.id] = { label: c.label, color: c.color }; return m; },
+  {} as Record<string, { label: string; color: string }>,
+);
+
 interface TokenInfo {
   symbol: string;
   name: string;
@@ -115,7 +123,12 @@ const TOKEN_LIST: TokenInfo[] = [
   { symbol: 'BONK', name: 'Bonk', color: '#F2A900', decimals: 5, coingeckoId: 'bonk', logo: 'https://assets.coingecko.com/coins/images/28600/small/bonk.jpg' },
   { symbol: 'JUP', name: 'Jupiter', color: '#52D5B7', decimals: 6, coingeckoId: 'jupiter-exchange-solana', logo: 'https://assets.coingecko.com/coins/images/34188/small/jup.png' },
   { symbol: 'RAY', name: 'Raydium', color: '#4F67E4', decimals: 6, coingeckoId: 'raydium', logo: 'https://assets.coingecko.com/coins/images/13928/small/PSigc4ie_400x400.jpg' },
-  { symbol: 'NAKA', name: 'Nakamoto Games', color: '#00D4AA', decimals: 18, coingeckoId: 'nakamoto-games', logo: 'https://assets.coingecko.com/coins/images/18041/small/naka.png' },
+  // NOTE: the curated list intentionally does NOT hardcode a "NAKA" symbol.
+  // "NAKA" previously pointed at Nakamoto Games (an unrelated project), which
+  // would mislead a user into buying the wrong token. The real nakalabs $NAKA
+  // is registered first-class once its verified contract address is confirmed;
+  // until then searching "naka" surfaces real on-chain results (all networks)
+  // and the exact token imports cleanly by pasting its contract address.
   { symbol: 'DOGE', name: 'Dogecoin', color: '#C2A633', decimals: 8, popular: true, coingeckoId: 'dogecoin', logo: 'https://assets.coingecko.com/coins/images/5/small/dogecoin.png' },
   { symbol: 'SHIB', name: 'Shiba Inu', color: '#FFA409', decimals: 18, coingeckoId: 'shiba-inu', logo: 'https://assets.coingecko.com/coins/images/11939/small/shiba.png' },
   { symbol: 'XRP', name: 'XRP', color: '#346AA9', decimals: 6, coingeckoId: 'ripple', logo: 'https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png' },
@@ -288,7 +301,9 @@ function SearchResultLogo({ logo, address, chain, symbol }: { logo: string | nul
 function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (symbol: string) => void;
+  // tokenChain is passed when the picked token lives on a network other than
+  // the one currently selected, so the parent can switch the swap's chain.
+  onSelect: (symbol: string, tokenChain?: string) => void;
   exclude: string;
   chain: string;
 }) {
@@ -345,6 +360,11 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
   }, [search, chain, looksLikeAddress]);
 
   // Debounced remote name search — runs for 2+ char non-address queries.
+  // Searches ALL networks (no chain filter), like Uniswap's "All networks":
+  // a token such as NAKA lives on Polygon/BSC, so restricting to the currently
+  // selected chain is exactly why "naka" returned nothing before. Results are
+  // sorted current-chain-first below, and picking a cross-chain token switches
+  // the swap's network.
   useEffect(() => {
     const q = search.trim();
     if (looksLikeAddress || q.length < 2) { setRemoteResults([]); setRemoteSearching(false); return; }
@@ -352,7 +372,7 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
     setRemoteSearching(true);
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/swap/token-search?q=${encodeURIComponent(q)}&chain=${encodeURIComponent(chain)}`);
+        const res = await fetch(`/api/swap/token-search?q=${encodeURIComponent(q)}`);
         const data = res.ok ? await res.json() : { tokens: [] };
         if (!cancelled) setRemoteResults(Array.isArray(data.tokens) ? data.tokens : []);
       } catch {
@@ -374,9 +394,14 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
     t.symbol !== exclude &&
     (t.symbol.toLowerCase().includes(search.toLowerCase()) || t.name.toLowerCase().includes(search.toLowerCase()))
   );
-  // Remote rows that duplicate a local/imported symbol are dropped.
+  // Remote rows that duplicate a local/imported symbol are dropped. Results
+  // span all networks now, so surface tokens on the current chain first (no
+  // network switch needed) then everything else, each keeping its liquidity
+  // rank from the API.
   const localSymbols = new Set([...filtered, ...importedForChain].map(t => t.symbol.toUpperCase()));
-  const remoteFiltered = remoteResults.filter(t => !localSymbols.has(t.symbol.toUpperCase()) && t.symbol.toUpperCase() !== exclude.toUpperCase());
+  const remoteFiltered = remoteResults
+    .filter(t => !localSymbols.has(t.symbol.toUpperCase()) && t.symbol.toUpperCase() !== exclude.toUpperCase())
+    .sort((a, b) => (a.chain === chain ? 0 : 1) - (b.chain === chain ? 0 : 1));
 
   const popular = filtered.filter(t => t.popular);
 
@@ -405,7 +430,7 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
           address: data.address || t.address,
           chain: t.chain,
         });
-        onSelect((data.symbol || t.symbol).toUpperCase());
+        onSelect((data.symbol || t.symbol).toUpperCase(), t.chain);
         onClose();
       } else {
         setImportError('Could not resolve this token on-chain');
@@ -538,6 +563,15 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
                           {t.verified && (
                             <span title="Verified by Trust Wallet" className="inline-flex items-center gap-0.5 text-[9px] font-bold text-[#10B981] bg-[#10B981]/10 border border-[#10B981]/20 rounded px-1 py-px">
                               <CheckCircle className="w-2.5 h-2.5" /> Verified
+                            </span>
+                          )}
+                          {t.chain !== chain && CHAIN_BADGE[t.chain] && (
+                            <span
+                              className="inline-flex items-center gap-1 text-[9px] font-semibold rounded px-1 py-px border"
+                              style={{ color: CHAIN_BADGE[t.chain].color, borderColor: `${CHAIN_BADGE[t.chain].color}55`, backgroundColor: `${CHAIN_BADGE[t.chain].color}18` }}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: CHAIN_BADGE[t.chain].color }} />
+                              {CHAIN_BADGE[t.chain].label}
                             </span>
                           )}
                         </div>
@@ -1693,8 +1727,11 @@ export default function SwapPage() {
           />
           {showSettings && <div className="h-3" />}
 
-          <div className="nl-glass rounded-2xl overflow-hidden shadow-2xl shadow-black/20" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 26px rgba(0,102,255,.18), 0 18px 50px rgba(0,0,0,.45)' }}>
-            <div className="p-4 sm:p-5">
+          <div className="space-y-1.5">
+            {/* You pay — its own glass card, separated from You receive by a
+                gap so the direction switch reads as a clean pivot (Uniswap
+                style) rather than a seam line across one merged panel. */}
+            <div className="nl-glass rounded-2xl p-4 sm:p-5" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.28), 0 10px 34px rgba(0,0,0,.4)' }}>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs text-gray-500 font-medium">You pay</span>
                 <div className="flex items-center gap-1.5">
@@ -1731,21 +1768,19 @@ export default function SwapPage() {
               )}
             </div>
 
-            {/* Direction switch — brand glass chip floated fully ABOVE both
-                cards (owner screenshot 2026-07-03 showed it half-buried
-                behind the receive card in off-brand flat hexes). z-20 +
-                glass ring keeps it the visual pivot of the swap card. */}
+            {/* Direction switch — rounded square nested in the gap between the
+                two cards, ringed in the page background (#060A12) so it reads
+                as a clean cut-in pivot (Uniswap vibe), never a divider line. */}
             <div className="relative h-0 z-20">
               <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2">
                 <button
                   onClick={handleSwapTokens}
                   aria-label="Switch pay and receive tokens"
-                  className="w-11 h-11 nl-glass rounded-2xl flex items-center justify-center hover:bg-[#0066FF]/25 active:scale-95 group"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#0b1424] ring-4 ring-[#060A12] hover:bg-[#0066FF]/30 active:scale-95 group"
                   style={{
                     transform: `rotate(${swapRotate}deg)`,
                     transition: 'transform 0.3s ease, background-color 0.2s ease',
-                    boxShadow: '0 0 0 1px rgba(0,102,255,.45), 0 0 18px rgba(0,102,255,.25), 0 6px 18px rgba(0,0,0,.5)',
-                    backdropFilter: 'blur(12px)',
+                    boxShadow: '0 0 0 1px rgba(0,102,255,.5), 0 0 16px rgba(0,102,255,.28)',
                   }}
                 >
                   <ArrowDownUp className="w-[18px] h-[18px] text-blue-300 group-hover:text-white transition-colors" />
@@ -1753,9 +1788,12 @@ export default function SwapPage() {
               </div>
             </div>
 
-            <div className="nl-card p-4 sm:p-5">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs text-gray-500 font-medium">You receive</span>
+            {/* You receive — its own glass card; the rate + details drawer
+                lives inside it under a hairline so the block stays unified. */}
+            <div className="nl-glass rounded-2xl overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.28), 0 10px 34px rgba(0,0,0,.4)' }}>
+              <div className="p-4 sm:p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs text-gray-500 font-medium">You receive</span>
                 <span className="text-xs text-gray-600">Balance: {connectedAddress ? (walletBalance[toToken]?.toFixed(4) || '0.00') : '--'}</span>
               </div>
               <div className="flex items-center gap-3">
@@ -1845,6 +1883,7 @@ export default function SwapPage() {
                 )}
               </div>
             )}
+            </div>
           </div>
 
           {/* Quote failure banner — an unsupported pair or aggregator outage
@@ -2080,7 +2119,25 @@ export default function SwapPage() {
       <TokenSelectModal
         isOpen={showTokenSelect !== null}
         onClose={() => setShowTokenSelect(null)}
-        onSelect={(symbol) => {
+        onSelect={(symbol, tokenChain) => {
+          // Cross-network pick: a swap is single-chain, so switch the whole
+          // swap to the token's network and reset the opposite side to that
+          // chain's native asset, then let the fresh chain quote from a clean
+          // amount. This is what lets a user search "naka" from any starting
+          // network and land on a ready-to-trade pair on its home chain.
+          if (tokenChain && tokenChain !== chain) {
+            const dest = CHAINS.find(c => c.id === tokenChain);
+            const native = dest?.symbol || 'ETH';
+            const other = native === symbol ? 'USDC' : native;
+            setChain(tokenChain);
+            if (showTokenSelect === 'from') { setFromToken(symbol); setToToken(other); }
+            else { setToToken(symbol); setFromToken(other); }
+            setFromAmount('');
+            setToAmount('');
+            setQuoteData(null);
+            setQuoteError('');
+            return;
+          }
           if (showTokenSelect === 'from') {
             if (symbol === toToken) setToToken(fromToken);
             setFromToken(symbol);
