@@ -70,6 +70,28 @@ export function trustWalletCdnLogo(chain: string, address: string): string | nul
   return `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/${dir}/assets/${pathAddress}/logo.png`;
 }
 
+// Native L1 / major-coin logos live in the Trust Wallet registry under
+// blockchains/<dir>/info/logo.png (public, keyless, stable). Surfaces that only
+// have a ticker (e.g. the Predict token switcher, the Stocks/heatmap symbols)
+// map the symbol to that real art; an unknown ticker returns null so the caller
+// falls back to a lettered avatar. We never fabricate coin art.
+const NATIVE_LOGO_DIRS: Record<string, string> = {
+  btc: 'bitcoin', eth: 'ethereum', sol: 'solana', bnb: 'smartchain',
+  xrp: 'ripple', ada: 'cardano', avax: 'avalanchec', doge: 'doge',
+  dot: 'polkadot', matic: 'polygon', pol: 'polygon', trx: 'tron',
+  ltc: 'litecoin', atom: 'cosmos', near: 'near', apt: 'aptos',
+  ton: 'ton', sui: 'sui', link: 'ethereum', op: 'optimism', arb: 'arbitrum',
+};
+
+/** Real native/major coin logo URL for a bare ticker, or null if unknown. */
+export function nativeCoinLogo(symbol?: string | null): string | null {
+  if (!symbol) return null;
+  const dir = NATIVE_LOGO_DIRS[symbol.trim().toLowerCase()];
+  return dir
+    ? `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/${dir}/info/logo.png`
+    : null;
+}
+
 /**
  * Ordered, de-duplicated candidate logo URLs. Pass whatever the indexer already
  * gave you (DexScreener/GeckoTerminal imageUrl) as `primary` — it goes first,

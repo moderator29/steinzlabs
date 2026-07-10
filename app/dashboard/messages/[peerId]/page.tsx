@@ -463,7 +463,18 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
     // (aurora bg + banners) that was clipping the header at the top and pushing
     // the composer off the bottom. inset-0 + max-w-2xl + mx-auto centres it on
     // desktop and fills the viewport on mobile; h-dvh tracks the mobile URL bar.
-    <div className="fixed inset-0 z-[60] mx-auto flex h-[100dvh] max-w-2xl flex-col">
+    <div
+      data-overlay
+      className="fixed inset-0 z-[60] mx-auto flex h-[100dvh] max-w-2xl flex-col overflow-x-hidden"
+      style={{
+        // Own opaque brand canvas so nothing on a lower layer (a nav / VTX
+        // active-tab highlight pill) bleeds through the transparent overlay.
+        // Deep-navy base keeps it sealed; the two soft radial glows preserve
+        // the brand aurora feel instead of a flat box.
+        background:
+          'radial-gradient(ellipse 90% 55% at 15% 0%, rgba(0,102,255,0.14) 0%, transparent 55%), radial-gradient(ellipse 90% 55% at 85% 12%, rgba(0,200,255,0.08) 0%, transparent 55%), var(--nl-canvas-base, #050816)',
+      }}
+    >
       {/* Header — compact back, peer (links to profile), encryption badge. */}
       <div className="flex items-center gap-2 px-3 sm:px-4 py-2.5 shrink-0 border-b border-[#0066FF]/20" style={{ boxShadow: '0 1px 0 rgba(0,102,255,.12)' }}>
         <button
@@ -629,7 +640,8 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
           disabled={!ready || sending}
           maxLength={4096}
           rows={1}
-          className="flex-1 resize-none bg-white/[0.05] border border-white/10 rounded-2xl px-4 py-2.5 text-base leading-6 text-white placeholder:text-slate-500 focus:outline-none focus:border-[var(--nl-blue,#0066FF)]/50 disabled:opacity-50"
+          className="flex-1 min-w-0 resize-none bg-[#0066FF]/[0.06] border border-[#0066FF]/25 rounded-2xl px-4 py-2.5 text-base leading-6 text-white placeholder:text-slate-500 focus:outline-none focus:border-[#0066FF]/60 disabled:opacity-50"
+          style={{ boxShadow: 'inset 0 0 0 1px rgba(0,102,255,.06), 0 0 12px rgba(0,102,255,.08)' }}
           aria-label="Type your message"
         />
         <button
