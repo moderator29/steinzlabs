@@ -665,7 +665,7 @@ export default function Dashboard() {
                 pushing the page sideways. Data logic + render switch untouched. */}
             <div
               ref={homeNavRef}
-              className="relative flex items-center gap-0.5 p-1 nl-glass rounded-full mb-5 overflow-x-auto no-scrollbar"
+              className="relative flex items-center gap-0.5 p-1 nl-glass rounded-full mb-5 max-w-full overflow-x-auto no-scrollbar snap-x"
               style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.25), 0 0 24px rgba(0,102,255,.14), inset 0 1px 0 rgba(255,255,255,.06)' }}
               role="tablist"
               aria-label="Home views"
@@ -694,7 +694,7 @@ export default function Dashboard() {
                     onClick={() => setActiveTab(id)}
                     role="tab"
                     aria-selected={isActive}
-                    className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 whitespace-nowrap px-3.5 py-2 text-sm font-semibold rounded-full transition-colors duration-200 ${
+                    className={`relative z-10 shrink-0 snap-start flex items-center justify-center gap-1.5 whitespace-nowrap px-3.5 py-2 text-sm font-semibold rounded-full transition-colors duration-200 ${
                       isActive ? 'text-white' : 'text-gray-400 hover:text-white'
                     }`}
                   >
