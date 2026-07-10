@@ -1,5 +1,6 @@
 import 'server-only';
 import { NextResponse } from 'next/server';
+import { takeToken } from '@/lib/cache/upstash-rate-limit';
 import { applyContextFilter, matchesEventFilter, type PersonalContext, type ContextTypeFilter } from '@/lib/contextFeed/filter';
 import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
@@ -1280,6 +1281,22 @@ function applyTypeFilter(events: WhaleEvent[], filter: FilterKind): WhaleEvent[]
 }
 
 export async function GET(request: Request) {
+  // Per-IP flood guard, checked before any upstream crypto-API fan-out. This
+  // route queries CoinGecko / DexScreener / GoPlus / GeckoTerminal / Birdeye /
+  // LunarCrush; an unthrottled burst from one client fans every request out to
+  // all of them, which is what generated 2,211 dexscreener 429s during the
+  // 2026-07-10 spike. The in-memory responseCache does not help a concurrent
+  // burst because each cold lambda instance starts with an empty cache, so we
+  // stop the flood at the door. Upstash-backed (shared across instances), fails
+  // open if Redis is unset. A real client polls a few times a minute, so 30/min
+  // per IP is invisible to genuine use.
+  {
+    const h = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? '';
+    const ip = h.split(',')[0]?.trim() || 'unknown';
+    if (!(await takeToken(`ctxfeed:${ip}`, { capacity: 30, refillSec: 60 }))) {
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
+  }
   try {
     const { searchParams } = new URL(request.url);
     const rawLimit = parseInt(searchParams.get('limit') || '150');
