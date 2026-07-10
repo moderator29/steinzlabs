@@ -55,7 +55,9 @@ const WireTab  = lazy(() => import('@/components/wire/WireTab'));
 const GiftSheet = lazy(() => import('@/components/wire/GiftSheet').then(m => ({ default: m.GiftSheet })));
 const GiftSuccessCard = lazy(() => import('@/components/wire/GiftSuccessCard').then(m => ({ default: m.GiftSuccessCard })));
 const NewsTab  = lazy(() => import('@/components/news/NewsTab'));
-// Prediction sub-tab — real Polymarket (keyless Gamma API) markets board.
+// Prediction sub-tab — Naka Predict Breaking-Live game (free Naka Points).
+const LivePredict = lazy(() => import('@/components/predict/LivePredict'));
+// Secondary "World Events" board — real Polymarket (keyless Gamma API) markets.
 const PredictionBoard = lazy(() => import('@/components/prediction/PredictionBoard'));
 
 // Sub-tab ordering + typing for the home feed. Kept as a const tuple so the
@@ -562,9 +564,16 @@ export default function Dashboard() {
         </div>
       );
       if (activeTab === 'prediction') return (
-        <div className="space-y-5">
+        <div className="space-y-6">
           <SubTabHelpHeader label="Prediction" content={predictionHowItWorks} />
-          <PredictionBoard />
+          <LivePredict />
+          <div className="pt-2">
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="text-sm font-semibold text-white">World Events</h3>
+              <span className="text-[11px] text-gray-500">Live odds from Polymarket</span>
+            </div>
+            <PredictionBoard />
+          </div>
         </div>
       );
       return (

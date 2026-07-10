@@ -1,0 +1,8 @@
+-- Naka Predict — "Breaking Live" short-horizon YES/NO price markets played with
+-- free Naka Points (no real money, non-custodial). Odds are model-derived
+-- (lognormal on real price + realized vol), never a fabricated pool.
+-- Tables: predict_markets, predict_entries, predict_user_stats (RLS: public read
+-- markets, own-read entries/stats, server-only writes).
+-- RPCs (service-role only): place_predict_entry(user,market,side,stake,mult),
+-- resolve_predict_market(market,resolved_price). See applied migrations
+-- naka_predict_live_markets + naka_predict_rpcs for the full definitions.
