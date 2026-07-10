@@ -777,7 +777,6 @@ export default function SwapPage() {
   const [quoteError, setQuoteError] = useState('');
   const [showDetails, setShowDetails] = useState(false);
   const [swapRotate, setSwapRotate] = useState(0);
-  const [swapSuccess, setSwapSuccess] = useState(false);
   const [swapError, setSwapError] = useState('');
   const [walletBalance, setWalletBalance] = useState<Record<string, number>>({});
   const [txStatus, setTxStatus] = useState<TxStatus>('idle');
@@ -1246,7 +1245,7 @@ export default function SwapPage() {
   const handleSwap = async () => {
     if (!fromAmount || parseFloat(fromAmount) <= 0) return;
     setSwapError('');
-    setSwapSuccess(false);
+    setResultData(null);
     setTxHash('');
     setTxStatus('idle');
 
@@ -1480,7 +1479,6 @@ export default function SwapPage() {
       setTxHash(hash);
       setTxStatus('confirmed');
       notifySwapCompleted(fromToken, toToken, fromAmount);
-      setSwapSuccess(true);
       setResultData({
         status: 'confirmed',
         fromToken, toToken,
@@ -1503,7 +1501,6 @@ export default function SwapPage() {
           tx_hash: hash,
         });
       }).catch(() => { /* PostHog not configured */ });
-      setTimeout(() => { setSwapSuccess(false); setTxStatus('idle'); setTxHash(''); }, 10000);
 
       // Save amounts before clearing
       const savedFromAmount = fromAmount;
@@ -1983,40 +1980,13 @@ export default function SwapPage() {
           )}
 
           <div className="mt-3">
-            {/* Transaction Status Overlay */}
-            {txStatus !== 'idle' && (
-              <div className={`mb-3 rounded-2xl p-4 flex flex-col gap-2 border ${
-                txStatus === 'pending' ? 'bg-[#0066FF]/10 border-[#0066FF]/30' :
-                txStatus === 'confirmed' ? 'bg-green-500/10 border-green-500/30' :
-                'bg-red-500/10 border-red-500/30'
-              }`}>
-                <div className="flex items-center gap-2">
-                  {txStatus === 'pending' && <Loader2 className="w-4 h-4 animate-spin text-[#0066FF]" />}
-                  {txStatus === 'confirmed' && <CheckCircle className="w-4 h-4 text-green-400" />}
-                  {txStatus === 'failed' && <AlertTriangle className="w-4 h-4 text-red-400" />}
-                  <span className={`text-xs font-bold ${
-                    txStatus === 'pending' ? 'text-[#0066FF]' :
-                    txStatus === 'confirmed' ? 'text-green-400' : 'text-red-400'
-                  }`}>
-                    {txStatus === 'pending' ? 'Transaction Pending...' :
-                     txStatus === 'confirmed' ? 'Swap Confirmed!' : 'Transaction Failed'}
-                  </span>
-                </div>
-                {txHash && (
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] text-gray-500 font-mono truncate flex-1">
-                      {txHash.slice(0, 20)}...{txHash.slice(-8)}
-                    </span>
-                    <a
-                      href={chain === 'solana' ? `https://solscan.io/tx/${txHash}` : chain === 'base' ? `https://basescan.org/tx/${txHash}` : `https://etherscan.io/tx/${txHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-[10px] text-[#0066FF] hover:underline shrink-0"
-                    >
-                      View <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </div>
-                )}
+            {/* In-flight status. Settled + failed states are owned by the
+                full-screen TransactionResultCard (driven by resultData), so
+                the inline strip only covers the pending/broadcasting window. */}
+            {txStatus === 'pending' && (
+              <div className="mb-3 rounded-2xl p-4 flex items-center gap-2 border bg-[#0066FF]/10 border-[#0066FF]/30">
+                <Loader2 className="w-4 h-4 animate-spin text-[#0066FF]" />
+                <span className="text-xs font-bold text-[#0066FF]">Broadcasting transaction...</span>
               </div>
             )}
 
@@ -2110,23 +2080,8 @@ export default function SwapPage() {
               </div>
             )}
 
-            {swapSuccess && (
-              <div className="mt-2 flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-xl px-3 py-2.5">
-                <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
-                <span className="text-xs text-green-400">
-                  Swap executed successfully
-                  {txHash && (
-                    <a
-                      href={chain === 'solana' ? `https://solscan.io/tx/${txHash}` : `https://etherscan.io/tx/${txHash}`}
-                      target="_blank" rel="noopener noreferrer"
-                      className="ms-2 underline inline-flex items-center gap-1"
-                    >
-                      View tx <ExternalLink className="w-3 h-3" />
-                    </a>
-                  )}
-                </span>
-              </div>
-            )}
+            {/* Success + failure are surfaced by the TransactionResultCard
+                (shareable receipt) instead of an inline strip. */}
 
             {/* Advanced orders (Limit / DCA / Stop) removed from the swap
                 page per owner direction 2026-07-03 — the backend stacks
