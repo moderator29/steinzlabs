@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, X, Minus, Loader2 } from 'lucide-react';
+import { Check, X, Minus, Loader2, Zap } from 'lucide-react';
 import { VoteOrbs } from './VoteOrbs';
 
 // Mirrors MIN_VOTERS_FOR_PASS in app/api/cron/cult-resolve-proposals: a decree
@@ -128,8 +128,8 @@ export function ProposalCard({ proposal, onVoted }: { proposal: Proposal; onVote
       className={`vault-portal ${closingSoon ? 'vault-portal--urgent' : ''}`}
     >
       <header className="flex items-center justify-between">
-        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#00C8FF]">
-          ⚡ {KIND_LABEL[proposal.kind]}
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#00C8FF]">
+          <Zap size={11} /> {KIND_LABEL[proposal.kind]}
         </span>
         <span className={`text-[12px] font-semibold ${closingSoon ? 'text-[#FF1744]' : 'text-[#B4C0E0]'}`}>
           {remaining}
@@ -145,9 +145,9 @@ export function ProposalCard({ proposal, onVoted }: { proposal: Proposal; onVote
         <VoteOrbs proposalId={proposal.id} />
         <ConvictionBar yes={yes} abstain={abstain} no={no} />
         <div className="flex items-center justify-between text-[12px] font-semibold">
-          <span className="text-[#10B981]">✓ {yes.toLocaleString()} yes</span>
+          <span className="inline-flex items-center gap-1 text-[#10B981]"><Check size={13} /> {yes.toLocaleString()} yes</span>
           <span className="text-[#B4C0E0]">{proposal.voter_count} voters</span>
-          <span className="text-[#FF1744]">✗ {no.toLocaleString()} no</span>
+          <span className="inline-flex items-center gap-1 text-[#FF1744]"><X size={13} /> {no.toLocaleString()} no</span>
         </div>
         <QuorumMeter voters={proposal.voter_count} />
       </div>

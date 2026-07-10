@@ -3,6 +3,12 @@ import * as Sentry from '@sentry/nextjs';
 import { sendTelegramMessage } from '@/lib/telegram/client';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { inQuietHours, type QuietHoursPrefs } from '@/lib/preferences/quietHours';
+import {
+  notificationMessage,
+  resolveTelegramStyle,
+  type InlineKeyboardMarkup,
+  type TelegramStyle,
+} from '@/lib/telegram/templates';
 
 // Outbound notification dispatcher. Called server-side whenever the
 // platform creates a notification that should also be pushed to the
@@ -30,24 +36,11 @@ interface PushInput {
 const MAX_ATTEMPTS = 3;
 const BACKOFF_MS = [250, 500, 1000];
 
-function formatMessage(kind: NotificationKind, title: string, body?: string, url?: string): string {
-  const ICON: Record<NotificationKind, string> = {
-    price:    '📈',
-    whale:    '🐋',
-    security: '🛡️',
-    alert:    '🔔',
-    sniper:   '🎯',
-    copy:     '👥',
-    general:  '💠',
-  };
-  const icon = ICON[kind] ?? ICON.general;
-  const parts = [`${icon} *${title}*`];
-  if (body) parts.push('', body);
-  if (url) parts.push('', `[Open in Naka](${url})`);
-  return parts.join('\n');
-}
-
-async function deliverWithRetry(chatId: number, text: string): Promise<{ ok: true } | { ok: false; error: string; attempts: number }> {
+async function deliverWithRetry(
+  chatId: number,
+  text: string,
+  reply_markup?: InlineKeyboardMarkup,
+): Promise<{ ok: true } | { ok: false; error: string; attempts: number }> {
   let lastErr = 'unknown';
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {
@@ -58,9 +51,14 @@ async function deliverWithRetry(chatId: number, text: string): Promise<{ ok: tru
       // never fired and real failures were silently swallowed as fabricated
       // successes. Check the returned flag so a false result is a real,
       // retryable failure.
+      //
+      // Messages are rendered by the shared template system (HTML parse mode,
+      // provably safe escaping) so every push looks consistent and carries a
+      // clean inline "Open in Naka" button.
       const sent = await sendTelegramMessage(chatId, text, {
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         disable_web_page_preview: true,
+        ...(reply_markup ? { reply_markup } : {}),
       });
       if (sent) return { ok: true };
       lastErr = 'sendTelegramMessage returned false';
@@ -78,6 +76,7 @@ export async function sendTelegramNotification(input: PushInput): Promise<boolea
   const admin = getSupabaseAdmin();
 
   let chatId: number | null = null;
+  let style: TelegramStyle = 'normal';
   try {
     const [{ data: link }, { data: prefRow }, { data: settingsRow }] = await Promise.all([
       admin
@@ -92,7 +91,7 @@ export async function sendTelegramNotification(input: PushInput): Promise<boolea
         .maybeSingle(),
       admin
         .from('notification_settings')
-        .select('quiet_hours_enabled, quiet_hours_start_minute, quiet_hours_end_minute, quiet_hours_timezone')
+        .select('quiet_hours_enabled, quiet_hours_start_minute, quiet_hours_end_minute, quiet_hours_timezone, telegram_style')
         .eq('user_id', input.userId)
         .maybeSingle(),
     ]);
@@ -104,6 +103,10 @@ export async function sendTelegramNotification(input: PushInput): Promise<boolea
     if (prefs.telegram_notifications === false) return false;
     const perKindKey = `telegram_${input.kind}` as const;
     if (prefs[perKindKey] === false) return false;
+
+    // Per-user message style ('normal' | 'advanced'); defaults to 'normal'
+    // when the column/row/value is absent.
+    style = resolveTelegramStyle(settingsRow as { telegram_style?: unknown } | null);
 
     // Honor Do Not Disturb the same way the digest cron does — but let security
     // alerts pierce quiet hours (a security event is exactly what you want to
@@ -118,8 +121,11 @@ export async function sendTelegramNotification(input: PushInput): Promise<boolea
     return false;
   }
 
-  const text = formatMessage(input.kind, input.title, input.body, input.url);
-  const result = await deliverWithRetry(chatId, text);
+  const rendered = notificationMessage(
+    { kind: input.kind, title: input.title, body: input.body, url: input.url },
+    style,
+  );
+  const result = await deliverWithRetry(chatId, rendered.text, rendered.reply_markup);
   if (result.ok) return true;
 
   // Persist failure so it's visible. Best-effort — Sentry on top so we still page if DB fails.

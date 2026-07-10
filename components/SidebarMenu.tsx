@@ -10,10 +10,10 @@ import SteinzLogo from '@/components/ui/SteinzLogo';
 // `variant` prop (lucide has none).
 import {
   X, BarChart3, Search, TrendingUp, Fish, Bell, Shield, Wallet,
-  CandlestickChart, Dna, Link2, Trophy, Radio, ArrowLeftRight, Bot, Target,
+  CandlestickChart, Dna, Link2, Trophy, Radio, ArrowLeftRight, Bot, Target, Copy,
   PieChart, DollarSign, Archive, Circle, FileCode, FlaskConical, FileSearch,
   CheckSquare, Crosshair, Network, Globe, History, MessageCircle, Compass, Gem,
-  LineChart, Sparkles, ScanSearch, Settings, ShieldCheck, Copy, LayoutGrid, Rss,
+  LineChart, Sparkles, ScanSearch, Settings, ShieldCheck, LayoutGrid, Rss,
   Newspaper, LogIn, LogOut, UserCircle2, Twitter, Send, LifeBuoy, FileText,
   ChevronRight,
 } from 'lucide-react';
@@ -77,7 +77,7 @@ const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { icon: CandlestickChart, label: 'Market', path: '/dashboard/market' },
       { icon: ArrowLeftRight, label: 'Swap', path: '/dashboard/swap' },
-      { icon: Copy, label: 'Copy Trading', path: '/dashboard/copy-trading', badge: 'BETA' },
+      { icon: Copy, label: 'Copy Trading', path: '/dashboard/copy-trading' },
       { icon: History, label: 'Transactions', path: '/dashboard/transactions' },
     ],
   },
@@ -321,14 +321,14 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
 
         {/* ── Footer: social + support/legal ────────────────────────────── */}
         <footer className="mt-auto pt-8">
-          <div className="flex flex-col gap-4 border-t border-white/[0.06] pt-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-4 pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-1">
               <a
                 href="https://x.com/nakalabs"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Naka Labs on X"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-gray-400 transition-colors hover:text-white"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/[0.05] hover:text-white"
               >
                 <Twitter className="h-4 w-4" />
               </a>
@@ -337,7 +337,7 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Naka Labs on Telegram"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04] text-gray-400 transition-colors hover:text-white"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/[0.05] hover:text-white"
               >
                 <Send className="h-4 w-4" />
               </a>

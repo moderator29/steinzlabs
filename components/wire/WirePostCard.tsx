@@ -62,6 +62,50 @@ export interface WirePostCardProps {
   threadOpen?: boolean;
   /** Compact rendering for replies inside a thread (tighter, smaller avatar). */
   compact?: boolean;
+  /** Clicking a #hashtag in the body filters The Wire to that tag. */
+  onHashtag?: (tag: string) => void;
+}
+
+// Matches a #hashtag token: letters, digits and underscores after the hash.
+// Unicode-aware so non-latin tags still parse. Used to split a wire body into
+// plain text and clickable hashtag chips.
+const HASHTAG_RE = /(#[\p{L}\p{N}_]+)/gu;
+
+/**
+ * Render a wire body as React nodes, turning every #hashtag into a blue,
+ * clickable link. Whitespace/newlines are preserved by the caller's
+ * `whitespace-pre-wrap`. When no handler is given, hashtags still render blue
+ * but are non-interactive.
+ */
+function renderBody(text: string, onHashtag?: (tag: string) => void): React.ReactNode[] {
+  const parts = text.split(HASHTAG_RE);
+  return parts.map((part, i) => {
+    if (i % 2 === 1) {
+      // Odd indices are the captured #hashtag tokens.
+      const tag = part.slice(1).toLowerCase();
+      if (onHashtag) {
+        return (
+          <button
+            key={i}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onHashtag(tag);
+            }}
+            className="text-[#4d94ff] hover:underline font-medium"
+          >
+            {part}
+          </button>
+        );
+      }
+      return (
+        <span key={i} className="text-[#4d94ff] font-medium">
+          {part}
+        </span>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
 }
 
 function relativeTime(iso: string): string {
@@ -265,6 +309,7 @@ export function WirePostCard({
   onComment,
   threadOpen,
   compact,
+  onHashtag,
 }: WirePostCardProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -339,7 +384,9 @@ export function WirePostCard({
           </div>
 
           {shown.body ? (
-            <p className="mt-1.5 text-[15px] text-white/90 whitespace-pre-wrap break-words leading-relaxed">{shown.body}</p>
+            <p className="mt-1.5 text-[15px] text-white/90 whitespace-pre-wrap break-words leading-relaxed">
+              {renderBody(shown.body, onHashtag)}
+            </p>
           ) : null}
 
           <MediaGallery urls={galleryUrls} />

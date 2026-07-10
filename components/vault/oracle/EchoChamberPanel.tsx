@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 
 interface Slot {
   id: string;
@@ -156,9 +157,9 @@ export function EchoChamberPanel() {
                 onClick={() => remove(s.id)}
                 disabled={busy}
                 aria-label={`Remove ${shortAddr(s.address)} from the Echo Chamber`}
-                className="rounded-md border border-[#FF1744]/30 px-2 py-1 text-[11px] text-[#FF1744] hover:bg-[#FF1744]/10 disabled:opacity-30"
+                className="grid place-items-center rounded-md border border-[#FF1744]/30 px-2 py-1 text-[#FF1744] hover:bg-[#FF1744]/10 disabled:opacity-30"
               >
-                ✕
+                <X size={13} />
               </button>
             </li>
           ))}

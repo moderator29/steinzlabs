@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Wallet, User,
   Home, MessageSquare, Search, Menu, X,
-  LayoutGrid, Rss, Radio, Newspaper, LineChart, Sparkles,
+  LayoutGrid, Rss, Radio, Newspaper, CandlestickChart, Coins, Target,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -20,6 +20,7 @@ import { dashboardHowItWorks } from '@/lib/howItWorks/content/dashboard';
 import { feedHowItWorks } from '@/lib/howItWorks/content/feed';
 import { newsHowItWorks } from '@/lib/howItWorks/content/news';
 import { rwaHowItWorks } from '@/lib/howItWorks/content/rwa';
+import { marketHowItWorks } from '@/lib/howItWorks/content/market';
 import { predictionHowItWorks } from '@/lib/howItWorks/content/prediction';
 import type { HowItWorksContent } from '@/lib/howItWorks/types';
 import { OnboardingGate } from '@/components/onboarding/OnboardingFlow';
@@ -31,13 +32,18 @@ import SteinzLogo from '@/components/ui/SteinzLogo';
 // cards rendered below already cover Total Market Cap / 24h Volume / BTC
 // Dominance / Chains Tracked.
 import { RenderWidgets } from '@/components/dashboard/RenderWidgets';
+import { DailyPulseSummary } from '@/components/dashboard/DailyPulseSummary';
 import { FirstRunTour } from '@/components/dashboard/FirstRunTour';
 
 const ContextFeed    = lazy(() => import('@/components/ContextFeed'));
-// The single canonical markets front — the SAME component renders at
+// The single canonical CRYPTO markets front — the SAME component renders at
 // /dashboard/market so the two surfaces can never drift. Owns the market
-// stat strip, Top Gainers + Heating Up, the token list, and the RWA board.
+// stat strip, heatmap, Top Gainers + Heating Up, sectors, and the crypto
+// token table. The stocks/RWA board moved to its own Stocks sub-tab below.
 const MarketsView = lazy(() => import('@/components/market/MarketsView'));
+// The Stocks sub-tab — wraps the real RWA / TradFi board carved out of
+// MarketsView, keeping equities/RWA separate from the crypto Market view.
+const StocksBoard = lazy(() => import('@/components/dashboard/StocksBoard'));
 const WalletTab   = lazy(() => import('@/components/WalletTab'));
 const ProfileTab  = lazy(() => import('@/components/ProfileTab'));
 // New home sub-tab surfaces. These live at exact agreed paths and are owned
@@ -53,7 +59,7 @@ const PredictionBoard = lazy(() => import('@/components/prediction/PredictionBoa
 
 // Sub-tab ordering + typing for the home feed. Kept as a const tuple so the
 // union type, the deep-link parser and the tab-bar UI can never drift apart.
-const HOME_SUBTABS = ['overview', 'wire', 'context', 'news', 'markets', 'prediction'] as const;
+const HOME_SUBTABS = ['overview', 'wire', 'context', 'news', 'stocks', 'markets', 'prediction'] as const;
 type HomeSubtab = (typeof HOME_SUBTABS)[number];
 function isHomeSubtab(v: unknown): v is HomeSubtab {
   return typeof v === 'string' && (HOME_SUBTABS as readonly string[]).includes(v);
@@ -61,15 +67,16 @@ function isHomeSubtab(v: unknown): v is HomeSubtab {
 
 // Display metadata for the segmented home nav. `id` stays the internal union
 // value (never rename — deep-links + localStorage key off it); `label` is the
-// visible copy. Note 'wire' intentionally shows as "Feed". Order mirrors
-// HOME_SUBTABS so the union, deep-link parser and the nav can never drift.
+// visible copy. Order mirrors HOME_SUBTABS so the union, deep-link parser and
+// the nav can never drift. Flat lucide icons throughout.
 const HOME_TABS: { id: HomeSubtab; label: string; Icon: LucideIcon }[] = [
   { id: 'overview',   label: 'Overview',     Icon: LayoutGrid },
-  { id: 'wire',       label: 'Feed',         Icon: Rss },
+  { id: 'wire',       label: 'The Wire',     Icon: Rss },
   { id: 'context',    label: 'Context Feed', Icon: Radio },
   { id: 'news',       label: 'News',         Icon: Newspaper },
-  { id: 'markets',    label: 'Markets',      Icon: LineChart },
-  { id: 'prediction', label: 'Prediction',   Icon: Sparkles },
+  { id: 'stocks',     label: 'Stocks',       Icon: CandlestickChart },
+  { id: 'markets',    label: 'Market',       Icon: Coins },
+  { id: 'prediction', label: 'Prediction',   Icon: Target },
 ];
 
 function TabSpinner() {
@@ -288,14 +295,16 @@ const OverviewHero = memo(function OverviewHero({ name }: { name: string }) {
   );
 });
 
-// A small right-aligned header row that carries a sub-tab title and its
-// in-app "How it works" button. Kept intentionally light so it sits above a
-// sub-tab's own content without competing with it.
-function SubTabHelpHeader({ label, content }: { label: string; content: HowItWorksContent }) {
+// A clean single-row header for a sub-tab: the section title on the left and
+// its in-app "How it works" (?) button on the right. One row, no overlap, clear
+// bottom spacing so it never collides with the content below. `content` is
+// optional — surfaces without dedicated help copy (e.g. Context Feed) render
+// the title alone rather than a dead button.
+function SubTabHelpHeader({ label, content }: { label: string; content?: HowItWorksContent }) {
   return (
-    <div className="flex items-center justify-between gap-2 mb-1">
-      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500">{label}</span>
-      <HowItWorksButton content={content} iconOnly />
+    <div className="flex items-center justify-between gap-3 mb-4">
+      <h2 className="text-base font-semibold text-white tracking-tight">{label}</h2>
+      {content ? <HowItWorksButton content={content} iconOnly /> : null}
     </div>
   );
 }
@@ -374,18 +383,31 @@ export default function Dashboard() {
   useEffect(() => {
     if (activeNav === 'vtxai') router.replace('/dashboard/vtx-ai');
   }, [activeNav, router]);
-  // ?subtab=overview|wire|context|news|markets|prediction restores the home
-  // sub-tab — used by /dashboard/proof's "Back to Feed" button (§6.3) so the
-  // user lands on the Context Feed instead of the overview after explaining a
-  // signal. Any unknown value falls back to the Overview tab.
+  // ?subtab=overview|wire|context|news|stocks|markets|prediction restores the
+  // home sub-tab — used by the side-nav links (/dashboard?subtab=wire etc.) and
+  // by /dashboard/proof's "Back to Feed" button (§6.3). Any unknown value falls
+  // back to the Overview tab.
   const initialSubtab: HomeSubtab = (() => {
     const s = searchParams?.get('subtab');
     return isHomeSubtab(s) ? s : 'overview';
   })();
   const [activeTab, setActiveTab] = useState<HomeSubtab>(initialSubtab);
 
+  // Bug §subtab-nav — the side-nav links to /dashboard?subtab=wire etc., but
+  // when the user was ALREADY on /dashboard the sub-tab never switched: the
+  // initial state above only reads searchParams once at mount. Watch the live
+  // ?subtab value and drive setActiveTab whenever it changes to a valid tab, so
+  // clicking a nav link switches the surface in place. (A local tab click also
+  // updates the URL nowhere, so this only fires on real deep-link changes.)
+  const subtabParam = searchParams?.get('subtab');
+  useEffect(() => {
+    if (isHomeSubtab(subtabParam)) {
+      setActiveTab((prev) => (prev === subtabParam ? prev : subtabParam));
+    }
+  }, [subtabParam]);
+
   // Restore last sub-tab when navigating back from a coin detail page (which
-  // stashes 'steinz_last_tab' before routing away). Accepts any of the six
+  // stashes 'steinz_last_tab' before routing away). Accepts any of the seven
   // valid sub-tabs, not just markets, so future deep entries keep working.
   useEffect(() => {
     try {
@@ -489,18 +511,34 @@ export default function Dashboard() {
       if (activeTab === 'markets') {
         return (
           <div className="space-y-5">
-            <SubTabHelpHeader label="Markets" content={rwaHowItWorks} />
-            {/* Single canonical markets front — the SAME MarketsView renders
-                at /dashboard/market. Owns the market stat strip, Top Gainers +
-                Heating Up, the token list, and the RWA board. */}
+            <SubTabHelpHeader label="Market" content={marketHowItWorks} />
+            {/* Single canonical CRYPTO markets front — the SAME MarketsView
+                renders at /dashboard/market. Owns the market stat strip,
+                heatmap, Top Gainers + Heating Up, sectors, and the crypto token
+                table. Stocks/RWA now live on the Stocks tab below. */}
             <MarketsView />
           </div>
         );
       }
-      if (activeTab === 'context') return <ContextFeed />;
+      if (activeTab === 'stocks') {
+        return (
+          <div className="space-y-5">
+            <SubTabHelpHeader label="Stocks" content={rwaHowItWorks} />
+            {/* Stocks / RWA board — split out of MarketsView so equities and
+                crypto no longer compete on one screen. */}
+            <StocksBoard />
+          </div>
+        );
+      }
+      if (activeTab === 'context') return (
+        <div className="space-y-5">
+          <SubTabHelpHeader label="Context Feed" />
+          <ContextFeed />
+        </div>
+      );
       if (activeTab === 'wire') return (
         <div className="space-y-3">
-          <SubTabHelpHeader label="Feed" content={feedHowItWorks} />
+          <SubTabHelpHeader label="The Wire" content={feedHowItWorks} />
         <WireTab
           onGift={(post) => {
             // A repost forwards the ORIGINAL wire, so post.author is the wallet
@@ -534,10 +572,14 @@ export default function Dashboard() {
         // logic (PortfolioHeroCard returns null for no-wallets users,
         // SinceLastLoginDigest hides on first-ever visit, etc.) so the
         // dashboard stays clean for fresh accounts. The redesigned Overview
-        // opens with a branded hero and no longer carries the global
-        // market-stats bar (that moved to the Markets tab).
+        // opens with ONE greeting (OverviewHero) — the old PersonalizedHome
+        // widget that carried a duplicate "Welcome, {name}" greeting AND the
+        // "What are you trading today? / Ask VTX anything…" preview was dropped
+        // from the widget registry. The DailyPulseSummary below fills the old
+        // empty "what's moving" area with a real 24h whale/watchlist summary.
         <>
           <OverviewHero name={heroName} />
+          <DailyPulseSummary />
           <RenderWidgets />
         </>
       );
@@ -549,7 +591,12 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen text-white pb-28 sm:pb-24">
+    // overflow-x-clip — hard stop against side-to-side drift on mobile. Any wide
+    // child (the sub-tab pill row, a market table) must scroll inside its OWN
+    // overflow-x-auto container; the page body itself never scrolls sideways.
+    // `clip` (not `hidden`) so it doesn't establish a vertical scroll container
+    // that would break position:sticky descendants.
+    <div className="min-h-screen text-white pb-28 sm:pb-24 overflow-x-clip">
       {/* Only run the lightweight tour AFTER the full onboarding flow is done
           (onboardedAt is a real date). Previously both the 10-card
           OnboardingGate and this 3-step tour mounted at z-[200] for a
@@ -594,16 +641,17 @@ export default function Dashboard() {
           80px. Hardcoded 80px on mobile created a 24px dead zone above
           the first content row. Use h-14 worth of padding on mobile,
           the original 80px on lg+ where the header has more chrome. */}
-      <div className="pt-14 lg:pt-[80px] px-3 lg:px-6 max-w-7xl mx-auto">
+      <div className="pt-14 lg:pt-[80px] px-3 lg:px-6 max-w-7xl mx-auto w-full min-w-0 overflow-x-clip">
         {showHomeTabs && (
           <>
             {/* Home segmented nav — prime top slot, first thing under the
                 header (the old market-stats bar lived here; it moved into the
-                Markets tab). A single nl-glass pill holds all six surfaces with
+                Market tab). A single nl-glass pill holds all seven surfaces with
                 one brand-blue glass indicator that slides between them (its
                 left/width is measured off the active button, see the effect
-                above). Horizontally scrollable on mobile so all six fit without
-                wrapping. Data logic + render switch are untouched. */}
+                above). The pill row scrolls inside its OWN overflow-x-auto
+                container on mobile so all seven fit without wrapping and without
+                pushing the page sideways. Data logic + render switch untouched. */}
             <div
               ref={homeNavRef}
               className="relative flex items-center gap-0.5 p-1 nl-glass rounded-full mb-5 overflow-x-auto no-scrollbar"
@@ -657,6 +705,7 @@ export default function Dashboard() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
                 transition={{ duration: 0.18 }}
+                className="min-w-0"
               >
                 {renderContent()}
               </motion.div>

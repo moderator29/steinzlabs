@@ -94,7 +94,7 @@ export default async function VaultPage() {
             href="/vault/ape"
             name="Ape or Nope"
             tagline="Instinct"
-            description="A trending coin a day · call it, build your streak. 🚀💀"
+            description="A trending coin a day · call it, build your streak."
             sigil={<Rocket size={64} className="text-emerald-300" />}
           />
           <ChamberPortal

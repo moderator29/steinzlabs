@@ -10,12 +10,14 @@ import { HeatingUpCard } from '@/components/dashboard/HeatingUpCard';
 import MarketHeatmap from '@/components/market/MarketHeatmap';
 import SectorStrip from '@/components/market/SectorStrip';
 
-// The token list (search + categories + watchlist) and the RWA / TradFi
-// board are heavy, so they stay lazy — MarketsView renders on two surfaces
-// (the dashboard Markets sub-tab and the standalone /dashboard/market route)
-// and we only want to pay for these once the markets front is actually shown.
+// The token list (search + categories + watchlist) is heavy, so it stays
+// lazy — MarketsView renders on two surfaces (the dashboard Market sub-tab
+// and the standalone /dashboard/market route) and we only want to pay for it
+// once the markets front is actually shown.
+// The RWA / TradFi (stocks) board used to render here too; it now lives on its
+// own **Stocks** sub-tab (components/dashboard/StocksBoard) so this surface is
+// CRYPTO-ONLY and the two asset classes no longer compete on one screen.
 const MarketDashboard = lazy(() => import('@/components/MarketDashboard'));
-const RwaBoard = lazy(() => import('@/components/markets/RwaBoard'));
 
 interface MarketStats {
   totalMarketCap: string;
@@ -76,7 +78,8 @@ function MarketsSectionSpinner() {
  *   3. Top Gainers + Heating Up   (60/40 split on lg+)
  *   4. Sector Rotation strip      (cap-weighted 24h change per sector)
  *   5. The token list/table       (search, categories, live prices, watchlist)
- *   6. The RWA / TradFi board
+ *
+ * CRYPTO-ONLY. The RWA / TradFi (stocks) board moved to the Stocks sub-tab.
  *
  * Self-contained: it owns its own market-globals fetch so neither host
  * surface has to thread data in. Real data only — volume-change and
@@ -165,11 +168,6 @@ export default function MarketsView() {
       {/* 5 — Token list/table (search, categories, live prices, watchlist) */}
       <Suspense fallback={<MarketsSectionSpinner />}>
         <MarketDashboard />
-      </Suspense>
-
-      {/* 6 — RWA / TradFi board */}
-      <Suspense fallback={<MarketsSectionSpinner />}>
-        <RwaBoard />
       </Suspense>
     </div>
   );

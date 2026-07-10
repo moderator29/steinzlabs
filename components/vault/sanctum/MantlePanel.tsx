@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { Check } from 'lucide-react';
 
 type Slot = 'avatar' | 'frame' | 'glow' | 'banner' | 'title' | 'sigil';
 
@@ -126,14 +127,14 @@ export function MantlePanel() {
             type="button"
             onClick={() => setFocusSlot(s)}
             aria-pressed={focusSlot === s}
-            className={`rounded-md border px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] ${
+            className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] ${
               focusSlot === s
                 ? 'border-[#00C8FF]/60 text-white bg-[#00C8FF]/[0.08]'
                 : 'border-white/10 text-[#B4C0E0] hover:bg-white/[0.04]'
             }`}
           >
             {SLOT_TITLE[s]}
-            {equippedBySlot.has(s) ? ' ✓' : ''}
+            {equippedBySlot.has(s) && <Check size={11} className="text-[#00C8FF]" />}
           </button>
         ))}
       </div>

@@ -133,11 +133,28 @@ export async function GET(req: NextRequest) {
   const author = params.get('author');
   const reposts = params.get('reposts');
   const feed = params.get('feed'); // 'signal' | 'pack' | null
-  const tag = params.get('tag');   // canonical topic value | null
+  const tag = params.get('tag');   // legacy single canonical topic value | null
+  const tagsParam = params.get('tags'); // comma-separated canonical topics | null
 
   if (tag && !WIRE_TOPIC_SET.has(tag)) {
     return NextResponse.json({ error: 'Unknown topic' }, { status: 400 });
   }
+
+  // The Wire settings panel lets a viewer pick several catalogue topics at
+  // once. We accept them as a comma list and filter to posts whose tags[]
+  // OVERLAP the selection (Postgres `&&`). A single legacy `tag` still works
+  // and is folded into the same filter. Unknown values are dropped, never
+  // trusted — an all-unknown selection simply means "no topic filter".
+  const topicFilter = Array.from(
+    new Set(
+      [
+        ...(tag ? [tag] : []),
+        ...(tagsParam ? tagsParam.split(',') : []),
+      ]
+        .map((t) => t.trim().toLowerCase())
+        .filter((t) => WIRE_TOPIC_SET.has(t)),
+    ),
+  );
 
   // Viewer (optional — feed is public-readable). Used only to annotate
   // liked/reposted state, never to widen access.
@@ -157,7 +174,7 @@ export async function GET(req: NextRequest) {
       .gte('created_at', since)
       .order('created_at', { ascending: false })
       .limit(CANDIDATE_CAP);
-    if (tag) sq = sq.contains('tags', [tag]);
+    if (topicFilter.length) sq = sq.overlaps('tags', topicFilter);
 
     const { data, error } = await sq;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -213,7 +230,7 @@ export async function GET(req: NextRequest) {
       .in('author_id', followingIds)
       .order('created_at', { ascending: false })
       .limit(PAGE_SIZE);
-    if (tag) pq = pq.contains('tags', [tag]);
+    if (topicFilter.length) pq = pq.overlaps('tags', topicFilter);
     if (cursor) pq = pq.lt('created_at', cursor);
 
     const { data, error } = await pq;
@@ -265,7 +282,7 @@ export async function GET(req: NextRequest) {
     }
     q = q.eq('author_id', author);
   }
-  if (tag) q = q.contains('tags', [tag]);
+  if (topicFilter.length) q = q.overlaps('tags', topicFilter);
   if (cursor) q = q.lt('created_at', cursor);
 
   const { data, error } = await q;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Loader2, ImagePlus, X, Hash } from 'lucide-react';
+import { Loader2, ImagePlus, X, Hash, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { WIRE_TOPICS, WIRE_MAX_TAGS } from '@/lib/wire/topics';
 import type { WirePost } from './WirePostCard';
@@ -38,16 +38,24 @@ export interface WireComposerProps {
   userId?: string | null;
   /** Called with the freshly created wire so the parent can prepend it. */
   onPosted: (post: WirePost) => void;
+  /** Show the topic picker expanded from the start (used by the compose page). */
+  expandedTags?: boolean;
+  /** Page mode: larger textarea + autofocus for the full-screen compose route. */
+  large?: boolean;
+  /** Render without the outer glass card (the compose page supplies its own). */
+  bare?: boolean;
 }
 
-export function WireComposer({ avatarUrl, displayName, userId, onPosted }: WireComposerProps) {
+export function WireComposer({ avatarUrl, displayName, userId, onPosted, expandedTags, large, bare }: WireComposerProps) {
   const [body, setBody] = useState('');
   const [tags, setTags] = useState<string[]>([]);
-  const [showTags, setShowTags] = useState(false);
+  const [showTags, setShowTags] = useState(!!expandedTags);
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const len = body.length;
@@ -132,6 +140,52 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted }: WireC
 
   const removeImage = (url: string) => setMediaUrls((prev) => prev.filter((u) => u !== url));
 
+  /**
+   * Optional AI draft helper. Sends the current draft (which may be empty, a
+   * pasted ticker / contract, or rough notes) to /api/wire/ai-draft and drops
+   * the returned clean draft straight into the editable textarea — the user
+   * still reviews, edits and posts manually. Suggested topics are merged into
+   * the picker (respecting the 3-tag cap) but never auto-submitted. If the AI
+   * layer is unavailable we surface an honest message and posting is untouched.
+   */
+  const aiAssist = async () => {
+    if (aiLoading || submitting) return;
+    setAiError(null);
+    setAiLoading(true);
+    try {
+      const res = await fetch('/api/wire/ai-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draft: body.trim() || undefined }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => null);
+        setAiError(j?.error || 'AI assist unavailable');
+        return;
+      }
+      const j = await res.json();
+      if (typeof j.text === 'string' && j.text.trim()) {
+        setBody(j.text.trim().slice(0, MAX));
+      }
+      if (Array.isArray(j.tags) && j.tags.length) {
+        setTags((prev) => {
+          const merged = [...prev];
+          for (const t of j.tags) {
+            if (typeof t === 'string' && !merged.includes(t) && merged.length < WIRE_MAX_TAGS) {
+              merged.push(t);
+            }
+          }
+          return merged;
+        });
+        setShowTags(true);
+      }
+    } catch {
+      setAiError('AI assist unavailable');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const submit = async () => {
     if (!canPost) return;
     setSubmitting(true);
@@ -169,7 +223,7 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted }: WireC
   const ringColor = over ? '#ef4444' : len > MAX * 0.9 ? '#f59e0b' : '#0066FF';
 
   return (
-    <div className="nl-glass rounded-2xl p-4">
+    <div className={bare ? '' : 'nl-glass rounded-2xl p-4'}>
       <div className="flex gap-3">
         {avatarUrl ? (
           <img src={avatarUrl} alt="" className="w-11 h-11 rounded-full object-cover border border-white/10 flex-shrink-0" />
@@ -189,9 +243,12 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted }: WireC
             onKeyDown={(e) => {
               if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submit();
             }}
-            placeholder="What's happening on the wire?"
-            rows={3}
-            className="w-full bg-transparent resize-none outline-none text-[15px] text-white placeholder:text-white/35 leading-relaxed"
+            placeholder="What's happening on The Wire?"
+            rows={large ? 6 : 3}
+            autoFocus={large}
+            className={`w-full bg-transparent resize-none outline-none text-white placeholder:text-white/35 leading-relaxed ${
+              large ? 'text-lg min-h-[8rem]' : 'text-[15px]'
+            }`}
           />
 
           {/* Thumbnail row — up to 4 attached images + an add tile */}
@@ -234,7 +291,7 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted }: WireC
 
           {/* Tag picker */}
           {showTags ? (
-            <div className="mt-3 border-t border-white/[0.06] pt-3">
+            <div className="mt-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-white/45">Add up to {WIRE_MAX_TAGS} topics</span>
                 <span className="text-xs text-white/35 tabular-nums">{tags.length}/{WIRE_MAX_TAGS}</span>
@@ -267,8 +324,9 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted }: WireC
           ) : null}
 
           {error ? <div className="mt-2 text-xs text-red-400" role="alert">{error}</div> : null}
+          {aiError ? <div className="mt-2 text-xs text-amber-400/90" role="status">{aiError}</div> : null}
 
-          <div className="mt-3 flex items-center gap-1.5 border-t border-white/[0.06] pt-3">
+          <div className="mt-3 flex items-center gap-1.5 rounded-xl nl-glass px-2 py-1.5">
             <input
               ref={fileRef}
               type="file"
@@ -296,6 +354,17 @@ export function WireComposer({ avatarUrl, displayName, userId, onPosted }: WireC
               title="Add topics"
             >
               <Hash className="w-[18px] h-[18px]" />
+            </button>
+            <button
+              type="button"
+              onClick={aiAssist}
+              disabled={aiLoading || submitting}
+              className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[13px] font-medium text-[#4d94ff] hover:bg-[#0066FF]/12 transition disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              aria-label="AI draft assist"
+              title="Draft or refine with AI"
+            >
+              {aiLoading ? <Loader2 className="w-[16px] h-[16px] animate-spin" /> : <Sparkles className="w-[16px] h-[16px]" />}
+              AI
             </button>
 
             <div className="ms-auto flex items-center gap-3">

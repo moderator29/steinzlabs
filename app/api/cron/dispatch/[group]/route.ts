@@ -74,6 +74,9 @@ const GROUPS: Record<string, string[]> = {
     // Twice-daily crypto news roundup to users who opted in (notification_settings
     // .news_alerts). Exits instantly when nobody has opted in.
     'news-digest',
+    // Clean news-to-Telegram drop for users who opted in (telegram_news_drop).
+    // Idempotent + quiet-hours aware; exits instantly when nobody has opted in.
+    'news-telegram',
   ],
   // Once daily (03:00 UTC).
   daily: [

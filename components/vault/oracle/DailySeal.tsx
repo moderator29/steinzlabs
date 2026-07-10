@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { RotateCcw } from 'lucide-react';
 import { playSound } from '@/lib/cinematic/sound';
 
 type Seal = {
@@ -132,7 +133,7 @@ export function DailySeal() {
           >
             <h2 className="oracle-seal__title">{seal.title}</h2>
             <InkBody body={seal.body} />
-            <button type="button" onClick={reseal} className="oracle-seal__reseal">↺ Re-seal</button>
+            <button type="button" onClick={reseal} className="oracle-seal__reseal inline-flex items-center justify-center gap-1.5"><RotateCcw size={14} /> Re-seal</button>
           </motion.div>
         )}
       </AnimatePresence>

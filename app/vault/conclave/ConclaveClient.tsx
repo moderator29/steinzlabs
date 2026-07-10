@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ProposalCard, type Proposal } from './ProposalCard';
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Plus, Scale } from 'lucide-react';
 import { CreateProposalModal } from './CreateProposalModal';
 import { supabase } from '@/lib/supabase';
 import { playSound } from '@/lib/cinematic/sound';
@@ -108,7 +108,7 @@ export function ConclaveClient() {
 
       {!loading && proposals.length === 0 && (
         <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] py-16 text-center">
-          <div className="text-4xl opacity-30 mb-3">⚖</div>
+          <div className="mb-3 flex justify-center text-[#B4C0E0] opacity-30"><Scale size={40} /></div>
           <h3 className="cinematic-heading text-lg mb-1">The Conclave is silent</h3>
           <p className="text-[14px] text-[#B4C0E0]">No proposals in this view yet. Author the first Decree.</p>
         </div>
