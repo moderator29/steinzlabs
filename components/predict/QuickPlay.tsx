@@ -94,10 +94,11 @@ export function QuickPlay({ markets, now, me, signedIn, submitting, onEnter, onS
                 key={t}
                 type="button"
                 onClick={() => setToken(t)}
-                className={`relative rounded-full px-2.5 py-1 text-[11px] font-bold transition-all ${
+                className={`relative inline-flex items-center gap-1 rounded-full pl-1 pr-2.5 py-0.5 text-[11px] font-bold transition-all ${
                   active ? 'bg-[#0066FF] text-white shadow-[0_0_14px_rgba(0,102,255,0.5)]' : 'text-gray-400 hover:text-white'
                 }`}
               >
+                <SymbolBadge symbol={t} size={16} />
                 {t}
                 {live && !active && (
                   <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400" />

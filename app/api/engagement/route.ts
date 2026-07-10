@@ -4,8 +4,27 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
+import { takeToken } from '@/lib/cache/upstash-rate-limit';
 
 export const runtime = 'nodejs';
+
+// Per-IP flood guard. This endpoint is anonymous (view events need no auth),
+// so a single client can otherwise hammer it without limit: on 2026-07-10 one
+// IP sent 1,063 requests in 5 minutes, each triggering a Supabase insert plus a
+// full re-aggregation, spiking Vercel function invocations. We check the limit
+// BEFORE touching Supabase so a flood is rejected cheaply. Upstash-backed so the
+// window is shared across all lambda instances (an in-memory bucket resets on
+// every cold start a burst spins up). Fails open if Redis is unset. A real feed
+// session fires only a handful of events, so 80/min per IP never bites genuine
+// use while it crushes an abusive loop.
+function clientIp(req: NextRequest): string {
+  const h = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? '';
+  return h.split(',')[0]?.trim() || 'unknown';
+}
+async function floodOk(req: NextRequest): Promise<boolean> {
+  return takeToken(`engage:${clientIp(req)}`, { capacity: 80, refillSec: 60 });
+}
+const TOO_MANY = NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
 
 type CountShape = { views: number; likes: number; shares: number; comments: number };
 
@@ -54,6 +73,7 @@ async function aggregateCounts(
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await floodOk(request))) return TOO_MANY;
   try {
     const parsed = PostBody.safeParse(await request.json());
     if (!parsed.success) {
@@ -101,6 +121,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  if (!(await floodOk(request))) return TOO_MANY;
   const { searchParams } = new URL(request.url);
   const eventId = searchParams.get('eventId');
   if (!eventId || eventId.length > 128) {

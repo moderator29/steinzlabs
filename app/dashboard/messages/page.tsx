@@ -247,7 +247,12 @@ export default function MessagesInboxPage() {
     <div className="min-h-screen p-4 sm:p-6 max-w-2xl mx-auto">
       {/* Header: back · always-visible long search · settings dot (no title/E2E) */}
       <div className="flex items-center gap-2 mb-3">
-        <BackButton />
+        {/* Inbox Back always returns to the dashboard. Using smartBack /
+            router.back() here looped the user between the inbox and a
+            just-opened thread (the thread's Back pushes /dashboard/messages,
+            so router.back() on the list walked straight back into the thread).
+            An explicit target guarantees a path home. */}
+        <BackButton href="/dashboard" forceHref />
         <div className="flex-1 flex items-center gap-2 bg-black/30 border border-white/10 rounded-xl px-3 py-2 min-w-0">
           <Search className="w-4 h-4 text-slate-500 shrink-0" />
           <input

@@ -464,6 +464,33 @@ export async function handleGainers(ctx: CmdContext): Promise<void> {
   }
 }
 
+// ─── Fear & Greed (menu button) ──────────────────────────────────────────────
+// Keyless alternative.me index the platform already uses. Read-only, no account
+// needed, so it is a great one-tap menu action.
+export async function handleFearGreed(ctx: CmdContext): Promise<void> {
+  await sendTelegramTyping(ctx.chatId);
+  try {
+    const r = await fetch("https://api.alternative.me/fng/?limit=1", { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) throw new Error("fng fetch failed");
+    const j = await r.json();
+    const row = Array.isArray(j?.data) ? j.data[0] : null;
+    const value = Number(row?.value);
+    const label = String(row?.value_classification ?? "");
+    if (!Number.isFinite(value)) {
+      await sendTelegramMessage(ctx.chatId, "😶 Fear & Greed index unavailable right now.");
+      return;
+    }
+    const emoji = value <= 25 ? "😱" : value <= 45 ? "😟" : value <= 55 ? "😐" : value <= 75 ? "🙂" : "🤑";
+    await sendTelegramMessage(
+      ctx.chatId,
+      `${emoji} *Crypto Fear & Greed*\n\n*${value}* / 100 · ${escapeMd(label)}`,
+    );
+  } catch (err) {
+    console.error("[telegram.feargreed]", err);
+    await sendTelegramMessage(ctx.chatId, "❌ Fear & Greed unavailable. Try again shortly.");
+  }
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 // TG5: /myholdings, /pnl, /trades — read from the existing portfolio +
 // whale_activity tables. Resolves the calling chat to a linked user_id
@@ -643,6 +670,21 @@ export async function handleCallbackAction(
       const ctx: CmdContext = { chatId, args: cmdArgs, rawText: `/${cmd} ${cmdArgs.join(" ")}` };
       if (cmd === "price") await handlePrice(ctx);
       else if (cmd === "gainers") await handleGainers(ctx);
+      return true;
+    }
+    // One-tap menu actions: the /start command deck fires these so a user can
+    // pull live data without typing a slash command. All are read-only + public.
+    case "menu": {
+      await answerCallbackQuery(callbackQueryId, { text: "Loading…", show_alert: false });
+      const sub = args[0];
+      if (sub === "trending") await handleTrending({ chatId, args: [], rawText: "/trending" });
+      else if (sub === "gainers") await handleGainers({ chatId, args: [], rawText: "/gainers" });
+      else if (sub === "whales") await handleWhalesTop({ chatId, args: [], rawText: "/whales" });
+      else if (sub === "feargreed") await handleFearGreed({ chatId, args: [], rawText: "/feargreed" });
+      else if (sub === "price") {
+        const sym = args[1] ?? "BTC";
+        await handlePrice({ chatId, args: [sym], rawText: `/price ${sym}` });
+      }
       return true;
     }
     default:

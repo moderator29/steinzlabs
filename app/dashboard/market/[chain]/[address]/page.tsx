@@ -349,7 +349,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
   }
 
   return (
-    <div className="flex flex-col min-h-screen text-white pb-20 md:pb-0">
+    <div className="flex flex-col min-h-screen w-full max-w-full overflow-x-clip text-white pb-20 md:pb-0">
       {/* Top bar */}
       <div className="sticky top-0 z-20 nl-glass rounded-none" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}>
         {/* Bug §6.6 — breadcrumb above the back button gives users an
@@ -478,13 +478,14 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
       </div>
 
       {/* Body — 3-column on lg (stats panel · chart · trade rail), 2-column on
-          md (chart · trade rail), stacked on mobile (stats panel on top). */}
-      <div className="flex-1 min-h-0 flex flex-col md:flex-row">
+          md (chart · trade rail). On mobile the chart column is ordered first
+          (chart + tabs + inline buy/sell), with the stats panel below it. */}
+      <div className="flex-1 min-h-0 w-full min-w-0 flex flex-col md:flex-row">
         {/* LEFT stats panel — OUR aurora take on the DEX token panel. Single
             instance: shows on mobile (stacked, top) and lg+ (left column),
             hidden at md where 3 columns would crowd. Real DexScreener /
             GeckoTerminal / CoinGecko data, ~4s live refresh. */}
-        <aside className="flex md:hidden lg:flex w-full lg:w-[300px] shrink-0 flex-col p-3 lg:p-3 lg:border-r lg:border-slate-800/50">
+        <aside className="order-2 md:order-none flex md:hidden lg:flex w-full max-w-full min-w-0 lg:w-[300px] shrink-0 flex-col p-3 lg:p-3 lg:border-r lg:border-slate-800/50">
           <TokenStatsPanel
             chain={chain}
             address={address}
@@ -498,7 +499,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
           />
         </aside>
 
-        <div className="flex-1 min-w-0 flex flex-col">
+        <div className="order-1 md:order-none flex-1 min-w-0 max-w-full flex flex-col">
           {/*
             Audit M3 — interval selector + fullscreen toggle. Restored
             from main after the rebase dropped the toolbar; selection
@@ -779,31 +780,6 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
           onClose={() => setShowAlert(false)}
         />
       )}
-
-      {/* Mobile fixed Buy/Sell bottom bar — anchored to the viewport,
-          keeps the primary trade actions always-reachable without
-          scrolling. Hidden on md+ where the right rail has the full
-          inline form. Links to the same BUY/SELL scroll target. */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-slate-800/95 backdrop-blur-xl px-3 py-2 grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            document.getElementById('mobile-trade-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }}
-          className="py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm"
-        >
-          Buy
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            document.getElementById('mobile-trade-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }}
-          className="py-2.5 rounded-lg bg-red-500 hover:bg-red-400 text-white font-bold text-sm"
-        >
-          Sell
-        </button>
-      </div>
     </div>
   );
 }
