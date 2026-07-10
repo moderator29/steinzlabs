@@ -24,6 +24,7 @@ import { HAS_APPKIT } from '@/lib/wallet/appkit';
 // WalletConnect session can actually sign, where window.ethereum/solana are
 // undefined) and fall back to an injected provider on desktop.
 import { getEvmProvider, getSolanaProvider } from '@/lib/hooks/useSwapBroadcast';
+import { TransactionResultCard, type TransactionResultData } from '@/components/swap/TransactionResultCard';
 import { SecurityGate } from '@/components/security/SecurityGate';
 import SwapRoutePreview from '@/components/swap/SwapRoutePreview';
 import { RouteComparison } from '@/components/swap/RouteComparison';
@@ -94,6 +95,22 @@ const CHAIN_BADGE: Record<string, { label: string; color: string }> = CHAINS.red
   (m, c) => { m[c.id] = { label: c.label, color: c.color }; return m; },
   {} as Record<string, { label: string; color: string }>,
 );
+
+// Per-chain block explorer for a tx hash. Covers every chain the swap can
+// settle on (falls back to Etherscan for anything unmapped).
+function explorerTxUrl(chain: string, hash: string): string {
+  const base: Record<string, string> = {
+    ethereum: 'https://etherscan.io/tx/',
+    base: 'https://basescan.org/tx/',
+    arbitrum: 'https://arbiscan.io/tx/',
+    polygon: 'https://polygonscan.com/tx/',
+    avalanche: 'https://snowtrace.io/tx/',
+    bsc: 'https://bscscan.com/tx/',
+    optimism: 'https://optimistic.etherscan.io/tx/',
+    solana: 'https://solscan.io/tx/',
+  };
+  return `${base[chain] || base.ethereum}${hash}`;
+}
 
 interface TokenInfo {
   symbol: string;
@@ -765,6 +782,10 @@ export default function SwapPage() {
   const [walletBalance, setWalletBalance] = useState<Record<string, number>>({});
   const [txStatus, setTxStatus] = useState<TxStatus>('idle');
   const [txHash, setTxHash] = useState('');
+  // Snapshot that drives the branded, shareable result card. Captured at
+  // settle time (before inputs clear) so it survives the field reset and is
+  // wallet-mode agnostic (built-in / injected / WalletConnect / gasless).
+  const [resultData, setResultData] = useState<TransactionResultData | null>(null);
   const [detectedWallet, setDetectedWallet] = useState<'solana' | 'ethereum' | 'builtin' | null>(null);
   const [walletMode, setWalletMode] = useState<'naka' | 'metamask' | 'phantom'>(() => {
     const stored = safeLocalGet('swap_wallet_mode');
@@ -1460,6 +1481,19 @@ export default function SwapPage() {
       setTxStatus('confirmed');
       notifySwapCompleted(fromToken, toToken, fromAmount);
       setSwapSuccess(true);
+      setResultData({
+        status: 'confirmed',
+        fromToken, toToken,
+        fromAmount, toAmount,
+        fromUsd: quoteData?.fromAmountUsd ?? null,
+        toUsd: quoteData?.toAmountUsd ?? null,
+        fromLogo: getTokenInfo(fromToken).logo ?? null,
+        toLogo: getTokenInfo(toToken).logo ?? null,
+        chainLabel: activeChain.label,
+        chainColor: activeChain.color,
+        txHash: hash,
+        explorerUrl: explorerTxUrl(chain, hash),
+      });
       import('@/lib/posthog').then(({ track }) => {
         track('swap_executed', {
           from_token: fromToken,
@@ -1519,7 +1553,20 @@ export default function SwapPage() {
       safeLocalSet('steinz_swap_history', JSON.stringify(existing.slice(0, 50)));
     } catch (err: any) {
       setTxStatus('failed');
-      setSwapError(err?.message || 'Swap failed. Please try again.');
+      const msg = err?.message || 'Swap failed. Please try again.';
+      setSwapError(msg);
+      setResultData({
+        status: 'failed',
+        fromToken, toToken,
+        fromAmount, toAmount,
+        fromUsd: quoteData?.fromAmountUsd ?? null,
+        toUsd: quoteData?.toAmountUsd ?? null,
+        fromLogo: getTokenInfo(fromToken).logo ?? null,
+        toLogo: getTokenInfo(toToken).logo ?? null,
+        chainLabel: activeChain.label,
+        chainColor: activeChain.color,
+        errorMessage: msg,
+      });
     }
     setSwapping(false);
   };
@@ -2166,6 +2213,14 @@ export default function SwapPage() {
         exclude={showTokenSelect === 'from' ? toToken : fromToken}
         chain={chain}
       />
+
+      {resultData && (
+        <TransactionResultCard
+          data={resultData}
+          onClose={() => { setResultData(null); setTxStatus('idle'); setSwapError(''); setTxHash(''); }}
+          onRetry={() => { setResultData(null); setTxStatus('idle'); setShowReview(true); }}
+        />
+      )}
 
       {showReview && (() => {
         // Honest impact state — 0x-based EVM quotes only carry a price-impact
