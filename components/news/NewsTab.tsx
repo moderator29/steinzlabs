@@ -489,7 +489,7 @@ function NewsAlertToggle() {
             </div>
 
             {!hasExtendedSchema ? (
-              <p className="mt-3 text-[11px] text-amber-400/80">Syncing your settings — try again in a moment.</p>
+              <p className="mt-3 text-[11px] text-amber-400/80">Syncing your settings. Try again in a moment.</p>
             ) : (
               <a
                 href="/dashboard/settings"

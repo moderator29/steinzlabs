@@ -94,7 +94,7 @@ export default function TokenStatsPanel({
               <span className="text-sm font-bold text-white truncate">{name}</span>
               <span
                 className={`w-1.5 h-1.5 rounded-full transition-colors ${justUpdated ? 'bg-emerald-400' : 'bg-slate-600'}`}
-                title="Live — refreshes every ~4s"
+                title="Live, refreshes every ~4s"
               />
             </div>
             <div className="flex items-center gap-1.5 mt-0.5">

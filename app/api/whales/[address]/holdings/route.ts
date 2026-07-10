@@ -68,7 +68,7 @@ export const GET = withTierGate("mini", async (
       chain,
       holdings: [],
       total_value_usd: 0,
-      message: 'Solana holdings indexer is rolling out — EVM chains supported today.',
+      message: 'Solana holdings indexer is rolling out. EVM chains supported today.',
     });
   }
   if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {

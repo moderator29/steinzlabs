@@ -367,7 +367,7 @@ export default function NewCopyRuleModal({
                   value={minTradeSize}
                   onChange={setMinTradeSize}
                   type="number"
-                  placeholder="e.g. 5000 — skip smaller moves"
+                  placeholder="e.g. 5000, skip smaller moves"
                 />
 
                 <TextAreaField

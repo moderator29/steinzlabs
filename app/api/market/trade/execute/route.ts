@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         blocked: true,
         blockReason: ofac.source === 'unavailable'
-          ? 'Compliance (OFAC) check is temporarily unavailable — please try again shortly'
+          ? 'Compliance (OFAC) check is temporarily unavailable. Please try again shortly'
           : 'Wallet appears on the OFAC SDN list',
         ofac,
       }, { status: 403 });
