@@ -20,6 +20,10 @@ import { SwapSecurityWarnings, shouldBlockSwap } from '@/components/swap/SwapSec
 import { useAppKit, useAppKitAccount } from '@reown/appkit/react';
 import { isMobile } from '@/lib/utils/detectDevice';
 import { HAS_APPKIT } from '@/lib/wallet/appkit';
+// Provider resolvers that prefer the wagmi/AppKit connector (so a phone on a
+// WalletConnect session can actually sign, where window.ethereum/solana are
+// undefined) and fall back to an injected provider on desktop.
+import { getEvmProvider, getSolanaProvider } from '@/lib/hooks/useSwapBroadcast';
 import { SecurityGate } from '@/components/security/SecurityGate';
 import SwapRoutePreview from '@/components/swap/SwapRoutePreview';
 import { RouteComparison } from '@/components/swap/RouteComparison';
@@ -495,13 +499,13 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
                     ? <img src={imported.logo} alt="" className="w-9 h-9 rounded-full object-cover" />
                     : <div className="w-9 h-9 rounded-full bg-[#0066FF]/20 flex items-center justify-center text-xs font-bold text-white">{imported.symbol.slice(0, 2)}</div>}
                   <div className="text-start flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-white flex items-center gap-1.5">
-                      {imported.symbol}
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25 uppercase">Unverified</span>
+                    <div className="text-sm font-semibold text-white">{imported.symbol}</div>
+                    <div className="text-xs text-gray-500 truncate">
+                      {imported.name}
+                      {imported.address ? ` · ${imported.address.slice(0, 6)}…${imported.address.slice(-4)}` : ''}
                     </div>
-                    <div className="text-xs text-gray-500 truncate">{imported.name}</div>
                   </div>
-                  <span className="text-[11px] font-semibold text-[#0066FF]">Import</span>
+                  <span className="text-[11px] font-semibold text-[#0066FF]">Add</span>
                 </button>
               )}
             </div>
@@ -548,7 +552,7 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
               )}
               {remoteFiltered.length > 0 && (
                 <>
-                  <p className="px-4 pt-2 pb-1 text-[10px] font-bold tracking-wider text-gray-500 uppercase">All tokens</p>
+                  <p className="px-4 pt-2 pb-1 text-[10px] font-bold tracking-wider text-gray-500 uppercase">Search results</p>
                   {remoteFiltered.map(t => (
                     <button
                       key={`rem-${t.chain}-${t.address}`}
@@ -579,7 +583,7 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
                       </div>
                       {resolvingRemote === t.address
                         ? <Loader2 className="w-4 h-4 animate-spin text-[#0066FF]" />
-                        : <span className="text-[11px] font-semibold text-[#0066FF]">Import</span>}
+                        : <span className="text-[11px] font-semibold text-[#0066FF]">Add</span>}
                     </button>
                   ))}
                 </>
@@ -1278,23 +1282,27 @@ export default function SwapPage() {
 
       let hash = '';
 
-      // Step 2: Send transaction via connected wallet
+      // Step 2: Send transaction via connected wallet. Resolve the EVM
+      // provider through the wagmi/AppKit connector first so a WalletConnect
+      // session on a phone signs correctly (window.ethereum is undefined
+      // there); falls back to an injected desktop provider.
       const win = typeof window !== 'undefined' ? window : null;
+      const evmProvider = await getEvmProvider();
 
       if (useGasless && swapData.trade) {
         // Gasless flow: EIP-712 signature + submit
-        if (!win?.ethereum) throw new Error('Gasless swaps require MetaMask or compatible EVM wallet.');
-        const accounts = (await win.ethereum.request({ method: 'eth_accounts' })) as string[];
+        if (!evmProvider) throw new Error('Gasless swaps require a connected EVM wallet.');
+        const accounts = (await evmProvider.request({ method: 'eth_accounts' })) as string[];
         if (!accounts.length) throw new Error('No Ethereum wallet connected');
         // Sign the trade typed data
-        const tradeSignature = await win.ethereum.request({
+        const tradeSignature = await evmProvider.request({
           method: 'eth_signTypedData_v4',
           params: [accounts[0], JSON.stringify(swapData.trade)],
         });
         // Sign approval if needed
         let approvalSignature: string | undefined;
         if (swapData.approval) {
-          approvalSignature = (await win.ethereum.request({
+          approvalSignature = (await evmProvider.request({
             method: 'eth_signTypedData_v4',
             params: [accounts[0], JSON.stringify(swapData.approval)],
           })) as string;
@@ -1323,21 +1331,24 @@ export default function SwapPage() {
           attempts++;
         }
         if (!hash) throw new Error('Gasless transaction timed out. Check your wallet for status.');
-      } else if (swapData.transaction && win?.ethereum && detectedWallet === 'ethereum') {
-        // EVM wallet (MetaMask etc) — standard swap
-        const accounts = (await win.ethereum.request({ method: 'eth_accounts' })) as string[];
+      } else if (swapData.transaction && evmProvider && detectedWallet === 'ethereum') {
+        // EVM wallet (injected extension OR WalletConnect mobile session).
+        const accounts = (await evmProvider.request({ method: 'eth_accounts' })) as string[];
         if (!accounts.length) throw new Error('No Ethereum wallet connected');
         const txParams = { from: accounts[0], to: swapData.transaction.to, data: swapData.transaction.data, value: swapData.transaction.value, gas: swapData.transaction.gas };
-        hash = (await win.ethereum.request({ method: 'eth_sendTransaction', params: [txParams] })) as string;
-      } else if (win?.solana && detectedWallet === 'solana') {
-        // Solana wallet (Phantom etc)
+        hash = (await evmProvider.request({ method: 'eth_sendTransaction', params: [txParams] })) as string;
+      } else if (detectedWallet === 'solana') {
+        // Solana wallet (injected Phantom OR WalletConnect mobile session).
+        const solanaSigner = await getSolanaProvider();
+        if (!solanaSigner) throw new Error('No Solana wallet connected.');
         if (swapData.swapTransaction) {
           // Jupiter returns a VersionedTransaction — legacy Transaction.from
           // threw here on every Solana swap attempt.
           const { deserializeSolanaTx } = await import('@/lib/wallet/solanaTx');
           const tx = await deserializeSolanaTx(swapData.swapTransaction);
-          const signed = await win.solana.signAndSendTransaction(tx);
-          hash = signed.signature;
+          const signed = await solanaSigner.signAndSendTransaction(tx);
+          hash = typeof signed === 'string' ? signed : (signed.signature ?? '');
+          if (!hash) throw new Error('Solana wallet did not return a signature.');
         } else {
           throw new Error('No Solana transaction data received from API.');
         }
@@ -1512,7 +1523,7 @@ export default function SwapPage() {
   // Never fabricate numbers: gas and impact render only when the quote
   // pipeline actually supplied them (the old '$2.40' / '0.01%' constants
   // were invented and violated the no-mock-data rule).
-  const estimatedGas = typeof quoteData?.gasEstimateUsd === 'number' ? `$${quoteData.gasEstimateUsd.toFixed(quoteData.gasEstimateUsd < 0.01 ? 4 : 2)}` : '—';
+  const estimatedGas = typeof quoteData?.gasEstimateUsd === 'number' ? `$${quoteData.gasEstimateUsd.toFixed(quoteData.gasEstimateUsd < 0.01 ? 4 : 2)}` : '-';
   const priceImpact = quoteData?.priceImpact ?? null;
   const hasQuote = fromAmount && toAmount && parseFloat(fromAmount) > 0;
   const rate = hasQuote ? (parseFloat(toAmount) / parseFloat(fromAmount)) : 0;
@@ -1855,7 +1866,7 @@ export default function SwapPage() {
                           {priceImpact}%
                         </span>
                       ) : (
-                        <span className="text-gray-500">—</span>
+                        <span className="text-gray-500">-</span>
                       )}
                     </div>
                     <div className="flex justify-between text-xs">
@@ -2257,7 +2268,7 @@ export default function SwapPage() {
                   {hasImpact ? (
                     <span className={`font-semibold ${piColor}`}>{priceImpact}% <span className="text-[10px] font-normal opacity-80">({piLabel})</span></span>
                   ) : (
-                    <span className="text-gray-400" title="No confident market price available to compute impact">—</span>
+                    <span className="text-gray-400" title="No confident market price available to compute impact">-</span>
                   )}
                 </div>
                 <div className="flex justify-between">

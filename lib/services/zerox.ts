@@ -151,7 +151,10 @@ export async function getSwapPrice(params: {
     // 0x v2 monetization params (the buy token receives the fee).
     qs.set('swapFeeRecipient', feeRecipient);
     qs.set('swapFeeBps', STEINZ_FEE_BPS);
-    qs.set('swapFeeToken', params.buyToken);
+    // 0x v2 rejects the native sentinel (0xEeee…) as a fee token, so a
+    // fee-enabled buy of native ETH (e.g. NAKA -> ETH) would 400 and dead-end.
+    // Collect the fee in the sell token whenever the buy side is native.
+    qs.set('swapFeeToken', isNativeToken(params.buyToken) ? params.sellToken : params.buyToken);
   }
 
   const res = await fetchWithRetry(`${BASE_URL}/swap/allowance-holder/price?${qs}`, {
@@ -197,7 +200,10 @@ export async function getSwapQuote(params: {
     // ignored by the allowance-holder / permit2 endpoints).
     qs.set('swapFeeRecipient', feeRecipient);
     qs.set('swapFeeBps', STEINZ_FEE_BPS);
-    qs.set('swapFeeToken', params.buyToken);
+    // 0x v2 rejects the native sentinel (0xEeee…) as a fee token, so a
+    // fee-enabled buy of native ETH (e.g. NAKA -> ETH) would 400 and dead-end.
+    // Collect the fee in the sell token whenever the buy side is native.
+    qs.set('swapFeeToken', isNativeToken(params.buyToken) ? params.sellToken : params.buyToken);
   }
   if (typeof params.slippageBps === 'number' && Number.isFinite(params.slippageBps)) {
     qs.set('slippageBps', String(Math.round(params.slippageBps)));
@@ -296,7 +302,10 @@ export async function getGaslessPrice(params: {
   if (feeRecipient) {
     qs.set('swapFeeRecipient', feeRecipient);
     qs.set('swapFeeBps', feeBps);
-    qs.set('swapFeeToken', params.buyToken);
+    // 0x v2 rejects the native sentinel (0xEeee…) as a fee token, so a
+    // fee-enabled buy of native ETH (e.g. NAKA -> ETH) would 400 and dead-end.
+    // Collect the fee in the sell token whenever the buy side is native.
+    qs.set('swapFeeToken', isNativeToken(params.buyToken) ? params.sellToken : params.buyToken);
   }
 
   const res = await fetchWithRetry(`${BASE_URL}/gasless/price?${qs}`, {
@@ -331,7 +340,10 @@ export async function getGaslessQuote(params: {
   if (feeRecipient) {
     qs.set('swapFeeRecipient', feeRecipient);
     qs.set('swapFeeBps', feeBps);
-    qs.set('swapFeeToken', params.buyToken);
+    // 0x v2 rejects the native sentinel (0xEeee…) as a fee token, so a
+    // fee-enabled buy of native ETH (e.g. NAKA -> ETH) would 400 and dead-end.
+    // Collect the fee in the sell token whenever the buy side is native.
+    qs.set('swapFeeToken', isNativeToken(params.buyToken) ? params.sellToken : params.buyToken);
   }
 
   const res = await fetchWithRetry(`${BASE_URL}/gasless/quote?${qs}`, {

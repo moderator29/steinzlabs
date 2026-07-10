@@ -137,13 +137,13 @@ export async function recordFeeRevenue(db: SupabaseClient, row: FeeRevenueRow): 
 
 /**
  * Canonical Naka platform fee, in basis points. 50 bps = 0.5%.
- * Collected on every swap (buy and sell) via the 0x integrator
- * `buyTokenPercentageFee` and routed to the treasury wallet
- * (NEXT_PUBLIC_FEE_RECIPIENT_EVM). This is the single source of truth —
- * the 0x quote params, the recorded fee_usd, and the displayed fee all
- * derive from it, so they can never drift apart.
+ * Collected on every swap (buy and sell) via the 0x v2 monetization params
+ * (swapFeeRecipient + swapFeeBps + swapFeeToken) and routed to the treasury
+ * wallet (NEXT_PUBLIC_FEE_RECIPIENT_EVM). This is the single source of truth:
+ * the 0x quote params (STEINZ_FEE_BPS), the recorded fee_usd, and the
+ * displayed fee all derive from it, so they can never drift apart.
  */
 export const PLATFORM_FEE_BPS = 50;
 
-/** The platform fee as a 0x `buyTokenPercentageFee` decimal string (e.g. "0.005"). */
+/** The platform fee as a decimal string (e.g. "0.005"). */
 export const PLATFORM_FEE_DECIMAL = (PLATFORM_FEE_BPS / 10000).toString();
