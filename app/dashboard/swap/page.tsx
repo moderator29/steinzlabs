@@ -199,6 +199,45 @@ function getTokenAddresses(sellSymbol: string, buySymbol: string, chainId: strin
   return { sellToken: resolve(sellSymbol), buyToken: resolve(buySymbol) };
 }
 
+// §usd-notional — the /api/swap/price quote returns token AMOUNTS only, not a
+// USD value, so the pay/receive "~$X" sub-labels and the ≥ $1,000 MEV
+// auto-enable had nothing real to read (they were hard-wired to null). This
+// resolves a REAL spot price for a token from the platform's existing price
+// service (/api/prices): CoinGecko by coingeckoId for curated tokens, then
+// DexScreener by contract address for imported/pasted tokens. Honest by
+// design — returns null (never 0) when no confident price exists so the UI
+// shows blank rather than a fake "$0" and the MEV threshold can't be tripped
+// by a token whose value we don't actually know.
+async function fetchTokenUsdPrice(symbol: string, chainId: string, signal?: AbortSignal): Promise<number | null> {
+  const info = getTokenInfo(symbol);
+  try {
+    if (info.coingeckoId) {
+      const res = await fetch(`/api/prices?ids=${encodeURIComponent(info.coingeckoId)}`, { signal });
+      if (res.ok) {
+        const json = await res.json();
+        const usd = json?.prices?.[info.coingeckoId]?.usd;
+        if (typeof usd === 'number' && Number.isFinite(usd) && usd > 0) return usd;
+      }
+    }
+    // Fallback: resolve by the token's on-chain address via DexScreener. This
+    // covers imported tokens (no coingeckoId) on both EVM and Solana. Native
+    // gas tokens always carry a coingeckoId above, so the sentinel address
+    // never reaches here.
+    const { sellToken: addr } = getTokenAddresses(symbol, symbol, chainId);
+    if (addr && addr !== symbol && addr.toLowerCase() !== NATIVE_TOKEN_0X.toLowerCase()) {
+      const res = await fetch(`/api/prices?address=${encodeURIComponent(addr)}`, { signal });
+      if (res.ok) {
+        const json = await res.json();
+        const price = json?.[addr]?.price;
+        if (typeof price === 'number' && Number.isFinite(price) && price > 0) return price;
+      }
+    }
+  } catch {
+    /* price service unreachable / aborted — return null, never fabricate. */
+  }
+  return null;
+}
+
 function TokenBadge({ symbol, size = 28 }: { symbol: string; size?: number }) {
   const token = getTokenInfo(symbol);
   const [imgIdx, setImgIdx] = useState(0);
@@ -1012,11 +1051,25 @@ export default function SwapPage() {
           const toAmt: number = data.toAmount;
           setToAmount(toAmt.toFixed(6));
           setQuoteError('');
+          // Real USD notional from the platform price service. Pay-leg drives
+          // the ≥ $1,000 MEV auto-enable, so it must be a genuine spot value —
+          // resolve both legs in parallel, leave null when unresolved.
+          const payAmt = parseFloat(amount);
+          const [fromPriceUsd, toPriceUsd] = await Promise.all([
+            fetchTokenUsdPrice(f, c),
+            fetchTokenUsdPrice(t, c),
+          ]);
+          const fromAmountUsd = fromPriceUsd != null && Number.isFinite(payAmt) && payAmt > 0
+            ? payAmt * fromPriceUsd
+            : null;
+          const toAmountUsd = toPriceUsd != null && toAmt > 0
+            ? toAmt * toPriceUsd
+            : null;
           setQuoteData({
             ...data,
             toAmount: toAmt,
-            fromAmountUsd: null,
-            toAmountUsd: null,
+            fromAmountUsd,
+            toAmountUsd,
             priceImpact: data.priceImpactPct != null && data.priceImpactPct !== '' ? String(data.priceImpactPct) : null,
             gasEstimateUsd: typeof data.gasEstimateUsd === 'number' ? data.gasEstimateUsd : null,
             minReceived: typeof data.minReceived === 'number'

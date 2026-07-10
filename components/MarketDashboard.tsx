@@ -22,6 +22,34 @@ interface CoinRow {
   source: 'coingecko' | 'dex';
   chain?: string;
   pairAddress?: string;
+  // A saved watchlist id that CoinGecko couldn't resolve to live market data
+  // (e.g. a dex-only or delisted id). We keep it visible in an honest minimal
+  // state rather than dropping it from the list.
+  unresolved?: boolean;
+}
+
+// Honest placeholder for a saved coin id we couldn't resolve to live data.
+// The card renders name/symbol derived from the id and a "data unavailable"
+// note instead of fabricated price/change numbers — the coin stays in the
+// watchlist and stays removable.
+function minimalWatchRow(id: string): CoinRow {
+  const name = id
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return {
+    id,
+    symbol: id.slice(0, 6).toUpperCase(),
+    name,
+    image: '',
+    price: 0,
+    change24h: 0,
+    marketCap: 0,
+    volume24h: 0,
+    rank: 0,
+    sparkline: [],
+    source: 'coingecko',
+    unresolved: true,
+  };
 }
 
 // Audit M1 #10 — was a frozen 10-token list. If SOL fell out of top
@@ -216,11 +244,59 @@ export default function MarketDashboard() {
     return () => { cancelled = true; if (searchTimer.current) clearTimeout(searchTimer.current); };
   }, [search]);
 
-  const watchlistCoins = useMemo<CoinRow[]>(() => {
-    return watchlist
-      .map(id => coinCache.current.get(id))
-      .filter((c): c is CoinRow => c !== undefined);
-  }, [watchlist, coins]);
+  // Watchlist rows are fetched by id, NOT filtered from the loaded page.
+  // The old code did `watchlist.map(id => coinCache.get(id))`, so any saved
+  // coin outside the currently-loaded category top-100 was simply absent from
+  // the cache and silently dropped. Now we ask CoinGecko for exactly the saved
+  // ids (/api/market/markets?ids=…) so every watchlisted coin renders with live
+  // price/logo regardless of which category is loaded.
+  const [watchlistCoins, setWatchlistCoins] = useState<CoinRow[]>([]);
+  const [watchlistLoading, setWatchlistLoading] = useState(false);
+
+  useEffect(() => {
+    // Only the watchlist tab needs this data; skip the fetch on the prices tab.
+    if (tab !== 'watchlist') return;
+    if (watchlist.length === 0) { setWatchlistCoins([]); setWatchlistLoading(false); return; }
+
+    let cancelled = false;
+    setWatchlistLoading(true);
+    (async () => {
+      const byId = new Map<string, CoinRow>();
+      try {
+        const res = await fetch(`/api/market/markets?ids=${encodeURIComponent(watchlist.join(','))}`);
+        const data = await res.json() as { tokens?: Record<string, unknown>[] };
+        if (cancelled) return;
+        (data.tokens ?? []).forEach((t) => {
+          const row: CoinRow = {
+            id:        String(t.id ?? ''),
+            symbol:    String(t.symbol ?? '').toUpperCase(),
+            name:      String(t.name ?? ''),
+            image:     String(t.image ?? ''),
+            price:     Number(t.price ?? 0),
+            change24h: Number(t.change24h ?? 0),
+            marketCap: Number(t.marketCap ?? 0),
+            volume24h: Number(t.volume24h ?? 0),
+            rank:      Number(t.rank ?? 0),
+            sparkline: Array.isArray(t.sparkline) ? t.sparkline as number[] : [],
+            source:    'coingecko' as const,
+          };
+          if (row.id) { byId.set(row.id, row); coinCache.current.set(row.id, row); }
+        });
+      } catch {
+        // Network/upstream failure — fall through and resolve each id from the
+        // cache (populated by the prices tab) or a minimal placeholder below.
+      }
+      if (cancelled) return;
+      // Preserve EVERY saved id, in saved order: live row → cached row →
+      // honest minimal placeholder. Nothing is ever dropped.
+      setWatchlistCoins(
+        watchlist.map((id) => byId.get(id) ?? coinCache.current.get(id) ?? minimalWatchRow(id)),
+      );
+      setWatchlistLoading(false);
+    })();
+
+    return () => { cancelled = true; };
+  }, [tab, watchlist]);
 
   const displayCoins = useMemo<CoinRow[]>(() => {
     if (tab === 'watchlist') return watchlistCoins;
@@ -376,8 +452,14 @@ export default function MarketDashboard() {
         </div>
       )}
 
-      {tab === 'watchlist' && !loading && (
-        watchlistCoins.length === 0 ? (
+      {tab === 'watchlist' && (
+        watchlistLoading && watchlistCoins.length === 0 ? (
+          <div className="grid grid-cols-2 gap-3">
+            {Array.from({length:4}).map((_,i)=>(
+              <div key={i} className="h-32 bg-[#111827] rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : watchlistCoins.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <Star className="w-8 h-8 text-gray-600" />
             <p className="text-gray-400 text-sm text-center">No coins saved yet.<br/>Tap ☆ on any coin to add it.</p>
@@ -401,22 +483,31 @@ export default function MarketDashboard() {
                         <div className="text-[10px] text-gray-500 font-mono">{coin.symbol}</div>
                       </div>
                     </div>
-                    <button onClick={e=>handleToggleWatch(e,coin.id)} className="p-1 hover:scale-110 transition-transform">
+                    <button onClick={e=>handleToggleWatch(e,coin.id)} className="p-1 hover:scale-110 transition-transform" aria-label="Remove from watchlist">
                       <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
                     </button>
                   </div>
-                  {coin.marketCap > 0 && (
-                    <div className="text-[10px] text-gray-500 mb-1 font-mono">{fmtMcap(coin.marketCap)}</div>
-                  )}
-                  <div className="text-sm font-bold font-mono text-white">{fmtPrice(coin.price)}</div>
-                  <div className={`text-xs font-semibold flex items-center gap-0.5 mb-2 ${pos?'text-emerald-400':'text-red-400'}`}>
-                    {pos?<TrendingUp className="w-3 h-3"/>:<TrendingDown className="w-3 h-3"/>}
-                    {pos?'+':''}{coin.change24h.toFixed(2)}%
-                  </div>
-                  {coin.sparkline.length > 1 && (
-                    <div className="h-10 w-full">
-                      <MiniSparkline data={coin.sparkline} isPositive={pos} />
-                    </div>
+                  {coin.unresolved ? (
+                    // Saved id CoinGecko couldn't resolve — stay honest: no
+                    // fabricated price/change, just a clear "unavailable" note.
+                    // The coin remains visible and removable via the star.
+                    <div className="text-[10px] text-gray-500 mt-1">Live data unavailable</div>
+                  ) : (
+                    <>
+                      {coin.marketCap > 0 && (
+                        <div className="text-[10px] text-gray-500 mb-1 font-mono">{fmtMcap(coin.marketCap)}</div>
+                      )}
+                      <div className="text-sm font-bold font-mono text-white">{fmtPrice(coin.price)}</div>
+                      <div className={`text-xs font-semibold flex items-center gap-0.5 mb-2 ${pos?'text-emerald-400':'text-red-400'}`}>
+                        {pos?<TrendingUp className="w-3 h-3"/>:<TrendingDown className="w-3 h-3"/>}
+                        {pos?'+':''}{coin.change24h.toFixed(2)}%
+                      </div>
+                      {coin.sparkline.length > 1 && (
+                        <div className="h-10 w-full">
+                          <MiniSparkline data={coin.sparkline} isPositive={pos} />
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               );

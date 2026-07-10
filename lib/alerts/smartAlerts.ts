@@ -22,6 +22,8 @@ import 'server-only';
 
 import { isEvmAddress, isSolanaAddress, normalizeAddress, type Chain } from '@/lib/utils/addressNormalize';
 import { getTokenPrice } from '@/lib/services/coingecko';
+import { getDexPriceForChain } from '@/lib/services/dexscreener';
+import { goldrushEnabled, goldrushSupportsChain, getTokenSpotPrice } from '@/lib/services/goldrush';
 import { cacheGet } from '@/lib/cache/redis';
 
 export const SMART_ALERT_TYPES = ['price', 'whale', 'launch', 'wallet_activity'] as const;
@@ -190,6 +192,56 @@ async function fetchEvmTxs(address: string, chain: AlertChain): Promise<EvmTx[] 
   }
 }
 
+// ERC-20 token transfers (tokentx). CRITICAL for whale valuation: an ERC-20
+// transfer's native `value` field is 0, so it never appears in txlist with any
+// USD weight. tokentx carries the token contract, symbol, decimals and raw
+// amount we need to value the move at its REAL USD.
+interface EvmTokenTx {
+  hash: string;
+  timeStamp: string;
+  value: string;           // raw token amount (base units)
+  tokenDecimal: string;
+  contractAddress: string;
+  tokenSymbol: string;
+}
+
+async function fetchEvmTokenTxs(address: string, chain: AlertChain): Promise<EvmTokenTx[] | null> {
+  const key = explorerKey(chain);
+  const url = `${evmExplorerBase(chain)}?module=account&action=tokentx&address=${address}&sort=desc&page=1&offset=20${key ? `&apikey=${key}` : ''}`;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+    if (!res.ok) return null;
+    const data = await res.json() as { status: string; result: unknown };
+    // status '0' with an empty result means "no token transfers" (a real
+    // negative), but Etherscan also returns '0' on rate-limit; either way we
+    // treat a non-'1' status as "no token data this tick" and lean on txlist.
+    if (data.status !== '1' || !Array.isArray(data.result)) return null;
+    return data.result as EvmTokenTx[];
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Real USD value of an ERC-20 transfer. Never fabricates: prefers GoldRush spot
+ * pricing when a key is configured and the chain is supported, otherwise falls
+ * back to the platform's existing DexScreener chain-scoped price. Returns null
+ * when NO source can price the token — the caller treats that transfer's USD as
+ * unknown (it will not threshold-fire) rather than valuing it at $0 or guessing.
+ */
+async function tokenTransferUsd(chain: AlertChain, contractAddress: string, amount: number): Promise<number | null> {
+  if (!contractAddress || !(amount > 0)) return null;
+  if (goldrushEnabled() && goldrushSupportsChain(chain)) {
+    const p = await getTokenSpotPrice(chain, contractAddress);
+    if (p != null && p > 0) return amount * p;
+  }
+  try {
+    const p = await getDexPriceForChain(contractAddress, chain);
+    if (p > 0) return amount * p;
+  } catch { /* unpriceable → unknown */ }
+  return null;
+}
+
 async function fetchSolSignatures(address: string): Promise<Array<{ signature: string; blockTime: number | null }> | null> {
   const endpoint = process.env.HELIUS_RPC_URL || process.env.NEXT_PUBLIC_HELIUS_RPC_URL || 'https://api.mainnet-beta.solana.com';
   try {
@@ -232,34 +284,83 @@ export async function evaluateWallet(
     };
   }
 
-  // EVM chains
-  const txs = await fetchEvmTxs(c.walletAddress, c.chain);
-  if (txs == null) return { fire: null, cursor: c.cursor, cold: true };
+  // EVM chains. Value BOTH native-coin transfers (txlist) AND ERC-20 token
+  // transfers (tokentx). The previous version read only txlist, where an ERC-20
+  // transfer's native `value` is 0 — so a $2M USDC/PEPE whale move was valued at
+  // $0 and could never cross the USD threshold. We now merge both streams and
+  // price each token transfer at its REAL USD (GoldRush → DexScreener).
+  const [nativeTxs, tokenTxs] = await Promise.all([
+    fetchEvmTxs(c.walletAddress, c.chain),
+    fetchEvmTokenTxs(c.walletAddress, c.chain),
+  ]);
+  // Both sources cold → skip without stamping so we re-attempt next tick and
+  // never decide on missing data. If at least one returned we proceed with it.
+  if (nativeTxs == null && tokenTxs == null) return { fire: null, cursor: c.cursor, cold: true };
 
-  // For whale alerts we value the transfer in USD using a LIVE native price;
-  // never a hardcoded rate. If we can't get a price, skip (cold) so we don't
-  // misjudge the threshold.
+  // Native transfers are valued with a LIVE native price; never a hardcoded
+  // rate. When the native price is cold we skip the whole tick (cold), matching
+  // the prior behavior, rather than misjudging a native move's threshold.
   let nativeUsd: number | null = null;
   if (kind === 'whale') {
     nativeUsd = await nativePriceUsd(c.chain);
     if (nativeUsd == null) return { fire: null, cursor: c.cursor, cold: true };
   }
 
-  for (const tx of txs) {
-    const txTime = parseInt(tx.timeStamp) * 1000;
-    if (txTime <= lastChecked) break;
-    if (tx.hash === c.cursor.lastTxHash) break;
-
+  // Merge into one newest-first candidate list. Each candidate carries its REAL
+  // USD value, or null = unknown (an unpriceable token move — must NOT fire).
+  interface Candidate { hash: string; timeMs: number; usd: number | null }
+  const candidates: Candidate[] = [];
+  for (const tx of nativeTxs ?? []) {
     const valueNative = parseInt(tx.value || '0') / 1e18;
-    const valueUsd = nativeUsd != null ? valueNative * nativeUsd : 0;
+    candidates.push({
+      hash: tx.hash,
+      timeMs: parseInt(tx.timeStamp) * 1000,
+      usd: nativeUsd != null ? valueNative * nativeUsd : null,
+    });
+  }
+  for (const tt of tokenTxs ?? []) {
+    const timeMs = parseInt(tt.timeStamp) * 1000;
+    if (kind === 'whale') {
+      // Only price tokens for the USD-thresholded whale path.
+      let amount = 0;
+      try {
+        const decimals = parseInt(tt.tokenDecimal || '18');
+        amount = Number(BigInt(tt.value || '0')) / 10 ** (Number.isFinite(decimals) ? decimals : 18);
+      } catch { amount = 0; }
+      const usd = await tokenTransferUsd(c.chain, tt.contractAddress, amount);
+      candidates.push({ hash: tt.hash, timeMs, usd });
+    } else {
+      // wallet_activity fires on ANY fresh transfer; USD is irrelevant.
+      candidates.push({ hash: tt.hash, timeMs, usd: null });
+    }
+  }
 
-    if (kind === 'wallet_activity' || valueUsd >= threshold) {
-      const message = kind === 'whale'
-        ? `Whale wallet ${short} moved ~$${Math.round(valueUsd).toLocaleString()} on ${c.chain.toUpperCase()}`
-        : `Wallet ${short} has new activity on ${c.chain.toUpperCase()}`;
+  candidates.sort((a, b) => b.timeMs - a.timeMs);
+  // Watermark advances to the newest transfer seen (native or token) so we
+  // never re-scan it, regardless of which older transfer actually fired.
+  const newestHash = candidates.length ? candidates[0].hash : c.cursor.lastTxHash;
+
+  for (const cand of candidates) {
+    if (cand.timeMs <= lastChecked) break;
+    if (cand.hash === c.cursor.lastTxHash) break;
+
+    if (kind === 'wallet_activity') {
+      const message = `Wallet ${short} has new activity on ${c.chain.toUpperCase()}`;
       return {
         fire: { message, oneShot: false },
-        cursor: { lastChecked: Date.now(), lastTxHash: txs[0].hash, lastTriggered: Date.now(), triggerCount: c.cursor.triggerCount + 1 },
+        cursor: { lastChecked: Date.now(), lastTxHash: newestHash, lastTriggered: Date.now(), triggerCount: c.cursor.triggerCount + 1 },
+        cold: false,
+      };
+    }
+
+    // whale: only a transfer with a KNOWN real USD value that clears the
+    // threshold fires. An unpriceable token (usd == null) is skipped honestly —
+    // we never value it at $0 to force a fire, nor fabricate a price.
+    if (cand.usd != null && cand.usd >= threshold) {
+      const message = `Whale wallet ${short} moved ~$${Math.round(cand.usd).toLocaleString()} on ${c.chain.toUpperCase()}`;
+      return {
+        fire: { message, oneShot: false },
+        cursor: { lastChecked: Date.now(), lastTxHash: newestHash, lastTriggered: Date.now(), triggerCount: c.cursor.triggerCount + 1 },
         cold: false,
       };
     }

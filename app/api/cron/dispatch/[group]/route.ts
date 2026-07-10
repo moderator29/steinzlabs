@@ -27,6 +27,9 @@ const GROUPS: Record<string, string[]> = {
     'sniper-feed-ingest', 'sniper-feed-enrich-security', 'mm-engine',
     'sniper-monitor', 'sniper-auto-execute', 'sniper-autosell', 'sniper-enrich-security',
     'copy-trade-monitor', 'alert-monitor', 'limit-order-monitor', 'stop-loss-monitor',
+    // Confirms Wire gifts on-chain (pending -> confirmed/failed). Exits instantly
+    // when no gifts are pending.
+    'gift-confirm',
     'publish-scheduled-research', 'feed-alert-monitor', 'whale-alert-dispatcher',
     // One-off self-validating Trust Wallet gateway probe — writes the live
     // result to trustwallet_probe_log then self-stops once a 2xx is seen.

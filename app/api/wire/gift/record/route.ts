@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { guardRoute } from '@/lib/api/guardRoute';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { resolveReceiveAddress } from '@/lib/wire/resolveReceiveAddress';
+import { verifyGiftOnChain, type GiftVerifyOutcome } from '../_verify';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -137,5 +138,34 @@ export async function POST(req: NextRequest) {
   // trg_wire_gift_counts trigger on wire_gifts — no manual bump here (that path
   // was a non-atomic read-modify-write that lost counts under concurrency).
 
-  return NextResponse.json({ ok: true, id: inserted.id, status: 'pending' });
+  // Inline confirmation attempt: a native transfer that was broadcast with a
+  // 'confirmed' commitment is very often already mined by the time this request
+  // arrives, so try once to flip pending→confirmed immediately (recipient's
+  // Gifts tab surfaces only confirmed gifts). This is best-effort and read-only
+  // on-chain — never fabricates a confirm, never fails the record. The
+  // gift-confirm cron is the backstop for gifts still in flight here.
+  let status: 'pending' | 'confirmed' = 'pending';
+  try {
+    // Bound the inline attempt so it can't push this route past maxDuration —
+    // whatever isn't resolved in time stays 'pending' for the gift-confirm cron.
+    const outcome = await Promise.race<GiftVerifyOutcome>([
+      verifyGiftOnChain({ chain, txHash, recipientAddress }),
+      new Promise<GiftVerifyOutcome>((resolve) => setTimeout(() => resolve('pending'), 9_000)),
+    ]);
+    if (outcome === 'confirmed') {
+      const { error: updErr } = await supabase
+        .from('wire_gifts')
+        .update({ status: 'confirmed' })
+        .eq('id', inserted.id)
+        .eq('status', 'pending');
+      if (!updErr) status = 'confirmed';
+    }
+    // 'failed'/'pending' are left for the cron; the transfer already happened,
+    // so we never mark 'failed' from a single early read (a not-yet-mined tx
+    // reads identically to a dropped one until the grace window elapses).
+  } catch {
+    /* leave pending; cron will confirm */
+  }
+
+  return NextResponse.json({ ok: true, id: inserted.id, status });
 }
