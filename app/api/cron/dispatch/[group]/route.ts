@@ -30,6 +30,9 @@ const GROUPS: Record<string, string[]> = {
     // Confirms Wire gifts on-chain (pending -> confirmed/failed). Exits instantly
     // when no gifts are pending.
     'gift-confirm',
+    // Naka Predict "Breaking Live": keep short-horizon markets open, and settle
+    // expired ones against the real price. Both exit fast when there is no work.
+    'predict-generate', 'predict-resolve',
     'publish-scheduled-research', 'feed-alert-monitor', 'whale-alert-dispatcher',
     // One-off self-validating Trust Wallet gateway probe — writes the live
     // result to trustwallet_probe_log then self-stops once a 2xx is seen.
