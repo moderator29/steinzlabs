@@ -17,6 +17,7 @@
 import { useState, useCallback } from 'react';
 import { SwapQuote } from '@/lib/market/types';
 import { useSwapBroadcast, detectWalletKind } from '@/lib/hooks/useSwapBroadcast';
+import { PLATFORM_FEE_BPS } from '@/lib/trading/swapLogging';
 
 interface SwapExecutionParams {
   chain: string;
@@ -83,8 +84,10 @@ export function useSwapExecution() {
           amountOut: typeof data?.toAmount === 'number' ? String(data.toAmount) : '0',
           priceImpact: typeof data?.priceImpactPct === 'string' ? parseFloat(data.priceImpactPct) || 0 : 0,
           route: data?.provider === 'jupiter' ? 'Jupiter' : '0x',
-          // Platform fee is a flat 0.4% (PLATFORM_FEE_BPS=40) on the trade USD.
-          feeUSD: amountUsd * 0.005,
+          // Platform fee on the trade USD, from the single source of truth
+          // (NEXT_PUBLIC_STEINZ_FEE_BPS via PLATFORM_FEE_BPS) so the displayed
+          // fee always matches what 0x actually collects.
+          feeUSD: amountUsd * (PLATFORM_FEE_BPS / 10000),
         });
       } else {
         const errMsg =

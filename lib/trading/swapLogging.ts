@@ -143,7 +143,7 @@ export async function recordFeeRevenue(db: SupabaseClient, row: FeeRevenueRow): 
  * the 0x quote params (STEINZ_FEE_BPS), the recorded fee_usd, and the
  * displayed fee all derive from it, so they can never drift apart.
  */
-export const PLATFORM_FEE_BPS = 50;
+export const PLATFORM_FEE_BPS = Number(process.env.NEXT_PUBLIC_STEINZ_FEE_BPS) || 50;
 
-/** The platform fee as a decimal string (e.g. "0.005"). */
+/** The platform fee as a decimal string (e.g. "0.004"). */
 export const PLATFORM_FEE_DECIMAL = (PLATFORM_FEE_BPS / 10000).toString();

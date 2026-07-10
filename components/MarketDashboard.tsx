@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useWatchlist } from '@/hooks/market/useWatchlist';
 import { resolveTokenChain } from '@/lib/market/tokenChainResolver';
+import { TokenLogo } from '@/components/market/TokenLogo';
 
 interface CoinRow {
   id: string;
@@ -22,6 +23,10 @@ interface CoinRow {
   source: 'coingecko' | 'dex';
   chain?: string;
   pairAddress?: string;
+  // Token contract address for on-chain (dex) hits. Feeds the logo cascade
+  // (DexScreener CDN then Trust Wallet registry keyed by CA + chain) so a coin
+  // searched by name or pasted CA shows real art, not just a lettered avatar.
+  address?: string;
   // A saved watchlist id that CoinGecko couldn't resolve to live market data
   // (e.g. a dex-only or delisted id). We keep it visible in an honest minimal
   // state rather than dropping it from the list.
@@ -236,6 +241,7 @@ export default function MarketDashboard() {
           source:    r.source === 'coingecko' ? 'coingecko' : 'dex',
           chain:     r.chain ? String(r.chain) : undefined,
           pairAddress: r.pairAddress ? String(r.pairAddress) : undefined,
+          address:   r.contractAddress ? String(r.contractAddress) : undefined,
         }));
         setSearchResults(mapped);
       } catch { if (!cancelled) setSearchResults([]); }
@@ -473,11 +479,7 @@ export default function MarketDashboard() {
                   className="bg-[#111827] border border-white/[0.06] rounded-xl p-3 cursor-pointer hover:border-[#0066FF]/40 transition-all">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 flex items-center justify-center">
-                        {coin.image
-                          ? <img src={coin.image} alt={coin.symbol} loading="lazy" decoding="async" className="w-full h-full object-cover rounded-full" onError={e=>{(e.target as HTMLImageElement).style.display='none';}} />
-                          : <span className="text-[10px] font-bold text-white">{coin.symbol.slice(0,2)}</span>}
-                      </div>
+                      <TokenLogo src={coin.image || undefined} symbol={coin.symbol} address={coin.address} chain={coin.chain} size={32} />
                       <div>
                         <div className="text-xs font-bold text-white truncate max-w-[72px]">{coin.name}</div>
                         <div className="text-[10px] text-gray-500 font-mono">{coin.symbol}</div>
@@ -543,11 +545,7 @@ export default function MarketDashboard() {
                   <div className="w-6 text-end text-[11px] text-gray-500 flex-shrink-0 font-mono">
                     {coin.rank > 0 ? coin.rank : ''}
                   </div>
-                  <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 flex items-center justify-center">
-                    {coin.image
-                      ? <img src={coin.image} alt={coin.symbol} loading="lazy" decoding="async" className="w-full h-full object-cover rounded-full" onError={e=>{(e.target as HTMLImageElement).style.display='none';}} />
-                      : <span className="text-xs font-bold text-white">{coin.symbol.slice(0,2)}</span>}
-                  </div>
+                  <TokenLogo src={coin.image || undefined} symbol={coin.symbol} address={coin.address} chain={coin.chain} size={36} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-semibold text-white truncate">{coin.name}</span>

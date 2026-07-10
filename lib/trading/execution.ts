@@ -3,7 +3,11 @@ import { TradeQuote, TradeExecution } from './types';
 import { shadowGuardian } from '../security/shadowGuardian';
 import { savePosition, getUserByWallet } from '../database/supabase';
 import { calculateFee, recordRevenue } from '../revenue/feeSystem';
-import { PLATFORM_FEE_DECIMAL } from './swapLogging';
+import { PLATFORM_FEE_BPS } from './swapLogging';
+
+// 0x native-asset sentinel. When the buy side is native (e.g. buying ETH),
+// 0x v2 rejects it as the fee token, so the fee is taken in the sell token.
+const ZX_NATIVE = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 import { getTokenMetadata } from '../services/alchemy';
 import { getTokenPairs } from '../services/dexscreener';
 
@@ -43,7 +47,7 @@ async function getZeroXQuote(
 
   const apiKey = process.env.NEXT_PUBLIC_ZX_API_KEY || process.env.ZX_API_KEY || '';
   const feeRecipient = process.env.NEXT_PUBLIC_FEE_RECIPIENT_EVM || '';
-  const feePct = process.env.NEXT_PUBLIC_STEINZ_FEE_PERCENT || PLATFORM_FEE_DECIMAL;
+  const feeBps = String(process.env.NEXT_PUBLIC_STEINZ_FEE_BPS || PLATFORM_FEE_BPS);
 
   const params = new URLSearchParams({
     chainId: String(chainId),
@@ -52,8 +56,11 @@ async function getZeroXQuote(
     sellAmount: amountWei,
   });
   if (feeRecipient) {
-    params.set('feeRecipient', feeRecipient);
-    params.set('buyTokenPercentageFee', feePct);
+    // 0x v2 monetization params (v1 feeRecipient/buyTokenPercentageFee are
+    // silently ignored by the v2 endpoints, i.e. no fee was collected).
+    params.set('swapFeeRecipient', feeRecipient);
+    params.set('swapFeeBps', feeBps);
+    params.set('swapFeeToken', toToken.toLowerCase() === ZX_NATIVE ? fromToken : toToken);
   }
 
   const res = await fetch(`https://api.0x.org/swap/allowance-holder/price?${params}`, {
@@ -154,7 +161,7 @@ export async function executeTrade(params: {
 
         const apiKey = process.env.NEXT_PUBLIC_ZX_API_KEY || process.env.ZX_API_KEY || '';
         const feeRecipient = process.env.NEXT_PUBLIC_FEE_RECIPIENT_EVM || '';
-        const feePct = process.env.NEXT_PUBLIC_STEINZ_FEE_PERCENT || PLATFORM_FEE_DECIMAL;
+        const feeBps = String(process.env.NEXT_PUBLIC_STEINZ_FEE_BPS || PLATFORM_FEE_BPS);
         const amountWei = Math.floor(parseFloat(quote.fromAmount) * 1e18).toString();
 
         const params = new URLSearchParams({
@@ -165,8 +172,10 @@ export async function executeTrade(params: {
           taker: userAddress,
         });
         if (feeRecipient) {
-          params.set('feeRecipient', feeRecipient);
-          params.set('buyTokenPercentageFee', feePct);
+          // 0x v2 monetization params (v1 params are ignored on v2 -> no fee).
+          params.set('swapFeeRecipient', feeRecipient);
+          params.set('swapFeeBps', feeBps);
+          params.set('swapFeeToken', quote.toToken.toLowerCase() === ZX_NATIVE ? quote.fromToken : quote.toToken);
         }
 
         const quoteRes = await fetch(`https://api.0x.org/swap/allowance-holder/quote?${params}`, {

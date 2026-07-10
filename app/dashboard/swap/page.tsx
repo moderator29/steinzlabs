@@ -111,6 +111,10 @@ const TOKEN_LIST: TokenInfo[] = [
   { symbol: 'USDC', name: 'USD Coin', color: '#2775CA', decimals: 6, popular: true, coingeckoId: 'usd-coin', logo: 'https://assets.coingecko.com/coins/images/6319/small/usdc.png' },
   { symbol: 'USDT', name: 'Tether', color: '#26A17B', decimals: 6, popular: true, coingeckoId: 'tether', logo: 'https://assets.coingecko.com/coins/images/325/small/Tether.png' },
   { symbol: 'BNB', name: 'BNB', color: '#F0B90B', decimals: 18, popular: true, coingeckoId: 'binancecoin', logo: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png' },
+  // Naka ($NAKA) on Ethereum, first-class and pinned to popular. Logo pulls
+  // from the DexScreener token image (address-derived, the same art indexers
+  // and Uniswap surface); falls back to a lettered glyph if unavailable.
+  { symbol: 'NAKA', name: 'Naka', color: '#0066FF', decimals: 18, popular: true, logo: 'https://dd.dexscreener.com/ds-data/tokens/ethereum/0x6967b9a8c0b14849cfe8f9e5732b401433fd2898.png' },
   { symbol: 'MATIC', name: 'Polygon', color: '#8247E5', decimals: 18, coingeckoId: 'matic-network', logo: 'https://assets.coingecko.com/coins/images/4713/small/polygon.png' },
   { symbol: 'AVAX', name: 'Avalanche', color: '#E84142', decimals: 18, coingeckoId: 'avalanche-2', logo: 'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png' },
   { symbol: 'WBTC', name: 'Wrapped Bitcoin', color: '#F7931A', decimals: 8, popular: true, coingeckoId: 'wrapped-bitcoin', logo: 'https://assets.coingecko.com/coins/images/7598/small/wrapped_bitcoin_wbtc.png' },
