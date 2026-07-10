@@ -44,6 +44,7 @@ import {
   handlePortfolio,
   handleTrending,
   handleGainers,
+  handleFearGreed,
   handleMyHoldings,
   handlePnl,
   handleTrades,
@@ -130,36 +131,81 @@ function tierBadge(tier: Tier): string {
   return tier === "max" ? "🔥 MAX" : tier === "pro" ? "⭐ PRO" : tier === "mini" ? "✨ MINI" : "🆓 FREE";
 }
 
+// The command deck. A tap-first inline menu (like the best TG bots): live
+// market data one tap away, deep app features as buttons, and the full text
+// command list one tap deeper. Tasteful single emoji per button, no walls of
+// text, no em-dashes.
+function menuKeyboard(linked: LinkedUser | null) {
+  const rows: { text: string; callback_data?: string; url?: string }[][] = [
+    [
+      { text: "📈 Trending", callback_data: "menu:trending" },
+      { text: "🚀 Gainers", callback_data: "menu:gainers" },
+    ],
+    [
+      { text: "🐳 Top Whales", callback_data: "menu:whales" },
+      { text: "😱 Fear & Greed", callback_data: "menu:feargreed" },
+    ],
+    [
+      { text: "💰 BTC", callback_data: "menu:price:BTC" },
+      { text: "💰 ETH", callback_data: "menu:price:ETH" },
+      { text: "💰 SOL", callback_data: "menu:price:SOL" },
+    ],
+    [
+      { text: "🎯 Predict", url: `${APP_URL}/dashboard?subtab=prediction` },
+      { text: "🧠 VTX AI", url: `${APP_URL}/dashboard/vtx-ai` },
+    ],
+    [
+      { text: "🤝 Copy Trading", url: `${APP_URL}/dashboard/copy-trading` },
+      { text: "🔫 Sniper", url: `${APP_URL}/dashboard/sniper` },
+    ],
+    [
+      { text: "🔔 Alerts", url: `${APP_URL}/dashboard/alerts` },
+      { text: "💼 Portfolio", url: `${APP_URL}/dashboard/portfolio` },
+    ],
+    [OPEN_APP_BTN, SETTINGS_BTN],
+  ];
+  if (!linked || linked.tier === "free" || linked.tier === "mini") rows.push([UPGRADE_BTN]);
+  rows.push([
+    { text: "📋 All commands", callback_data: "commands" },
+    { text: "🆘 Support", url: `${APP_URL}/support` },
+  ]);
+  return rows;
+}
+
 async function sendHelp(chatId: number, linked: LinkedUser | null): Promise<void> {
+  const tierLine = linked ? `Plan: *${tierBadge(linked.tier)}*` : "_Not linked yet. Send_ `/link <code>` _from Settings._";
+  const text =
+    `*🐺 Naka Labs*\n${tierLine}\n\n` +
+    `Your command deck. Tap anything below for live data, or type a command like \`/price BTC\`.`;
+  await sendTelegramMessage(chatId, text, { reply_markup: { inline_keyboard: menuKeyboard(linked) } });
+}
+
+// The full text command reference, one tap behind the "All commands" button so
+// the main menu stays clean.
+async function sendCommandList(chatId: number, linked: LinkedUser | null): Promise<void> {
   const tierLine = linked ? `Plan: *${tierBadge(linked.tier)}*` : "_Not linked yet_";
   const text =
-    `*🤖 Naka Labs Bot*\n${tierLine}\n\n` +
+    `*📋 Naka Labs commands*\n${tierLine}\n\n` +
     `*🔓 Free*\n` +
-    `• \`/price BTC\` — live price card\n` +
-    `• \`/chart ETH 7\` — price chart (1, 7, 30, 365 days)\n` +
-    `• \`/info SOL\` — full token info\n` +
-    `• \`/security <addr>\` — GoPlus rug check\n` +
-    `• \`/trending\` — top trending coins\n` +
-    `• \`/gainers\` — top 24h gainers\n` +
-    `• \`/whales\` — top 10 whales by 30d PnL\n` +
-    `• \`/alerts\` — your active price alerts\n` +
-    `• \`/setalert BTC 100000\` — alert when ≥ price\n` +
-    `• \`/setalert ETH <3000\` — alert when ≤ price\n` +
-    `• \`/portfolio\` — your connected wallets\n\n` +
-    `*✨ MINI ($5/mo)*\n` +
-    `• \`/whale <addr>\` — full wallet intelligence\n\n` +
-    `*⭐ PRO ($9/mo)*\n` +
-    `• \`/copy <addr>\` — copy trading controls\n\n` +
-    `*🔥 MAX ($15/mo)*\n` +
-    `• \`/snipe <token>\` — sniper bot config\n\n` +
-    `*Account*\n` +
-    `• \`/start\` · \`/help\` · \`/status\` · \`/link <code>\` · \`/unlink\``;
-
-  const buttons = linked
-    ? [[OPEN_APP_BTN, SETTINGS_BTN], ...(linked.tier === "free" || linked.tier === "mini" ? [[UPGRADE_BTN]] : [])]
-    : [[OPEN_APP_BTN]];
-
-  await sendTelegramMessage(chatId, text, { reply_markup: { inline_keyboard: buttons } });
+    `\`/price BTC\` live price card\n` +
+    `\`/chart ETH 7\` price chart (1, 7, 30, 365d)\n` +
+    `\`/info SOL\` full token info\n` +
+    `\`/security <addr>\` GoPlus rug check\n` +
+    `\`/trending\` top trending coins\n` +
+    `\`/gainers\` top 24h gainers\n` +
+    `\`/feargreed\` market sentiment index\n` +
+    `\`/whales\` top 10 whales by 30d PnL\n` +
+    `\`/alerts\` your active price alerts\n` +
+    `\`/setalert BTC 100000\` alert at or above price\n` +
+    `\`/setalert ETH <3000\` alert at or below price\n` +
+    `\`/portfolio\` your connected wallets\n\n` +
+    `*✨ MINI*  \`/whale <addr>\` full wallet intelligence\n` +
+    `*⭐ PRO*  \`/copy <addr>\` copy trading controls\n` +
+    `*🔥 MAX*  \`/snipe <token>\` sniper bot config\n\n` +
+    `*Account*  \`/start\` · \`/help\` · \`/status\` · \`/link <code>\` · \`/unlink\``;
+  await sendTelegramMessage(chatId, text, {
+    reply_markup: { inline_keyboard: [[{ text: "🔙 Back to menu", callback_data: "help" }], [OPEN_APP_BTN]] },
+  });
 }
 
 function tierGateMsg(needed: Tier): string {
@@ -228,6 +274,12 @@ export async function POST(request: NextRequest) {
       await sendHelp(cbChatId, linked);
       return NextResponse.json({ ok: true });
     }
+    if (data === "commands") {
+      const linked = await getLinkedUser(cbChatId);
+      await answerCallbackQuery(cq.id);
+      await sendCommandList(cbChatId, linked);
+      return NextResponse.json({ ok: true });
+    }
     const [action, ...rest] = data.split(":");
     try {
       const { handleCallbackAction } = await import('@/lib/telegram/commands/handlers');
@@ -263,25 +315,10 @@ export async function POST(request: NextRequest) {
     } else {
       await sendTelegramMessage(
         chatId,
-        `*Welcome to Naka Labs* 🎯\n\n` +
-          `Your on-chain intelligence co-pilot. Live prices, charts, whales, alerts, copy trades — all from Telegram.\n\n` +
-          `*Quick start (no account needed):*\n` +
-          `• \`/price BTC\` — live price\n` +
-          `• \`/chart SOL 7\` — chart\n` +
-          `• \`/trending\` — what's hot\n\n` +
-          `*Link your account for alerts and trading:*\n` +
-          `1. Tap *Open Naka Labs* below.\n` +
-          `2. Settings → Notifications → Telegram.\n` +
-          `3. Generate a 6-digit code.\n` +
-          `4. Send: \`/link 123456\``,
-        {
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: "🌐 Open Naka Labs", url: `${APP_URL}/settings` }],
-              [{ text: "❓ All commands", callback_data: "help" }],
-            ],
-          },
-        },
+        `*Welcome to Naka Labs* 🐺\n\n` +
+          `Your on-chain intelligence co-pilot: live prices, charts, whales, alerts and copy trades, all from Telegram. Tap anything below to start. No account needed for market data.\n\n` +
+          `To unlock alerts and trading, link your account: open Settings, go to Notifications, Telegram, generate a 6-digit code, then send \`/link 123456\`.`,
+        { reply_markup: { inline_keyboard: menuKeyboard(linked) } },
       );
     }
     return NextResponse.json({ ok: true });
@@ -389,6 +426,7 @@ export async function POST(request: NextRequest) {
     case "whales":    await handleWhalesTop(ctx); return NextResponse.json({ ok: true });
     case "trending":  await handleTrending(ctx); return NextResponse.json({ ok: true });
     case "gainers":   await handleGainers(ctx); return NextResponse.json({ ok: true });
+    case "feargreed": await handleFearGreed(ctx); return NextResponse.json({ ok: true });
     case "myholdings": await handleMyHoldings(ctx); return NextResponse.json({ ok: true });
     case "holdings":   await handleMyHoldings(ctx); return NextResponse.json({ ok: true });
     case "pnl":        await handlePnl(ctx); return NextResponse.json({ ok: true });
