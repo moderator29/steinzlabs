@@ -133,13 +133,33 @@ export function useSwapExecution() {
       const walletKind = detectWalletKind(params.chain, null);
       const hash = await broadcast({ quote: data, chain: params.chain, walletKind, address: params.userAddress });
       setTxHash(hash);
+
+      // A settled on-chain swap must always write a history row + fee record,
+      // exactly like the main swap page. Signing without recording would leave
+      // the fee uncollected in our ledger and the trade invisible in Activity.
+      // Fire-and-forget: never block the success UI on logging.
+      void fetch('/api/swap/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: params.userAddress,
+          txHash: hash,
+          chain: params.chain,
+          fromToken: params.inputToken,
+          toToken: params.outputToken,
+          fromAmount: parseFloat(params.inputAmount) || 0,
+          toAmount: quote ? parseFloat(quote.amountOut) || 0 : 0,
+          status: 'confirmed',
+          source: 'order-form',
+        }),
+      }).catch(() => { /* logging is best-effort */ });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Swap execution failed';
       if (!/unlock cancelled/i.test(msg)) setError(msg);
     } finally {
       setExecuting(false);
     }
-  }, [broadcast]);
+  }, [broadcast, quote]);
 
   return {
     quote, loading, executing, error, txHash, mevRisk,
