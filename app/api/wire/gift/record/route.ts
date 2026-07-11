@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 15;
 
 // Record a Wire gift AFTER the client has broadcast the on-chain transfer.
-// This route never moves funds — the transfer already happened peer-to-peer
+// This route never moves funds - the transfer already happened peer-to-peer
 // from the sender's own wallet. RLS forbids clients from writing wire_gifts
 // directly, so we insert with the service-role client here, having verified
 // the caller is the sender.
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
   // transfer to an attacker-chosen address under someone else's name. The
   // client obtained recipientAddress from /api/wire/gift/resolve (same server
   // resolver), so a recipient with no resolvable address could not have been a
-  // legitimate gift target — reject rather than trust the client's address.
+  // legitimate gift target - reject rather than trust the client's address.
   const resolved = await resolveReceiveAddress(recipientId, chain);
   if (!resolved) {
     return NextResponse.json({ error: 'Recipient has no receive wallet on this chain' }, { status: 409 });
@@ -135,18 +135,18 @@ export async function POST(req: NextRequest) {
   }
 
   // Post counters (gift_count / gift_total_usd) are maintained atomically by the
-  // trg_wire_gift_counts trigger on wire_gifts — no manual bump here (that path
+  // trg_wire_gift_counts trigger on wire_gifts - no manual bump here (that path
   // was a non-atomic read-modify-write that lost counts under concurrency).
 
   // Inline confirmation attempt: a native transfer that was broadcast with a
   // 'confirmed' commitment is very often already mined by the time this request
   // arrives, so try once to flip pending→confirmed immediately (recipient's
   // Gifts tab surfaces only confirmed gifts). This is best-effort and read-only
-  // on-chain — never fabricates a confirm, never fails the record. The
+  // on-chain - never fabricates a confirm, never fails the record. The
   // gift-confirm cron is the backstop for gifts still in flight here.
   let status: 'pending' | 'confirmed' = 'pending';
   try {
-    // Bound the inline attempt so it can't push this route past maxDuration —
+    // Bound the inline attempt so it can't push this route past maxDuration -
     // whatever isn't resolved in time stays 'pending' for the gift-confirm cron.
     const outcome = await Promise.race<GiftVerifyOutcome>([
       verifyGiftOnChain({ chain, txHash, recipientAddress }),

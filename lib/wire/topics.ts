@@ -1,12 +1,12 @@
 /**
- * The Wire — catalogue topic vocabulary.
+ * The Wire - catalogue topic vocabulary.
  *
  * Single source of truth for both the feed catalogue filter chips and the
  * composer tag picker. `value` is the canonical lowercase tag persisted in
  * wire_posts.tags (text[]); `label` is the human chip copy. Keep these two in
- * lockstep — the API validates incoming tags against WIRE_TOPIC_SET.
+ * lockstep - the API validates incoming tags against WIRE_TOPIC_SET.
  *
- * "All" is NOT a topic — it is the no-filter pseudo-chip rendered by the UI and
+ * "All" is NOT a topic - it is the no-filter pseudo-chip rendered by the UI and
  * simply omits the `tag` query param.
  */
 

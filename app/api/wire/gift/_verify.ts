@@ -8,7 +8,7 @@ import { goldrushEnabled, goldrushChainName } from '@/lib/services/goldrush';
  * A Wire gift is a REAL peer-to-peer native transfer the sender's own wallet
  * already broadcast (see lib/wallet/giftSend.ts). The record route inserts the
  * row as status='pending' with the broadcast tx_hash; THIS module is the only
- * thing that flips it to 'confirmed' — and only after independently observing
+ * thing that flips it to 'confirmed' - and only after independently observing
  * the transaction succeed on-chain. It never confirms without a real success:
  *   - EVM: eth_getTransactionReceipt.status === 0x1 AND the receipt's `to`
  *     equals the recorded recipient address (a native transfer's `to` is the
@@ -20,9 +20,9 @@ import { goldrushEnabled, goldrushChainName } from '@/lib/services/goldrush';
  * The verifier is read-only and non-custodial: it touches no keys and moves no
  * funds. It returns one of three honest outcomes and lets the caller decide
  * what to persist:
- *   - 'confirmed' — the tx is real and succeeded to the right recipient.
- *   - 'failed'    — the tx reverted / errored on-chain (definitive).
- *   - 'pending'   — not yet observable (not mined, not found, RPC unreachable,
+ *   - 'confirmed' - the tx is real and succeeded to the right recipient.
+ *   - 'failed'    - the tx reverted / errored on-chain (definitive).
+ *   - 'pending'   - not yet observable (not mined, not found, RPC unreachable,
  *                   or the `to` didn't match). Never confirm on 'pending'.
  */
 
@@ -101,7 +101,7 @@ interface EvmReceipt {
 }
 
 async function verifyEvm(chain: string, txHash: string, recipientAddress: string): Promise<GiftVerifyOutcome> {
-  // Prefer GoldRush when enabled — it indexes the tx even after the node prunes
+  // Prefer GoldRush when enabled - it indexes the tx even after the node prunes
   // it from its recent set.
   const gr = await goldrushTxByHash(chain, txHash);
   if (gr && gr.successful != null) {

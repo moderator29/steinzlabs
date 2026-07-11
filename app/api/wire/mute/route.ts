@@ -4,7 +4,7 @@ import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 /**
- * The Wire — mute another user.
+ * The Wire - mute another user.
  *
  * POST   /api/wire/mute   body { userId }   mute (idempotent)
  * DELETE /api/wire/mute   body { userId }   unmute

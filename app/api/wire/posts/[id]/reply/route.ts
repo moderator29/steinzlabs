@@ -9,7 +9,7 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
  * Create a reply to wire [id]. A reply is itself a wire_posts row with
  * reply_to = [id]. author_id is ALWAYS the session user (IDOR-safe). The
  * parent's reply_count is incremented atomically by the trg_wire_reply_count
- * trigger — we never write the count here.
+ * trigger - we never write the count here.
  *
  * Body: { body (1..600), media_url? }
  */
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const sb = getSupabaseAdmin();
 
   // Parent must exist and be live. Replies to a reply are not supported (single
-  // level) — reject if the target is itself a reply to keep threads honest.
+  // level) - reject if the target is itself a reply to keep threads honest.
   const { data: parent } = await sb
     .from('wire_posts')
     .select('id, deleted_at, reply_to')

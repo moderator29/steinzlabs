@@ -5,7 +5,7 @@ import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 import { WIRE_TOPIC_SET, WIRE_TOPIC_VALUES, WIRE_MAX_TAGS } from '@/lib/wire/topics';
 
 /**
- * The Wire — optional AI draft helper.
+ * The Wire - optional AI draft helper.
  *
  * POST /api/wire/ai-draft
  *   body: { draft?: string }
@@ -15,7 +15,7 @@ import { WIRE_TOPIC_SET, WIRE_TOPIC_VALUES, WIRE_MAX_TAGS } from '@/lib/wire/top
  * has typed so far (a rough draft, a pasted contract address / ticker, or just
  * a topic) and returns ONE clean, short, human-sounding wire the user can edit
  * before posting, plus up to a few suggested catalogue topics (which the user
- * still confirms). The generated text is only ever returned to the client — it
+ * still confirms). The generated text is only ever returned to the client - it
  * is never persisted here.
  *
  * If ANTHROPIC_API_KEY is absent or the model call fails, we answer 503 so the
@@ -35,7 +35,7 @@ Rules:
 - Return ONE post, at most ~280 characters. Never multiple options.
 - Sound like a real human: natural, plain-spoken, specific. NOT marketing copy, NOT hype, no emojis-spam, no "🚀", no "game-changer", no exclamation stacking.
 - If the user already wrote a draft, refine and tighten it while keeping THEIR voice and intent. Do not invent facts, prices, or claims they did not make.
-- If they only pasted a topic, ticker, or contract address, write a clean, neutral, honest take or observation they could plausibly post — never fabricated data or fake numbers.
+- If they only pasted a topic, ticker, or contract address, write a clean, neutral, honest take or observation they could plausibly post - never fabricated data or fake numbers.
 - You may use at most one or two #hashtags inline only if they read naturally.
 - Do not add hashtags just to fill space.
 
