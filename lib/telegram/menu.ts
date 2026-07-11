@@ -116,9 +116,9 @@ async function whalesScreen(): Promise<Screen> {
         .map((w, idx) => {
           const name = (w.label as string | null) ?? shortAddress(w.address as string);
           const check = w.verified ? " ✓" : "";
-          const pnl = w.pnl_30d_usd != null ? fmtUsd(Number(w.pnl_30d_usd), { sign: true }) : "—";
+          const pnl = w.pnl_30d_usd != null ? fmtUsd(Number(w.pnl_30d_usd), { sign: true }) : "n/a";
           const wr = w.win_rate != null ? `${Math.round(Number(w.win_rate))}% WR` : "n/a";
-          return `${b(`${idx + 1}.`)} ${escapeHtml(name)}${check}  ${pnl} · ${escapeHtml(String(w.chain ?? "—"))} · ${wr}`;
+          return `${b(`${idx + 1}.`)} ${escapeHtml(name)}${check}  ${pnl} · ${escapeHtml(String(w.chain ?? "n/a"))} · ${wr}`;
         })
         .join("\n")
     : i("No whale data available right now. Check back shortly.");
@@ -159,7 +159,7 @@ async function smartScreen(): Promise<Screen> {
         .map((w, idx) => {
           const name = (w.label as string | null) ?? shortAddress(w.address as string);
           const check = w.verified ? " ✓" : "";
-          const score = w.whale_score != null ? `${w.whale_score}/100` : "—";
+          const score = w.whale_score != null ? `${w.whale_score}/100` : "n/a";
           const wr = w.win_rate != null ? `${Math.round(Number(w.win_rate))}% WR` : "n/a";
           return `${b(`${idx + 1}.`)} ${escapeHtml(name)}${check}  ${b(score)} · ${wr}`;
         })

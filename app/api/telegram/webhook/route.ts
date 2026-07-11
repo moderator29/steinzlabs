@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true });
     }
     if (rateLimited(cbChatId)) {
-      await answerCallbackQuery(cq.id, { text: "Slow down — try again in a moment.", show_alert: false });
+      await answerCallbackQuery(cq.id, { text: "Slow down. Try again in a moment.", show_alert: false });
       return NextResponse.json({ ok: true });
     }
     // TG2: callback router. Buttons send a callback_data string; we
@@ -306,7 +306,7 @@ export async function POST(request: NextRequest) {
       {
         reply_markup: {
           inline_keyboard: [
-            [{ text: "📋 Show Commands", callback_data: "help" }, OPEN_APP_BTN],
+            [{ text: "📋 Show Commands", callback_data: "nav:help" }, OPEN_APP_BTN],
             [SETTINGS_BTN],
           ],
         },
@@ -391,7 +391,7 @@ export async function POST(request: NextRequest) {
     await sendTelegramMessage(
       chatId,
       target
-        ? `🔁 Copy Trade setup for \`${target.slice(0, 14)}…\` — configure modes (Alerts / One-Click / Auto) and limits in the dashboard:`
+        ? `🔁 Copy Trade setup for \`${target.slice(0, 14)}…\`. Configure modes (Alerts / One-Click / Auto) and limits in the dashboard:`
         : "🔁 Copy Trade dashboard:",
       {
         reply_markup: {
@@ -432,7 +432,7 @@ export async function POST(request: NextRequest) {
 
   // Unknown command
   await sendTelegramMessage(chatId, `Unknown command: \`/${cmd.name}\`. Send /help for the full list.`, {
-    reply_markup: { inline_keyboard: [[{ text: "❓ Show All Commands", callback_data: "help" }]] },
+    reply_markup: { inline_keyboard: [[{ text: "❓ Show All Commands", callback_data: "nav:help" }]] },
   });
   return NextResponse.json({ ok: true });
 }
