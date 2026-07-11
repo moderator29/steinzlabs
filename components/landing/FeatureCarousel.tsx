@@ -11,7 +11,7 @@
 
 import { useRef, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Brain, Waves, Target, Repeat, Crosshair, Radar, ShieldCheck, MessageSquare,
   ArrowRight, ChevronLeft, ChevronRight, MoveHorizontal, type LucideIcon,
@@ -179,16 +179,33 @@ export function FeatureCarousel() {
               }}
             >
               {/* Icon square */}
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-all duration-500"
+              <motion.div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6"
                 style={{
                   background: 'linear-gradient(145deg, rgba(0,102,255,0.28), rgba(0,102,255,0.08))',
                   border: '1px solid rgba(0,150,255,0.45)',
-                  boxShadow: isActive ? '0 8px 24px -6px rgba(0,102,255,0.6)' : 'none',
                 }}
+                animate={
+                  reduced
+                    ? { boxShadow: isActive ? '0 8px 24px -6px rgba(0,102,255,0.6)' : '0 0 0 rgba(0,0,0,0)' }
+                    : isActive
+                      ? { boxShadow: [
+                          '0 8px 20px -8px rgba(0,102,255,0.45)',
+                          '0 10px 30px -6px rgba(0,150,255,0.75)',
+                          '0 8px 20px -8px rgba(0,102,255,0.45)',
+                        ] }
+                      : { boxShadow: '0 0 0 rgba(0,0,0,0)' }
+                }
+                transition={
+                  reduced
+                    ? { duration: 0 }
+                    : isActive
+                      ? { duration: 2.6, ease: 'easeInOut', repeat: Infinity }
+                      : { duration: 0.5 }
+                }
               >
                 <f.icon className="w-6 h-6" style={{ color: '#3d9bff' }} strokeWidth={1.6} />
-              </div>
+              </motion.div>
 
               <span className="text-[10px] font-bold uppercase tracking-[0.22em]" style={{ color: '#6d85ff' }}>
                 {f.eyebrow}
@@ -208,45 +225,98 @@ export function FeatureCarousel() {
         })}
       </div>
 
-      {/* Controls */}
-      <div className="flex items-center justify-center gap-5 mt-8 px-5">
-        <button
-          onClick={() => goTo(active - 1)}
-          disabled={active === 0}
-          aria-label="Previous feature"
-          className="w-11 h-11 rounded-full flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:scale-105"
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(0,150,255,0.35)' }}
-        >
-          <ChevronLeft className="w-5 h-5 text-white" />
-        </button>
+      {/* Controls: glass arrows + segmented neon progress indicator */}
+      <div className="mt-9 px-5">
+        <div className="flex items-center gap-3 sm:gap-4 max-w-[460px] mx-auto">
+          <button
+            onClick={() => goTo(active - 1)}
+            disabled={active === 0}
+            aria-label="Previous feature"
+            className="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all disabled:opacity-25 disabled:cursor-not-allowed hover:scale-[1.04] active:scale-95"
+            style={{
+              background: 'linear-gradient(160deg, rgba(12,18,44,0.8), rgba(5,8,22,0.9))',
+              border: '1px solid rgba(0,150,255,0.35)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 20px -12px rgba(0,102,255,0.6)',
+            }}
+          >
+            <ChevronLeft className="w-5 h-5 text-white" />
+          </button>
 
-        {/* Dots */}
-        <div className="flex items-center gap-2">
-          {FEATURES.map((f, i) => (
-            <button
-              key={f.eyebrow}
-              onClick={() => goTo(i)}
-              aria-label={`Go to ${f.eyebrow}`}
-              className="rounded-full transition-all duration-300"
-              style={{
-                width: i === active ? 22 : 7,
-                height: 7,
-                background: i === active ? '#1E90FF' : 'rgba(255,255,255,0.2)',
-                boxShadow: i === active ? '0 0 12px rgba(0,150,255,0.7)' : 'none',
-              }}
-            />
-          ))}
+          {/* Segmented progress track */}
+          <div className="flex-1 flex items-center gap-1.5" role="tablist" aria-label="Feature progress">
+            {FEATURES.map((f, i) => {
+              const isActive = i === active;
+              const isPast = i < active;
+              return (
+                <button
+                  key={f.eyebrow}
+                  onClick={() => goTo(i)}
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-label={`Go to ${f.eyebrow}`}
+                  className="group relative flex-1 py-2.5 outline-none"
+                >
+                  <span
+                    className="relative block h-[3px] rounded-full overflow-hidden transition-colors duration-300"
+                    style={{
+                      background: isPast ? 'rgba(0,150,255,0.4)' : 'rgba(255,255,255,0.1)',
+                    }}
+                  >
+                    {isActive && (
+                      <motion.span
+                        layoutId={reduced ? undefined : 'carousel-progress'}
+                        className="absolute inset-0 rounded-full"
+                        style={{
+                          background: 'linear-gradient(90deg, #0066FF, #1E90FF)',
+                          boxShadow: '0 0 12px rgba(0,150,255,0.85), 0 0 3px rgba(0,150,255,0.9)',
+                        }}
+                        transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 34 }}
+                      />
+                    )}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={() => goTo(active + 1)}
+            disabled={active === FEATURES.length - 1}
+            aria-label="Next feature"
+            className="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all disabled:opacity-25 disabled:cursor-not-allowed hover:scale-[1.04] active:scale-95"
+            style={{
+              background: 'linear-gradient(160deg, rgba(12,18,44,0.8), rgba(5,8,22,0.9))',
+              border: '1px solid rgba(0,150,255,0.35)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 20px -12px rgba(0,102,255,0.6)',
+            }}
+          >
+            <ChevronRight className="w-5 h-5 text-white" />
+          </button>
         </div>
 
-        <button
-          onClick={() => goTo(active + 1)}
-          disabled={active === FEATURES.length - 1}
-          aria-label="Next feature"
-          className="w-11 h-11 rounded-full flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:scale-105"
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(0,150,255,0.35)' }}
-        >
-          <ChevronRight className="w-5 h-5 text-white" />
-        </button>
+        {/* Live active label + index counter */}
+        <div className="flex items-center justify-center gap-3 mt-4 max-w-[460px] mx-auto">
+          <div className="relative h-4 overflow-hidden">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={active}
+                className="block text-[11px] font-bold uppercase tracking-[0.22em] whitespace-nowrap"
+                style={{ color: '#3d9bff' }}
+                initial={reduced ? false : { opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduced ? { opacity: 0 } : { opacity: 0, y: -6 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {FEATURES[active].eyebrow}
+              </motion.span>
+            </AnimatePresence>
+          </div>
+          <span className="text-[11px] font-bold tabular-nums tracking-wider" style={{ color: '#5a6b93' }}>
+            {String(active + 1).padStart(2, '0')}
+            <span style={{ color: 'rgba(255,255,255,0.18)' }}> / </span>
+            {String(FEATURES.length).padStart(2, '0')}
+          </span>
+        </div>
       </div>
 
       {/* Swipe hint */}
