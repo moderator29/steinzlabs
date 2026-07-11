@@ -32,11 +32,11 @@ export function PreExecutionSummary({
       <Row label="Expected output" value={`${expectedOutput} ${outputSymbol}`} mono />
       <Row
         label="Price impact"
-        value={priceImpactBps !== null ? `${(priceImpactBps / 100).toFixed(2)}%` : "—"}
+        value={priceImpactBps !== null ? `${(priceImpactBps / 100).toFixed(2)}%` : "-"}
         danger={highImpact}
       />
       <Row label="Slippage tolerance" value={`${(slippageBps / 100).toFixed(2)}%`} danger={highSlippage} />
-      <Row label="Network fee" value={gasUsd !== null ? `$${gasUsd.toFixed(2)}` : "—"} mono />
+      <Row label="Network fee" value={gasUsd !== null ? `$${gasUsd.toFixed(2)}` : "-"} mono />
       <Row label="Route" value={provider} />
       <div className="flex items-center gap-2 pt-1">
         {mevProtected && (

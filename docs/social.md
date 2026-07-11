@@ -32,7 +32,7 @@ Attach an **inline prediction** to a wire, for example a call that SOL trades be
 
 ### Relay and replies
 
-- **Relay (repost)** pushes a wire to your own followers.
+- **Relay (repost)** pushes a wire to your own followers. A relay can carry your own note as a **quote**, shown above the original wire in a quote inset.
 - **Reply** opens a **thread in a side panel** when you tap the comment icon, so a conversation never pulls you away from the feed.
 
 ### The post menu

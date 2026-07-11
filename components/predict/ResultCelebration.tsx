@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { PartyPopper, X } from 'lucide-react';
+import { Flame, PartyPopper, Target, X } from 'lucide-react';
 import type { Entry } from './types';
 import { ShareToWire } from './ShareToWire';
 import { formatPoints } from './utils';
@@ -57,9 +57,7 @@ export function ResultCelebration({ celebration, onClose }: { celebration: Celeb
             {won ? (
               <PartyPopper className="w-5 h-5 text-emerald-300" />
             ) : (
-              <span className="text-lg" aria-hidden>
-                🎯
-              </span>
+              <Target className="w-5 h-5 text-rose-300" />
             )}
           </div>
 
@@ -68,7 +66,11 @@ export function ResultCelebration({ celebration, onClose }: { celebration: Celeb
               <>
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-lg font-extrabold tabular-nums text-emerald-300">+{formatPoints(payout)} pts</span>
-                  {streak > 1 && <span className="text-xs font-bold text-orange-300">{streak} streak 🔥</span>}
+                  {streak > 1 && (
+                    <span className="inline-flex items-center gap-0.5 text-xs font-bold text-orange-300">
+                      <Flame className="w-3 h-3" /> {streak} streak
+                    </span>
+                  )}
                 </div>
                 <div className="text-[12px] text-emerald-200/90 truncate">
                   {entry.symbol} · you called it. Nice one.

@@ -2,7 +2,7 @@ import type { Direction, Entry, Market } from './types';
 
 // ── number / money formatting ────────────────────────────────────────────────
 export function formatPrice(n: number | null | undefined): string {
-  if (n == null || !Number.isFinite(n)) return '—';
+  if (n == null || !Number.isFinite(n)) return '-';
   const abs = Math.abs(n);
   let decimals = 2;
   if (abs > 0 && abs < 1) decimals = abs < 0.01 ? 6 : 4;
@@ -14,7 +14,7 @@ export function formatPrice(n: number | null | undefined): string {
 }
 
 export function formatUsd(n: number | null | undefined): string {
-  if (n == null || !Number.isFinite(n)) return '—';
+  if (n == null || !Number.isFinite(n)) return '-';
   return `$${formatPrice(n)}`;
 }
 

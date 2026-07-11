@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState, memo } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import SteinzLogo from '@/components/ui/SteinzLogo';
-// Flat lucide-react icon set only — the brand gradient-glow icons were swapped
+// Flat lucide-react icon set only. The brand gradient-glow icons were swapped
 // out here for their clean lucide equivalents (see mapping in the PR): brand
 // `Whale`→`Fish`, `ChartBar`→`BarChart3`, `ChartCandle`→`CandlestickChart`,
 // brand `X/Search/TrendingUp/Bell/Shield/Wallet`→same-named lucide icons. No
@@ -130,7 +130,27 @@ const NAV_CATEGORIES: NavCategory[] = [
 export default function SidebarMenu({ onClose }: SidebarMenuProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user, signOut } = useAuth();
+
+  // Active-state resolver. usePathname() drops the query string, so the Home
+  // sub-tab links (/dashboard?subtab=wire) never matched a bare pathname compare:
+  // every non-overview home surface rendered inactive while the two plain
+  // /dashboard rows both lit at once. Split each target into path + ?subtab and
+  // match the live subtab param so exactly the intended row highlights.
+  const activeSubtab = searchParams?.get('subtab') ?? null;
+  const isItemActive = (target: string) => {
+    const [base, query] = target.split('?');
+    if (base !== pathname) return false;
+    if (query) {
+      const sub = new URLSearchParams(query).get('subtab');
+      return (activeSubtab ?? 'overview') === sub;
+    }
+    // A bare /dashboard target reads as active only on the Overview subtab, never
+    // while a specific home sub-tab (wire, news, stocks, ...) is showing.
+    if (base === '/dashboard') return !activeSubtab || activeSubtab === 'overview';
+    return true;
+  };
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -145,7 +165,7 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
     fetch('/api/cult/me', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (!cancelled && d?.cult === true) setIsCultMember(true); })
-      .catch(() => { /* non-fatal — link stays hidden */ });
+      .catch(() => { /* non-fatal, link stays hidden */ });
     return () => { cancelled = true; };
   }, []);
 
@@ -263,7 +283,7 @@ export default function SidebarMenu({ onClose }: SidebarMenuProps) {
                     icon={item.icon}
                     label={item.label}
                     badge={item.path === '/dashboard/messages' && unreadDms > 0 ? (unreadDms > 99 ? '99+' : String(unreadDms)) : item.badge}
-                    isActive={pathname === item.path}
+                    isActive={isItemActive(item.path)}
                     onClick={() => handleNavigation(item.path)}
                     onHover={() => { if (!item.path.includes('?')) router.prefetch(item.path); }}
                   />

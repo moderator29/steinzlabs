@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Flame, Gift, Loader2 } from 'lucide-react';
+import { Flame, Gift, Loader2, Sparkles } from 'lucide-react';
 import type { DailyClaimResult } from './types';
 import { useDaily } from './hooks';
 import { formatPoints } from './utils';
@@ -85,16 +85,16 @@ export function DailyBonus({ now, onClaimed }: { now: number; onClaimed?: (point
       <div className="relative inline-flex items-center gap-2 rounded-full border border-emerald-400/50 bg-emerald-500/[0.14] px-3 py-1.5 shadow-[0_0_22px_rgba(16,185,129,0.35)]">
         <Gift className="w-4 h-4 text-emerald-300" />
         <span className="text-sm font-bold tabular-nums text-emerald-200">+{formatPoints(countUp)}</span>
-        <span className="text-[11px] text-emerald-300/90">day {burst.streak} 🔥</span>
+        <span className="inline-flex items-center gap-0.5 text-[11px] text-emerald-300/90">
+          day {burst.streak} <Flame className="w-3 h-3 text-orange-400" />
+        </span>
         <span className="pointer-events-none absolute inset-0 overflow-visible" aria-hidden>
           {['-8px', '4px', '16px'].map((left, i) => (
-            <span
+            <Sparkles
               key={left}
-              className="absolute -top-1 text-xs animate-ping"
+              className="absolute -top-1 h-3 w-3 animate-ping text-emerald-300"
               style={{ left, animationDelay: `${i * 90}ms`, animationDuration: '1.4s' }}
-            >
-              {['✨', '🎉', '⭐'][i]}
-            </span>
+            />
           ))}
         </span>
       </div>
@@ -112,7 +112,6 @@ export function DailyBonus({ now, onClaimed }: { now: number; onClaimed?: (point
       >
         {claiming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gift className="w-4 h-4" />}
         <span className="text-xs sm:text-sm">{claiming ? 'Claiming…' : 'Claim daily bonus'}</span>
-        <span className="text-sm">🎁</span>
         {streak > 0 && (
           <span className="ms-0.5 inline-flex items-center gap-0.5 rounded-full bg-emerald-400/20 px-1.5 py-0.5 text-[10px] font-bold text-emerald-100">
             <Flame className="w-3 h-3" /> {streak}

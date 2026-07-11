@@ -78,8 +78,8 @@ export default function LivePredict() {
   const displayPoints = optimisticPoints ?? serverPoints;
   useEffect(() => {
     // The optimistic overlay is always set to a server-authoritative target
-    // (pointsLeft on entry, points on claim), so drop it the moment /me agrees —
-    // this reconciles both spends (down) and daily claims (up) without flicker.
+    // (pointsLeft on entry, points on claim), so drop it the moment /me agrees.
+    // This reconciles both spends (down) and daily claims (up) without flicker.
     if (optimisticPoints != null && serverPoints != null && serverPoints === optimisticPoints) {
       setOptimisticPoints(null);
     }
@@ -93,7 +93,7 @@ export default function LivePredict() {
 
   const goSignIn = useCallback(() => router.push('/login'), [router]);
 
-  // Generic entry — shared by the featured threshold market and Quick Play's
+  // Generic entry, shared by the featured threshold market and Quick Play's
   // one-tap UP/DOWN. Optimistic points (subtract the stake now, reconcile from
   // the authoritative pointsLeft), then pull /me for the fresh open position.
   const handleEnterMarket = useCallback(

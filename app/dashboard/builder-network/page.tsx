@@ -166,7 +166,7 @@ export default function BuilderNetworkPage() {
 
         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
           {['All', 'Verified', 'Available', 'Developers', 'Auditors', 'Designers'].map((f) => (
-            <button key={f} onClick={() => setFilter(f)} className={`nl-button px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${filter === f ? '' : 'nl-button--ghost text-gray-400'}`}>
+            <button key={f} onClick={() => setFilter(f)} className={`nl-button shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${filter === f ? '' : 'nl-button--ghost text-gray-400'}`}>
               {f}
             </button>
           ))}

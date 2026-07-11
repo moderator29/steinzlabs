@@ -95,6 +95,12 @@ export interface WirePostCardProps {
   compact?: boolean;
   /** Clicking a #hashtag in the body filters The Wire to that tag. */
   onHashtag?: (tag: string) => void;
+  /**
+   * Opens the wire's dedicated page (like X). When set, tapping anywhere on the
+   * card that is not an interactive control navigates to that wire. Omitted for
+   * cards already shown inside a thread (parent card / replies).
+   */
+  onOpenPost?: (post: WirePost) => void;
 }
 
 // A #hashtag or a $cashtag token. Unicode-aware for non-latin hashtags. A
@@ -477,6 +483,7 @@ export function WirePostCard({
   threadOpen,
   compact,
   onHashtag,
+  onOpenPost,
 }: WirePostCardProps) {
   const reduced = useReducedMotion();
   const [toast, setToast] = useState<string | null>(null);
@@ -539,12 +546,28 @@ export function WirePostCard({
 
   const shown = display as WirePost;
 
+  // Whole-card open (X-style): tapping the card opens the wire's dedicated page,
+  // but never when the tap lands on a control (button/link/field), inside an
+  // open overlay, or while the viewer is selecting text.
+  const openTarget = shown;
+  const handleCardClick = (e: React.MouseEvent<HTMLElement>) => {
+    if (!onOpenPost) return;
+    const el = e.target as HTMLElement | null;
+    if (el && el.closest('a,button,input,textarea,label,[role="dialog"],[role="menu"]')) return;
+    if (typeof window !== 'undefined') {
+      const sel = window.getSelection?.();
+      if (sel && sel.toString().length > 0) return;
+    }
+    onOpenPost(openTarget);
+  };
+
   return (
     <motion.article
       initial={reduced ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, ease: 'easeOut' }}
-      className={`group relative overflow-hidden nl-glass rounded-2xl ${pad}`}
+      onClick={onOpenPost ? handleCardClick : undefined}
+      className={`group relative overflow-hidden nl-glass rounded-2xl ${pad} ${onOpenPost ? 'cursor-pointer' : ''}`}
     >
       <SignalRail signal={shown.authorSignal} />
       {ShareToast}

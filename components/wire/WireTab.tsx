@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Clock, Loader2, Plus, Settings2, Sparkles, TrendingUp, Users, X } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { WirePostCard, type WirePost } from './WirePostCard';
@@ -54,6 +55,7 @@ function patchPost(posts: WirePost[], id: string, patch: (p: WirePost) => WirePo
 
 export default function WireTab({ onGift, author, reposts, repliesBy, mediaAuthor }: WireTabProps) {
   const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   // The main feed (global) shows the Signal/Pack tabs + catalogue chips. Profile
   // views (author / reposts / replies / media) reuse this component without that
   // chrome.
@@ -293,6 +295,11 @@ export default function WireTab({ onGift, author, reposts, repliesBy, mediaAutho
   const handleComment = useCallback((post: WirePost) => {
     setOpenThreadId((cur) => (cur === post.id ? null : post.id));
   }, []);
+
+  // Tapping a card (outside its controls) opens the wire's dedicated page.
+  const openPost = useCallback((post: WirePost) => {
+    router.push(`/wire/${post.id}`);
+  }, [router]);
 
   // Keep a card's reply_count live as replies are added / removed in its thread.
   const bumpReplyCount = useCallback((id: string, delta: number) => {
@@ -558,6 +565,7 @@ export default function WireTab({ onGift, author, reposts, repliesBy, mediaAutho
                 muted={mutedIds.has(p.original?.author_id ?? p.author_id)}
                 onComment={p.repost_of ? undefined : handleComment}
                 onHashtag={handleHashtag}
+                onOpenPost={openPost}
                 threadOpen={openThreadId === p.id}
               />
             </div>

@@ -16,6 +16,7 @@ import UnlockWalletModal from '@/components/wallet/UnlockWalletModal';
 import { NakaLogo, WalletConnectLogo } from '@/components/wallet/WalletLogo';
 import { WalletConnectHealthPanel } from '@/components/wallet/WalletConnectHealthPanel';
 import { SelectMenu } from '@/components/ui/SelectMenu';
+import { Toggle } from '@/components/ui/Toggle';
 import { SwapSecurityWarnings, shouldBlockSwap } from '@/components/swap/SwapSecurityWarnings';
 import { useAppKit, useAppKitAccount } from '@reown/appkit/react';
 import { isMobile } from '@/lib/utils/detectDevice';
@@ -692,21 +693,12 @@ function SettingsPanel({ slippage, setSlippage, mevProtect, setMevProtect, mevAu
             <span className="text-xs text-gray-400 font-medium">MEV Protection</span>
             <Info className="w-3 h-3 text-gray-600" />
           </div>
-          <button
-            type="button"
-            onClick={() => setMevProtect(!mevProtect)}
-            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-              mevProtect ? 'bg-[#0066FF]' : 'bg-slate-700'
-            }`}
-            aria-pressed={mevProtect}
-            aria-label="Toggle MEV protection"
-          >
-            <span
-              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition ${
-                mevProtect ? 'translate-x-5' : 'translate-x-1'
-              }`}
-            />
-          </button>
+          <Toggle
+            checked={mevProtect}
+            onChange={setMevProtect}
+            label="Toggle MEV protection"
+            size="md"
+          />
         </div>
         <p className="text-[10px] text-gray-500 leading-relaxed">
           Naka Wallet Ethereum swaps broadcast through Flashbots Protect (private
@@ -1970,12 +1962,13 @@ export default function SwapPage() {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setGaslessEnabled(!gaslessEnabled)}
-                className={`relative w-10 h-5 rounded-full transition-colors ${gaslessEnabled ? 'bg-[#0066FF]' : 'bg-gray-600'}`}
-              >
-                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${gaslessEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
-              </button>
+              <Toggle
+                checked={gaslessEnabled}
+                onChange={setGaslessEnabled}
+                label="Toggle gasless mode"
+                size="md"
+                className="shrink-0"
+              />
             </div>
           )}
 

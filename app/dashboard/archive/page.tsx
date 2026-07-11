@@ -167,7 +167,7 @@ export default function ArchivePage() {
               <button
                 key={f.key}
                 onClick={() => setTypeFilter(f.key)}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold whitespace-nowrap transition-all ${
+                className={`shrink-0 px-3 py-1.5 rounded-lg text-[10px] font-semibold whitespace-nowrap transition-all ${
                   typeFilter === f.key
                     ? 'bg-[#0066FF]/20 text-[#0066FF] border border-[#0066FF]/30'
                     : 'text-gray-500 border border-white/[0.06] hover:text-gray-300'
@@ -184,7 +184,7 @@ export default function ArchivePage() {
               <button
                 key={c.key}
                 onClick={() => { setChainFilter(c.key); setVisibleCount(20); }}
-                className="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold whitespace-nowrap transition-all border"
+                className="shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold whitespace-nowrap transition-all border"
                 style={{
                   borderColor: chainFilter === c.key ? c.color : 'rgba(255,255,255,0.04)',
                   backgroundColor: chainFilter === c.key ? `${c.color}15` : 'transparent',

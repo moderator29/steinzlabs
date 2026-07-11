@@ -36,8 +36,10 @@ the rest of the platform. Expired subscriptions are auto-downgraded to
 
 | Command | What it does |
 |---|---|
-| `/start` | Onboarding. If unlinked, shows the connect flow with an "Open Naka Labs" button. If linked, shows the help menu. |
+| `/start` | Onboarding. Opens the tap-first inline menu (main menu). If unlinked, My Account shows the connect flow. |
+| `/menu` | Reopens the inline menu at the main screen. |
 | `/help` | Full command list with tier badge for the current user. |
+| `/whales` | Top whales by 30d realized PnL, read live from the `whales` table. |
 | `/status` | Shows whether linked + current plan badge (FREE / MINI / PRO / MAX). |
 | `/link <code>` | Pairs the Telegram chat with the Naka account that generated the code. |
 | `/unlink` | Removes the link. Stops all alerts to this chat. |
@@ -108,19 +110,37 @@ button.
 
 ---
 
-## Inline keyboard buttons
+## Inline menu navigation
 
-Every reply that benefits from a follow-up action ships with an inline
-keyboard. Common buttons:
+`/start` and `/menu` open a tap-first command deck built in
+[`lib/telegram/menu.ts`](../lib/telegram/menu.ts). It is **one persistent
+message that rewrites itself in place** as the user navigates, so the chat
+never fills with stale bubbles. Every screen renders `parse_mode: "HTML"`
+(only `& < >` need escaping), which is safe for arbitrary token, whale and
+news text.
 
-- **🌐 Open Naka Labs** → `${APP_URL}`
-- **⚙️ Notification Settings** → `${APP_URL}/settings/notifications`
-- **🔑 Generate Code** → `${APP_URL}/settings/notifications`
-- **⭐ Upgrade Plan** → `${APP_URL}/dashboard/pricing`
-- Per-command deep-links (e.g. `/whale 0xabc` → "🌐 Open Wallet")
+The main menu (`home`) leads into six submenus, each with a **🔙 Back**
+button that returns to `home`:
 
-Schema: `{ inline_keyboard: [[{ text, url }, …], …] }` — see Telegram's
-[InlineKeyboardMarkup docs](https://core.telegram.org/bots/api#inlinekeyboardmarkup).
+- **🐋 Whale Alerts**: top wallets by 30d realized PnL, read live from the `whales` table, with a link into the in-app Whale Tracker.
+- **🧠 Smart Money**: highest-conviction wallets by Naka whale score, same source table, ranked by score.
+- **📰 Naka News**: live headlines from the same multi-source aggregator as the in-app News tab, each headline a tappable link.
+- **📊 Markets**: launcher for the live market-data commands (`/price`, `/chart`, `/info`) plus one-tap BTC / ETH / SOL, Trending, Gainers, and Fear & Greed.
+- **👤 My Account**: live link status, plan badge and active-alert count, or the connect steps if the chat is not linked yet.
+- **🆘 Help**: the full command reference with tier badges.
+
+Navigation uses callback buttons (`nav:<node>`, `menu:<action>`); external
+actions stay URL buttons (**🌐 Open Naka Labs**, **⚙️ Settings**,
+**⭐ Upgrade Plan**, and per-command deep-links). When an in-place edit fails
+(for example the source bubble was a photo caption), the bot falls back to a
+fresh send so a button never dead-ends.
+
+All screens are grounded in real data: whale and smart-money screens read the
+`whales` table, News reads the live aggregator, and My Account reads the live
+link and alert rows. Nothing is fabricated.
+
+Schema: `{ inline_keyboard: [[{ text, url | callback_data }, …], …] }`. See
+Telegram's [InlineKeyboardMarkup docs](https://core.telegram.org/bots/api#inlinekeyboardmarkup).
 
 ---
 
@@ -132,7 +152,7 @@ curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
   -d '{
     "url": "https://steinzlabs.vercel.app/api/telegram/webhook",
     "secret_token": "<TELEGRAM_WEBHOOK_SECRET>",
-    "allowed_updates": ["message"],
+    "allowed_updates": ["message", "callback_query"],
     "drop_pending_updates": true
   }'
 ```

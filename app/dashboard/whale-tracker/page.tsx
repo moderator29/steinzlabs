@@ -409,7 +409,7 @@ export default function WhaleTrackerPage() {
 
         {/* Filters */}
         <div className="max-w-7xl mx-auto px-4 pb-3 flex flex-wrap gap-2 items-center">
-          <div className="flex gap-1 overflow-x-auto">
+          <div className="flex gap-1 overflow-x-auto [&>button]:shrink-0">
             {CHAIN_PILLS.map((c) => {
               const active = selectedChains.includes(c.id);
               return (
@@ -546,7 +546,7 @@ export default function WhaleTrackerPage() {
               <button
                 type="button"
                 onClick={() => void loadFeed()}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors"
                 aria-label="Load new whale activity"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -1311,12 +1311,12 @@ function AddWhaleModal({
             <button
               type="button"
               onClick={() => setAlertEnabled((v) => !v)}
-              className={`w-10 h-5 rounded-full relative transition-colors ${
+              className={`w-10 h-5 rounded-md relative transition-colors ${
                 alertEnabled ? "bg-[#0066FF]" : "bg-slate-700"
               }`}
             >
               <span
-                className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${
+                className={`absolute top-0.5 w-4 h-4 bg-white rounded-sm transition-all ${
                   alertEnabled ? "right-0.5" : "left-0.5"
                 }`}
               />

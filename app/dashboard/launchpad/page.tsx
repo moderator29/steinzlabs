@@ -130,7 +130,7 @@ export default function LaunchpadPage() {
 
         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
           {['All', 'Live', 'Upcoming', 'Funded'].map((f) => (
-            <button key={f} onClick={() => setFilter(f)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${filter === f ? 'nl-btn-neon' : 'nl-glass text-gray-400'}`}>
+            <button key={f} onClick={() => setFilter(f)} className={`shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${filter === f ? 'nl-btn-neon' : 'nl-glass text-gray-400'}`}>
               {f}
             </button>
           ))}

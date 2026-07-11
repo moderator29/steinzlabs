@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { formatPrice } from './utils';
 
 // Smoothly counts the displayed price toward the latest tick and flashes
-// emerald/rose on up/down moves. Respects the visible target value — it never
+// emerald/rose on up/down moves. Respects the visible target value. It never
 // invents digits, it just eases between real ticks.
 export function AnimatedPrice({
   value,
@@ -60,7 +60,7 @@ export function AnimatedPrice({
   return (
     <span className={`tabular-nums transition-colors duration-500 ${color} ${className}`}>
       {prefix}
-      {display == null ? '—' : formatPrice(display)}
+      {display == null ? '-' : formatPrice(display)}
     </span>
   );
 }

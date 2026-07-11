@@ -6,7 +6,7 @@ import { getSiteUrl } from '@/lib/siteUrl';
 import { computeAuthorSignals } from '@/lib/wire/signal';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import type { WirePost } from '@/components/wire/WirePostCard';
-import { PublicWire, OpenInAppCta } from './PublicWire';
+import { PublicWire, OpenInAppCta, WireComments } from './PublicWire';
 
 /**
  * app/wire/[id] - the PUBLIC, signed-out-safe page for a single wire.
@@ -129,6 +129,7 @@ export default async function PublicWirePage({ params }: { params: Promise<{ id:
           </Link>
 
           <PublicWire post={post} />
+          <WireComments postId={post.id} />
           <OpenInAppCta />
 
           <p className="text-center text-xs text-white/40 mt-4">

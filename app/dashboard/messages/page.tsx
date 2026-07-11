@@ -346,7 +346,10 @@ export default function MessagesInboxPage() {
             : <>No conversations yet. Search above to find anyone, or visit <Link href="/discover" className="text-[var(--nl-blue,#0066FF)]">Discover</Link>.</>}
         </div>
       ) : (
-        <GlassCard className="divide-y divide-white/[0.05]">
+        /* overflow-hidden clips each row's square tap/hover fill to the card's
+           rounded corners so the active-row highlight can't bleed past the
+           first/last row edges (nl-glass itself never sets overflow). */
+        <GlassCard className="divide-y divide-white/[0.05] overflow-hidden">
           {shown.map((c) => <ConvoRow key={c.id} c={c} />)}
         </GlassCard>
       )}

@@ -9,6 +9,41 @@ export const GLOBAL_WHATS_NEW: WhatsNewEntry[] = [
   {
     date: 'July 2026',
     tag: 'NEW',
+    text: 'Swap is rebuilt as a pro DEX: buy almost any coin by name or contract across every supported network, in a two-card You pay and You receive panel with a one-tap direction switch, real token logos, and NAKA on Ethereum tradeable first-class.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'NEW',
+    text: 'Every swap now ends with a branded, shareable receipt, on success or failure, showing the pair, amounts, chain and hash, ready to share natively or save as a PNG.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'IMPROVED',
+    text: 'Swap runs non-custodially the same way across the built-in Naka Wallet, injected extensions, WalletConnect mobile wallets and gasless mode, so you can trade from whatever wallet you already use.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'IMPROVED',
+    text: 'One search across the platform: find almost any coin by name, symbol or contract address, with its real logo, in global search, the markets board and the swap token selector alike.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'NEW',
+    text: 'Naka Predict goes live in beta: free-to-play crypto prediction markets with one-tap Quick Play UP and DOWN, live rounds, Naka Points, a daily bonus and streaks, on a board rebuilt in brand glass.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'IMPROVED',
+    text: 'The Telegram bot moves to a tap-first inline menu that rewrites one message as you navigate from the main menu into whale alerts, smart money, Naka News, markets and your account, then back, with account linking from the same place.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'IMPROVED',
+    text: 'A platform-wide UI sweep brings square toggles, rectangle filters and buttons, and consistent brand glass across the app, and the non-working light and dark nav toggle has been removed since the app is dark-first.',
+  },
+  {
+    date: 'July 2026',
+    tag: 'NEW',
     text: 'The Wire goes full SocialFi: cashtags like $SOL and $BTC become live price chips anyone can tap, on-chain tips and gifts land on any wire with the earned value shown on the post, and a transparent 0 to 100 Signal score ranks the feed on real activity.',
   },
   {

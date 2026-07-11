@@ -375,6 +375,14 @@ export function AdvancedChart({
           <p className="text-sm text-red-400">{error}</p>
         </div>
       )}
+      {/* Honest empty state. The OHLCV source returned no candles (no DEX pair
+          or no history yet). Show a clear note instead of a silent blank panel;
+          never synthesize fake candles to fill the space. */}
+      {!loading && !error && candles.length === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center z-10 px-4 text-center">
+          <p className="text-sm text-slate-500">No chart data available for this token yet.</p>
+        </div>
+      )}
       {enableSaveImage && (
         <button
           type="button"

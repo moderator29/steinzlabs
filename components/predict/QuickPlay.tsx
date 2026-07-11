@@ -22,7 +22,7 @@ interface Props {
   onSignIn: () => void;
 }
 
-// Quick Play — the hook. One-tap UP/DOWN on the soonest-closing `direction`
+// Quick Play, the hook. One-tap UP/DOWN on the soonest-closing `direction`
 // market for the selected token. Optimistic, addictive, dead simple. It rolls
 // into the next 60s round automatically as markets poll in.
 export function QuickPlay({ markets, now, me, signedIn, submitting, onEnter, onSignIn }: Props) {

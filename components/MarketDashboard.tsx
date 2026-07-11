@@ -544,15 +544,17 @@ export default function MarketDashboard() {
               const pos = coin.change24h >= 0;
               const inWl = isWatched(coin.id);
               return (
-                <button key={`${coin.id}-${i}`} onClick={()=>handleCoinTap(coin)}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 bg-[#111827] hover:bg-white/[0.03] transition-colors border-b border-white/[0.04] last:border-b-0 text-start">
+                <div key={`${coin.id}-${i}`} role="button" tabIndex={0}
+                  onClick={()=>handleCoinTap(coin)}
+                  onKeyDown={e=>{ if (e.key==='Enter'||e.key===' ') { e.preventDefault(); handleCoinTap(coin); } }}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 bg-[#111827] hover:bg-white/[0.03] transition-colors border-b border-white/[0.04] last:border-b-0 text-start cursor-pointer">
                   <div className="w-6 text-end text-[11px] text-gray-500 flex-shrink-0 font-mono">
                     {coin.rank > 0 ? coin.rank : ''}
                   </div>
                   <TokenLogo src={coin.image || undefined} symbol={coin.symbol} address={coin.address} chain={coin.chain} size={36} />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-semibold text-white truncate">{coin.name}</span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-sm font-semibold text-white truncate min-w-0">{coin.name}</span>
                       {coin.source==='dex' && coin.chain && (
                         <span className="flex-shrink-0 text-[9px] px-1 py-0.5 bg-[#0066FF]/20 text-[#0066FF] rounded font-medium">
                           {CHAIN_LABEL[coin.chain]||coin.chain.slice(0,4).toUpperCase()}
@@ -576,7 +578,7 @@ export default function MarketDashboard() {
                     aria-label={inWl?'Remove from watchlist':'Add to watchlist'}>
                     <Star className={`w-4 h-4 transition-colors ${inWl?'text-yellow-400 fill-yellow-400':'text-gray-600'}`} />
                   </button>
-                </button>
+                </div>
               );
             })}
           </div>

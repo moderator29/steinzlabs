@@ -351,8 +351,8 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
                   {w.verified && <CheckCircle2 size={15} className="text-blue-400" />}
                   <SecurityBadge score={w.whale_score} size="md" />
                 </div>
-              <div className="flex items-center gap-2 text-xs text-slate-500">
-                <code className="font-mono">{w.address}</code>
+              <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap min-w-0">
+                <code className="font-mono break-all min-w-0">{w.address}</code>
                 <button
                   onClick={() => {
                     void navigator.clipboard.writeText(w.address);
@@ -442,7 +442,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
                 <div className="flex items-start gap-3">
                   {data.arkham.logo && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={data.arkham.logo} alt="" className="w-10 h-10 rounded-lg object-cover bg-slate-800" />
+                    <img src={data.arkham.logo} alt="" className="w-10 h-10 rounded-lg object-cover bg-slate-800" onError={(e) => (e.currentTarget.style.display = 'none')} />
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">

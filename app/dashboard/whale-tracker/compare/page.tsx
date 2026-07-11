@@ -162,7 +162,7 @@ export default function WhaleComparePage() {
             <div className="flex flex-wrap gap-1.5">
               {picks.filter((p) => !selected.includes(p.address)).slice(0, 8).map((p) => (
                 <button key={p.address} onClick={() => add(p.address)} disabled={selected.length >= 4}
-                  className="px-2.5 py-1 rounded-full text-[11px] text-slate-300 bg-white/[0.04] border border-white/[0.08] hover:border-[#0066FF]/40 hover:text-white transition-colors disabled:opacity-40">
+                  className="px-2.5 py-1 rounded-lg text-[11px] text-slate-300 bg-white/[0.04] border border-white/[0.08] hover:border-[#0066FF]/40 hover:text-white transition-colors disabled:opacity-40">
                   {p.name}{p.winRate != null ? ` · ${p.winRate}%` : ''}
                 </button>
               ))}

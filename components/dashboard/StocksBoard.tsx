@@ -107,7 +107,7 @@ function writeWatchlist(userId: string | null, symbols: string[]): void {
 // ─── Formatting (every number guarded before toFixed) ────────────────────────
 
 function fmtPrice(p: number | null | undefined): string {
-  if (p == null || !Number.isFinite(p)) return '—';
+  if (p == null || !Number.isFinite(p)) return '-';
   return p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 

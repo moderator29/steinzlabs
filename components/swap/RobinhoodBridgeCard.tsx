@@ -89,7 +89,7 @@ export default function RobinhoodBridgeCard({
             {RH.label} has no DEX yet
           </h3>
           <p className="text-sm text-gray-400 leading-relaxed mt-1">
-            Bridge your ETH to Base or Ethereum to trade — swaps route through the
+            Bridge your ETH to Base or Ethereum to trade. Swaps route through the
             live aggregator there. Your ETH stays yours the whole way.
           </p>
         </div>
@@ -108,7 +108,7 @@ export default function RobinhoodBridgeCard({
         </div>
         <span className="text-sm font-bold text-white tabular-nums">
           {!address ? (
-            '—'
+            '--'
           ) : balanceLoading ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-500" aria-hidden="true" />
           ) : ethBalance !== null ? (
@@ -158,7 +158,7 @@ export default function RobinhoodBridgeCard({
         <p className="text-[11px] text-[#F59E0B]/90 leading-relaxed">
           The canonical withdrawal to Ethereum settles after a{' '}
           <span className="font-bold">{CANONICAL_WITHDRAWAL_CHALLENGE_DAYS}-day</span>{' '}
-          challenge period (an Arbitrum fraud-proof rule — not instant). Fast
+          challenge period (an Arbitrum fraud-proof rule, not instant). Fast
           third-party bridges below settle in minutes for a fee.
         </p>
       </div>
@@ -205,7 +205,7 @@ export default function RobinhoodBridgeCard({
               href={b.url}
               target="_blank"
               rel="noopener noreferrer"
-              title={`${b.name} — ${b.eta}`}
+              title={`${b.name}: ${b.eta}`}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#060A12] border border-white/[0.06] text-xs font-semibold text-gray-300 hover:border-[#0066FF]/40 hover:text-white transition-all"
             >
               {b.name}

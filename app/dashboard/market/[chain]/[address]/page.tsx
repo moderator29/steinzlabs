@@ -376,10 +376,10 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
           <BackButton />
           <TokenLogo src={logo} symbol={symbol} size={32} />
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold truncate">{name}</span>
-              <span className="text-[10px] uppercase text-slate-500">{symbol}</span>
-              <span className="text-[10px] uppercase px-1.5 py-0.5 bg-slate-800/60 rounded text-slate-400">{chain}</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm font-bold truncate min-w-0">{name}</span>
+              <span className="text-[10px] uppercase text-slate-500 shrink-0">{symbol}</span>
+              <span className="text-[10px] uppercase px-1.5 py-0.5 bg-slate-800/60 rounded text-slate-400 shrink-0">{chain}</span>
               <SocialVelocityPill symbol={symbol} />
             </div>
             {/* §5.6 Trading Terminal — Dune-derived intelligence strip
@@ -446,11 +446,11 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
         </div>
 
         {/* Checkprice-style stats strip */}
-        <div className="flex items-center gap-4 px-4 pb-3 overflow-x-auto text-xs whitespace-nowrap">
+        <div className="flex items-center gap-4 px-4 pb-3 overflow-x-auto text-xs whitespace-nowrap [&>*]:shrink-0">
           <span className="text-lg md:text-xl font-mono font-bold tabular-nums">
-            {/* Honest price: show — while loading AND when the source has no
-                real price (price <= 0), never a fabricated $0.00. */}
-            {loading ? '—' : price > 0 ? formatPrice(price) : '—'}
+            {/* Honest price: show a dash while loading AND when the source has
+                no real price (price <= 0), never a fabricated $0.00. */}
+            {loading ? '-' : price > 0 ? formatPrice(price) : '-'}
           </span>
           <PriceChangeDisplay value={change24hUnified} size="sm" />
           <div className="h-4 w-px bg-slate-800/60 hidden md:block" />

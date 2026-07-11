@@ -93,7 +93,7 @@ export default function CostBasisPage() {
 
       <div className="flex gap-1.5 mb-3 overflow-x-auto">
         {CHAINS.map((c) => (
-          <button key={c.slug} onClick={() => setChain(c.slug)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap ${chain === c.slug ? 'bg-[#0066FF]/20 text-[#8FA3FF] border border-[#0066FF]/40' : 'bg-white/[0.04] text-slate-400 border border-white/10'}`}>{c.label}</button>
+          <button key={c.slug} onClick={() => setChain(c.slug)} className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap ${chain === c.slug ? 'bg-[#0066FF]/20 text-[#8FA3FF] border border-[#0066FF]/40' : 'bg-white/[0.04] text-slate-400 border border-white/10'}`}>{c.label}</button>
         ))}
       </div>
 

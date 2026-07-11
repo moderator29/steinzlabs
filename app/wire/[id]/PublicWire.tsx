@@ -6,6 +6,8 @@ import { VerifiedGoldBadge } from '@/components/ui/VerifiedGoldBadge';
 import { SignalRail, SignalChip } from '@/components/wire/WireSignalRail';
 import { CashtagChip } from '@/components/wire/CashtagChip';
 import { WirePrediction } from '@/components/wire/WirePrediction';
+import { WireThread } from '@/components/wire/WireThread';
+import { useAuth } from '@/lib/hooks/useAuth';
 import { wireRelativeTime, formatWireCount } from '@/lib/wire/format';
 import type { WirePost } from '@/components/wire/WirePostCard';
 import { Heart, MessageCircle, Repeat2, Gift } from 'lucide-react';
@@ -145,6 +147,26 @@ export function PublicWire({ post }: { post: WirePost }) {
         </div>
       </div>
     </article>
+  );
+}
+
+/**
+ * WireComments - the reply thread on the dedicated wire page. Signed-in visitors
+ * can reply and act; signed-out visitors see the conversation read-only. The
+ * thread id drives its own fetches, so it stays in sync with the real replies.
+ */
+export function WireComments({ postId }: { postId: string }) {
+  const { user } = useAuth();
+  return (
+    <div className="mt-5">
+      <WireThread
+        postId={postId}
+        currentUserId={user?.id ?? null}
+        authorAvatarUrl={(user as { avatar_url?: string | null } | null)?.avatar_url ?? null}
+        authorDisplayName={user?.first_name || user?.username || 'You'}
+        onGift={() => {}}
+      />
+    </div>
   );
 }
 

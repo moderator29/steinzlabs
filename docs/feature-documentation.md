@@ -118,11 +118,11 @@ For pricing details see [pricing.md](./pricing.md). For slash-commands see [slas
 
 ### 14. Multi-Chain Swap
 
-- **What it does:** Trade across 8 chains. 5-step safety flow runs before every swap.
+- **What it does:** Buy almost any coin by name, symbol, or contract address across every supported network from a two-card (You pay / You receive) panel with a one-tap direction switch and real token logos. A safety flow runs before every swap, and a branded, shareable receipt renders on success and failure.
 - **How to access:** `/dashboard/swap`. Inline drawer from any token page.
 - **Tier:** Free up to $500/trade. Mini+ to $5k. Pro+ to $50k. Max+ unlimited.
-- **How it works:** EVM via 0x Protocol (Swap + Gasless). Solana via Jupiter Aggregator. Quote → safety check (GoPlus + Naka Trust Score) → user signs in wallet → broadcast. `pending_trades` holds the unsigned quote; `swap_logs` records the broadcast.
-- **Limitations:** Cross-chain not yet supported (no bridge integration). Slippage default 1%, max 50%.
+- **How it works:** Routed DEX execution across Ethereum, Base, Solana, BSC, Polygon, Avalanche, and Arbitrum (EVM via 0x Protocol Swap + Gasless; Solana via Jupiter Aggregator), plus native ETH on Robinhood Chain. NAKA on Ethereum is tradeable first-class. Token discovery runs through `/api/swap/token-search` (any coin by name or pasted CA, all networks, real logos), the same universal search consumed by global search and the markets board. Non-custodial execution is identical across the built-in Naka Wallet, injected extensions, and WalletConnect (including mobile). Flow: quote → safety check (GoPlus + Naka Trust Score) → user signs in wallet → broadcast → `TransactionResultCard` receipt (share natively or save PNG via html2canvas). `pending_trades` holds the unsigned quote; `swap_logs` records the broadcast. Platform fee is single-sourced from `NEXT_PUBLIC_STEINZ_FEE_BPS` (`PLATFORM_FEE_BPS`) and included in the quote.
+- **Limitations:** Cross-chain not yet supported (no bridge integration). Robinhood Chain is send/hold of native ETH; in-app swap routing lands as aggregators list the network. Slippage default 1%, max 50%.
 
 ### 15. Sniper Bot
 
@@ -272,11 +272,11 @@ For pricing details see [pricing.md](./pricing.md). For slash-commands see [slas
 
 ### 33. Telegram Bot
 
-- **What it does:** Feature parity for the most-used flows. 27 slash commands across account, market, whales, portfolio, alerts, trading.
-- **How to access:** `@SteinzLabsBot` on Telegram. `/connect` to pair.
-- **Tier:** Free–Max+ depending on command. See [slash-commands.md](./slash-commands.md).
-- **How it works:** Webhook handler at `/api/telegram/webhook` with `X-Telegram-Bot-Api-Secret-Token` header verification. Symbol resolution shared with VTX via `lib/telegram/commands/resolveSymbol.ts`. Tier gates use `withTierGate()` so the same enforcement runs in HTTP routes and Telegram callbacks.
-- **Limitations:** Telegram per-chat rate limit 30 commands/minute. Inline buttons subject to Telegram MarkdownV2 escaping.
+- **What it does:** Tap-first inline menu plus slash commands for the most-used flows, across account, market, whales, smart money, Naka News, portfolio, alerts, and trading. `/start` and `/menu` open one persistent message that rewrites itself as the user navigates main menu → submenu → back.
+- **How to access:** `@Nakalabsbot` on Telegram. Link from Settings → Notifications, then `/link <code>` to pair.
+- **Tier:** Free–Max+ depending on command. See [slash-commands.md](./slash-commands.md) and [TELEGRAM_BOT.md](./TELEGRAM_BOT.md).
+- **How it works:** Webhook handler at `/api/telegram/webhook` with `X-Telegram-Bot-Api-Secret-Token` header verification, handling both `message` and `callback_query` updates. Inline menu built in `lib/telegram/menu.ts` (HTML parse mode, in-place message edits). Whale Alerts and Smart Money read the live `whales` table; Naka News reads the same multi-source aggregator as the in-app News tab. Symbol resolution shared with VTX via `lib/telegram/commands/resolveSymbol.ts`. Tier gates use the shared `checkTier()` so the same enforcement runs in HTTP routes and Telegram callbacks.
+- **Limitations:** Telegram per-chat rate limit 30 commands/minute. `setWebhook` must allow `callback_query` for the inline menu to receive taps.
 
 ### 34b. Portfolio
 
