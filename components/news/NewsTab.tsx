@@ -271,7 +271,7 @@ function LeadCard({
         {item.summary ? (
           <p className="mt-2 text-sm leading-relaxed text-slate-300/90">{item.summary}</p>
         ) : null}
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-white/5 pt-3">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 pt-1">
           <VoteControl vote={vote} onVote={onVote} />
           <ReadMore url={item.url} />
         </div>
@@ -318,7 +318,7 @@ function NewsCard({
           ) : null}
         </div>
       </div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-white/5 pt-3">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 pt-1">
         <VoteControl vote={vote} onVote={onVote} />
         <ReadMore url={item.url} />
       </div>

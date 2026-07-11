@@ -983,8 +983,8 @@ export default function ProfileTab() {
           </div>
         </div>
 
-        {/* Edit Fields */}
-        <div className="glass rounded-xl border border-white/10 overflow-hidden mb-4">
+        {/* Edit Fields — brand glass card */}
+        <div className="nl-glass rounded-2xl overflow-hidden mb-4">
           <div className="px-3 py-3 border-b border-white/5">
             <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Username</label>
             <input
@@ -992,7 +992,7 @@ export default function ProfileTab() {
               value={editUsername}
               onChange={(e) => { setEditUsername(e.target.value); setEditError(''); }}
               placeholder="username"
-              className="w-full bg-[#060A12] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/40 text-white"
+              className="w-full bg-white/[0.03] border border-[#0066FF]/20 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/35 focus:outline-none focus:border-[#0066FF]/50 focus:bg-white/[0.05] transition-colors"
             />
             <p className="text-[9px] text-gray-600 mt-1">Letters, numbers and underscores only</p>
           </div>
@@ -1003,7 +1003,7 @@ export default function ProfileTab() {
               value={editFirstName}
               onChange={(e) => setEditFirstName(e.target.value)}
               placeholder="First name"
-              className="w-full bg-[#060A12] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/40 text-white"
+              className="w-full bg-white/[0.03] border border-[#0066FF]/20 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/35 focus:outline-none focus:border-[#0066FF]/50 focus:bg-white/[0.05] transition-colors"
             />
           </div>
           <div className="px-3 py-3 border-b border-white/5">
@@ -1013,7 +1013,7 @@ export default function ProfileTab() {
               value={editLastName}
               onChange={(e) => setEditLastName(e.target.value)}
               placeholder="Last name"
-              className="w-full bg-[#060A12] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/40 text-white"
+              className="w-full bg-white/[0.03] border border-[#0066FF]/20 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/35 focus:outline-none focus:border-[#0066FF]/50 focus:bg-white/[0.05] transition-colors"
             />
           </div>
           <div className="px-3 py-3">
@@ -1023,7 +1023,7 @@ export default function ProfileTab() {
               onChange={(e) => setEditBio(e.target.value)}
               placeholder="Tell the world about yourself..."
               rows={3}
-              className="w-full bg-[#060A12] border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#0066FF]/40 text-white resize-none"
+              className="w-full bg-white/[0.03] border border-[#0066FF]/20 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/35 focus:outline-none focus:border-[#0066FF]/50 focus:bg-white/[0.05] transition-colors resize-none"
             />
             <p className="text-[9px] text-gray-600 mt-1">Max 160 characters</p>
           </div>
