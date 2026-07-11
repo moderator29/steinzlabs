@@ -52,8 +52,20 @@ export async function POST(request: NextRequest) {
 
     const db = getSupabaseAdmin();
     const feeBps = platformFeeBps || PLATFORM_FEE_BPS;
-    // Fee in FROM-token units (correct: feeBps of the input quantity).
-    const feeAmountToken = fromAmount * (feeBps / 10000);
+    // 0x v2 collects the fee in the BUY token (swapFeeToken = buyToken), so
+    // revenue is feeBps of the OUTPUT quantity, denominated in the buy token.
+    // EXCEPT a native-ETH buy: 0x rejects the native sentinel as a fee token,
+    // so lib/services/zerox.ts takes the fee in the SELL token instead. Mirror
+    // that exact rule here or the recorded fee_token/fee_amount would not match
+    // what 0x actually charged (e.g. a NAKA -> ETH swap collects the fee in
+    // NAKA, not ETH). Detect native by gas symbol or the 0x/zero sentinels.
+    const NATIVE_SYMBOLS = new Set(['ETH', 'BNB', 'MATIC', 'AVAX', 'SOL']);
+    const buyIsNative =
+      NATIVE_SYMBOLS.has(String(toToken).toUpperCase()) ||
+      String(toToken).toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ||
+      String(toToken).toLowerCase() === '0x0000000000000000000000000000000000000000';
+    const feeToken = buyIsNative ? fromToken : toToken;
+    const feeAmountToken = (buyIsNative ? (fromAmount || 0) : (toAmount || 0)) * (feeBps / 10000);
     // USD value: ONLY a real figure the client computed from the live quote is
     // used. The old code set usd = fromAmount * feeBps/10000, i.e. it treated a
     // raw token quantity as dollars (a 0.5 ETH fee logged as ~$0.0025). We never
@@ -78,14 +90,18 @@ export async function POST(request: NextRequest) {
       source: (body as { source?: string }).source ?? 'swap-page',
     });
 
-    await recordFeeRevenue(db, {
-      user_id: userId,
-      tx_hash: txHash,
-      fee_amount: feeAmountToken,
-      fee_token: fromToken,
-      usd_value: feeUsd,
-      chain,
-    });
+    // Only a confirmed swap actually collected a fee; a failed swap must not
+    // inflate fee_revenue.
+    if (status !== 'failed') {
+      await recordFeeRevenue(db, {
+        user_id: userId,
+        tx_hash: txHash,
+        fee_amount: feeAmountToken,
+        fee_token: feeToken,
+        usd_value: feeUsd,
+        chain,
+      });
+    }
 
     return NextResponse.json({ success: true, feeUsd });
   } catch (error) {

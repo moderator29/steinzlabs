@@ -15,7 +15,7 @@ interface Props {
 
 // A lightweight, dependency-free area/line chart. Draws the real `series`, a
 // dashed target line, a glowing "now" dot, and a subtle 24h/now axis feel. All
-// geometry is derived from real data — no synthetic points.
+// geometry is derived from real data, no synthetic points.
 export function PriceChart({
   series,
   target,

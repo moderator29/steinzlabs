@@ -7,58 +7,17 @@ interface Layer {
   icon: React.ElementType;
   title: string;
   detail: string;
-  color: string;
 }
 
 const LAYERS: Layer[] = [
-  {
-    icon: ShieldCheck,
-    title: 'GoPlus token scanning',
-    detail: 'Every token you interact with is scanned against the GoPlus security engine before a swap, snipe, or VTX reference. Honeypots, hidden taxes, blacklists and unverified contracts are flagged, or blocked outright.',
-    color: '#10B981',
-  },
-  {
-    icon: Cpu,
-    title: 'Shadow Guardian simulation',
-    detail: 'Every swap is simulated on-chain in under 200ms before it’s submitted. If a token prevents selling (the fingerprint of a honeypot), the trade is aborted automatically. No gas spent, no funds lost.',
-    color: '#0066FF',
-  },
-  {
-    icon: Lock,
-    title: 'AES-256-GCM wallet encryption',
-    detail: 'Your Naka wallet keys are encrypted in your browser using AES-256-GCM with PBKDF2 (100k iterations). Only opaque ciphertext reaches our servers. We cannot decrypt your keys, ever.',
-    color: '#F59E0B',
-  },
-  {
-    icon: KeyRound,
-    title: 'JWT + Supabase RLS',
-    detail: 'Every protected route verifies your Supabase JWT. Every database table enforces Row-Level Security so no user can read data belonging to another account, even under a compromised service.',
-    color: '#8B5CF6',
-  },
-  {
-    icon: Database,
-    title: 'Signature Insight',
-    detail: 'Every wallet signature request is decoded into plain English before you sign. Unlimited approvals, dangerous permit signatures, and suspicious calldata surface automatically.',
-    color: '#EC4899',
-  },
-  {
-    icon: Network,
-    title: 'Domain Shield',
-    detail: 'URLs are cross-referenced against known scam databases and pattern-matched against legitimate sites. Registration age, SSL validity and WHOIS anomalies are checked in real time.',
-    color: '#06B6D4',
-  },
-  {
-    icon: EyeOff,
-    title: 'Non-custodial by default',
-    detail: 'Naka Labs never sees your seed phrase or private keys. Not on create, not on import, not on sign. If this platform vanished tomorrow, your funds would be unaffected because we never held them.',
-    color: '#A78BFA',
-  },
-  {
-    icon: AlertTriangle,
-    title: 'Bot &amp; abuse protection',
-    detail: 'Cloudflare Turnstile gates login and signup. Rate limits on every sensitive endpoint. Sentry captures errors with PII stripped. PostHog flags anomalous behaviour patterns.',
-    color: '#EF4444',
-  },
+  { icon: ShieldCheck,     title: 'GoPlus token scanning',   detail: 'Honeypots, hidden taxes, and unverified contracts flagged before any swap.' },
+  { icon: Cpu,             title: 'Shadow Guardian sim',      detail: 'Every swap is simulated on-chain first. If it cannot sell, it is aborted.' },
+  { icon: Lock,            title: 'AES-256-GCM encryption',   detail: 'Wallet keys are encrypted in your browser. Only ciphertext reaches us.' },
+  { icon: KeyRound,        title: 'JWT + Supabase RLS',       detail: 'Row-level security means no account can ever read another account’s data.' },
+  { icon: Database,        title: 'Signature Insight',        detail: 'Every signature request is decoded into plain English before you sign.' },
+  { icon: Network,         title: 'Domain Shield',            detail: 'URLs are checked against scam databases and phishing patterns in real time.' },
+  { icon: EyeOff,          title: 'Non-custodial by default', detail: 'We never see your seed phrase or keys. If we vanished, your funds are fine.' },
+  { icon: AlertTriangle,   title: 'Bot + abuse protection',   detail: 'Turnstile gating, rate limits, and anomaly detection on every sensitive route.' },
 ];
 
 export function SecurityShowcase() {
@@ -76,41 +35,43 @@ export function SecurityShowcase() {
   }, []);
 
   return (
-    <section ref={ref} className="relative max-w-7xl mx-auto px-5 py-24">
-      {/* Subtle grid background */}
-      <div className="absolute inset-0 opacity-[0.06] pointer-events-none" style={{
-        backgroundImage: 'linear-gradient(rgba(255,255,255,.25) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.25) 1px, transparent 1px)',
-        backgroundSize: '40px 40px',
-      }} />
-
+    <section id="security" ref={ref} className="relative max-w-6xl mx-auto px-5 py-20 sm:py-24">
       <div className={`relative transition-all duration-1000 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
-        <div className="flex flex-col items-center text-center mb-12">
-          <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/25 rounded-full px-3 py-1 text-xs text-emerald-400 font-semibold mb-4">
+        <div className="flex flex-col items-center text-center mb-12 max-w-2xl mx-auto">
+          <div
+            className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold mb-4"
+            style={{ background: 'rgba(0,102,255,.1)', border: '1px solid rgba(0,102,255,.3)', color: '#6d85ff' }}
+          >
             <ShieldCheck className="w-3 h-3" /> Defence in depth
           </div>
-          <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-4">
-            {"Security isn’t a feature."}<br /> {"It’s the default."}
+          <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
+            Security isn&apos;t a feature.{' '}
+            <span style={{ color: '#1E90FF' }}>It&apos;s the default.</span>
           </h2>
-          <p className="text-white/50 text-base sm:text-lg max-w-2xl leading-relaxed">
-            Eight protection layers run on every interaction: automatically, invisibly. You cannot accidentally skip a scan. You cannot accidentally sign something dangerous. And we cannot accidentally lose your keys, because we never hold them.
+          <p className="mt-4 text-base leading-relaxed" style={{ color: '#B4C0E0' }}>
+            Eight layers run automatically on every interaction. You cannot skip a scan, and we cannot lose your keys, because we never hold them.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {LAYERS.map((l, i) => (
             <div
               key={l.title}
-              className={`group relative nl-glass rounded-2xl p-5 transition-all duration-500 hover:bg-white/[0.04] hover:-translate-y-1 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-              style={{ transitionDelay: `${i * 70}ms` }}
+              className={`group rounded-2xl p-5 transition-all duration-500 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+              style={{
+                background: 'linear-gradient(160deg, rgba(12,18,44,0.5) 0%, rgba(5,8,22,0.8) 100%)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                transitionDelay: `${i * 60}ms`,
+              }}
             >
               <div
-                className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110"
-                style={{ background: l.color + '18', border: `1px solid ${l.color}40` }}
+                className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 transition-transform group-hover:scale-110"
+                style={{ background: 'rgba(0,102,255,.12)', border: '1px solid rgba(0,150,255,.35)' }}
               >
-                <l.icon className="w-5 h-5" style={{ color: l.color }} />
+                <l.icon className="w-5 h-5" style={{ color: '#3d9bff' }} strokeWidth={1.6} />
               </div>
-              <h3 className="text-sm font-bold text-white mb-2">{l.title}</h3>
-              <p className="text-[13px] text-white/55 leading-relaxed">{l.detail}</p>
+              <h3 className="text-sm font-bold text-white mb-1.5">{l.title}</h3>
+              <p className="text-[12.5px] leading-relaxed" style={{ color: '#95a3c9' }}>{l.detail}</p>
             </div>
           ))}
         </div>

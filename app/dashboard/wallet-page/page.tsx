@@ -3822,7 +3822,7 @@ function CustomizeTokensView({ onBack, tokens, isHidden, onToggle, onAddToken }:
               key={n}
               onClick={() => setNet(n)}
               style={net === n ? { background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 55%,#1233AE 100%)', boxShadow: '0 0 12px rgba(0,102,255,.5)' } : { boxShadow: '0 0 0 1px rgba(0,102,255,.15)' }}
-              className={`px-3 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap capitalize ${net === n ? 'text-white nl-glass' : 'bg-white/[0.03] text-slate-400'}`}
+              className={`shrink-0 px-3 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap capitalize ${net === n ? 'text-white nl-glass' : 'bg-white/[0.03] text-slate-400'}`}
             >
               {n === 'all' ? 'All Networks' : n}
             </button>

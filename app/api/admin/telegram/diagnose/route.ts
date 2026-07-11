@@ -22,6 +22,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
+import { setTelegramCommands, setTelegramMenuButton } from '@/lib/telegram/client';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -178,28 +179,18 @@ export async function POST(req: NextRequest) {
     drop_pending_updates: true,
   });
 
-  // Also register the command menu so users see them in the Telegram UI
-  const commandResult = await tg(token, 'setMyCommands', {
-    commands: [
-      { command: 'start', description: 'Get started' },
-      { command: 'help', description: 'Show all commands' },
-      { command: 'link', description: 'Link your Naka account: /link <code>' },
-      { command: 'unlink', description: 'Disconnect your Naka account' },
-      { command: 'status', description: 'Check your plan + link status' },
-      { command: 'price', description: 'Token price: /price ETH' },
-      { command: 'watchlist', description: 'Open your watchlist' },
-      { command: 'alerts', description: 'Recent alerts' },
-      { command: 'whale', description: 'Wallet snapshot (Mini+)' },
-      { command: 'portfolio', description: 'Your portfolio (Mini+)' },
-      { command: 'copy', description: 'Copy trading (Pro+)' },
-      { command: 'snipe', description: 'Sniper bot (Max)' },
-      { command: 'vtx', description: 'Ask VTX AI anything' },
-    ],
-  });
+  // Register the command menu (single source of truth in lib/telegram/client)
+  // and point the chat "Menu" button at it, so users get the native one-tap
+  // command deck like the best TG bots.
+  const [setMyCommands, setMenuButton] = await Promise.all([
+    setTelegramCommands(),
+    setTelegramMenuButton(),
+  ]);
 
   return NextResponse.json({
     setWebhook: setResult,
-    setMyCommands: commandResult,
+    setMyCommands,
+    setMenuButton,
     registeredAt: url,
   });
 }

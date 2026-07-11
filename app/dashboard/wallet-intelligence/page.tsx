@@ -764,7 +764,7 @@ export default function WalletIntelligencePage() {
             {/* §9.3 — Compare two wallets side-by-side. */}
             <Link
               href="/dashboard/wallet-intelligence/compare"
-              className="whale-pill"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white/70 bg-white/[0.04] border border-white/[0.08] hover:text-white hover:bg-white/[0.08] hover:border-[#00C8FF]/30 transition-colors"
               title="Compare two wallets side by side"
               aria-label="Compare two wallets"
             >
@@ -773,7 +773,7 @@ export default function WalletIntelligencePage() {
             </Link>
             <Link
               href="/dashboard/security/wallet-analysis"
-              className="whale-pill"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white/70 bg-white/[0.04] border border-white/[0.08] hover:text-white hover:bg-white/[0.08] hover:border-[#00C8FF]/30 transition-colors"
               title="Run a Shadow Guardian scan in the Security Center"
               aria-label="Run a wallet security scan"
             >

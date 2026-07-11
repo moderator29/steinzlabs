@@ -185,7 +185,7 @@ export async function sendAlertDigestEmail(
     ${emailButton(`${appUrl}/dashboard/alerts`, 'Open alerts')}
     <p style="margin:24px 0 0;font-size:11px;line-height:1.5;color:#7c869c;">Tune cadence or pause email digests in your <a href="${appUrl}/dashboard/settings" style="color:#4d94ff;text-decoration:none;">notification settings</a>.</p>`;
   const html = brandedEmailWrapper('Alert digest', 'Last 4 hours', body);
-  return sendEmail(to, `Naka digest — ${alerts.length} alert${alerts.length === 1 ? '' : 's'}`, html);
+  return sendEmail(to, `Naka digest: ${alerts.length} alert${alerts.length === 1 ? '' : 's'}`, html);
 }
 
 export async function sendNewsDigestEmail(
@@ -218,7 +218,7 @@ export async function sendNewsDigestEmail(
     ${emailButton(`${appUrl}/dashboard`, 'Open the News feed')}
     <p style="margin:24px 0 0;font-size:11px;line-height:1.5;color:#7c869c;">You opted in to news email. Turn it off anytime in your <a href="${appUrl}/dashboard/settings" style="color:#4d94ff;text-decoration:none;">notification settings</a>.</p>`;
   const html = brandedEmailWrapper('Crypto news digest', 'Top headlines', body);
-  return sendEmail(to, `Naka Labs — ${top.length} top crypto headline${top.length === 1 ? '' : 's'}`, html);
+  return sendEmail(to, `Naka Labs: ${top.length} top crypto headline${top.length === 1 ? '' : 's'}`, html);
 }
 
 export async function sendPasswordResetEmail(

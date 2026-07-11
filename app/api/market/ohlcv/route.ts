@@ -38,7 +38,7 @@ export async function GET(req: Request) {
       ...base,
       available: false,
       reason: 'goldrush_unconfigured',
-      note: 'GoldRush key not set — no OHLCV from this provider. Fall back to your own source.',
+      note: 'GoldRush key not set. No OHLCV from this provider. Fall back to your own source.',
       candles: [],
     });
   }

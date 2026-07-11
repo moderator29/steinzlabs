@@ -16,10 +16,16 @@ import UnlockWalletModal from '@/components/wallet/UnlockWalletModal';
 import { NakaLogo, WalletConnectLogo } from '@/components/wallet/WalletLogo';
 import { WalletConnectHealthPanel } from '@/components/wallet/WalletConnectHealthPanel';
 import { SelectMenu } from '@/components/ui/SelectMenu';
+import { Toggle } from '@/components/ui/Toggle';
 import { SwapSecurityWarnings, shouldBlockSwap } from '@/components/swap/SwapSecurityWarnings';
 import { useAppKit, useAppKitAccount } from '@reown/appkit/react';
 import { isMobile } from '@/lib/utils/detectDevice';
 import { HAS_APPKIT } from '@/lib/wallet/appkit';
+// Provider resolvers that prefer the wagmi/AppKit connector (so a phone on a
+// WalletConnect session can actually sign, where window.ethereum/solana are
+// undefined) and fall back to an injected provider on desktop.
+import { getEvmProvider, getSolanaProvider } from '@/lib/hooks/useSwapBroadcast';
+import { TransactionResultCard, type TransactionResultData } from '@/components/swap/TransactionResultCard';
 import { SecurityGate } from '@/components/security/SecurityGate';
 import SwapRoutePreview from '@/components/swap/SwapRoutePreview';
 import { RouteComparison } from '@/components/swap/RouteComparison';
@@ -83,6 +89,30 @@ const CHAINS = [
   { id: 'robinhood', label: CHAIN_META.robinhood.label, symbol: 'ETH', color: CHAIN_META.robinhood.color, dex: 'Native ETH' },
 ];
 
+// Compact per-network badge (short label + brand color) for cross-chain search
+// rows, so a token found on another network is clearly tagged before the user
+// picks it and the swap switches chains.
+const CHAIN_BADGE: Record<string, { label: string; color: string }> = CHAINS.reduce(
+  (m, c) => { m[c.id] = { label: c.label, color: c.color }; return m; },
+  {} as Record<string, { label: string; color: string }>,
+);
+
+// Per-chain block explorer for a tx hash. Covers every chain the swap can
+// settle on (falls back to Etherscan for anything unmapped).
+function explorerTxUrl(chain: string, hash: string): string {
+  const base: Record<string, string> = {
+    ethereum: 'https://etherscan.io/tx/',
+    base: 'https://basescan.org/tx/',
+    arbitrum: 'https://arbiscan.io/tx/',
+    polygon: 'https://polygonscan.com/tx/',
+    avalanche: 'https://snowtrace.io/tx/',
+    bsc: 'https://bscscan.com/tx/',
+    optimism: 'https://optimistic.etherscan.io/tx/',
+    solana: 'https://solscan.io/tx/',
+  };
+  return `${base[chain] || base.ethereum}${hash}`;
+}
+
 interface TokenInfo {
   symbol: string;
   name: string;
@@ -99,6 +129,10 @@ const TOKEN_LIST: TokenInfo[] = [
   { symbol: 'USDC', name: 'USD Coin', color: '#2775CA', decimals: 6, popular: true, coingeckoId: 'usd-coin', logo: 'https://assets.coingecko.com/coins/images/6319/small/usdc.png' },
   { symbol: 'USDT', name: 'Tether', color: '#26A17B', decimals: 6, popular: true, coingeckoId: 'tether', logo: 'https://assets.coingecko.com/coins/images/325/small/Tether.png' },
   { symbol: 'BNB', name: 'BNB', color: '#F0B90B', decimals: 18, popular: true, coingeckoId: 'binancecoin', logo: 'https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png' },
+  // Naka ($NAKA) on Ethereum, first-class and pinned to popular. Logo pulls
+  // from the DexScreener token image (address-derived, the same art indexers
+  // and Uniswap surface); falls back to a lettered glyph if unavailable.
+  { symbol: 'NAKA', name: 'Naka', color: '#0066FF', decimals: 18, popular: true, logo: 'https://dd.dexscreener.com/ds-data/tokens/ethereum/0x6967b9a8c0b14849cfe8f9e5732b401433fd2898.png' },
   { symbol: 'MATIC', name: 'Polygon', color: '#8247E5', decimals: 18, coingeckoId: 'matic-network', logo: 'https://assets.coingecko.com/coins/images/4713/small/polygon.png' },
   { symbol: 'AVAX', name: 'Avalanche', color: '#E84142', decimals: 18, coingeckoId: 'avalanche-2', logo: 'https://assets.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png' },
   { symbol: 'WBTC', name: 'Wrapped Bitcoin', color: '#F7931A', decimals: 8, popular: true, coingeckoId: 'wrapped-bitcoin', logo: 'https://assets.coingecko.com/coins/images/7598/small/wrapped_bitcoin_wbtc.png' },
@@ -115,7 +149,12 @@ const TOKEN_LIST: TokenInfo[] = [
   { symbol: 'BONK', name: 'Bonk', color: '#F2A900', decimals: 5, coingeckoId: 'bonk', logo: 'https://assets.coingecko.com/coins/images/28600/small/bonk.jpg' },
   { symbol: 'JUP', name: 'Jupiter', color: '#52D5B7', decimals: 6, coingeckoId: 'jupiter-exchange-solana', logo: 'https://assets.coingecko.com/coins/images/34188/small/jup.png' },
   { symbol: 'RAY', name: 'Raydium', color: '#4F67E4', decimals: 6, coingeckoId: 'raydium', logo: 'https://assets.coingecko.com/coins/images/13928/small/PSigc4ie_400x400.jpg' },
-  { symbol: 'NAKA', name: 'Nakamoto Games', color: '#00D4AA', decimals: 18, coingeckoId: 'nakamoto-games', logo: 'https://assets.coingecko.com/coins/images/18041/small/naka.png' },
+  // NOTE: the curated list intentionally does NOT hardcode a "NAKA" symbol.
+  // "NAKA" previously pointed at Nakamoto Games (an unrelated project), which
+  // would mislead a user into buying the wrong token. The real nakalabs $NAKA
+  // is registered first-class once its verified contract address is confirmed;
+  // until then searching "naka" surfaces real on-chain results (all networks)
+  // and the exact token imports cleanly by pasting its contract address.
   { symbol: 'DOGE', name: 'Dogecoin', color: '#C2A633', decimals: 8, popular: true, coingeckoId: 'dogecoin', logo: 'https://assets.coingecko.com/coins/images/5/small/dogecoin.png' },
   { symbol: 'SHIB', name: 'Shiba Inu', color: '#FFA409', decimals: 18, coingeckoId: 'shiba-inu', logo: 'https://assets.coingecko.com/coins/images/11939/small/shiba.png' },
   { symbol: 'XRP', name: 'XRP', color: '#346AA9', decimals: 6, coingeckoId: 'ripple', logo: 'https://assets.coingecko.com/coins/images/44/small/xrp-symbol-white-128.png' },
@@ -288,7 +327,9 @@ function SearchResultLogo({ logo, address, chain, symbol }: { logo: string | nul
 function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (symbol: string) => void;
+  // tokenChain is passed when the picked token lives on a network other than
+  // the one currently selected, so the parent can switch the swap's chain.
+  onSelect: (symbol: string, tokenChain?: string) => void;
   exclude: string;
   chain: string;
 }) {
@@ -345,6 +386,11 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
   }, [search, chain, looksLikeAddress]);
 
   // Debounced remote name search — runs for 2+ char non-address queries.
+  // Searches ALL networks (no chain filter), like Uniswap's "All networks":
+  // a token such as NAKA lives on Polygon/BSC, so restricting to the currently
+  // selected chain is exactly why "naka" returned nothing before. Results are
+  // sorted current-chain-first below, and picking a cross-chain token switches
+  // the swap's network.
   useEffect(() => {
     const q = search.trim();
     if (looksLikeAddress || q.length < 2) { setRemoteResults([]); setRemoteSearching(false); return; }
@@ -352,7 +398,7 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
     setRemoteSearching(true);
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/swap/token-search?q=${encodeURIComponent(q)}&chain=${encodeURIComponent(chain)}`);
+        const res = await fetch(`/api/swap/token-search?q=${encodeURIComponent(q)}`);
         const data = res.ok ? await res.json() : { tokens: [] };
         if (!cancelled) setRemoteResults(Array.isArray(data.tokens) ? data.tokens : []);
       } catch {
@@ -374,9 +420,14 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
     t.symbol !== exclude &&
     (t.symbol.toLowerCase().includes(search.toLowerCase()) || t.name.toLowerCase().includes(search.toLowerCase()))
   );
-  // Remote rows that duplicate a local/imported symbol are dropped.
+  // Remote rows that duplicate a local/imported symbol are dropped. Results
+  // span all networks now, so surface tokens on the current chain first (no
+  // network switch needed) then everything else, each keeping its liquidity
+  // rank from the API.
   const localSymbols = new Set([...filtered, ...importedForChain].map(t => t.symbol.toUpperCase()));
-  const remoteFiltered = remoteResults.filter(t => !localSymbols.has(t.symbol.toUpperCase()) && t.symbol.toUpperCase() !== exclude.toUpperCase());
+  const remoteFiltered = remoteResults
+    .filter(t => !localSymbols.has(t.symbol.toUpperCase()) && t.symbol.toUpperCase() !== exclude.toUpperCase())
+    .sort((a, b) => (a.chain === chain ? 0 : 1) - (b.chain === chain ? 0 : 1));
 
   const popular = filtered.filter(t => t.popular);
 
@@ -405,7 +456,7 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
           address: data.address || t.address,
           chain: t.chain,
         });
-        onSelect((data.symbol || t.symbol).toUpperCase());
+        onSelect((data.symbol || t.symbol).toUpperCase(), t.chain);
         onClose();
       } else {
         setImportError('Could not resolve this token on-chain');
@@ -470,13 +521,13 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
                     ? <img src={imported.logo} alt="" className="w-9 h-9 rounded-full object-cover" />
                     : <div className="w-9 h-9 rounded-full bg-[#0066FF]/20 flex items-center justify-center text-xs font-bold text-white">{imported.symbol.slice(0, 2)}</div>}
                   <div className="text-start flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-white flex items-center gap-1.5">
-                      {imported.symbol}
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25 uppercase">Unverified</span>
+                    <div className="text-sm font-semibold text-white">{imported.symbol}</div>
+                    <div className="text-xs text-gray-500 truncate">
+                      {imported.name}
+                      {imported.address ? ` · ${imported.address.slice(0, 6)}…${imported.address.slice(-4)}` : ''}
                     </div>
-                    <div className="text-xs text-gray-500 truncate">{imported.name}</div>
                   </div>
-                  <span className="text-[11px] font-semibold text-[#0066FF]">Import</span>
+                  <span className="text-[11px] font-semibold text-[#0066FF]">Add</span>
                 </button>
               )}
             </div>
@@ -523,7 +574,7 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
               )}
               {remoteFiltered.length > 0 && (
                 <>
-                  <p className="px-4 pt-2 pb-1 text-[10px] font-bold tracking-wider text-gray-500 uppercase">All tokens</p>
+                  <p className="px-4 pt-2 pb-1 text-[10px] font-bold tracking-wider text-gray-500 uppercase">Search results</p>
                   {remoteFiltered.map(t => (
                     <button
                       key={`rem-${t.chain}-${t.address}`}
@@ -540,12 +591,21 @@ function TokenSelectModal({ isOpen, onClose, onSelect, exclude, chain }: {
                               <CheckCircle className="w-2.5 h-2.5" /> Verified
                             </span>
                           )}
+                          {t.chain !== chain && CHAIN_BADGE[t.chain] && (
+                            <span
+                              className="inline-flex items-center gap-1 text-[9px] font-semibold rounded px-1 py-px border"
+                              style={{ color: CHAIN_BADGE[t.chain].color, borderColor: `${CHAIN_BADGE[t.chain].color}55`, backgroundColor: `${CHAIN_BADGE[t.chain].color}18` }}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: CHAIN_BADGE[t.chain].color }} />
+                              {CHAIN_BADGE[t.chain].label}
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs text-gray-500 truncate">{t.name} · {t.address.slice(0, 6)}…{t.address.slice(-4)}</div>
                       </div>
                       {resolvingRemote === t.address
                         ? <Loader2 className="w-4 h-4 animate-spin text-[#0066FF]" />
-                        : <span className="text-[11px] font-semibold text-[#0066FF]">Import</span>}
+                        : <span className="text-[11px] font-semibold text-[#0066FF]">Add</span>}
                     </button>
                   ))}
                 </>
@@ -633,21 +693,12 @@ function SettingsPanel({ slippage, setSlippage, mevProtect, setMevProtect, mevAu
             <span className="text-xs text-gray-400 font-medium">MEV Protection</span>
             <Info className="w-3 h-3 text-gray-600" />
           </div>
-          <button
-            type="button"
-            onClick={() => setMevProtect(!mevProtect)}
-            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-              mevProtect ? 'bg-[#0066FF]' : 'bg-slate-700'
-            }`}
-            aria-pressed={mevProtect}
-            aria-label="Toggle MEV protection"
-          >
-            <span
-              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition ${
-                mevProtect ? 'translate-x-5' : 'translate-x-1'
-              }`}
-            />
-          </button>
+          <Toggle
+            checked={mevProtect}
+            onChange={setMevProtect}
+            label="Toggle MEV protection"
+            size="md"
+          />
         </div>
         <p className="text-[10px] text-gray-500 leading-relaxed">
           Naka Wallet Ethereum swaps broadcast through Flashbots Protect (private
@@ -718,11 +769,14 @@ export default function SwapPage() {
   const [quoteError, setQuoteError] = useState('');
   const [showDetails, setShowDetails] = useState(false);
   const [swapRotate, setSwapRotate] = useState(0);
-  const [swapSuccess, setSwapSuccess] = useState(false);
   const [swapError, setSwapError] = useState('');
   const [walletBalance, setWalletBalance] = useState<Record<string, number>>({});
   const [txStatus, setTxStatus] = useState<TxStatus>('idle');
   const [txHash, setTxHash] = useState('');
+  // Snapshot that drives the branded, shareable result card. Captured at
+  // settle time (before inputs clear) so it survives the field reset and is
+  // wallet-mode agnostic (built-in / injected / WalletConnect / gasless).
+  const [resultData, setResultData] = useState<TransactionResultData | null>(null);
   const [detectedWallet, setDetectedWallet] = useState<'solana' | 'ethereum' | 'builtin' | null>(null);
   const [walletMode, setWalletMode] = useState<'naka' | 'metamask' | 'phantom'>(() => {
     const stored = safeLocalGet('swap_wallet_mode');
@@ -1183,7 +1237,7 @@ export default function SwapPage() {
   const handleSwap = async () => {
     if (!fromAmount || parseFloat(fromAmount) <= 0) return;
     setSwapError('');
-    setSwapSuccess(false);
+    setResultData(null);
     setTxHash('');
     setTxStatus('idle');
 
@@ -1244,23 +1298,27 @@ export default function SwapPage() {
 
       let hash = '';
 
-      // Step 2: Send transaction via connected wallet
+      // Step 2: Send transaction via connected wallet. Resolve the EVM
+      // provider through the wagmi/AppKit connector first so a WalletConnect
+      // session on a phone signs correctly (window.ethereum is undefined
+      // there); falls back to an injected desktop provider.
       const win = typeof window !== 'undefined' ? window : null;
+      const evmProvider = await getEvmProvider();
 
       if (useGasless && swapData.trade) {
         // Gasless flow: EIP-712 signature + submit
-        if (!win?.ethereum) throw new Error('Gasless swaps require MetaMask or compatible EVM wallet.');
-        const accounts = (await win.ethereum.request({ method: 'eth_accounts' })) as string[];
+        if (!evmProvider) throw new Error('Gasless swaps require a connected EVM wallet.');
+        const accounts = (await evmProvider.request({ method: 'eth_accounts' })) as string[];
         if (!accounts.length) throw new Error('No Ethereum wallet connected');
         // Sign the trade typed data
-        const tradeSignature = await win.ethereum.request({
+        const tradeSignature = await evmProvider.request({
           method: 'eth_signTypedData_v4',
           params: [accounts[0], JSON.stringify(swapData.trade)],
         });
         // Sign approval if needed
         let approvalSignature: string | undefined;
         if (swapData.approval) {
-          approvalSignature = (await win.ethereum.request({
+          approvalSignature = (await evmProvider.request({
             method: 'eth_signTypedData_v4',
             params: [accounts[0], JSON.stringify(swapData.approval)],
           })) as string;
@@ -1289,21 +1347,24 @@ export default function SwapPage() {
           attempts++;
         }
         if (!hash) throw new Error('Gasless transaction timed out. Check your wallet for status.');
-      } else if (swapData.transaction && win?.ethereum && detectedWallet === 'ethereum') {
-        // EVM wallet (MetaMask etc) — standard swap
-        const accounts = (await win.ethereum.request({ method: 'eth_accounts' })) as string[];
+      } else if (swapData.transaction && evmProvider && detectedWallet === 'ethereum') {
+        // EVM wallet (injected extension OR WalletConnect mobile session).
+        const accounts = (await evmProvider.request({ method: 'eth_accounts' })) as string[];
         if (!accounts.length) throw new Error('No Ethereum wallet connected');
         const txParams = { from: accounts[0], to: swapData.transaction.to, data: swapData.transaction.data, value: swapData.transaction.value, gas: swapData.transaction.gas };
-        hash = (await win.ethereum.request({ method: 'eth_sendTransaction', params: [txParams] })) as string;
-      } else if (win?.solana && detectedWallet === 'solana') {
-        // Solana wallet (Phantom etc)
+        hash = (await evmProvider.request({ method: 'eth_sendTransaction', params: [txParams] })) as string;
+      } else if (detectedWallet === 'solana') {
+        // Solana wallet (injected Phantom OR WalletConnect mobile session).
+        const solanaSigner = await getSolanaProvider();
+        if (!solanaSigner) throw new Error('No Solana wallet connected.');
         if (swapData.swapTransaction) {
           // Jupiter returns a VersionedTransaction — legacy Transaction.from
           // threw here on every Solana swap attempt.
           const { deserializeSolanaTx } = await import('@/lib/wallet/solanaTx');
           const tx = await deserializeSolanaTx(swapData.swapTransaction);
-          const signed = await win.solana.signAndSendTransaction(tx);
-          hash = signed.signature;
+          const signed = await solanaSigner.signAndSendTransaction(tx);
+          hash = typeof signed === 'string' ? signed : (signed.signature ?? '');
+          if (!hash) throw new Error('Solana wallet did not return a signature.');
         } else {
           throw new Error('No Solana transaction data received from API.');
         }
@@ -1410,7 +1471,19 @@ export default function SwapPage() {
       setTxHash(hash);
       setTxStatus('confirmed');
       notifySwapCompleted(fromToken, toToken, fromAmount);
-      setSwapSuccess(true);
+      setResultData({
+        status: 'confirmed',
+        fromToken, toToken,
+        fromAmount, toAmount,
+        fromUsd: quoteData?.fromAmountUsd ?? null,
+        toUsd: quoteData?.toAmountUsd ?? null,
+        fromLogo: getTokenInfo(fromToken).logo ?? null,
+        toLogo: getTokenInfo(toToken).logo ?? null,
+        chainLabel: activeChain.label,
+        chainColor: activeChain.color,
+        txHash: hash,
+        explorerUrl: explorerTxUrl(chain, hash),
+      });
       import('@/lib/posthog').then(({ track }) => {
         track('swap_executed', {
           from_token: fromToken,
@@ -1420,7 +1493,6 @@ export default function SwapPage() {
           tx_hash: hash,
         });
       }).catch(() => { /* PostHog not configured */ });
-      setTimeout(() => { setSwapSuccess(false); setTxStatus('idle'); setTxHash(''); }, 10000);
 
       // Save amounts before clearing
       const savedFromAmount = fromAmount;
@@ -1470,7 +1542,20 @@ export default function SwapPage() {
       safeLocalSet('steinz_swap_history', JSON.stringify(existing.slice(0, 50)));
     } catch (err: any) {
       setTxStatus('failed');
-      setSwapError(err?.message || 'Swap failed. Please try again.');
+      const msg = err?.message || 'Swap failed. Please try again.';
+      setSwapError(msg);
+      setResultData({
+        status: 'failed',
+        fromToken, toToken,
+        fromAmount, toAmount,
+        fromUsd: quoteData?.fromAmountUsd ?? null,
+        toUsd: quoteData?.toAmountUsd ?? null,
+        fromLogo: getTokenInfo(fromToken).logo ?? null,
+        toLogo: getTokenInfo(toToken).logo ?? null,
+        chainLabel: activeChain.label,
+        chainColor: activeChain.color,
+        errorMessage: msg,
+      });
     }
     setSwapping(false);
   };
@@ -1478,7 +1563,7 @@ export default function SwapPage() {
   // Never fabricate numbers: gas and impact render only when the quote
   // pipeline actually supplied them (the old '$2.40' / '0.01%' constants
   // were invented and violated the no-mock-data rule).
-  const estimatedGas = typeof quoteData?.gasEstimateUsd === 'number' ? `$${quoteData.gasEstimateUsd.toFixed(quoteData.gasEstimateUsd < 0.01 ? 4 : 2)}` : '—';
+  const estimatedGas = typeof quoteData?.gasEstimateUsd === 'number' ? `$${quoteData.gasEstimateUsd.toFixed(quoteData.gasEstimateUsd < 0.01 ? 4 : 2)}` : '-';
   const priceImpact = quoteData?.priceImpact ?? null;
   const hasQuote = fromAmount && toAmount && parseFloat(fromAmount) > 0;
   const rate = hasQuote ? (parseFloat(toAmount) / parseFloat(fromAmount)) : 0;
@@ -1693,8 +1778,11 @@ export default function SwapPage() {
           />
           {showSettings && <div className="h-3" />}
 
-          <div className="nl-glass rounded-2xl overflow-hidden shadow-2xl shadow-black/20" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 26px rgba(0,102,255,.18), 0 18px 50px rgba(0,0,0,.45)' }}>
-            <div className="p-4 sm:p-5">
+          <div className="space-y-1.5">
+            {/* You pay — its own glass card, separated from You receive by a
+                gap so the direction switch reads as a clean pivot (Uniswap
+                style) rather than a seam line across one merged panel. */}
+            <div className="nl-glass rounded-2xl p-4 sm:p-5" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.28), 0 10px 34px rgba(0,0,0,.4)' }}>
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs text-gray-500 font-medium">You pay</span>
                 <div className="flex items-center gap-1.5">
@@ -1731,21 +1819,19 @@ export default function SwapPage() {
               )}
             </div>
 
-            {/* Direction switch — brand glass chip floated fully ABOVE both
-                cards (owner screenshot 2026-07-03 showed it half-buried
-                behind the receive card in off-brand flat hexes). z-20 +
-                glass ring keeps it the visual pivot of the swap card. */}
+            {/* Direction switch — rounded square nested in the gap between the
+                two cards, ringed in the page background (#060A12) so it reads
+                as a clean cut-in pivot (Uniswap vibe), never a divider line. */}
             <div className="relative h-0 z-20">
               <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2">
                 <button
                   onClick={handleSwapTokens}
                   aria-label="Switch pay and receive tokens"
-                  className="w-11 h-11 nl-glass rounded-2xl flex items-center justify-center hover:bg-[#0066FF]/25 active:scale-95 group"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#0b1424] ring-4 ring-[#060A12] hover:bg-[#0066FF]/30 active:scale-95 group"
                   style={{
                     transform: `rotate(${swapRotate}deg)`,
                     transition: 'transform 0.3s ease, background-color 0.2s ease',
-                    boxShadow: '0 0 0 1px rgba(0,102,255,.45), 0 0 18px rgba(0,102,255,.25), 0 6px 18px rgba(0,0,0,.5)',
-                    backdropFilter: 'blur(12px)',
+                    boxShadow: '0 0 0 1px rgba(0,102,255,.5), 0 0 16px rgba(0,102,255,.28)',
                   }}
                 >
                   <ArrowDownUp className="w-[18px] h-[18px] text-blue-300 group-hover:text-white transition-colors" />
@@ -1753,9 +1839,12 @@ export default function SwapPage() {
               </div>
             </div>
 
-            <div className="nl-card p-4 sm:p-5">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs text-gray-500 font-medium">You receive</span>
+            {/* You receive — its own glass card; the rate + details drawer
+                lives inside it under a hairline so the block stays unified. */}
+            <div className="nl-glass rounded-2xl overflow-hidden" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.28), 0 10px 34px rgba(0,0,0,.4)' }}>
+              <div className="p-4 sm:p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs text-gray-500 font-medium">You receive</span>
                 <span className="text-xs text-gray-600">Balance: {connectedAddress ? (walletBalance[toToken]?.toFixed(4) || '0.00') : '--'}</span>
               </div>
               <div className="flex items-center gap-3">
@@ -1817,7 +1906,7 @@ export default function SwapPage() {
                           {priceImpact}%
                         </span>
                       ) : (
-                        <span className="text-gray-500">—</span>
+                        <span className="text-gray-500">-</span>
                       )}
                     </div>
                     <div className="flex justify-between text-xs">
@@ -1845,6 +1934,7 @@ export default function SwapPage() {
                 )}
               </div>
             )}
+            </div>
           </div>
 
           {/* Quote failure banner — an unsupported pair or aggregator outage
@@ -1872,50 +1962,24 @@ export default function SwapPage() {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setGaslessEnabled(!gaslessEnabled)}
-                className={`relative w-10 h-5 rounded-full transition-colors ${gaslessEnabled ? 'bg-[#0066FF]' : 'bg-gray-600'}`}
-              >
-                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${gaslessEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
-              </button>
+              <Toggle
+                checked={gaslessEnabled}
+                onChange={setGaslessEnabled}
+                label="Toggle gasless mode"
+                size="md"
+                className="shrink-0"
+              />
             </div>
           )}
 
           <div className="mt-3">
-            {/* Transaction Status Overlay */}
-            {txStatus !== 'idle' && (
-              <div className={`mb-3 rounded-2xl p-4 flex flex-col gap-2 border ${
-                txStatus === 'pending' ? 'bg-[#0066FF]/10 border-[#0066FF]/30' :
-                txStatus === 'confirmed' ? 'bg-green-500/10 border-green-500/30' :
-                'bg-red-500/10 border-red-500/30'
-              }`}>
-                <div className="flex items-center gap-2">
-                  {txStatus === 'pending' && <Loader2 className="w-4 h-4 animate-spin text-[#0066FF]" />}
-                  {txStatus === 'confirmed' && <CheckCircle className="w-4 h-4 text-green-400" />}
-                  {txStatus === 'failed' && <AlertTriangle className="w-4 h-4 text-red-400" />}
-                  <span className={`text-xs font-bold ${
-                    txStatus === 'pending' ? 'text-[#0066FF]' :
-                    txStatus === 'confirmed' ? 'text-green-400' : 'text-red-400'
-                  }`}>
-                    {txStatus === 'pending' ? 'Transaction Pending...' :
-                     txStatus === 'confirmed' ? 'Swap Confirmed!' : 'Transaction Failed'}
-                  </span>
-                </div>
-                {txHash && (
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] text-gray-500 font-mono truncate flex-1">
-                      {txHash.slice(0, 20)}...{txHash.slice(-8)}
-                    </span>
-                    <a
-                      href={chain === 'solana' ? `https://solscan.io/tx/${txHash}` : chain === 'base' ? `https://basescan.org/tx/${txHash}` : `https://etherscan.io/tx/${txHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-[10px] text-[#0066FF] hover:underline shrink-0"
-                    >
-                      View <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </div>
-                )}
+            {/* In-flight status. Settled + failed states are owned by the
+                full-screen TransactionResultCard (driven by resultData), so
+                the inline strip only covers the pending/broadcasting window. */}
+            {txStatus === 'pending' && (
+              <div className="mb-3 rounded-2xl p-4 flex items-center gap-2 border bg-[#0066FF]/10 border-[#0066FF]/30">
+                <Loader2 className="w-4 h-4 animate-spin text-[#0066FF]" />
+                <span className="text-xs font-bold text-[#0066FF]">Broadcasting transaction...</span>
               </div>
             )}
 
@@ -2009,23 +2073,8 @@ export default function SwapPage() {
               </div>
             )}
 
-            {swapSuccess && (
-              <div className="mt-2 flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-xl px-3 py-2.5">
-                <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
-                <span className="text-xs text-green-400">
-                  Swap executed successfully
-                  {txHash && (
-                    <a
-                      href={chain === 'solana' ? `https://solscan.io/tx/${txHash}` : `https://etherscan.io/tx/${txHash}`}
-                      target="_blank" rel="noopener noreferrer"
-                      className="ms-2 underline inline-flex items-center gap-1"
-                    >
-                      View tx <ExternalLink className="w-3 h-3" />
-                    </a>
-                  )}
-                </span>
-              </div>
-            )}
+            {/* Success + failure are surfaced by the TransactionResultCard
+                (shareable receipt) instead of an inline strip. */}
 
             {/* Advanced orders (Limit / DCA / Stop) removed from the swap
                 page per owner direction 2026-07-03 — the backend stacks
@@ -2080,7 +2129,25 @@ export default function SwapPage() {
       <TokenSelectModal
         isOpen={showTokenSelect !== null}
         onClose={() => setShowTokenSelect(null)}
-        onSelect={(symbol) => {
+        onSelect={(symbol, tokenChain) => {
+          // Cross-network pick: a swap is single-chain, so switch the whole
+          // swap to the token's network and reset the opposite side to that
+          // chain's native asset, then let the fresh chain quote from a clean
+          // amount. This is what lets a user search "naka" from any starting
+          // network and land on a ready-to-trade pair on its home chain.
+          if (tokenChain && tokenChain !== chain) {
+            const dest = CHAINS.find(c => c.id === tokenChain);
+            const native = dest?.symbol || 'ETH';
+            const other = native === symbol ? 'USDC' : native;
+            setChain(tokenChain);
+            if (showTokenSelect === 'from') { setFromToken(symbol); setToToken(other); }
+            else { setToToken(symbol); setFromToken(other); }
+            setFromAmount('');
+            setToAmount('');
+            setQuoteData(null);
+            setQuoteError('');
+            return;
+          }
           if (showTokenSelect === 'from') {
             if (symbol === toToken) setToToken(fromToken);
             setFromToken(symbol);
@@ -2094,6 +2161,14 @@ export default function SwapPage() {
         exclude={showTokenSelect === 'from' ? toToken : fromToken}
         chain={chain}
       />
+
+      {resultData && (
+        <TransactionResultCard
+          data={resultData}
+          onClose={() => { setResultData(null); setTxStatus('idle'); setSwapError(''); setTxHash(''); }}
+          onRetry={() => { setResultData(null); setTxStatus('idle'); setShowReview(true); }}
+        />
+      )}
 
       {showReview && (() => {
         // Honest impact state — 0x-based EVM quotes only carry a price-impact
@@ -2200,7 +2275,7 @@ export default function SwapPage() {
                   {hasImpact ? (
                     <span className={`font-semibold ${piColor}`}>{priceImpact}% <span className="text-[10px] font-normal opacity-80">({piLabel})</span></span>
                   ) : (
-                    <span className="text-gray-400" title="No confident market price available to compute impact">—</span>
+                    <span className="text-gray-400" title="No confident market price available to compute impact">-</span>
                   )}
                 </div>
                 <div className="flex justify-between">

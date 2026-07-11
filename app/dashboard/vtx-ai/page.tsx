@@ -1143,8 +1143,8 @@ function VtxAiPageInner() {
                     <p className="text-xs text-gray-300">Web Search</p>
                     <p className="text-[9px] text-gray-500">Include live web results in context</p>
                   </div>
-                  <button onClick={() => updateSettings({ webSearch: !settings.webSearch })} className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.webSearch ? 'bg-[#0066FF]' : 'bg-white/10'}`}>
-                    <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.webSearch ? 'right-[3px]' : 'left-[3px]'}`} />
+                  <button onClick={() => updateSettings({ webSearch: !settings.webSearch })} className={`w-8 sm:w-9 h-5 rounded-md transition-colors relative flex-shrink-0 ${settings.webSearch ? 'bg-[#0066FF]' : 'bg-white/10'}`}>
+                    <div className={`w-3.5 h-3.5 bg-white rounded-[3px] absolute top-[3px] transition-all ${settings.webSearch ? 'right-[3px]' : 'left-[3px]'}`} />
                   </button>
                 </div>
 
@@ -1153,8 +1153,8 @@ function VtxAiPageInner() {
                     <p className="text-xs text-gray-300">Auto-show Charts</p>
                     <p className="text-[9px] text-gray-500">Render inline charts when AI signals them</p>
                   </div>
-                  <button onClick={() => updateSettings({ autoCharts: !settings.autoCharts })} className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.autoCharts ? 'bg-[#0066FF]' : 'bg-white/10'}`}>
-                    <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.autoCharts ? 'right-[3px]' : 'left-[3px]'}`} />
+                  <button onClick={() => updateSettings({ autoCharts: !settings.autoCharts })} className={`w-8 sm:w-9 h-5 rounded-md transition-colors relative flex-shrink-0 ${settings.autoCharts ? 'bg-[#0066FF]' : 'bg-white/10'}`}>
+                    <div className={`w-3.5 h-3.5 bg-white rounded-[3px] absolute top-[3px] transition-all ${settings.autoCharts ? 'right-[3px]' : 'left-[3px]'}`} />
                   </button>
                 </div>
 
@@ -1163,8 +1163,8 @@ function VtxAiPageInner() {
                     <p className="text-xs text-gray-300">Focus Mode</p>
                     <p className="text-[9px] text-gray-500">Expand chat view while messaging</p>
                   </div>
-                  <button onClick={() => updateSettings({ focusMode: !settings.focusMode })} className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.focusMode ? 'bg-[#0066FF]' : 'bg-white/10'}`}>
-                    <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.focusMode ? 'right-[3px]' : 'left-[3px]'}`} />
+                  <button onClick={() => updateSettings({ focusMode: !settings.focusMode })} className={`w-8 sm:w-9 h-5 rounded-md transition-colors relative flex-shrink-0 ${settings.focusMode ? 'bg-[#0066FF]' : 'bg-white/10'}`}>
+                    <div className={`w-3.5 h-3.5 bg-white rounded-[3px] absolute top-[3px] transition-all ${settings.focusMode ? 'right-[3px]' : 'left-[3px]'}`} />
                   </button>
                 </div>
 
@@ -1173,8 +1173,8 @@ function VtxAiPageInner() {
                     <p className="text-xs text-gray-300">Message Sound</p>
                     <p className="text-[9px] text-gray-500">Chime when VTX replies</p>
                   </div>
-                  <button onClick={() => updateSettings({ messageSound: !settings.messageSound })} className={`w-9 h-5 rounded-full transition-colors relative flex-shrink-0 ${settings.messageSound ? 'bg-[#0066FF]' : 'bg-white/10'}`}>
-                    <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-[3px] transition-all ${settings.messageSound ? 'right-[3px]' : 'left-[3px]'}`} />
+                  <button onClick={() => updateSettings({ messageSound: !settings.messageSound })} className={`w-8 sm:w-9 h-5 rounded-md transition-colors relative flex-shrink-0 ${settings.messageSound ? 'bg-[#0066FF]' : 'bg-white/10'}`}>
+                    <div className={`w-3.5 h-3.5 bg-white rounded-[3px] absolute top-[3px] transition-all ${settings.messageSound ? 'right-[3px]' : 'left-[3px]'}`} />
                   </button>
                 </div>
               </div>
@@ -1214,7 +1214,7 @@ function VtxAiPageInner() {
 
             <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide mb-4">
               {QUICK_ACTIONS.map((action) => (
-                <button key={action.label} onClick={() => handleSend(action.query)} className="px-3 py-2 nl-glass rounded-full text-[11px] text-gray-400 hover:text-white hover:border-[#0066FF]/30 hover:bg-[#0066FF]/[0.05] transition-all whitespace-nowrap flex-shrink-0">
+                <button key={action.label} onClick={() => handleSend(action.query)} className="px-3 py-2 nl-glass rounded-lg text-[11px] text-gray-400 hover:text-white hover:border-[#0066FF]/30 hover:bg-[#0066FF]/[0.05] transition-all whitespace-nowrap flex-shrink-0">
                   {action.label}
                 </button>
               ))}

@@ -17,6 +17,7 @@
 import { useState, useCallback } from 'react';
 import { SwapQuote } from '@/lib/market/types';
 import { useSwapBroadcast, detectWalletKind } from '@/lib/hooks/useSwapBroadcast';
+import { PLATFORM_FEE_BPS } from '@/lib/trading/swapLogging';
 
 interface SwapExecutionParams {
   chain: string;
@@ -83,8 +84,10 @@ export function useSwapExecution() {
           amountOut: typeof data?.toAmount === 'number' ? String(data.toAmount) : '0',
           priceImpact: typeof data?.priceImpactPct === 'string' ? parseFloat(data.priceImpactPct) || 0 : 0,
           route: data?.provider === 'jupiter' ? 'Jupiter' : '0x',
-          // Platform fee is a flat 0.4% (PLATFORM_FEE_BPS=40) on the trade USD.
-          feeUSD: amountUsd * 0.004,
+          // Platform fee on the trade USD, from the single source of truth
+          // (NEXT_PUBLIC_STEINZ_FEE_BPS via PLATFORM_FEE_BPS) so the displayed
+          // fee always matches what 0x actually collects.
+          feeUSD: amountUsd * (PLATFORM_FEE_BPS / 10000),
         });
       } else {
         const errMsg =
@@ -130,13 +133,33 @@ export function useSwapExecution() {
       const walletKind = detectWalletKind(params.chain, null);
       const hash = await broadcast({ quote: data, chain: params.chain, walletKind, address: params.userAddress });
       setTxHash(hash);
+
+      // A settled on-chain swap must always write a history row + fee record,
+      // exactly like the main swap page. Signing without recording would leave
+      // the fee uncollected in our ledger and the trade invisible in Activity.
+      // Fire-and-forget: never block the success UI on logging.
+      void fetch('/api/swap/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: params.userAddress,
+          txHash: hash,
+          chain: params.chain,
+          fromToken: params.inputToken,
+          toToken: params.outputToken,
+          fromAmount: parseFloat(params.inputAmount) || 0,
+          toAmount: quote ? parseFloat(quote.amountOut) || 0 : 0,
+          status: 'confirmed',
+          source: 'order-form',
+        }),
+      }).catch(() => { /* logging is best-effort */ });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Swap execution failed';
       if (!/unlock cancelled/i.test(msg)) setError(msg);
     } finally {
       setExecuting(false);
     }
-  }, [broadcast]);
+  }, [broadcast, quote]);
 
   return {
     quote, loading, executing, error, txHash, mevRisk,

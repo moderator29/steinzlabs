@@ -137,7 +137,7 @@ export default function ProjectDiscoveryPage() {
             <button
               key={c.id}
               onClick={() => setActiveChain(c.id)}
-              className={`nl-button px-3 py-1.5 rounded-lg text-[10px] font-semibold whitespace-nowrap transition-colors ${
+              className={`nl-button shrink-0 px-3 py-1.5 rounded-lg text-[10px] font-semibold whitespace-nowrap transition-colors ${
                 activeChain === c.id
                   ? ''
                   : 'nl-button--ghost text-gray-400 hover:text-white'
@@ -164,7 +164,7 @@ export default function ProjectDiscoveryPage() {
             <button
               key={f}
               onClick={() => setActiveFilter(f)}
-              className={`nl-button px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors ${
+              className={`nl-button shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-colors ${
                 activeFilter === f
                   ? ''
                   : 'nl-button--ghost text-gray-400 hover:text-white'

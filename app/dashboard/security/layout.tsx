@@ -77,7 +77,7 @@ export default function SecurityLayout({ children }: { children: React.ReactNode
                 aria-controls={`security-panel-${tab.slug}`}
                 id={`security-tab-${tab.slug}`}
                 tabIndex={isActive ? 0 : -1}
-                className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-semibold border transition-colors ${
+                className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-semibold border transition-colors ${
                   isActive
                     ? 'bg-[#0066FF]/15 border-[#0066FF]/40 text-white'
                     : 'nl-button--ghost text-gray-400 hover:text-white'

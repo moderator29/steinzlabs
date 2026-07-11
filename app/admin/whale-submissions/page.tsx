@@ -117,7 +117,7 @@ export default function WhaleSubmissionsAdminPage() {
           <button
             key={s}
             onClick={() => setStatus(s)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
               status === s
                 ? 'bg-[#0066FF] border-[#0066FF] text-white'
                 : 'bg-transparent border-white/10 text-slate-400 hover:border-white/30 hover:text-white'

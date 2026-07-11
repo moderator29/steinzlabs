@@ -443,7 +443,7 @@ const SNIPER_ICON: Record<SniperData['action'], string> = {
 export function sniperMessage(d: SniperData, style: TelegramStyle = 'normal'): TelegramRender {
   const icon = SNIPER_ICON[d.action] ?? '🎯';
   const verb = d.action === 'detected' ? 'target detected' : d.action;
-  const title = `$${d.tokenSymbol} — ${verb}`;
+  const title = `$${d.tokenSymbol}: ${verb}`;
 
   if (style === 'normal') {
     const bits = [d.amountUsd ? fmtUsd(d.amountUsd) : null, d.price ? `@ ${fmtUsd(d.price)}` : null]
@@ -499,7 +499,7 @@ export function newsMessage(
   style: TelegramStyle = 'normal',
   opts: { heading?: string; limit?: number } = {},
 ): TelegramRender {
-  const heading = opts.heading || 'Naka Labs — Crypto News';
+  const heading = opts.heading || 'Naka Labs: Crypto News';
   const list = headlines.slice(0, opts.limit ?? (style === 'advanced' ? 8 : 6));
 
   const rows = list.map((h, idx) => {
@@ -555,7 +555,7 @@ function announcementBody(d: AnnouncementData): string {
   // Preserve author line breaks; escape each line.
   lines.push(d.body.split('\n').map((ln) => escapeHtml(ln)).join('\n'));
   lines.push('');
-  lines.push(i(d.footer || 'Naka Labs — the intelligence layer for on-chain alpha.'));
+  lines.push(i(d.footer || 'Naka Labs, the intelligence layer for on-chain alpha.'));
   return lines.join('\n');
 }
 

@@ -18,7 +18,7 @@ VTX Agent: AI crypto assistant with real-time prices, market analysis, wallet an
 Whale Tracker: Monitor large wallet movements. Follow whales, get notifications.
 Bubble Map: Visualize token holder distribution.
 Market Trading: Real-time charts via TradingView, buy/sell via 0x Protocol and Jupiter.
-Swap: Multi-chain token swaps. 0.4 percent platform fee.
+Swap: Multi-chain token swaps. 0.5 percent platform fee.
 Sniper Bot: Automated new token detection and trading. Max plan only.
 Security Tools: Contract Analyzer, Security Center, Domain Shield, Signature Insight, Approval Manager, Risk Scanner.
 

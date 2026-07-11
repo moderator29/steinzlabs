@@ -37,7 +37,7 @@ export function AlertModal({ tokenId, symbol, currentPrice, onAdd, onClose }: Al
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Bell size={16} className="text-[#0066FF]" aria-hidden />
-            <span id="alert-modal-title" className="text-white font-semibold">Set Price Alert — {symbol}</span>
+            <span id="alert-modal-title" className="text-white font-semibold">Set Price Alert: {symbol}</span>
           </div>
           <button onClick={onClose} aria-label="Close price alert modal" className="text-gray-500 hover:text-white transition-colors"><X size={18} /></button>
         </div>
@@ -62,7 +62,7 @@ export function AlertModal({ tokenId, symbol, currentPrice, onAdd, onClose }: Al
           placeholder="Enter target price..."
           className="w-full bg-[#141824] border border-[#1E2433] rounded-lg px-3 py-2.5 text-white font-mono text-sm mb-3 focus:outline-none focus:border-[#0066FF]"
         />
-        {price && <p className="text-gray-500 text-xs mb-4">Alert when {symbol} goes {direction} ${parseFloat(price || '0').toFixed(4)} — delivered to your in-app notifications.</p>}
+        {price && <p className="text-gray-500 text-xs mb-4">Alert when {symbol} goes {direction} ${parseFloat(price || '0').toFixed(4)}. Delivered to your in-app notifications.</p>}
 
         <div className="flex gap-2">
           <button onClick={onClose} className="nl-button--ghost flex-1 py-2.5 rounded-lg text-sm">Cancel</button>

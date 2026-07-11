@@ -35,6 +35,11 @@ const TOKEN_ADDRESSES: Record<string, Record<string, string>> = {
     AAVE: '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9',
     PEPE: '0x6982508145454Ce325dDbE47a25d4ec3d2311933',
     SHIB: '0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE',
+    // Naka ($NAKA) on Ethereum. First-class so ETH<->NAKA quotes resolve by
+    // symbol; the same contract is what indexers (DexScreener/DEXTools) return
+    // when searching "naka", so the logo and price pull the same way any other
+    // listed coin does.
+    NAKA: '0x6967b9a8c0b14849CFE8f9E5732B401433fD2898',
   },
   base: {
     ETH: NATIVE_TOKEN_SENTINEL,

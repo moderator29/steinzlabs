@@ -1271,8 +1271,8 @@ export default function STZRunnerPage() {
                   <span className="text-sm">Music & SFX</span>
                 </div>
                 <button onClick={toggleSound}
-                  className={`w-10 h-5 rounded-full transition-all ${soundEnabled ? 'bg-[#0066FF]' : 'bg-gray-600'}`}>
-                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${soundEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                  className={`w-8 sm:w-10 h-5 rounded-md transition-all ${soundEnabled ? 'bg-[#0066FF]' : 'bg-gray-600'}`}>
+                  <div className={`w-4 h-4 rounded-[4px] bg-white transition-transform ${soundEnabled ? 'translate-x-[14px] sm:translate-x-5' : 'translate-x-0.5'}`} />
                 </button>
               </div>
               <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">

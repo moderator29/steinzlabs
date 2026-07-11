@@ -5,7 +5,7 @@ import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 import { WIRE_TOPIC_SET, WIRE_TOPIC_VALUES, WIRE_MAX_TAGS } from '@/lib/wire/topics';
 
 /**
- * The Wire — optional AI draft helper.
+ * The Wire - optional AI draft helper.
  *
  * POST /api/wire/ai-draft
  *   body: { draft?: string }
@@ -15,7 +15,7 @@ import { WIRE_TOPIC_SET, WIRE_TOPIC_VALUES, WIRE_MAX_TAGS } from '@/lib/wire/top
  * has typed so far (a rough draft, a pasted contract address / ticker, or just
  * a topic) and returns ONE clean, short, human-sounding wire the user can edit
  * before posting, plus up to a few suggested catalogue topics (which the user
- * still confirms). The generated text is only ever returned to the client — it
+ * still confirms). The generated text is only ever returned to the client - it
  * is never persisted here.
  *
  * If ANTHROPIC_API_KEY is absent or the model call fails, we answer 503 so the
@@ -35,7 +35,7 @@ Rules:
 - Return ONE post, at most ~280 characters. Never multiple options.
 - Sound like a real human: natural, plain-spoken, specific. NOT marketing copy, NOT hype, no emojis-spam, no "🚀", no "game-changer", no exclamation stacking.
 - If the user already wrote a draft, refine and tighten it while keeping THEIR voice and intent. Do not invent facts, prices, or claims they did not make.
-- If they only pasted a topic, ticker, or contract address, write a clean, neutral, honest take or observation they could plausibly post — never fabricated data or fake numbers.
+- If they only pasted a topic, ticker, or contract address, write a clean, neutral, honest take or observation they could plausibly post - never fabricated data or fake numbers.
 - You may use at most one or two #hashtags inline only if they read naturally.
 - Do not add hashtags just to fill space.
 
@@ -43,6 +43,27 @@ Also suggest 0-3 topics from this exact list (use the lowercase value verbatim, 
 
 Respond with STRICT JSON only, no prose, in this shape:
 {"text": "<the post>", "tags": ["<topic-value>", ...]}`;
+
+// Distinct directions the empty-draft assistant rotates through so it never
+// defaults to one go-to idea (the owner saw it always reach for "Solana
+// validators"). One is picked per request from the caller id plus a clock tick.
+const WIRE_ANGLES = [
+  'a whale or smart-money move worth noting',
+  'a market-structure or liquidity observation',
+  'an AI and crypto crossover thought',
+  'a memecoin or narrative observation',
+  'a prediction or odds angle on where price goes next',
+  'an on-chain data nugget or pattern',
+  'a contrarian macro take',
+  'a note on market psychology or sentiment',
+  'an infrastructure or scaling angle',
+  'a stablecoin or liquidity-plumbing thought',
+];
+function hashString(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return h;
+}
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser(req);
@@ -59,9 +80,12 @@ export async function POST(req: NextRequest) {
   }
 
   const draft = (parsed.data.draft ?? '').trim();
+  // Rotate the empty-draft angle each call so repeated taps do not keep
+  // returning the same idea. Derived from the caller id plus a clock tick.
+  const angle = WIRE_ANGLES[Math.abs(hashString(user.id) + Date.now()) % WIRE_ANGLES.length];
   const userPrompt = draft
-    ? `The user's current draft:\n"""${draft}"""\n\nRefine it into one clean, natural wire.`
-    : `The user hasn't written anything yet. Ask nothing — just propose one clean, natural, non-hypey wire they could post about crypto or tech right now that they can edit.`;
+    ? `The user's current draft:\n"""${draft}"""\n\nRefine it into one clean, natural wire in their voice.`
+    : `The user has not written anything yet. Propose one clean, natural, non-hypey wire they could post right now, leaning into this angle: ${angle}. Make it feel fresh and specific, not a generic line, and keep it honest with no invented numbers.`;
 
   try {
     const client = new Anthropic({ apiKey, timeout: 30_000 });

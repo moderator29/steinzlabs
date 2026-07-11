@@ -3,9 +3,33 @@ import { TradeQuote, TradeExecution } from './types';
 import { shadowGuardian } from '../security/shadowGuardian';
 import { savePosition, getUserByWallet } from '../database/supabase';
 import { calculateFee, recordRevenue } from '../revenue/feeSystem';
-import { PLATFORM_FEE_DECIMAL } from './swapLogging';
+import { PLATFORM_FEE_BPS } from './swapLogging';
+
+// 0x native-asset sentinel. When the buy side is native (e.g. buying ETH),
+// 0x v2 rejects it as the fee token, so the fee is taken in the sell token.
+const ZX_NATIVE = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 import { getTokenMetadata } from '../services/alchemy';
 import { getTokenPairs } from '../services/dexscreener';
+import { getEvmTokenDecimals } from '../sniper/priceFeed';
+
+// Resolve a token's REAL decimals (native = 18; on-chain read with an 18
+// fallback). The old code assumed 18 everywhere, which mis-scaled any
+// non-18-decimal token (USDC = 6, WBTC = 8) by orders of magnitude in the
+// amount sent to 0x, so copy-trading / DCA / limit orders of those tokens
+// quoted and executed the wrong size.
+async function resolveDec(chain: string, token: string): Promise<number> {
+  if (!token || token.toLowerCase() === ZX_NATIVE) return 18;
+  try { return await getEvmTokenDecimals(chain, token); } catch { return 18; }
+}
+
+// Human amount -> integer base-units string, precise at any decimals. String
+// math avoids the float overflow of amount * 10**18 (imprecise above ~9).
+function toBaseUnits(amount: number, decimals: number): string {
+  if (!Number.isFinite(amount) || amount <= 0) return '0';
+  const [whole, frac = ''] = amount.toFixed(decimals).split('.');
+  const digits = (whole + frac.padEnd(decimals, '0').slice(0, decimals)).replace(/^0+(?=\d)/, '');
+  return digits || '0';
+}
 
 // Best-effort token symbol for the position/revenue records. Never blocks or
 // fails the trade (this runs after execution succeeds); resolves the real
@@ -32,7 +56,8 @@ async function getZeroXQuote(
   fromToken: string,
   toToken: string,
   amountWei: string,
-  slippage: number
+  slippage: number,
+  fromDecimals: number
 ): Promise<TradeQuote> {
   const CHAIN_IDS: Record<string, number> = {
     ethereum: 1, base: 8453, arbitrum: 42161, polygon: 137,
@@ -43,7 +68,7 @@ async function getZeroXQuote(
 
   const apiKey = process.env.NEXT_PUBLIC_ZX_API_KEY || process.env.ZX_API_KEY || '';
   const feeRecipient = process.env.NEXT_PUBLIC_FEE_RECIPIENT_EVM || '';
-  const feePct = process.env.NEXT_PUBLIC_STEINZ_FEE_PERCENT || PLATFORM_FEE_DECIMAL;
+  const feeBps = String(process.env.NEXT_PUBLIC_STEINZ_FEE_BPS || PLATFORM_FEE_BPS);
 
   const params = new URLSearchParams({
     chainId: String(chainId),
@@ -52,8 +77,11 @@ async function getZeroXQuote(
     sellAmount: amountWei,
   });
   if (feeRecipient) {
-    params.set('feeRecipient', feeRecipient);
-    params.set('buyTokenPercentageFee', feePct);
+    // 0x v2 monetization params (v1 feeRecipient/buyTokenPercentageFee are
+    // silently ignored by the v2 endpoints, i.e. no fee was collected).
+    params.set('swapFeeRecipient', feeRecipient);
+    params.set('swapFeeBps', feeBps);
+    params.set('swapFeeToken', toToken.toLowerCase() === ZX_NATIVE ? fromToken : toToken);
   }
 
   const res = await fetch(`https://api.0x.org/swap/allowance-holder/price?${params}`, {
@@ -66,13 +94,14 @@ async function getZeroXQuote(
   }
 
   const data = await res.json();
-  const toAmountEth = (parseInt(data.buyAmount || '0') / 1e18).toString();
+  const buyDecimals = await resolveDec(chain, toToken);
+  const toAmountHuman = (parseInt(data.buyAmount || '0') / 10 ** buyDecimals).toString();
 
   return {
     fromToken,
     toToken,
-    fromAmount: (parseInt(amountWei) / 1e18).toString(),
-    toAmount: toAmountEth,
+    fromAmount: (parseInt(amountWei) / 10 ** fromDecimals).toString(),
+    toAmount: toAmountHuman,
     // USD legs aren't in the 0x quote and we don't price them here — empty, not a
     // fabricated "0". priceImpact uses 0x's REAL estimatedPriceImpact (percent);
     // 0 only if 0x genuinely omits it.
@@ -99,8 +128,9 @@ export async function getOptimalQuote(params: {
   if (chain === 'solana') {
     return jupiterAPI.getQuote(fromToken, toToken, amount, slippage * 100);
   } else {
-    const amountWei = Math.floor(amount * 1e18).toString();
-    return getZeroXQuote(chain, fromToken, toToken, amountWei, slippage);
+    const fromDecimals = await resolveDec(chain, fromToken);
+    const amountWei = toBaseUnits(amount, fromDecimals);
+    return getZeroXQuote(chain, fromToken, toToken, amountWei, slippage, fromDecimals);
   }
 }
 
@@ -154,8 +184,9 @@ export async function executeTrade(params: {
 
         const apiKey = process.env.NEXT_PUBLIC_ZX_API_KEY || process.env.ZX_API_KEY || '';
         const feeRecipient = process.env.NEXT_PUBLIC_FEE_RECIPIENT_EVM || '';
-        const feePct = process.env.NEXT_PUBLIC_STEINZ_FEE_PERCENT || PLATFORM_FEE_DECIMAL;
-        const amountWei = Math.floor(parseFloat(quote.fromAmount) * 1e18).toString();
+        const feeBps = String(process.env.NEXT_PUBLIC_STEINZ_FEE_BPS || PLATFORM_FEE_BPS);
+        const fromDecimals = await resolveDec(chain, quote.fromToken);
+        const amountWei = toBaseUnits(parseFloat(quote.fromAmount), fromDecimals);
 
         const params = new URLSearchParams({
           chainId: String(chainId),
@@ -165,8 +196,10 @@ export async function executeTrade(params: {
           taker: userAddress,
         });
         if (feeRecipient) {
-          params.set('feeRecipient', feeRecipient);
-          params.set('buyTokenPercentageFee', feePct);
+          // 0x v2 monetization params (v1 params are ignored on v2 -> no fee).
+          params.set('swapFeeRecipient', feeRecipient);
+          params.set('swapFeeBps', feeBps);
+          params.set('swapFeeToken', quote.toToken.toLowerCase() === ZX_NATIVE ? quote.fromToken : quote.toToken);
         }
 
         const quoteRes = await fetch(`https://api.0x.org/swap/allowance-holder/quote?${params}`, {

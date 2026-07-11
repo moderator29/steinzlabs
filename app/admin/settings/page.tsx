@@ -138,8 +138,8 @@ export default function AdminSettingsPage() {
                 </div>
               </div>
               <button onClick={() => toggle(flag.key)}
-                className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${flag.enabled ? 'bg-[#0066FF]' : 'bg-[#1E2433]'}`}>
-                <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${flag.enabled ? 'right-1' : 'left-1'}`} />
+                className={`relative w-8 h-5 sm:w-10 sm:h-6 rounded-md transition-colors flex-shrink-0 ${flag.enabled ? 'bg-[#0066FF]' : 'bg-[#1E2433]'}`}>
+                <span className={`absolute top-0.5 sm:top-1 w-4 h-4 bg-white rounded-[4px] shadow transition-all ${flag.enabled ? 'right-0.5 sm:right-1' : 'left-0.5 sm:left-1'}`} />
               </button>
             </div>
           </div>

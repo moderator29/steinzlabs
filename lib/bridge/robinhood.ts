@@ -77,7 +77,7 @@ export interface BridgeDestination {
 }
 
 export const SWAP_DESTINATIONS: BridgeDestination[] = [
-  { chainId: 'base', label: 'Base', note: 'Cheapest gas — recommended for most trades' },
+  { chainId: 'base', label: 'Base', note: 'Cheapest gas, recommended for most trades' },
   { chainId: 'ethereum', label: 'Ethereum', note: 'Deepest liquidity' },
 ];
 
@@ -139,7 +139,7 @@ export function getGuidedBridgeSteps(destinationLabel: string): BridgeStep[] {
     {
       title: 'Open the official bridge',
       detail:
-        'You’ll leave to the canonical Arbitrum bridge portal, pre-selected to Robinhood Chain. Your wallet signs there — funds never leave your control.',
+        'You’ll leave to the canonical Arbitrum bridge portal, pre-selected to Robinhood Chain. Your wallet signs there. Funds never leave your control.',
     },
     {
       title: `Move your ETH to ${destinationLabel}`,
@@ -149,7 +149,7 @@ export function getGuidedBridgeSteps(destinationLabel: string): BridgeStep[] {
     {
       title: 'Come back and swap',
       detail:
-        `Once your ETH lands on ${destinationLabel}, return here and tap “Swap on ${destinationLabel}” — the trade routes through the live DEX aggregator.`,
+        `Once your ETH lands on ${destinationLabel}, return here and tap “Swap on ${destinationLabel}”. The trade routes through the live DEX aggregator.`,
     },
   ];
 }

@@ -551,27 +551,42 @@ async function getWalletsFromWhales(): Promise<{ wallets: SmartWallet[]; recentM
   return { wallets, recentMoves };
 }
 
-// Real convergence straight from the curated smart_money_convergence table —
+// Stablecoins (and wrapped variants) are noise in a smart-money signal: "N top
+// wallets entered USDT" says nothing about conviction and was the bulk of the
+// spammy convergence pings. Excluded by symbol so the signal stays organic.
+const STABLE_SYMBOLS = new Set([
+  'USDT', 'USDC', 'DAI', 'USDE', 'BUSD', 'TUSD', 'FRAX', 'USDD', 'PYUSD', 'GUSD',
+  'LUSD', 'USDP', 'FDUSD', 'CRVUSD', 'MIM', 'USDS', 'SUSD', 'USDG',
+]);
+function isStableSymbol(sym: string | null | undefined): boolean {
+  return !!sym && STABLE_SYMBOLS.has(sym.trim().toUpperCase());
+}
+
+// Real convergence straight from the curated smart_money_convergence table,
 // the same signal the Convergence Radar uses. Replaces the old naive grouping
 // that counted shared token SYMBOLS across derived recentTrades (which was
 // empty for the transfer-only Alchemy wallets).
 async function getConvergenceFromTable(): Promise<ConvergenceSignal[]> {
   try {
     const admin = getSupabaseAdmin();
+    // Over-fetch, then drop stablecoins and take the top 5 real signals.
     const { data } = await admin
       .from('smart_money_convergence')
       .select('token_symbol, token_address, chain, wallet_count, total_value_usd')
       .eq('is_active', true)
       .gte('wallet_count', 2)
       .order('wallet_count', { ascending: false })
-      .limit(5);
-    return (data ?? []).map((c: { token_symbol: string | null; token_address: string; chain: string; wallet_count: number | null; total_value_usd: number | null }) => ({
-      token: c.token_address,
-      symbol: c.token_symbol || `${c.token_address.slice(0, 6)}…`,
-      walletCount: c.wallet_count ?? 0,
-      totalVolume: formatVolume(Number(c.total_value_usd ?? 0)),
-      timeWindow: '24h',
-    }));
+      .limit(25);
+    return (data ?? [])
+      .filter((c: { token_symbol: string | null }) => !isStableSymbol(c.token_symbol))
+      .slice(0, 5)
+      .map((c: { token_symbol: string | null; token_address: string; chain: string; wallet_count: number | null; total_value_usd: number | null }) => ({
+        token: c.token_address,
+        symbol: c.token_symbol || `${c.token_address.slice(0, 6)}…`,
+        walletCount: c.wallet_count ?? 0,
+        totalVolume: formatVolume(Number(c.total_value_usd ?? 0)),
+        timeWindow: '24h',
+      }));
   } catch { return []; }
 }
 

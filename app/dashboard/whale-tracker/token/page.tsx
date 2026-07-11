@@ -112,7 +112,7 @@ export default function TokenLensPage() {
       {!loading && s && (
         <>
           <div className="flex justify-center mb-3">
-            <Link href={`/dashboard/token-xray?token=${encodeURIComponent(result!.query)}`} className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full bg-[#0066FF]/10 border border-[#0066FF]/30 text-[#00C8FF] hover:border-[#0066FF]/50 transition-colors">
+            <Link href={`/dashboard/token-xray?token=${encodeURIComponent(result!.query)}`} className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg bg-[#0066FF]/10 border border-[#0066FF]/30 text-[#00C8FF] hover:border-[#0066FF]/50 transition-colors">
               <ScanSearch className="w-3.5 h-3.5" /> Full Token X-Ray
             </Link>
           </div>

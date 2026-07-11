@@ -1,0 +1,142 @@
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { getSiteUrl } from '@/lib/siteUrl';
+import { computeAuthorSignals } from '@/lib/wire/signal';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
+import type { WirePost } from '@/components/wire/WirePostCard';
+import { PublicWire, OpenInAppCta, WireComments } from './PublicWire';
+
+/**
+ * app/wire/[id] - the PUBLIC, signed-out-safe page for a single wire.
+ *
+ * It renders the wire read-only in the SocialFi style and deep-links visitors
+ * into the app. generateMetadata() produces real OpenGraph + Twitter card meta
+ * so links preview correctly on X / Telegram / iMessage. All data is the real
+ * wire pulled via the service client; nothing here is fabricated.
+ */
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+const AUTHOR = 'author:profiles!wire_posts_author_id_fkey(id,username,display_name,avatar_url,is_verified)';
+const POST_SELECT = `*, ${AUTHOR}, original:wire_posts!wire_posts_repost_of_fkey(*, ${AUTHOR})`;
+
+function shapePrediction(raw: any): WirePost['prediction'] {
+  if (!raw) return null;
+  return {
+    id: raw.id,
+    symbol: raw.symbol,
+    direction: raw.direction,
+    target: Number(raw.target),
+    priceAtCreate: raw.price_at_create != null ? Number(raw.price_at_create) : null,
+    resolvesAt: raw.resolves_at,
+    status: raw.status,
+    agreeCount: raw.agree_count ?? 0,
+    agreed: false,
+  };
+}
+
+/** Fetch and shape a single wire (with author signals + prediction) or null. */
+async function getWire(id: string): Promise<WirePost | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const sb = getSupabaseAdmin();
+  const { data, error } = await sb
+    .from('wire_posts')
+    .select(POST_SELECT)
+    .eq('id', id)
+    .is('deleted_at', null)
+    .maybeSingle();
+  if (error || !data) return null;
+
+  const post = data as any;
+  const allIds = [post.id, post.original?.id].filter(Boolean);
+  const authorIds = [post.author_id, post.original?.author_id].filter(Boolean);
+
+  const [signals, { data: preds }] = await Promise.all([
+    computeAuthorSignals(sb, authorIds),
+    sb.from('wire_predictions').select('*').in('post_id', allIds),
+  ]);
+  const predByPost = new Map<string, any>();
+  for (const pr of preds ?? []) predByPost.set(pr.post_id, pr);
+
+  post.authorSignal = signals.has(post.author_id) ? signals.get(post.author_id) : null;
+  post.prediction = shapePrediction(predByPost.get(post.id));
+  if (post.original) {
+    post.original.authorSignal = signals.has(post.original.author_id) ? signals.get(post.original.author_id) : null;
+    post.original.prediction = shapePrediction(predByPost.get(post.original.id));
+  }
+  return post as WirePost;
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const post = await getWire(id);
+  const site = getSiteUrl();
+
+  if (!post) {
+    return {
+      title: 'Wire not found · Naka Labs',
+      description: 'This wire may have been removed or the link is invalid.',
+    };
+  }
+
+  const shown = post.repost_of && post.original && !post.original.deleted_at ? post.original : post;
+  const author = shown.author?.display_name || shown.author?.username || 'Someone';
+  const snippet = (shown.body || '').replace(/\s+/g, ' ').trim();
+  const title = `${author} on The Wire`;
+  const description = snippet ? snippet.slice(0, 180) : `${author} posted on The Wire, the SocialFi feed on Naka Labs.`;
+  const url = `${site}/wire/${post.id}`;
+
+  const firstMedia =
+    (Array.isArray(shown.media_urls) && shown.media_urls[0]) || shown.media_url || `${site}/steinz-logo-64.png`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: 'article',
+      title,
+      description,
+      url,
+      siteName: 'Naka Labs',
+      images: [{ url: firstMedia }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [firstMedia],
+    },
+  };
+}
+
+export default async function PublicWirePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const post = await getWire(id);
+  if (!post) notFound();
+
+  return (
+    <AuroraBackground fullHeight>
+      <div className="min-h-screen px-4 py-8 sm:py-12">
+        <div className="mx-auto w-full max-w-xl">
+          <Link href="/dashboard?subtab=wire" className="inline-flex items-center gap-2 mb-5">
+            <img src="/steinz-logo-64.png" alt="" className="w-7 h-7" />
+            <span className="text-white font-semibold">The Wire</span>
+            <span className="text-white/40 text-sm">· Naka Labs</span>
+          </Link>
+
+          <PublicWire post={post} />
+          <WireComments postId={post.id} />
+          <OpenInAppCta />
+
+          <p className="text-center text-xs text-white/40 mt-4">
+            Join The Wire, the SocialFi feed on Naka Labs. Real prices, real calls, real signal.
+          </p>
+        </div>
+      </div>
+    </AuroraBackground>
+  );
+}

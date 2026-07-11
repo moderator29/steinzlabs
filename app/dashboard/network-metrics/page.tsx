@@ -68,7 +68,7 @@ export default function NetworkMetricsPage() {
       <div className="p-4 space-y-4">
         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
           {chains.map((chain) => (
-            <button key={chain} onClick={() => setSelectedChain(chain)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${selectedChain === chain ? 'nl-button' : 'nl-button--ghost'}`}>
+            <button key={chain} onClick={() => setSelectedChain(chain)} className={`shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap ${selectedChain === chain ? 'nl-button' : 'nl-button--ghost'}`}>
               {chain}
             </button>
           ))}

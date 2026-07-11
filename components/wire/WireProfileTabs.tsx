@@ -1,20 +1,22 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, Gift as GiftIcon } from 'lucide-react';
+import { Loader2, Gift as GiftIcon, MessageSquareText, Image as ImageIcon, Repeat, StickyNote, type LucideIcon } from 'lucide-react';
 import { VerifiedGoldBadge } from '@/components/ui/VerifiedGoldBadge';
 import WireTab from './WireTab';
 import type { WirePost, WireAuthor } from './WirePostCard';
 
 /**
- * WireProfileTabs — self-contained 3 sub-tab strip for a user's profile:
- *   Posts    → that user's wire timeline   (WireTab author=userId)
- *   Reposts  → that user's reposts          (WireTab reposts=userId)
- *   Gifts    → gifts RECEIVED by the user    (read-only list of wire_gifts)
+ * WireProfileTabs - self-contained SocialFi sub-tab strip for a user's profile:
+ *   Posts    → that user's wire timeline    (WireTab author=userId)
+ *   Replies  → that user's replies           (WireTab repliesBy=userId)
+ *   Media    → that user's wires with media  (WireTab mediaAuthor=userId)
+ *   Reposts  → that user's relays            (WireTab reposts=userId)
+ *   Gifts    → gifts RECEIVED by the user     (read-only list of wire_gifts)
  *
- * Slot this into ProfileTab without rewiring its existing structure — it owns
- * its own tab state and data fetching. The Gift button inside the Posts/Reposts
- * feeds bubbles up via the optional `onGift` prop.
+ * Slot this into ProfileTab without rewiring its existing structure - it owns
+ * its own tab state and data fetching. The Gift button inside the feeds bubbles
+ * up via the optional `onGift` prop.
  */
 
 export interface WireProfileTabsProps {
@@ -23,7 +25,7 @@ export interface WireProfileTabsProps {
   className?: string;
 }
 
-type SubTab = 'posts' | 'reposts' | 'gifts';
+type SubTab = 'posts' | 'replies' | 'media' | 'reposts' | 'gifts';
 
 interface WireGift {
   id: string;
@@ -154,31 +156,45 @@ function GiftsList({ userId }: { userId: string }) {
 export default function WireProfileTabs({ userId, onGift, className }: WireProfileTabsProps) {
   const [tab, setTab] = useState<SubTab>('posts');
 
-  const tabs: { key: SubTab; label: string }[] = [
-    { key: 'posts', label: 'Posts' },
-    { key: 'reposts', label: 'Reposts' },
-    { key: 'gifts', label: 'Gifts' },
+  const tabs: { key: SubTab; label: string; Icon: LucideIcon }[] = [
+    { key: 'posts', label: 'Posts', Icon: StickyNote },
+    { key: 'replies', label: 'Replies', Icon: MessageSquareText },
+    { key: 'media', label: 'Media', Icon: ImageIcon },
+    { key: 'reposts', label: 'Relays', Icon: Repeat },
+    { key: 'gifts', label: 'Gifts', Icon: GiftIcon },
   ];
 
   return (
     <div className={className}>
-      <div className="flex items-center gap-1 nl-glass rounded-2xl p-1 mb-4 w-full max-w-2xl mx-auto">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            onClick={() => setTab(t.key)}
-            className={`flex-1 text-sm font-medium py-2 rounded-xl transition ${
-              tab === t.key ? 'bg-[#0066FF]/15 text-white border border-[#0066FF]/40' : 'text-white/55 hover:text-white'
-            }`}
-            aria-pressed={tab === t.key}
-          >
-            {t.label}
-          </button>
-        ))}
+      {/* Segmented glass sub-tabs - horizontally scrollable on narrow screens so
+          all five stay reachable on mobile without wrapping. */}
+      <div className="mb-4 w-full max-w-2xl mx-auto overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-1 nl-glass rounded-2xl p-1 min-w-max sm:min-w-0">
+          {tabs.map((t) => {
+            const active = tab === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTab(t.key)}
+                className={`flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 text-[13px] font-medium px-3 py-2 rounded-xl transition whitespace-nowrap ${
+                  active
+                    ? 'bg-[#0066FF]/15 text-white border border-[#0066FF]/40'
+                    : 'text-white/55 hover:text-white border border-transparent'
+                }`}
+                aria-pressed={active}
+              >
+                <t.Icon className="w-4 h-4 flex-shrink-0" />
+                <span>{t.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {tab === 'posts' ? <WireTab author={userId} onGift={onGift} /> : null}
+      {tab === 'replies' ? <WireTab repliesBy={userId} onGift={onGift} /> : null}
+      {tab === 'media' ? <WireTab mediaAuthor={userId} onGift={onGift} /> : null}
       {tab === 'reposts' ? <WireTab reposts={userId} onGift={onGift} /> : null}
       {tab === 'gifts' ? (
         <div className="w-full max-w-2xl mx-auto">

@@ -95,6 +95,10 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
   // Tracks whether the first history render has been positioned. The initial
   // jump is instant (no animation); messages arriving after mount scroll smoothly.
   const didInitialScroll = useRef(false);
+  // Id of the newest (tail) message we last scrolled to. Auto-scroll keys off
+  // this so prepending OLDER messages (Load older) or an in-place read-receipt
+  // update never yanks the view back to the bottom.
+  const lastMsgIdRef = useRef<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Conversation is usable once we have a real E2E key OR we're in plaintext mode.
@@ -348,16 +352,19 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
   }, [conversationId, ready, convKey, decodeRow, loadHistory]);
 
   // Auto-scroll: the first history render jumps instantly (no animation jank on
-  // open); every message that arrives AFTER mount scrolls smoothly.
+  // open); every NEW message appended after mount scrolls smoothly. We only act
+  // when the tail message id changes, so loading older history (which prepends)
+  // and live read-receipt UPDATEs (which mutate in place) leave scroll untouched
+  // instead of jumping the reader back down to the newest message.
   useEffect(() => {
-    if (messages.length === 0) return;
-    if (!didInitialScroll.current) {
-      endRef.current?.scrollIntoView({ behavior: 'auto' });
-      didInitialScroll.current = true;
-    } else {
-      endRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages.length]);
+    const last = messages[messages.length - 1];
+    if (!last) return;
+    if (lastMsgIdRef.current === last.id) return;
+    const isFirst = !didInitialScroll.current;
+    lastMsgIdRef.current = last.id;
+    didInitialScroll.current = true;
+    endRef.current?.scrollIntoView({ behavior: isFirst ? 'auto' : 'smooth' });
+  }, [messages]);
 
   // Mark the thread read on open and whenever new messages arrive while visible.
   useEffect(() => {

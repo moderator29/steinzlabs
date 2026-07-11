@@ -148,7 +148,7 @@ export function GiftSheet({ recipient, postId, onClose, onSuccess }: GiftSheetPr
         password: sender.needsPassword ? password : undefined,
       });
 
-      // Record the gift (best-effort — the on-chain transfer already happened).
+      // Record the gift (best-effort, the on-chain transfer already happened).
       const amountUsd = usdValue != null ? Number(usdValue.toFixed(2)) : null;
       try {
         await fetch('/api/wire/gift/record', {
@@ -277,7 +277,7 @@ export function GiftSheet({ recipient, postId, onClose, onSuccess }: GiftSheetPr
         {/* Amount */}
         <div className="mb-3">
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs text-slate-400 font-medium">Amount ({chain.symbol}) — native only</label>
+            <label className="text-xs text-slate-400 font-medium">Amount ({chain.symbol}), native only</label>
             <button type="button" onClick={setMax} className="text-[10px] font-bold text-[#0066FF] hover:text-[#3B4EFF]">MAX</button>
           </div>
           <input

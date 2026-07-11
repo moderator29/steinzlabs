@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, SlidersHorizontal, X, TrendingUp, TrendingDown, Loader2, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { resolveTokenChain } from '@/lib/market/tokenChainResolver';
+import { TokenLogo } from '@/components/market/TokenLogo';
 
 interface CoinRow {
   id: string;
@@ -18,6 +19,10 @@ interface CoinRow {
   source: 'coingecko' | 'dex';
   chain?: string;
   pairAddress?: string;
+  // Token contract address for on-chain (dex) hits. Drives the real-logo
+  // cascade (DexScreener CDN then Trust Wallet registry, keyed by CA + chain)
+  // so a coin found by name or pasted CA shows real art, not just initials.
+  address?: string;
 }
 
 const CHAIN_LABEL: Record<string, string> = {
@@ -131,6 +136,7 @@ export default function Markets() {
           source: 'dex',
           chain: r.chain,
           pairAddress: r.pairAddress,
+          address: r.address,
         }));
         setSearchResults(rows);
       } catch {
@@ -241,19 +247,13 @@ export default function Markets() {
                     {coin.rank > 0 ? coin.rank : ''}
                   </div>
 
-                  <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-[#0066FF]/20 to-[#7C3AED]/20 flex items-center justify-center">
-                    {coin.image ? (
-                      <img src={coin.image} alt={coin.symbol} className="w-full h-full object-cover rounded-full" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                    ) : (
-                      <span className="text-xs font-bold text-white">{coin.symbol.slice(0, 2)}</span>
-                    )}
-                  </div>
+                  <TokenLogo src={coin.image || undefined} symbol={coin.symbol} address={coin.address} chain={coin.chain} size={36} />
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-semibold text-white">{coin.name}</span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-sm font-semibold text-white truncate min-w-0">{coin.name}</span>
                       {coin.source === 'dex' && coin.chain && (
-                        <span className="text-[9px] px-1 py-0.5 bg-[#0066FF]/20 text-[#0066FF] rounded font-medium">
+                        <span className="flex-shrink-0 text-[9px] px-1 py-0.5 bg-[#0066FF]/20 text-[#0066FF] rounded font-medium">
                           {CHAIN_LABEL[coin.chain] || coin.chain.slice(0, 4).toUpperCase()}
                         </span>
                       )}

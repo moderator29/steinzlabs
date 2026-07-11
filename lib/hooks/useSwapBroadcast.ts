@@ -42,7 +42,7 @@ type SolanaSigner = { signAndSendTransaction: (tx: unknown) => Promise<{ signatu
  * phone connected via the WalletConnect QR actually sign: window.ethereum is
  * undefined there, so the old code could only sign with a desktop extension.
  */
-async function getEvmProvider(): Promise<Eip1193 | null> {
+export async function getEvmProvider(): Promise<Eip1193 | null> {
   try {
     const cfg = wagmiAdapter?.wagmiConfig;
     if (cfg) {
@@ -66,7 +66,7 @@ async function getEvmProvider(): Promise<Eip1193 | null> {
  * desktop, the path the app's own Solana connect button uses). Mirrors
  * getEvmProvider so Solana swaps work on the same set of devices as EVM.
  */
-async function getSolanaProvider(): Promise<SolanaSigner | null> {
+export async function getSolanaProvider(): Promise<SolanaSigner | null> {
   try {
     const p = ProviderController.state.providers?.solana as SolanaSigner | undefined;
     if (p && typeof p.signAndSendTransaction === 'function') return p;

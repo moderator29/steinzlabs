@@ -2,6 +2,65 @@
 
 Naka Labs is more than a trading platform. It's a social trading intelligence network where reputation is built on real on-chain performance.
 
+## The Wire
+
+The Wire is the SocialFi layer of Naka Labs: a live timeline where you post calls, react on-chain, and reward the people who get it right, all from your own wallet. It reads and works cleanly on mobile, tablet and desktop.
+
+### Post a wire
+
+Tap the compose button to open the **full-page composer**. From there you can:
+
+- Write your wire and attach **up to 4 images** (JPG, PNG, WebP or GIF, each under 1 MB).
+- Tag it with topics from the **Options** dropdown, picking one to three subjects so the right people find it.
+- Use the **AI draft helper**: hand it rough notes or a ticker and it drops a clean draft into the editor. You still review, edit and post it yourself.
+
+### Cashtags
+
+Type a **cashtag** like `$SOL` or `$BTC` and it becomes a live price chip inside your wire. Anyone reading can tap the chip to see the current price, so a call always carries the number behind it.
+
+### Tips and gifts
+
+Any wire can receive **on-chain tips and gifts**, and the value it has earned shows right on the post. Gifting is **non-custodial**: the sender signs every gift from their own wallet, so nothing passes through us.
+
+### Signal score
+
+Each account carries a **Signal score** from 0 to 100. It is a transparent read on reputation built from real on-chain activity and genuine engagement, and it helps rank what rises in the feed. It is honest and legible, not a black box.
+
+### Inline predictions
+
+Attach an **inline prediction** to a wire, for example a call that SOL trades below a target within the hour. Readers **tap to agree** with it, and it ties into **Naka Predict**, so a hunch becomes something you can track.
+
+### Relay and replies
+
+- **Relay (repost)** pushes a wire to your own followers. A relay can carry your own note as a **quote**, shown above the original wire in a quote inset.
+- **Reply** opens a **thread in a side panel** when you tap the comment icon, so a conversation never pulls you away from the feed.
+
+### The post menu
+
+The **"..." menu** on any wire gives you:
+
+- **Share**: copy a public link or use your device share sheet.
+- **Mute a user**: hides their wires from your feed. Their profile still works normally, and they are not notified.
+- **Delete**: removes a wire you posted.
+
+### Public share links
+
+Every wire has a **public share link**. Drop it anywhere off the platform and people can preview the wire and follow it back into Naka Labs.
+
+### Feeds
+
+Switch between three views at the top of The Wire:
+
+- **Latest**: every top-level wire, newest first.
+- **Signal**: ranked by real engagement and Signal score.
+- **Pack**: only the people you follow.
+
+Tap a topic to filter the stream to that subject. The filter **applies on its own** and tapping it again clears it.
+
+### Wire activity on your profile
+
+A profile organizes a person's wire activity into tabs: **Posts**, **Replies**, **Media**, **Reposts** and **Gifts**.
+
 ## Follow people
 
 Click **Follow** on any profile. By default the follow is instant (one-way). If the user has set their profile to private, the follow becomes a pending request — they decide whether to accept.

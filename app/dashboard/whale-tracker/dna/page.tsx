@@ -118,7 +118,7 @@ export default function WhaleDnaPage() {
         <div className="flex flex-wrap gap-1.5 justify-center mb-6">
           {picks.slice(0, 8).map((p) => (
             <button key={p.address} onClick={() => { setInput(p.address); run(p.address); }}
-              className="px-2.5 py-1 rounded-full text-[11px] text-slate-300 bg-white/[0.04] border border-white/[0.08] hover:border-[#0066FF]/40 hover:text-white transition-colors">
+              className="px-2.5 py-1 rounded-lg text-[11px] text-slate-300 bg-white/[0.04] border border-white/[0.08] hover:border-[#0066FF]/40 hover:text-white transition-colors">
               {p.name}{p.winRate != null ? ` · ${p.winRate}%` : ''}
             </button>
           ))}

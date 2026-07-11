@@ -347,6 +347,19 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
       volumeAddress = chosen[1];
     }
   }
+  // Every on-chain coin should chart like DexScreener: if no pool/platform
+  // source resolved above but this page's own address is a real contract on a
+  // GeckoTerminal-supported network, route the chart straight to that contract
+  // so GT resolves the deepest pool and returns real candles + volume. This is
+  // what makes any DEX-traded token (memecoins, long-tail) render a full,
+  // functioning chart instead of an empty panel.
+  if (!volumeNetwork) {
+    const addrIsContract = isEvmAddress || /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address);
+    if (addrIsContract && GT_SUPPORTED_NETS.has(chain)) {
+      volumeNetwork = chain;
+      volumeAddress = address;
+    }
+  }
 
   return (
     <div className="flex flex-col min-h-screen w-full max-w-full overflow-x-clip text-white pb-20 md:pb-0">
@@ -376,10 +389,10 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
           <BackButton />
           <TokenLogo src={logo} symbol={symbol} size={32} />
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold truncate">{name}</span>
-              <span className="text-[10px] uppercase text-slate-500">{symbol}</span>
-              <span className="text-[10px] uppercase px-1.5 py-0.5 bg-slate-800/60 rounded text-slate-400">{chain}</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm font-bold truncate min-w-0">{name}</span>
+              <span className="text-[10px] uppercase text-slate-500 shrink-0">{symbol}</span>
+              <span className="text-[10px] uppercase px-1.5 py-0.5 bg-slate-800/60 rounded text-slate-400 shrink-0">{chain}</span>
               <SocialVelocityPill symbol={symbol} />
             </div>
             {/* §5.6 Trading Terminal — Dune-derived intelligence strip
@@ -446,11 +459,11 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
         </div>
 
         {/* Checkprice-style stats strip */}
-        <div className="flex items-center gap-4 px-4 pb-3 overflow-x-auto text-xs whitespace-nowrap">
+        <div className="flex items-center gap-4 px-4 pb-3 overflow-x-auto text-xs whitespace-nowrap [&>*]:shrink-0">
           <span className="text-lg md:text-xl font-mono font-bold tabular-nums">
-            {/* Honest price: show — while loading AND when the source has no
-                real price (price <= 0), never a fabricated $0.00. */}
-            {loading ? '—' : price > 0 ? formatPrice(price) : '—'}
+            {/* Honest price: show a dash while loading AND when the source has
+                no real price (price <= 0), never a fabricated $0.00. */}
+            {loading ? '-' : price > 0 ? formatPrice(price) : '-'}
           </span>
           <PriceChangeDisplay value={change24hUnified} size="sm" />
           <div className="h-4 w-px bg-slate-800/60 hidden md:block" />

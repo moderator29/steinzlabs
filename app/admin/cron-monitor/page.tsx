@@ -115,7 +115,7 @@ export default function CronMonitorPage() {
                         type="button"
                         onClick={() => void trigger(r.name)}
                         disabled={busy !== null}
-                        className="text-[11px] text-blue-300 hover:text-blue-200 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/25 rounded-full px-2 py-0.5 me-2 disabled:opacity-50"
+                        className="text-[11px] text-blue-300 hover:text-blue-200 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/25 rounded-lg px-2 py-0.5 me-2 disabled:opacity-50"
                       >
                         {busy === r.name + ':run' ? 'Running…' : 'Run now'}
                       </button>
@@ -123,7 +123,7 @@ export default function CronMonitorPage() {
                         type="button"
                         onClick={() => void toggle(r.name, r.paused)}
                         disabled={busy !== null}
-                        className={`text-[11px] rounded-full px-2 py-0.5 border disabled:opacity-50 ${r.paused ? 'text-emerald-300 hover:text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/25' : 'text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/25'}`}
+                        className={`text-[11px] rounded-lg px-2 py-0.5 border disabled:opacity-50 ${r.paused ? 'text-emerald-300 hover:text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/25' : 'text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/25'}`}
                       >
                         {r.paused ? <Play className="w-3 h-3 inline" /> : <Pause className="w-3 h-3 inline" />}
                         {r.paused ? ' Resume' : ' Pause'}

@@ -8,16 +8,16 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
  * recipient's OWN wallet. This helper answers "where do I send funds so
  * <user> receives them on <chain>?" using the two sources of truth:
  *
- *   1. wallet_identities — verified, wallet-signature-proven addresses.
+ *   1. wallet_identities - verified, wallet-signature-proven addresses.
  *      `chain` there is coarse: 'evm' covers every EVM network (the same
  *      0x address receives on Ethereum, Base, BSC, ...); 'solana' is its
  *      own row. We prefer is_primary, then most-recently-verified.
- *   2. user_wallets_v2 — the built-in Naka wallet backup. `default_address`
+ *   2. user_wallets_v2 - the built-in Naka wallet backup. `default_address`
  *      is the EVM address; the `wallets` jsonb array carries the derived
  *      `solanaAddress` per wallet for Solana.
  *
  * Returns the address string, or null when the user has not set a receive
- * wallet on that chain (the gift UI then says so honestly — we never
+ * wallet on that chain (the gift UI then says so honestly - we never
  * fabricate an address).
  */
 
@@ -86,7 +86,7 @@ export async function resolveReceiveAddress(
     if (verified) return verified.address.trim();
 
     // 2. Built-in wallet's derived Solana address (default_address is EVM,
-    //    so there is no EVM fallback for Solana — honest null if none).
+    //    so there is no EVM fallback for Solana - honest null if none).
     const { data: uw } = await supabase
       .from('user_wallets_v2')
       .select('wallets')
