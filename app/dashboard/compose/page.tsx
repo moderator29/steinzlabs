@@ -54,15 +54,6 @@ export default function ComposePage() {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="text-white font-semibold text-base">New wire</h1>
-        <button
-          type="button"
-          onClick={() => composerRef.current?.submit()}
-          disabled={!postState.canPost}
-          className="ms-auto naka-button-primary px-5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
-        >
-          {postState.submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-          Post
-        </button>
       </div>
 
       {/* Composer — full page, no caged card. */}
@@ -83,6 +74,19 @@ export default function ComposePage() {
         <p className="mt-4 text-center text-xs text-white/35">
           No topic? Your wire still posts to the general Wire and shows in Signal.
         </p>
+      </div>
+
+      {/* Post lives at the BOTTOM (owner preference, not the X-style top bar). */}
+      <div className="sticky bottom-0 z-20 px-4 py-3 bg-black/50 backdrop-blur-md border-t border-white/[0.06]">
+        <button
+          type="button"
+          onClick={() => composerRef.current?.submit()}
+          disabled={!postState.canPost}
+          className="w-full naka-button-primary py-3 rounded-2xl inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
+        >
+          {postState.submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+          Post
+        </button>
       </div>
     </div>
   );

@@ -446,7 +446,7 @@ export default function WireTab({ onGift, author, reposts, repliesBy, mediaAutho
                   className={`text-[11px] font-medium px-2.5 py-1 rounded-md border transition ${
                     selectedTopics.length === 0
                       ? 'bg-[#0066FF]/20 text-[#4d94ff] border-[#0066FF]/50'
-                      : 'text-white/55 border-white/12 hover:text-white hover:border-white/25'
+                      : 'text-white/60 border-[#0066FF]/25 bg-white/[0.02] hover:text-white hover:border-[#0066FF]/50'
                   }`}
                   aria-pressed={selectedTopics.length === 0}
                 >
@@ -462,7 +462,7 @@ export default function WireTab({ onGift, author, reposts, repliesBy, mediaAutho
                       className={`text-[11px] font-medium px-2.5 py-1 rounded-md border transition ${
                         active
                           ? 'bg-[#0066FF]/20 text-[#4d94ff] border-[#0066FF]/50'
-                          : 'text-white/55 border-white/12 hover:text-white hover:border-white/25'
+                          : 'text-white/60 border-[#0066FF]/25 bg-white/[0.02] hover:text-white hover:border-[#0066FF]/50'
                       }`}
                       aria-pressed={active}
                     >

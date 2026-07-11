@@ -50,7 +50,10 @@ export function FloatingCoins({ section = 'hero' }: FloatingCoinsProps) {
       {subset.map((c, i) => (
         <div
           key={`${c.coin}-${i}`}
-          className="hidden md:block absolute"
+          // Visible on mobile too, scaled down so the 3D coins accent the hero
+          // without crowding the copy at 390px (decorative + pointer-events-
+          // none, clamped inside the overflow-hidden field, so no overflow).
+          className="block absolute scale-[0.55] md:scale-100"
           style={{
             top: c.top,
             bottom: c.bottom,
