@@ -1351,6 +1351,38 @@ export default function SwapPage() {
         // EVM wallet (injected extension OR WalletConnect mobile session).
         const accounts = (await evmProvider.request({ method: 'eth_accounts' })) as string[];
         if (!accounts.length) throw new Error('No Ethereum wallet connected');
+
+        // ── ERC-20 approval (the "Allow" step) ──────────────────────────────
+        // 0x's allowance-holder swap reverts if the sell token isn't approved
+        // for its spender. When 0x reports an allowance issue, send the approve
+        // tx FIRST (industry-standard "Approve then Swap"), wait for it to
+        // confirm, then swap. Native ETH sells carry no allowance issue, so this
+        // never fires for them. This is what makes a WalletConnect wallet
+        // actually pop its Allow prompt on a token sell.
+        const spender: string | undefined =
+          swapData.issues?.allowance?.spender || swapData.allowanceTarget;
+        const needsApproval = !!swapData.issues?.allowance && !!spender;
+        const sellTokenAddr: string | undefined = swapData.sellTokenAddress;
+        if (needsApproval && spender && sellTokenAddr && !/^0x0{40}$/i.test(sellTokenAddr)) {
+          setTxStatus('pending');
+          const approveData =
+            '0x095ea7b3' +
+            spender.toLowerCase().replace(/^0x/, '').padStart(64, '0') +
+            'f'.repeat(64); // approve(spender, uint256 max)
+          const approveHash = (await evmProvider.request({
+            method: 'eth_sendTransaction',
+            params: [{ from: accounts[0], to: sellTokenAddr, data: approveData }],
+          })) as string;
+          // Wait for the approval to confirm before the swap (max ~60s).
+          for (let i = 0; i < 40; i++) {
+            await new Promise((r) => setTimeout(r, 1500));
+            const receipt = await evmProvider
+              .request({ method: 'eth_getTransactionReceipt', params: [approveHash] })
+              .catch(() => null);
+            if (receipt && (receipt as { status?: string }).status != null) break;
+          }
+        }
+
         const txParams = { from: accounts[0], to: swapData.transaction.to, data: swapData.transaction.data, value: swapData.transaction.value, gas: swapData.transaction.gas };
         hash = (await evmProvider.request({ method: 'eth_sendTransaction', params: [txParams] })) as string;
       } else if (detectedWallet === 'solana') {
