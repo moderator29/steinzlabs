@@ -104,11 +104,27 @@ export function useWallet() {
       return { addr: null, prov: null };
     };
 
+    let cancelled = false;
     const { addr: stored, prov: storedProvider } = resolveStoredAddress();
     if (stored) {
       setAddress(stored);
       setProvider(storedProvider);
       fetchBalance(stored);
+    } else {
+      // No local wallet in this browser: load the account's default wallet
+      // address from the DB (user_wallets) so a wallet created on another
+      // device/session is still detected. Fixes the "connect a wallet"
+      // re-prompt on portfolio / swap / VTX when the account already has one.
+      fetch('/api/wallet/default')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d: { address?: string | null } | null) => {
+          if (!cancelled && d?.address) {
+            setAddress(d.address);
+            setProvider('builtin');
+            fetchBalance(d.address);
+          }
+        })
+        .catch(() => { /* stay disconnected */ });
     }
 
     const handleChange = () => {
@@ -148,6 +164,7 @@ export function useWallet() {
     }
 
     return () => {
+      cancelled = true;
       window.removeEventListener(WALLET_CHANGE_EVENT, handleChange);
       window.removeEventListener('storage', handleChange);
       window.removeEventListener(BALANCE_CHANGE_EVENT, handleBalanceChange);
