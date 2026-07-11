@@ -331,7 +331,7 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
       <div className="sticky top-0 z-30 bg-[#0A0E27]/95 backdrop-blur-xl border-b border-slate-800">
         <div className="max-w-5xl mx-auto px-4 py-4">
           <div className="mb-3"><BackButton href="/dashboard/whale-tracker" label="Whale tracker" compact /></div>
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div className="flex-1 min-w-0 flex items-start gap-3">
               {/* §4.2 Whale avatar — uses the cached logo_url from
                   /api/whales/[address]/logo (Arkham → ENS → Dicebear).
@@ -351,14 +351,17 @@ export default function WhaleDetailPage({ params }: { params: Promise<{ address:
                   {w.verified && <CheckCircle2 size={15} className="text-blue-400" />}
                   <SecurityBadge score={w.whale_score} size="md" />
                 </div>
-              <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap min-w-0">
-                <code className="font-mono break-all min-w-0">{w.address}</code>
+              <div className="flex items-center gap-2 text-xs text-slate-500 min-w-0">
+                {/* Single horizontal line — truncates with ellipsis instead of
+                    wrapping into a tall vertical block; copy grabs the full address. */}
+                <code className="font-mono truncate min-w-0 flex-1">{w.address}</code>
                 <button
                   onClick={() => {
                     void navigator.clipboard.writeText(w.address);
                     toast.success("Copied");
                   }}
-                  className="hover:text-white transition"
+                  className="hover:text-white transition shrink-0"
+                  aria-label="Copy address"
                 >
                   <Copy size={11} />
                 </button>

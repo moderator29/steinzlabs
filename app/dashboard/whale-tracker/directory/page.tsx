@@ -333,7 +333,7 @@ export default function WhaleDirectoryPage() {
                 value={q}
                 onChange={(e) => { setQ(e.target.value); setOffset(0); }}
                 placeholder="Search by label or address…"
-                className="flex-1 bg-transparent outline-none text-sm placeholder-slate-500"
+                className="flex-1 bg-transparent appearance-none border-0 outline-none focus:outline-none focus:ring-0 text-base sm:text-sm placeholder-slate-500"
               />
               {q && (
                 <button onClick={() => setQ('')} aria-label="Clear search" className="text-slate-500 hover:text-white"><X className="w-3.5 h-3.5" aria-hidden="true" /></button>
