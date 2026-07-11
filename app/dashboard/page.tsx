@@ -33,7 +33,6 @@ import SteinzLogo from '@/components/ui/SteinzLogo';
 // Dominance / Chains Tracked.
 import { RenderWidgets } from '@/components/dashboard/RenderWidgets';
 import { DailyPulseSummary } from '@/components/dashboard/DailyPulseSummary';
-import { ShippedBanner } from '@/components/dashboard/ShippedBanner';
 import { FirstRunTour } from '@/components/dashboard/FirstRunTour';
 
 const ContextFeed    = lazy(() => import('@/components/ContextFeed'));
@@ -439,8 +438,17 @@ export default function Dashboard() {
       if (el) setPill({ left: el.offsetLeft, width: el.offsetWidth });
     };
     measure();
+    // Center the active pill by scrolling ONLY the tab strip. The previous
+    // el.scrollIntoView({inline:'center'}) also scrolled the mobile viewport
+    // horizontally for later tabs, dragging the whole page content off to the
+    // left (the "half render" clipping on Market / Context Feed / News /
+    // Prediction). The strip is position:relative, so offsetLeft is strip-
+    // relative; scroll the strip alone and the content never shifts.
     const el = tabRefs.current[activeTab];
-    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    const strip = el?.parentElement;
+    if (el && strip) {
+      strip.scrollTo({ left: el.offsetLeft - strip.clientWidth / 2 + el.offsetWidth / 2, behavior: 'smooth' });
+    }
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
   }, [activeTab, activeNav]);
@@ -588,7 +596,6 @@ export default function Dashboard() {
         // from the widget registry. The DailyPulseSummary below fills the old
         // empty "what's moving" area with a real 24h whale/watchlist summary.
         <>
-          <ShippedBanner />
           <OverviewHero name={heroName} />
           <DailyPulseSummary />
           <RenderWidgets />
