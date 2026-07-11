@@ -81,6 +81,10 @@ const CreateBody = z.object({
     .max(WIRE_MAX_TAGS, `Up to ${WIRE_MAX_TAGS} topics`)
     .optional()
     .nullable(),
+  // Who can see the wire. 'everyone' (default, public), 'followers' (only the
+  // author's accepted followers), 'following' (only accounts the author
+  // follows). Enforced server-side in the feed by applyAudience().
+  audience: z.enum(['everyone', 'followers', 'following']).optional().nullable(),
 });
 
 /** Canonicalise + validate a client-supplied tag list (dedupe, drop unknowns). */
@@ -127,6 +131,7 @@ export async function POST(req: NextRequest) {
     // reply_to here or that guard can be bypassed.
     reply_to: null,
     tags: cleanTags(parsed.data.tags),
+    audience: parsed.data.audience ?? 'everyone',
   };
 
   const { data, error } = await sb
@@ -388,6 +393,46 @@ function shapePrediction(raw: any, agreedSet: Set<string>): any {
 }
 
 /**
+ * Enforce per-wire audience visibility on a page of wires.
+ *   everyone   - public, always visible
+ *   followers  - only the author's accepted followers (and the author)
+ *   following  - only accounts the author follows (and the author)
+ * Signed-out viewers only ever see 'everyone'. Applied centrally at the top of
+ * annotate() so every feed path (signal / pack / author / replies) inherits it
+ * and a restricted wire can never leak into a feed it should not appear in.
+ */
+async function applyAudience(
+  sb: ReturnType<typeof getSupabaseAdmin>,
+  posts: any[],
+  viewerId?: string,
+): Promise<any[]> {
+  const restricted = posts.filter((p) => p?.audience && p.audience !== 'everyone');
+  if (restricted.length === 0) return posts;
+
+  const isPublic = (p: any) => !p?.audience || p.audience === 'everyone';
+  if (!viewerId) return posts.filter(isPublic);
+
+  const authorIds = Array.from(new Set(restricted.map((p) => p.author_id).filter(Boolean)));
+
+  // authors the viewer follows (satisfies 'followers'); authors who follow the
+  // viewer (satisfies 'following'). Two small scoped lookups, accepted-only.
+  const [{ data: vf }, { data: fv }] = await Promise.all([
+    sb.from('social_follows').select('following_id').eq('follower_id', viewerId).eq('status', 'accepted').in('following_id', authorIds),
+    sb.from('social_follows').select('follower_id').eq('following_id', viewerId).eq('status', 'accepted').in('follower_id', authorIds),
+  ]);
+  const viewerFollows = new Set((vf ?? []).map((e: any) => e.following_id).filter(Boolean));
+  const followsViewer = new Set((fv ?? []).map((e: any) => e.follower_id).filter(Boolean));
+
+  return posts.filter((p) => {
+    if (isPublic(p)) return true;
+    if (p.author_id === viewerId) return true; // author always sees own wire
+    if (p.audience === 'followers') return viewerFollows.has(p.author_id);
+    if (p.audience === 'following') return followsViewer.has(p.author_id);
+    return true;
+  });
+}
+
+/**
  * Attach the per-viewer + SocialFi data contract to a page of wires:
  *   liked / reposted  - viewer engagement (false when signed out)
  *   authorSignal      - the author's transparent 0-100 signal score
@@ -406,6 +451,11 @@ async function annotate(
   signalMap?: Map<string, number>,
 ): Promise<any[]> {
   if (!Array.isArray(posts) || posts.length === 0) return [];
+
+  // Enforce audience visibility first so restricted wires never reach a viewer
+  // who should not see them (and their originals are never fetched below).
+  posts = await applyAudience(sb, posts, viewerId);
+  if (posts.length === 0) return [];
 
   // Attach repost originals with a plain batched query (embeds removed so a
   // stale relationship cache can never blank the feed). A repost carries

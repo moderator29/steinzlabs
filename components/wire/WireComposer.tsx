@@ -4,7 +4,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import {
   Loader2, ImagePlus, X, Sparkles, ChevronDown, Check,
   Coins, Building2, Bot, BrainCircuit, Blocks, TrendingUp, Laugh, Hexagon, Globe,
-  Plus, DollarSign, LineChart, ArrowUpRight, ArrowDownRight,
+  Plus, DollarSign, LineChart, ArrowUpRight, ArrowDownRight, Users, UserCheck,
   type LucideIcon,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -56,6 +56,20 @@ const TOPIC_ICON: Record<string, LucideIcon> = {
   memes: Laugh,
 };
 
+// Audience options for the visibility pill. Meaning is enforced server-side in
+// the feed (applyAudience): everyone = public; followers = only the author's
+// accepted followers; following = only accounts the author follows.
+const AUDIENCE_OPTS: Array<{
+  key: 'everyone' | 'followers' | 'following';
+  label: string;
+  hint: string;
+  icon: LucideIcon;
+}> = [
+  { key: 'everyone', label: 'Everyone', hint: 'Anyone on Naka can see this', icon: Globe },
+  { key: 'followers', label: 'Followers', hint: 'Only people who follow you', icon: Users },
+  { key: 'following', label: 'Following', hint: 'Only people you follow', icon: UserCheck },
+];
+
 export interface WireComposerHandle {
   submit: () => void;
 }
@@ -86,6 +100,9 @@ export const WireComposer = forwardRef<WireComposerHandle, WireComposerProps>(fu
   const [body, setBody] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [showTags, setShowTags] = useState(false);
+  // Who can see the wire. Drives the audience pill dropdown + the create call.
+  const [audience, setAudience] = useState<'everyone' | 'followers' | 'following'>('everyone');
+  const [showAudience, setShowAudience] = useState(false);
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -281,6 +298,7 @@ export const WireComposer = forwardRef<WireComposerHandle, WireComposerProps>(fu
           body: body.trim(),
           media_urls: mediaUrls.length ? mediaUrls : undefined,
           tags: tags.length ? tags : undefined,
+          audience: audience !== 'everyone' ? audience : undefined,
         }),
       });
       if (!res.ok) {
@@ -357,9 +375,62 @@ export const WireComposer = forwardRef<WireComposerHandle, WireComposerProps>(fu
             <div className="text-white font-semibold text-sm leading-tight truncate">{displayName || 'You'}</div>
             {username ? <div className="text-white/40 text-xs leading-tight truncate">@{username}</div> : null}
           </div>
-          <span className="inline-flex items-center gap-1 rounded-full border border-[#0066FF]/30 bg-[#0066FF]/10 px-2.5 py-1 text-[11px] font-semibold text-[#8fb6ff] flex-shrink-0">
-            <Globe className="w-3 h-3" /> Everyone
-          </span>
+          {(() => {
+            const current = AUDIENCE_OPTS.find((o) => o.key === audience) ?? AUDIENCE_OPTS[0];
+            const CurrentIcon = current.icon;
+            return (
+              <div className="relative flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowAudience((v) => !v)}
+                  aria-haspopup="listbox"
+                  aria-expanded={showAudience}
+                  className="inline-flex items-center gap-1 rounded-full border border-[#0066FF]/30 bg-[#0066FF]/10 px-2.5 py-1 text-[11px] font-semibold text-[#8fb6ff] transition-colors hover:bg-[#0066FF]/20"
+                >
+                  <CurrentIcon className="w-3 h-3" /> {current.label}
+                  <ChevronDown className="w-3 h-3 opacity-70" />
+                </button>
+                {showAudience ? (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowAudience(false)} />
+                    <div
+                      role="listbox"
+                      className="absolute right-0 top-9 z-50 w-56 overflow-hidden rounded-2xl border border-white/10 bg-[#0d1120] p-1.5 shadow-2xl"
+                    >
+                      {AUDIENCE_OPTS.map((o) => {
+                        const Icon = o.icon;
+                        const active = o.key === audience;
+                        return (
+                          <button
+                            key={o.key}
+                            type="button"
+                            role="option"
+                            aria-selected={active}
+                            onClick={() => {
+                              setAudience(o.key);
+                              setShowAudience(false);
+                            }}
+                            className={`flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors ${
+                              active ? 'bg-[#0066FF]/15' : 'hover:bg-white/[0.05]'
+                            }`}
+                          >
+                            <Icon className={`mt-0.5 h-4 w-4 flex-shrink-0 ${active ? 'text-[#4d94ff]' : 'text-white/60'}`} />
+                            <span className="min-w-0">
+                              <span className={`block text-[13px] font-semibold ${active ? 'text-white' : 'text-white/85'}`}>
+                                {o.label}
+                              </span>
+                              <span className="block text-[11px] leading-tight text-white/45">{o.hint}</span>
+                            </span>
+                            {active ? <Check className="ml-auto mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-[#4d94ff]" /> : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            );
+          })()}
         </div>
       ) : null}
 
