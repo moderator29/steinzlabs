@@ -27,17 +27,29 @@ import { computeAuthorSignals } from '@/lib/wire/signal';
  * only ever READ here. Gifts are recorded elsewhere; we never write them.
  */
 
-// Author profile embed - the only FK from wire_posts to profiles.
-const AUTHOR = 'author:profiles!wire_posts_author_id_fkey(id,username,display_name,avatar_url,is_verified)';
-// Full post select including the embedded original (for reposts) and its author.
-const POST_SELECT = `*, ${AUTHOR}, original:wire_posts!wire_posts_repost_of_fkey(*, ${AUTHOR})`;
-// Create-response select - a freshly created post is always top-level (reposts
-// go through the dedicated /repost route), so it never has an `original` to
-// embed. Omitting the wire_posts->wire_posts self-join here keeps posting
-// working even if PostgREST's schema cache lags on the self-referential FK
-// (the cause of the "Could not find a relationship between 'wire_posts' and
-// 'wire_posts'" errors on create).
-const CREATE_SELECT = `*, ${AUTHOR}`;
+// Read + create selects are deliberately EMBED-FREE. PostgREST relationship
+// embeds (the profiles author join and the wire_posts self-join for a repost
+// original) fail with a hard 500 whenever its schema cache lags a migration,
+// which repeatedly blanked the whole Wire ("could not load the wire") and made
+// posting look like it failed even though the row was written. Authors and
+// repost originals are attached with plain batched queries (fetchAuthors /
+// annotate) that a stale relationship cache can never break.
+const AUTHOR_COLS = 'id,username,display_name,avatar_url,is_verified';
+const POST_SELECT = '*';
+const CREATE_SELECT = '*';
+
+/** Batched author-profile fetch, keyed by id. Never fails the caller. */
+async function fetchAuthors(
+  sb: ReturnType<typeof getSupabaseAdmin>,
+  ids: string[],
+): Promise<Map<string, any>> {
+  const map = new Map<string, any>();
+  const unique = Array.from(new Set(ids.filter(Boolean)));
+  if (!unique.length) return map;
+  const { data } = await sb.from('profiles').select(AUTHOR_COLS).in('id', unique);
+  for (const a of data ?? []) map.set(a.id, a);
+  return map;
+}
 
 const PAGE_SIZE = 20;
 
@@ -124,7 +136,12 @@ export async function POST(req: NextRequest) {
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ post: { ...data, original: null, liked: false, reposted: false } });
+  // Attach the author via a plain query (no embed) so the create response can
+  // never fail on a stale relationship cache.
+  const authorMap = await fetchAuthors(sb, [user.id]);
+  return NextResponse.json({
+    post: { ...data, author: authorMap.get(user.id) ?? null, original: null, liked: false, reposted: false },
+  });
 }
 
 export async function GET(req: NextRequest) {
@@ -390,7 +407,19 @@ async function annotate(
 ): Promise<any[]> {
   if (!Array.isArray(posts) || posts.length === 0) return [];
 
-  // Every wire id on the page, including embedded originals of reposts.
+  // Attach repost originals with a plain batched query (embeds removed so a
+  // stale relationship cache can never blank the feed). A repost carries
+  // repost_of; fetch those originals once and hang them off `.original`.
+  const repostOfIds = Array.from(new Set(posts.map((p) => p?.repost_of).filter(Boolean)));
+  if (repostOfIds.length) {
+    const { data: origs } = await sb.from('wire_posts').select('*').in('id', repostOfIds);
+    const origMap = new Map((origs ?? []).map((o: any) => [o.id, o]));
+    for (const p of posts) {
+      if (p?.repost_of && p.original == null) p.original = origMap.get(p.repost_of) ?? null;
+    }
+  }
+
+  // Every wire id on the page, including originals of reposts.
   const allIds = Array.from(
     new Set(
       posts
@@ -410,6 +439,9 @@ async function annotate(
   const missing = authorIds.filter((id) => !provided.has(id));
   const extra = missing.length ? await computeAuthorSignals(sb, missing) : new Map<string, number>();
   const signals = new Map<string, number>([...provided, ...extra]);
+
+  // Author profiles for every wire + original on the page (plain query, no embed).
+  const authorMap = await fetchAuthors(sb, authorIds);
 
   // Predictions attached to any wire on the page.
   const { data: preds } = await sb.from('wire_predictions').select('*').in('post_id', allIds);
@@ -439,6 +471,7 @@ async function annotate(
 
   const decorate = (p: any) => ({
     ...p,
+    author: authorMap.get(p?.author_id) ?? p?.author ?? null,
     liked: likedSet.has(p?.id),
     reposted: repostedSet.has(p?.id),
     authorSignal: signals.has(p?.author_id) ? signals.get(p?.author_id) : null,
