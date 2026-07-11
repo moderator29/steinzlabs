@@ -63,41 +63,43 @@ export function HeroSection() {
         </p>
 
         <h1 className="mt-6 font-black tracking-tight text-white text-[40px] leading-[1.05] sm:text-[64px] sm:leading-[1.04]">
-          On-chain{' '}
-          <span style={{ color: '#1E90FF' }}>intelligence</span>
-          <br className="hidden sm:block" /> for every trade.
+          Read the chain.
+          <br />
+          <span style={{ color: '#1E90FF' }}>Own every trade.</span>
         </h1>
 
         <p className="mt-6 max-w-xl text-base sm:text-lg leading-relaxed" style={{ color: '#B4C0E0' }}>
-          Track whales, snipe launches, and trade across every major chain, with a security scan on every move. Non-custodial by design.
+          Whale flows, fresh launches, and a live security scan on every swap, across 8 chains. Fully non-custodial. Your keys, your calls.
         </p>
 
-        {/* CTAs: filled neon primary + outlined secondary. Equal-width and
-            stacked on mobile, inline on desktop, so they always line up. */}
-        <div className="mt-9 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full max-w-xs sm:max-w-none sm:w-auto">
+        {/* CTAs: side by side even on mobile, shiny dark-neon-blue in our
+            button shape (rounded rectangle, not a pill). Primary launches the
+            app; secondary opens the docs. */}
+        <div className="mt-9 flex flex-row items-stretch gap-3 w-full max-w-md">
           <Link
             href="/dashboard"
-            className="inline-flex items-center justify-center gap-2 font-bold text-sm text-white rounded-full transition-all hover:scale-[1.03] active:scale-[0.98] w-full sm:w-auto"
+            className="group relative flex-1 inline-flex items-center justify-center gap-2 font-bold text-sm text-white rounded-2xl overflow-hidden transition-all hover:scale-[1.02] active:scale-[0.98]"
             style={{
-              padding: '15px 34px',
-              background: 'linear-gradient(135deg,#0066FF,#1E90FF)',
-              boxShadow: '0 0 28px rgba(0,102,255,.45)',
+              padding: '16px 20px',
+              background: 'linear-gradient(135deg,#3AA0FF 0%,#0066FF 52%,#0038B8 100%)',
+              boxShadow: '0 0 0 1px rgba(130,190,255,.5), 0 10px 34px rgba(0,102,255,.6), inset 0 1px 0 rgba(255,255,255,.4)',
             }}
           >
-            Launch App <ArrowRight className="w-[15px] h-[15px]" />
+            <span aria-hidden className="absolute inset-x-0 top-0 h-1/2 pointer-events-none" style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,.28), transparent)' }} />
+            <span className="relative inline-flex items-center gap-2">Launch App <ArrowRight className="w-[15px] h-[15px] group-hover:translate-x-0.5 transition-transform" /></span>
           </Link>
 
           <Link
             href="/docs"
-            className="inline-flex items-center justify-center gap-2 font-bold text-sm rounded-full transition-all hover:text-white w-full sm:w-auto"
+            className="flex-1 inline-flex items-center justify-center gap-2 font-bold text-sm rounded-2xl transition-all hover:text-white"
             style={{
-              padding: '15px 34px',
-              color: '#B4C0E0',
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(0,150,255,0.4)',
+              padding: '16px 20px',
+              color: '#CBD8FF',
+              background: 'linear-gradient(160deg, rgba(0,102,255,.16), rgba(8,12,28,.62))',
+              boxShadow: '0 0 0 1px rgba(0,150,255,.42), 0 8px 22px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.1)',
             }}
           >
-            <BookOpen className="w-[15px] h-[15px]" /> Read Docs
+            <BookOpen className="w-[15px] h-[15px]" /> Docs
           </Link>
         </div>
 
