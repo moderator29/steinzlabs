@@ -595,28 +595,47 @@ export default function ProfileTab() {
     }
   };
 
+  /** Read a Blob as a base64 data URL (for the server upload payload). */
+  const blobToDataUrl = (blob: Blob): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.onerror = () => reject(new Error('read failed'));
+      r.readAsDataURL(blob);
+    });
+
   const uploadProfileImage = async (file: File, kind: 'avatar' | 'cover') => {
-    if (!supabase || !user?.id) { setEditError('Sign in to upload an image'); return; }
+    if (!user?.id) { setEditError('Sign in to upload an image'); return; }
     const setLocal = kind === 'avatar' ? setAvatarUrl : setCoverUrl;
     const metaKey = kind === 'avatar' ? 'avatar_url' : 'cover_url';
     const lsKey = kind === 'avatar' ? 'steinz_avatar_url' : 'steinz_cover_url';
-    // Avatars render small (≤512px is plenty); covers are wide banners (≤1280px).
-    const { blob, ext, contentType } = await downscaleImage(file, kind === 'avatar' ? 512 : 1280);
-    const path = `${user.id}/${kind}.${ext}`;
     try {
-      const { error: upErr } = await supabase.storage
-        .from('avatars')
-        .upload(path, blob, { upsert: true, contentType, cacheControl: '3600' });
-      if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path);
-      // Cache-bust so a re-upload to the same path shows immediately.
-      const url = `${pub.publicUrl}?v=${Date.now()}`;
+      // Avatars render small (≤512px is plenty); covers are wide banners (≤1280px).
+      const { blob, contentType } = await downscaleImage(file, kind === 'avatar' ? 512 : 1280);
+      // Force a bucket-allowed mime even if a WebKit canvas mislabels the blob.
+      const okMime = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(contentType)
+        ? contentType
+        : 'image/jpeg';
+      const rawDataUrl = await blobToDataUrl(blob);
+      // Normalise the data URL's declared mime to the allowed one.
+      const dataUrl = rawDataUrl.replace(/^data:[^;]+/, `data:${okMime}`);
+
+      // Server-side upload (service-role, RLS-exempt) — never fails on a client
+      // storage-RLS/session edge the way the direct browser upload did.
+      const res = await fetch('/api/profile/avatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind, dataUrl }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.url) throw new Error(json?.error || 'Upload failed');
+
+      // Cache-bust so the new image shows immediately.
+      const url = `${json.url}?v=${Date.now()}`;
       setLocal(url);
       try { localStorage.setItem(lsKey, url); } catch { /* localStorage unavailable — silently ignore */ }
-      await supabase.auth.updateUser({ data: { [metaKey]: url } });
-      // Mirror the URL to the profiles table so it persists and shows on social
-      // / public-profile cards (user_metadata alone isn't queryable by others).
-      try { await supabase.from('profiles').update({ [metaKey]: url }).eq('id', user.id); } catch { /* non-fatal — metadata already holds it */ }
+      // Mirror into user_metadata too (the server already wrote the profiles row).
+      try { await supabase.auth.updateUser({ data: { [metaKey]: url } }); } catch { /* non-fatal */ }
       setEditError('');
     } catch (err) {
       console.error(`[ProfileTab] ${kind} upload failed:`, err);
