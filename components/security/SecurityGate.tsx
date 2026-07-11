@@ -194,24 +194,13 @@ export function SecurityGate({ chain, token, action, children, className = '' }:
   const isCaution = band === 'caution';
   const blocked = isHighRisk && !acknowledged;
 
-  // Degraded mode (endpoint 5xx/timeout): show a caution banner so the
-  // user is never silently fail-opened on a token whose risk we
-  // genuinely can't assess. Original CTA still renders.
-  if (degraded && !score) {
-    return (
-      <div className={`space-y-2 ${className}`}>
-        <div role="alert" className="flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs">
-          <AlertTriangle className="w-3.5 h-3.5 text-amber-300 flex-shrink-0 mt-0.5" aria-hidden="true" />
-          <div className="flex-1 text-amber-100/90">
-            Couldn't verify the token's trust score right now. Proceed with extra caution and double-check the contract on a block explorer before you {ACTION_VERBS[action]}.
-          </div>
-        </div>
-        {children}
-      </div>
-    );
-  }
-
-  // No token / unsupported chain / no score → fail-open: render bare CTA.
+  // When the trust score is unavailable (endpoint hiccup, unsupported chain,
+  // no token) we fail OPEN and render the bare CTA - no alarming banner.
+  // Real, actionable risk gating (honeypot / tax / blacklist / price impact)
+  // still runs in the swap review modal via SwapSecurityWarnings, so a transient
+  // trust-API failure never nags the user with "proceed with extra caution"
+  // FUD on a legitimate token. The score panel renders only when we actually
+  // have a score.
   if (!chain || !token || !score) {
     return <div className={className}>{children}</div>;
   }
