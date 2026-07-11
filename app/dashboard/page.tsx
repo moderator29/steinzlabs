@@ -623,7 +623,7 @@ export default function Dashboard() {
       {/* iOS safe-area — naka-safe-top adds env(safe-area-inset-top) so
           the header clears the iPhone 14+ dynamic island / notch instead
           of being overlapped by it. No-op on Android / web. */}
-      <div className="fixed top-0 w-full z-40/95 backdrop-blur-xl border-b border-white/[0.06] naka-safe-top">
+      <div className="fixed top-0 w-full z-40 bg-[#080b14]/80 backdrop-blur-xl border-b border-white/[0.06] naka-safe-top">
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2.5">
             <button onClick={() => setMenuOpen(!menuOpen)} className="-ms-1 p-1 text-white/80 hover:text-white transition-colors" aria-label="Open menu">
