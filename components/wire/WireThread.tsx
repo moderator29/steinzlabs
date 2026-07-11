@@ -46,6 +46,10 @@ export function WireThread({
   const [body, setBody] = useState('');
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState<string | null>(null);
+  // X-style: the composer stays collapsed as a single "Post your reply" pill and
+  // only expands into the full textarea when tapped (or while it holds text).
+  const [expanded, setExpanded] = useState(false);
+  const taRef = useRef<HTMLTextAreaElement>(null);
 
   const inFlightLike = useRef<Set<string>>(new Set());
   const inFlightRepost = useRef<Set<string>>(new Set());
@@ -113,12 +117,18 @@ export function WireThread({
         onCountDelta?.(1);
       }
       setBody('');
+      setExpanded(false);
     } catch {
       setPostError('Network error. Try again.');
     } finally {
       setPosting(false);
     }
   }, [body, posting, postId, onCountDelta]);
+
+  const openComposer = useCallback(() => {
+    setExpanded(true);
+    requestAnimationFrame(() => taRef.current?.focus());
+  }, []);
 
   const patch = (id: string, fn: (p: WirePost) => WirePost) =>
     setReplies((prev) => prev.map((p) => (p.id === id ? fn(p) : p)));
@@ -193,10 +203,15 @@ export function WireThread({
 
   return (
     <div className="mt-2 ms-3 ps-3 border-s border-white/10 space-y-3">
-      {/* Reply composer */}
+      {/* Reply composer — collapsed pill (X-style) that expands on tap */}
       {currentUserId ? (
-        <div className="nl-glass rounded-2xl p-3">
-          <div className="flex gap-2.5">
+        !expanded && !body.trim() ? (
+          <button
+            type="button"
+            onClick={openComposer}
+            className="w-full flex items-center gap-2.5 nl-glass rounded-full px-3 py-2.5 text-left transition-colors hover:bg-white/[0.04]"
+            aria-label="Post your reply"
+          >
             {authorAvatarUrl ? (
               <img src={authorAvatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 flex-shrink-0" />
             ) : (
@@ -207,33 +222,52 @@ export function WireThread({
                 {initial}
               </div>
             )}
-            <div className="min-w-0 flex-1">
-              <textarea
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                onKeyDown={(e) => {
-                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void submitReply();
-                }}
-                placeholder="Post your reply"
-                rows={2}
-                className="w-full bg-transparent resize-none outline-none text-sm text-white placeholder:text-white/35 leading-relaxed"
-              />
-              {postError ? <div className="mt-1 text-xs text-red-400" role="alert">{postError}</div> : null}
-              <div className="mt-2 flex items-center justify-end gap-3">
-                <span className={`text-xs tabular-nums ${over ? 'text-red-400' : 'text-white/40'}`}>{len}/{MAX}</span>
-                <button
-                  type="button"
-                  onClick={() => void submitReply()}
-                  disabled={!canReply}
-                  className="naka-button-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
+            <span className="text-sm text-white/40">Post your reply</span>
+          </button>
+        ) : (
+          <div className="nl-glass rounded-2xl p-3">
+            <div className="flex gap-2.5">
+              {authorAvatarUrl ? (
+                <img src={authorAvatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 flex-shrink-0" />
+              ) : (
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white/90 text-sm font-semibold border border-white/10"
+                  style={{ background: 'linear-gradient(135deg,#0066FF33,#5566FF33)' }}
                 >
-                  {posting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                  Reply
-                </button>
+                  {initial}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <textarea
+                  ref={taRef}
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  onBlur={() => { if (!body.trim()) setExpanded(false); }}
+                  onKeyDown={(e) => {
+                    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void submitReply();
+                    if (e.key === 'Escape' && !body.trim()) setExpanded(false);
+                  }}
+                  placeholder="Post your reply"
+                  rows={3}
+                  className="w-full bg-transparent resize-none outline-none text-base sm:text-sm text-white placeholder:text-white/35 leading-relaxed"
+                />
+                {postError ? <div className="mt-1 text-xs text-red-400" role="alert">{postError}</div> : null}
+                <div className="mt-2 flex items-center justify-end gap-3">
+                  <span className={`text-xs tabular-nums ${over ? 'text-red-400' : 'text-white/40'}`}>{len}/{MAX}</span>
+                  <button
+                    type="button"
+                    onClick={() => void submitReply()}
+                    disabled={!canReply}
+                    className="naka-button-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
+                  >
+                    {posting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                    Reply
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )
       ) : null}
 
       {/* Replies */}

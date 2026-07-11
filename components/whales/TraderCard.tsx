@@ -50,7 +50,11 @@ function fmtUsd(v: string | number | null): string {
   const n = typeof v === 'number' ? v : parseFloat(v);
   if (!isFinite(n) || n === 0) return 'n/a';
   const abs = Math.abs(n);
+  // Guard against raw-unit data artifacts (e.g. un-scaled wei) that would render
+  // as an absurd, overflowing number. Anything above ~$1 quadrillion is garbage.
+  if (abs >= 1e15) return 'n/a';
   const sign = n < 0 ? '-' : '';
+  if (abs >= 1e12) return `${sign}$${(abs / 1e12).toFixed(2)}T`;
   if (abs >= 1e9) return `${sign}$${(abs / 1e9).toFixed(2)}B`;
   if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(2)}M`;
   if (abs >= 1e3) return `${sign}$${(abs / 1e3).toFixed(1)}K`;
@@ -80,10 +84,10 @@ function Metric({ label, value, Icon, tone = 'neutral' }: {
 }) {
   const color = tone === 'green' ? 'text-emerald-400' : tone === 'red' ? 'text-red-400' : 'text-white';
   return (
-    <div className="bg-black/20 rounded-lg p-2">
-      <div className="text-[9px] uppercase tracking-wider text-slate-500">{label}</div>
-      <div className={`text-[11px] font-bold font-mono mt-0.5 flex items-center gap-1 ${color}`}>
-        {Icon && <Icon className="w-3 h-3" />}{value}
+    <div className="bg-black/20 rounded-lg p-2 min-w-0">
+      <div className="text-[9px] uppercase tracking-wider text-slate-500 truncate">{label}</div>
+      <div className={`text-[11px] font-bold font-mono mt-0.5 flex items-center gap-1 min-w-0 ${color}`}>
+        {Icon && <Icon className="w-3 h-3 shrink-0" />}<span className="truncate">{value}</span>
       </div>
     </div>
   );

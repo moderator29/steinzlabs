@@ -798,7 +798,7 @@ function BubbleMapInner() {
       <div className="flex-1 min-h-0 w-full max-w-[1440px] mx-auto p-3 sm:p-4 pb-8 flex flex-col gap-3 sm:gap-4">
         {/* Token entry */}
         <GlassCard className="rounded-2xl p-3 sm:p-4">
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <div className="relative flex-shrink-0">
               <button onClick={() => setShowChainDrop(v => !v)}
                 className="h-11 px-3 bg-white/[0.03] border border-white/[0.08] rounded-xl text-xs font-medium text-gray-300 flex items-center gap-1.5 hover:border-white/[0.15] transition-colors">
@@ -816,12 +816,12 @@ function BubbleMapInner() {
                 </div>
               </>}
             </div>
-            <div className="flex-1 min-w-0 flex items-center bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 focus-within:border-[#0066FF]/30 transition-colors">
+            <div className="h-11 flex-1 min-w-0 flex items-center bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 focus-within:border-[#0066FF]/30 transition-colors">
               <Search className="w-4 h-4 text-gray-600 flex-shrink-0" />
               <input value={tokenAddress} onChange={e => setTokenAddress(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && fetchMap()}
                 placeholder="Token contract address…"
-                className="w-full min-w-0 bg-transparent py-3 px-2 text-xs placeholder-gray-600 focus:outline-none font-mono" />
+                className="w-full min-w-0 bg-transparent px-2 text-xs placeholder-gray-600 focus:outline-none font-mono" />
             </div>
             <button onClick={() => fetchMap()} disabled={loading || !tokenAddress.trim()}
               className="h-11 px-4 nl-btn-neon rounded-xl text-xs font-bold disabled:opacity-30 flex-shrink-0">
@@ -904,9 +904,13 @@ function BubbleMapInner() {
           </GlassCard>
         )}
 
-        {/* Main area — grows to fill the remaining viewport height so the
-            graph + agent never leave a dead band at the bottom. */}
-        <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 sm:gap-4 items-stretch">
+        {/* Main area — on mobile it STACKS naturally and the page scrolls
+            (graph then agent, each with its own min-height); only on lg+ do we
+            constrain it to the viewport row. Previously flex-1+min-h-0 on mobile
+            crammed a 420px graph AND a 440px agent into one viewport-height box,
+            which overflowed, overlapped the header, and killed scroll until a
+            reload. */}
+        <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 lg:flex-1 lg:min-h-0 lg:items-stretch">
           {/* Left column: graph + concentration */}
           <div className="flex-1 min-w-0 flex flex-col gap-3 sm:gap-4 min-h-0">
             <GlassCard

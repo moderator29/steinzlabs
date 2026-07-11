@@ -18,7 +18,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { connectMetaMask, connectPhantom, clearStoredWallet } from '@/lib/wallet';
-import { getBuiltinWalletAddress } from '@/lib/wallet/builtinWallet';
+import { getBuiltinWalletAddress, hydrateBuiltinWalletFromCloud } from '@/lib/wallet/builtinWallet';
 
 const WALLET_CHANGE_EVENT = 'steinz_wallet_changed';
 const BALANCE_CHANGE_EVENT = 'steinz:balance-changed';
@@ -111,17 +111,18 @@ export function useWallet() {
       setProvider(storedProvider);
       fetchBalance(stored);
     } else {
-      // No local wallet in this browser: load the account's default wallet
-      // address from the DB (user_wallets) so a wallet created on another
-      // device/session is still detected. Fixes the "connect a wallet"
-      // re-prompt on portfolio / swap / VTX when the account already has one.
-      fetch('/api/wallet/default')
-        .then((r) => (r.ok ? r.json() : null))
-        .then((d: { address?: string | null } | null) => {
-          if (!cancelled && d?.address) {
-            setAddress(d.address);
+      // No built-in wallet in THIS browser's localStorage: restore it from the
+      // user's encrypted cloud backup (user_wallets_v2 via /api/wallet/sync).
+      // This is the real source of truth for the Naka built-in wallet, so a
+      // wallet created on another device/session is detected everywhere —
+      // fixes the "Not connected / No wallet found" prompt on wallet page /
+      // swap / gift / portfolio when the account already has a wallet.
+      hydrateBuiltinWalletFromCloud()
+        .then((addr) => {
+          if (!cancelled && addr) {
+            setAddress(addr);
             setProvider('builtin');
-            fetchBalance(d.address);
+            fetchBalance(addr);
           }
         })
         .catch(() => { /* stay disconnected */ });

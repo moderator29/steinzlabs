@@ -20,8 +20,12 @@ import { PublicWire, OpenInAppCta, WireComments } from './PublicWire';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const AUTHOR = 'author:profiles!wire_posts_author_id_fkey(id,username,display_name,avatar_url,is_verified)';
-const POST_SELECT = `*, ${AUTHOR}, original:wire_posts!wire_posts_repost_of_fkey(*, ${AUTHOR})`;
+// Embed-free author columns. We deliberately do NOT use a PostgREST embed
+// (author:profiles!fkey(...)) here: a stale PostgREST relationship cache makes
+// that embed 500/return null, which used to send getWire() → null → notFound(),
+// i.e. every "open post" and every username/avatar tap dead-ended on the 404
+// page. Fetching authors with a plain batched query removes that failure mode.
+const AUTHOR_COLS = 'id,username,display_name,avatar_url,is_verified';
 
 function shapePrediction(raw: any): WirePost['prediction'] {
   if (!raw) return null;
@@ -42,18 +46,32 @@ function shapePrediction(raw: any): WirePost['prediction'] {
 async function getWire(id: string): Promise<WirePost | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const sb = getSupabaseAdmin();
+
+  // 1) The wire itself (embed-free).
   const { data, error } = await sb
     .from('wire_posts')
-    .select(POST_SELECT)
+    .select('*')
     .eq('id', id)
     .is('deleted_at', null)
     .maybeSingle();
   if (error || !data) return null;
 
   const post = data as any;
-  const allIds = [post.id, post.original?.id].filter(Boolean);
-  const authorIds = [post.author_id, post.original?.author_id].filter(Boolean);
 
+  // 2) The reposted original, if any (embed-free).
+  if (post.repost_of) {
+    const { data: orig } = await sb.from('wire_posts').select('*').eq('id', post.repost_of).maybeSingle();
+    post.original = orig ?? null;
+  }
+
+  // 3) Authors, batched (embed-free) — the piece that used to fail as an embed.
+  const authorIds = Array.from(new Set([post.author_id, post.original?.author_id].filter(Boolean)));
+  const { data: authors } = await sb.from('profiles').select(AUTHOR_COLS).in('id', authorIds);
+  const authorMap = new Map((authors ?? []).map((a: any) => [a.id, a]));
+  post.author = authorMap.get(post.author_id) ?? null;
+  if (post.original) post.original.author = authorMap.get(post.original.author_id) ?? null;
+
+  const allIds = [post.id, post.original?.id].filter(Boolean);
   const [signals, { data: preds }] = await Promise.all([
     computeAuthorSignals(sb, authorIds),
     sb.from('wire_predictions').select('*').in('post_id', allIds),

@@ -22,7 +22,7 @@
 
 import { decryptPrivateKey } from '@/lib/wallet/encryption';
 import { getWalletSessionKey } from '@/lib/wallet/walletSession';
-import { getBuiltinWalletAddress } from '@/lib/wallet/builtinWallet';
+import { getBuiltinWalletAddress, hydrateBuiltinWalletFromCloud } from '@/lib/wallet/builtinWallet';
 import { addressesEqual } from '@/lib/utils/addressNormalize';
 
 export interface GiftChain {
@@ -134,6 +134,12 @@ function activeBuiltinWallet(): StoredBuiltinWallet | null {
  */
 export async function resolveGiftSender(chain: GiftChain): Promise<ResolvedGiftSender | null> {
   if (typeof window === 'undefined') return null;
+  // Self-heal: if this browser has no built-in wallet locally, restore it from
+  // the user's encrypted cloud backup first so the gift sheet detects the Naka
+  // wallet the account already owns (no more "No wallet found for Ethereum").
+  if (!getBuiltinWalletAddress()) {
+    await hydrateBuiltinWalletFromCloud();
+  }
   const builtin = activeBuiltinWallet();
 
   if (chain.isEvm) {

@@ -1351,6 +1351,38 @@ export default function SwapPage() {
         // EVM wallet (injected extension OR WalletConnect mobile session).
         const accounts = (await evmProvider.request({ method: 'eth_accounts' })) as string[];
         if (!accounts.length) throw new Error('No Ethereum wallet connected');
+
+        // ── ERC-20 approval (the "Allow" step) ──────────────────────────────
+        // 0x's allowance-holder swap reverts if the sell token isn't approved
+        // for its spender. When 0x reports an allowance issue, send the approve
+        // tx FIRST (industry-standard "Approve then Swap"), wait for it to
+        // confirm, then swap. Native ETH sells carry no allowance issue, so this
+        // never fires for them. This is what makes a WalletConnect wallet
+        // actually pop its Allow prompt on a token sell.
+        const spender: string | undefined =
+          swapData.issues?.allowance?.spender || swapData.allowanceTarget;
+        const needsApproval = !!swapData.issues?.allowance && !!spender;
+        const sellTokenAddr: string | undefined = swapData.sellTokenAddress;
+        if (needsApproval && spender && sellTokenAddr && !/^0x0{40}$/i.test(sellTokenAddr)) {
+          setTxStatus('pending');
+          const approveData =
+            '0x095ea7b3' +
+            spender.toLowerCase().replace(/^0x/, '').padStart(64, '0') +
+            'f'.repeat(64); // approve(spender, uint256 max)
+          const approveHash = (await evmProvider.request({
+            method: 'eth_sendTransaction',
+            params: [{ from: accounts[0], to: sellTokenAddr, data: approveData }],
+          })) as string;
+          // Wait for the approval to confirm before the swap (max ~60s).
+          for (let i = 0; i < 40; i++) {
+            await new Promise((r) => setTimeout(r, 1500));
+            const receipt = await evmProvider
+              .request({ method: 'eth_getTransactionReceipt', params: [approveHash] })
+              .catch(() => null);
+            if (receipt && (receipt as { status?: string }).status != null) break;
+          }
+        }
+
         const txParams = { from: accounts[0], to: swapData.transaction.to, data: swapData.transaction.data, value: swapData.transaction.value, gas: swapData.transaction.gas };
         hash = (await evmProvider.request({ method: 'eth_sendTransaction', params: [txParams] })) as string;
       } else if (detectedWallet === 'solana') {
@@ -2215,11 +2247,14 @@ export default function SwapPage() {
         return (
           <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4" onClick={() => setShowReview(false)}>
             <div
-              className="w-full max-w-[460px] nl-glass rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200"
+              className="w-full max-w-[460px] max-h-[92dvh] overflow-y-auto overscroll-contain nl-glass rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200"
               style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.4), 0 0 16px rgba(0,102,255,.18)' }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between">
+              {/* Sticky header so the title/close never scroll off the top when
+                  the review content is taller than the phone viewport (that
+                  overflow was the "no header / overlapping" render). */}
+              <div className="sticky top-0 z-10 -mx-5 -mt-5 sm:-mx-6 sm:-mt-6 px-5 sm:px-6 pt-5 sm:pt-6 pb-3 flex items-center justify-between bg-[#0a0e1a]/95 backdrop-blur-md rounded-t-3xl">
                 <h2 className="text-base font-bold text-white">Review swap</h2>
                 <div className="flex items-center gap-2">
                   {/*
@@ -2294,8 +2329,12 @@ export default function SwapPage() {
                   <span className="text-gray-200 font-mono">{quoteData ? quoteData.minReceived : (parseFloat(toAmount) * (1 - parseFloat(slippage) / 100)).toFixed(6)} {toToken}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Network fee</span>
+                  <span className="text-gray-500" title="Blockchain gas cost — set by network congestion, not by Naka. It moves up and down every block.">Network fee (gas)</span>
                   <span className="text-gray-200">{estimatedGas}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500" title="Naka platform fee, applied to the swap.">Naka fee</span>
+                  <span className="text-gray-200">{(Number(process.env.NEXT_PUBLIC_STEINZ_FEE_BPS || '50') / 100).toFixed(2)}%</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Route</span>

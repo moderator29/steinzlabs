@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   Trash2, Repeat, X, ChevronLeft, ChevronRight, MoreHorizontal,
@@ -367,21 +368,53 @@ function WireBody({
         ? [post.media_url]
         : [];
 
+  // Author profile link — avatar + name/handle route to /u/[username]. Guarded
+  // so a wire whose author has no username stays non-navigating (never a 404).
+  const profileHref = author?.username ? `/u/${author.username}` : null;
+
   return (
     <div className="flex gap-3">
-      <Avatar author={author} size={avatarSize} />
+      {profileHref ? (
+        <Link href={profileHref} onClick={(e) => e.stopPropagation()} className="flex-shrink-0" aria-label={`View @${author!.username}`}>
+          <Avatar author={author} size={avatarSize} />
+        </Link>
+      ) : (
+        <Avatar author={author} size={avatarSize} />
+      )}
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className={`font-semibold text-white truncate max-w-[10rem] ${inset ? 'text-sm' : ''}`}>{name}</span>
-          {author?.is_verified ? <VerifiedGoldBadge size={inset ? 13 : 15} title="Verified" /> : null}
-          <SignalChip signal={post.authorSignal} />
-          {handle ? <span className="text-white/45 text-sm truncate">{handle}</span> : null}
-          <span className="text-white/30 text-sm">·</span>
-          <time className="text-white/45 text-sm" dateTime={post.created_at} title={new Date(post.created_at).toLocaleString()}>
-            {wireRelativeTime(post.created_at)}
-          </time>
+        {/* Header row: name/badges/handle/time wrap within their own column so
+            the ... menu stays pinned top-right and never wraps to center. */}
+        <div className="flex items-start gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap min-w-0 flex-1">
+            {profileHref ? (
+              <Link
+                href={profileHref}
+                onClick={(e) => e.stopPropagation()}
+                className={`font-semibold text-white truncate max-w-[10rem] hover:underline ${inset ? 'text-sm' : ''}`}
+              >
+                {name}
+              </Link>
+            ) : (
+              <span className={`font-semibold text-white truncate max-w-[10rem] ${inset ? 'text-sm' : ''}`}>{name}</span>
+            )}
+            {author?.is_verified ? <VerifiedGoldBadge size={inset ? 13 : 15} title="Verified" /> : null}
+            <SignalChip signal={post.authorSignal} />
+            {handle ? (
+              profileHref ? (
+                <Link href={profileHref} onClick={(e) => e.stopPropagation()} className="text-white/45 text-sm truncate hover:underline">
+                  {handle}
+                </Link>
+              ) : (
+                <span className="text-white/45 text-sm truncate">{handle}</span>
+              )
+            ) : null}
+            <span className="text-white/30 text-sm">·</span>
+            <time className="text-white/45 text-sm" dateTime={post.created_at} title={new Date(post.created_at).toLocaleString()}>
+              {wireRelativeTime(post.created_at)}
+            </time>
+          </div>
 
-          <div className="ms-auto relative">
+          <div className="relative flex-shrink-0">
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}

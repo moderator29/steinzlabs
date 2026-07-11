@@ -236,16 +236,29 @@ export function GiftSheet({ recipient, postId, onClose, onSuccess }: GiftSheetPr
         <div className="mb-4">
           <label className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">Network</label>
           <div className="grid grid-cols-4 gap-2">
-            {GIFT_CHAINS.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => { setChain(c); setAmount(''); }}
-                className={`py-2 rounded-xl border-2 text-center transition ${chain.id === c.id ? 'border-blue-400/60 bg-blue-500/15' : 'border-white/10 bg-white/[0.03] hover:border-white/25'}`}
-              >
-                <div className={`text-xs font-semibold ${chain.id === c.id ? 'text-blue-100' : 'text-white/80'}`}>{c.symbol}</div>
-                <div className="text-[10px] text-white/45">{c.name.split(' ')[0]}</div>
-              </button>
-            ))}
+            {GIFT_CHAINS.map((c) => {
+              // Real chain logo from /public/chains. Robinhood (ETH L2) has no
+              // dedicated asset, so it reuses the Ethereum mark.
+              const logo = `/chains/${c.id === 'robinhood' ? 'ethereum' : c.id === 'bsc' ? 'bsc' : c.id}.png`;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => { setChain(c); setAmount(''); }}
+                  className={`flex flex-col items-center gap-1 py-2 rounded-xl border-2 text-center transition ${chain.id === c.id ? 'border-blue-400/60 bg-blue-500/15' : 'border-white/10 bg-white/[0.03] hover:border-white/25'}`}
+                >
+                  <img
+                    src={logo}
+                    alt=""
+                    width={22}
+                    height={22}
+                    className="h-[22px] w-[22px] rounded-full object-cover"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden'; }}
+                  />
+                  <div className={`text-xs font-semibold leading-none ${chain.id === c.id ? 'text-blue-100' : 'text-white/80'}`}>{c.symbol}</div>
+                  <div className="text-[10px] text-white/45 leading-none">{c.name.split(' ')[0]}</div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
