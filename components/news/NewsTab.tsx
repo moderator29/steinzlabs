@@ -430,7 +430,7 @@ function NewsAlertToggle() {
         className={`inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-[13px] font-medium ring-1 ring-inset transition-colors ${
           on
             ? 'bg-[#0066FF]/15 text-[#4d94ff] ring-[#0066FF]/30'
-            : 'bg-white/5 text-slate-300 ring-white/10 hover:bg-white/10 hover:text-white'
+            : 'bg-[#0066FF]/[0.08] text-[#8fb6ff] ring-[#0066FF]/25 hover:bg-[#0066FF]/15 hover:text-white'
         }`}
         aria-expanded={open}
         title="News alerts"
@@ -619,7 +619,7 @@ export default function NewsTab() {
             type="button"
             onClick={() => load(true)}
             disabled={refreshing || status === 'loading'}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 text-slate-300 ring-1 ring-inset ring-white/10 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-[#0066FF]/[0.08] text-[#8fb6ff] ring-1 ring-inset ring-[#0066FF]/25 transition-colors hover:bg-[#0066FF]/15 hover:text-white disabled:opacity-50"
             aria-label="Refresh news"
             title="Refresh"
           >
