@@ -4,6 +4,7 @@ import SessionGuardProvider from '@/components/SessionGuardProvider';
 import PlatformEventMonitor from '@/components/PlatformEventMonitor';
 import { PendingTradesBanner } from '@/components/trading/PendingTradesBanner';
 import PendingSignerProvider from '@/components/trading/PendingSignerProvider';
+import WalletHydrator from '@/components/wallet/WalletHydrator';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { MaxWelcomeJourney } from '@/components/onboarding/MaxWelcomeJourney';
 
@@ -25,6 +26,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           + landing pages outside this layout stay 1px. */}
       <div className="naka-thick-borders contents">
         <SessionGuardProvider />
+        <WalletHydrator />
         <PlatformEventMonitor />
         <PendingSignerProvider />
         <PendingTradesBanner />
