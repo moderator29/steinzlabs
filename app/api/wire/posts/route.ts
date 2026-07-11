@@ -27,17 +27,29 @@ import { computeAuthorSignals } from '@/lib/wire/signal';
  * only ever READ here. Gifts are recorded elsewhere; we never write them.
  */
 
-// Author profile embed - the only FK from wire_posts to profiles.
-const AUTHOR = 'author:profiles!wire_posts_author_id_fkey(id,username,display_name,avatar_url,is_verified)';
-// Full post select including the embedded original (for reposts) and its author.
-const POST_SELECT = `*, ${AUTHOR}, original:wire_posts!wire_posts_repost_of_fkey(*, ${AUTHOR})`;
-// Create-response select - a freshly created post is always top-level (reposts
-// go through the dedicated /repost route), so it never has an `original` to
-// embed. Omitting the wire_posts->wire_posts self-join here keeps posting
-// working even if PostgREST's schema cache lags on the self-referential FK
-// (the cause of the "Could not find a relationship between 'wire_posts' and
-// 'wire_posts'" errors on create).
-const CREATE_SELECT = `*, ${AUTHOR}`;
+// Read + create selects are deliberately EMBED-FREE. PostgREST relationship
+// embeds (the profiles author join and the wire_posts self-join for a repost
+// original) fail with a hard 500 whenever its schema cache lags a migration,
+// which repeatedly blanked the whole Wire ("could not load the wire") and made
+// posting look like it failed even though the row was written. Authors and
+// repost originals are attached with plain batched queries (fetchAuthors /
+// annotate) that a stale relationship cache can never break.
+const AUTHOR_COLS = 'id,username,display_name,avatar_url,is_verified';
+const POST_SELECT = '*';
+const CREATE_SELECT = '*';
+
+/** Batched author-profile fetch, keyed by id. Never fails the caller. */
+async function fetchAuthors(
+  sb: ReturnType<typeof getSupabaseAdmin>,
+  ids: string[],
+): Promise<Map<string, any>> {
+  const map = new Map<string, any>();
+  const unique = Array.from(new Set(ids.filter(Boolean)));
+  if (!unique.length) return map;
+  const { data } = await sb.from('profiles').select(AUTHOR_COLS).in('id', unique);
+  for (const a of data ?? []) map.set(a.id, a);
+  return map;
+}
 
 const PAGE_SIZE = 20;
 
@@ -69,6 +81,10 @@ const CreateBody = z.object({
     .max(WIRE_MAX_TAGS, `Up to ${WIRE_MAX_TAGS} topics`)
     .optional()
     .nullable(),
+  // Who can see the wire. 'everyone' (default, public), 'followers' (only the
+  // author's accepted followers), 'following' (only accounts the author
+  // follows). Enforced server-side in the feed by applyAudience().
+  audience: z.enum(['everyone', 'followers', 'following']).optional().nullable(),
 });
 
 /** Canonicalise + validate a client-supplied tag list (dedupe, drop unknowns). */
@@ -115,6 +131,7 @@ export async function POST(req: NextRequest) {
     // reply_to here or that guard can be bypassed.
     reply_to: null,
     tags: cleanTags(parsed.data.tags),
+    audience: parsed.data.audience ?? 'everyone',
   };
 
   const { data, error } = await sb
@@ -124,7 +141,12 @@ export async function POST(req: NextRequest) {
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  return NextResponse.json({ post: { ...data, original: null, liked: false, reposted: false } });
+  // Attach the author via a plain query (no embed) so the create response can
+  // never fail on a stale relationship cache.
+  const authorMap = await fetchAuthors(sb, [user.id]);
+  return NextResponse.json({
+    post: { ...data, author: authorMap.get(user.id) ?? null, original: null, liked: false, reposted: false },
+  });
 }
 
 export async function GET(req: NextRequest) {
@@ -371,6 +393,46 @@ function shapePrediction(raw: any, agreedSet: Set<string>): any {
 }
 
 /**
+ * Enforce per-wire audience visibility on a page of wires.
+ *   everyone   - public, always visible
+ *   followers  - only the author's accepted followers (and the author)
+ *   following  - only accounts the author follows (and the author)
+ * Signed-out viewers only ever see 'everyone'. Applied centrally at the top of
+ * annotate() so every feed path (signal / pack / author / replies) inherits it
+ * and a restricted wire can never leak into a feed it should not appear in.
+ */
+async function applyAudience(
+  sb: ReturnType<typeof getSupabaseAdmin>,
+  posts: any[],
+  viewerId?: string,
+): Promise<any[]> {
+  const restricted = posts.filter((p) => p?.audience && p.audience !== 'everyone');
+  if (restricted.length === 0) return posts;
+
+  const isPublic = (p: any) => !p?.audience || p.audience === 'everyone';
+  if (!viewerId) return posts.filter(isPublic);
+
+  const authorIds = Array.from(new Set(restricted.map((p) => p.author_id).filter(Boolean)));
+
+  // authors the viewer follows (satisfies 'followers'); authors who follow the
+  // viewer (satisfies 'following'). Two small scoped lookups, accepted-only.
+  const [{ data: vf }, { data: fv }] = await Promise.all([
+    sb.from('social_follows').select('following_id').eq('follower_id', viewerId).eq('status', 'accepted').in('following_id', authorIds),
+    sb.from('social_follows').select('follower_id').eq('following_id', viewerId).eq('status', 'accepted').in('follower_id', authorIds),
+  ]);
+  const viewerFollows = new Set((vf ?? []).map((e: any) => e.following_id).filter(Boolean));
+  const followsViewer = new Set((fv ?? []).map((e: any) => e.follower_id).filter(Boolean));
+
+  return posts.filter((p) => {
+    if (isPublic(p)) return true;
+    if (p.author_id === viewerId) return true; // author always sees own wire
+    if (p.audience === 'followers') return viewerFollows.has(p.author_id);
+    if (p.audience === 'following') return followsViewer.has(p.author_id);
+    return true;
+  });
+}
+
+/**
  * Attach the per-viewer + SocialFi data contract to a page of wires:
  *   liked / reposted  - viewer engagement (false when signed out)
  *   authorSignal      - the author's transparent 0-100 signal score
@@ -390,7 +452,24 @@ async function annotate(
 ): Promise<any[]> {
   if (!Array.isArray(posts) || posts.length === 0) return [];
 
-  // Every wire id on the page, including embedded originals of reposts.
+  // Enforce audience visibility first so restricted wires never reach a viewer
+  // who should not see them (and their originals are never fetched below).
+  posts = await applyAudience(sb, posts, viewerId);
+  if (posts.length === 0) return [];
+
+  // Attach repost originals with a plain batched query (embeds removed so a
+  // stale relationship cache can never blank the feed). A repost carries
+  // repost_of; fetch those originals once and hang them off `.original`.
+  const repostOfIds = Array.from(new Set(posts.map((p) => p?.repost_of).filter(Boolean)));
+  if (repostOfIds.length) {
+    const { data: origs } = await sb.from('wire_posts').select('*').in('id', repostOfIds);
+    const origMap = new Map((origs ?? []).map((o: any) => [o.id, o]));
+    for (const p of posts) {
+      if (p?.repost_of && p.original == null) p.original = origMap.get(p.repost_of) ?? null;
+    }
+  }
+
+  // Every wire id on the page, including originals of reposts.
   const allIds = Array.from(
     new Set(
       posts
@@ -410,6 +489,9 @@ async function annotate(
   const missing = authorIds.filter((id) => !provided.has(id));
   const extra = missing.length ? await computeAuthorSignals(sb, missing) : new Map<string, number>();
   const signals = new Map<string, number>([...provided, ...extra]);
+
+  // Author profiles for every wire + original on the page (plain query, no embed).
+  const authorMap = await fetchAuthors(sb, authorIds);
 
   // Predictions attached to any wire on the page.
   const { data: preds } = await sb.from('wire_predictions').select('*').in('post_id', allIds);
@@ -439,6 +521,7 @@ async function annotate(
 
   const decorate = (p: any) => ({
     ...p,
+    author: authorMap.get(p?.author_id) ?? p?.author ?? null,
     liked: likedSet.has(p?.id),
     reposted: repostedSet.has(p?.id),
     authorSignal: signals.has(p?.author_id) ? signals.get(p?.author_id) : null,

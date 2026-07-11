@@ -65,4 +65,24 @@ export const FAQS: FAQ[] = [
     q: 'How do I set up and configure the Sniper Bot?',
     a: 'Navigate to Dashboard → Sniper Bot → Settings. Configure your max buy amount per token, maximum risk score threshold (0–100), chains to monitor (Solana, ETH, Base), and optional stop-loss percentage. The bot will only execute on tokens scoring below your risk threshold. All 6 safety layers run automatically, and you cannot disable them. Start/stop the bot from the Sniper Oversight panel.',
   },
+  {
+    q: 'What is The Wire?',
+    a: 'The Wire is Naka Labs\' on-chain social layer. Every profile carries a Signal Score computed from verifiable on-chain activity and real engagement, not follower counts. Posts can carry $cashtag price chips and inline predictions, threads open in a side panel, and you can tip or gift any creator directly from their post. Reputation is earned from real trades, not bought.',
+  },
+  {
+    q: 'What is Naka Predict?',
+    a: 'Naka Predict is a free-to-play, crypto-only prediction game (currently in beta). Call whether a token goes up or down over a set window with one-tap Quick Play, earn Naka Points, keep daily streaks, and track your calls in My Predictions. Odds come from a transparent on-chain price model, never fabricated numbers.',
+  },
+  {
+    q: 'Can I buy any coin on Naka Labs, like a DEX?',
+    a: 'Yes. The swap engine lets you find any token by name or by pasting its contract address, across all supported networks, with a real logo, just like a pro DEX. Trades execute non-custodially through 0x on EVM chains and Jupiter on Solana, so you always get aggregated best-route pricing while keeping your keys. Every swap ends with a shareable receipt.',
+  },
+  {
+    q: 'Does Naka Labs have a Telegram bot?',
+    a: 'Yes. The Naka Labs Telegram bot gives you an inline button menu (no commands to memorize) for whale alerts, smart-money moves, Naka News, market lookups, and account linking. It is read-only and alert-focused; all trading stays non-custodial inside the app.',
+  },
+  {
+    q: 'Do I need to sign up to use Naka Labs?',
+    a: 'Yes. You create a Naka Labs account to use the platform. Many intelligence surfaces (Context Feed, Security scanner, Whale Tracker, VTX AI, Research) are read-only once you are in, and connecting a wallet is only needed for actions that move funds: swaps, the Sniper Bot, and tracking your own portfolio. Naka Labs stays non-custodial throughout.',
+  },
 ];

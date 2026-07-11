@@ -2198,6 +2198,13 @@ export default function SwapPage() {
         // button that costs them most of their input. Industry parity
         // with Uniswap V3.
         const piBlocked = pi >= 15;
+        // Industry-standard balance guard: a connected wallet cannot confirm a
+        // swap larger than its from-token balance (Uniswap/1inch disable the
+        // button in this case). Uses the read balance; when the wallet has no
+        // balance for the from-token the confirm is blocked, never a silent
+        // proceed.
+        const fromBal = walletBalance[fromToken] ?? 0;
+        const insufficientBalance = !!connectedAddress && parseFloat(fromAmount || '0') > fromBal;
         // Audit P0 #3 — quote staleness countdown. nowTick refreshes
         // every second while the modal is open; secondsLeft drives the
         // pill UI. Intentionally floor + max(0) so the user never sees
@@ -2246,7 +2253,7 @@ export default function SwapPage() {
               <div className="nl-card rounded-2xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-sm font-bold">{fromToken.slice(0, 2)}</div>
+                    <TokenBadge symbol={fromToken} size={40} />
                     <div>
                       <div className="text-[10px] text-gray-500 uppercase">You pay</div>
                       <div className="text-base font-mono text-white">{fromAmount} {fromToken}</div>
@@ -2256,7 +2263,7 @@ export default function SwapPage() {
                 <div className="flex justify-center"><ChevronDown className="w-4 h-4 text-gray-600" /></div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-sm font-bold">{toToken.slice(0, 2)}</div>
+                    <TokenBadge symbol={toToken} size={40} />
                     <div>
                       <div className="text-[10px] text-gray-500 uppercase">You receive</div>
                       <div className="text-base font-mono text-white">{toAmount} {toToken}</div>
@@ -2408,14 +2415,20 @@ export default function SwapPage() {
                 </button>
                 <button
                   onClick={() => { setShowReview(false); handleSwap(); }}
-                  disabled={piBlocked || swapping || securityBlocking}
-                  className={`flex-1 py-3.5 rounded-2xl text-sm font-bold transition-all ${
+                  disabled={piBlocked || swapping || securityBlocking || insufficientBalance}
+                  className={`flex-1 py-3.5 rounded-2xl text-sm font-bold transition-all text-white ${
                     piBlocked || securityBlocking
                       ? 'bg-red-500/20 text-red-400 cursor-not-allowed'
-                      : 'nl-button active:scale-[0.98]'
+                      : insufficientBalance
+                        ? 'bg-white/5 text-gray-500 cursor-not-allowed'
+                        : 'active:scale-[0.98]'
                   }`}
+                  style={!piBlocked && !securityBlocking && !insufficientBalance ? {
+                    background: 'linear-gradient(135deg,#3AA0FF 0%,#0066FF 52%,#0038B8 100%)',
+                    boxShadow: '0 0 0 1px rgba(130,190,255,.5), 0 8px 26px rgba(0,102,255,.55), inset 0 1px 0 rgba(255,255,255,.35)',
+                  } : undefined}
                 >
-                  {piBlocked || securityBlocking ? 'Blocked' : 'Confirm swap'}
+                  {insufficientBalance ? `Insufficient ${fromToken}` : piBlocked || securityBlocking ? 'Blocked' : 'Confirm swap'}
                 </button>
               </div>
             </div>

@@ -1,6 +1,8 @@
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { LandingNav } from '@/components/landing/LandingNav';
+import { FloatingCoins } from '@/components/landing/FloatingCoins';
 import { HeroSection } from '@/components/landing/HeroSection';
+import { LiveOverviewCard } from '@/components/landing/LiveOverviewCard';
 import { FeatureCarousel } from '@/components/landing/FeatureCarousel';
 import { VTXSection } from '@/components/landing/VTXSection';
 import { StatsSection } from '@/components/landing/StatsSection';
@@ -95,7 +97,9 @@ export default function LandingPage() {
       />
       <div className="min-h-screen text-white overflow-x-hidden">
         <LandingNav />
+        <FloatingCoins section="hero" />
         <HeroSection />
+        <LiveOverviewCard />
         <FeatureCarousel />
         <VTXSection />
         <StatsSection />

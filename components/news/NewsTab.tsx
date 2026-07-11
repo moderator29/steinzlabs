@@ -113,10 +113,10 @@ function VoteControl({
         onClick={() => onVote('bullish')}
         aria-pressed={vote === 'bullish'}
         title="Bullish"
-        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset transition-colors ${
+        className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset transition-colors ${
           vote === 'bullish'
-            ? 'bg-emerald-500/20 text-emerald-400 ring-emerald-500/40'
-            : 'bg-white/5 text-slate-400 ring-white/10 hover:bg-emerald-500/10 hover:text-emerald-400'
+            ? 'bg-emerald-500/20 text-emerald-400 ring-emerald-500/45'
+            : 'bg-emerald-500/[0.06] text-emerald-300/80 ring-emerald-500/20 hover:bg-emerald-500/15 hover:text-emerald-300'
         }`}
       >
         <TrendingUp className="h-3.5 w-3.5" />
@@ -127,10 +127,10 @@ function VoteControl({
         onClick={() => onVote('bearish')}
         aria-pressed={vote === 'bearish'}
         title="Bearish"
-        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset transition-colors ${
+        className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset transition-colors ${
           vote === 'bearish'
-            ? 'bg-rose-500/20 text-rose-400 ring-rose-500/40'
-            : 'bg-white/5 text-slate-400 ring-white/10 hover:bg-rose-500/10 hover:text-rose-400'
+            ? 'bg-rose-500/20 text-rose-400 ring-rose-500/45'
+            : 'bg-rose-500/[0.06] text-rose-300/80 ring-rose-500/20 hover:bg-rose-500/15 hover:text-rose-300'
         }`}
       >
         <TrendingDown className="h-3.5 w-3.5" />
