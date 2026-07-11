@@ -70,7 +70,7 @@ const GROUPS: Record<string, string[]> = {
   'six-hourly': [
     'cluster-analysis', 'security-monitor', 'notification-digest', 'telegram-heartbeat',
     'biz-mention-scrape', 'funding-rates-snapshot', 'reputation-feedback',
-    'whale-score-populator', 'whale-backfill-pnl', 'whale-discovery', 'market-pulse-warm', 'cult-refresh-treasury',
+    'whale-score-populator', 'whale-backfill-pnl', 'whale-winrate', 'whale-discovery', 'market-pulse-warm', 'cult-refresh-treasury',
     'cult-conviction-score', 'cult-offering-draw',
   ],
   // Every 12 hours (00:00 + 12:00 UTC) — the research brief publishes two
