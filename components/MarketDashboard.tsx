@@ -334,8 +334,12 @@ export default function MarketDashboard() {
     // Bug §3a — was hardcoded to /market/ethereum/{id}. Route to
     // each token's canonical native chain (BTC → bitcoin, SOL → solana,
     // XRP → xrp, etc.) so the terminal header doesn't label them ETHEREUM.
-    const chain = resolveTokenChain({ id: coin.id, symbol: coin.symbol }).chain;
-    router.push(`/dashboard/market/${chain}/${coin.id || coin.symbol.toLowerCase()}`);
+    // A dex search hit already carries its real chain + contract address, so
+    // route there directly instead of forcing it onto ethereum by id/symbol;
+    // CoinGecko coins have no explicit chain, so resolve the native one.
+    const chain = coin.chain || resolveTokenChain({ id: coin.id, symbol: coin.symbol }).chain;
+    const target = coin.address || coin.id || coin.symbol.toLowerCase();
+    router.push(`/dashboard/market/${chain}/${target}`);
   };
 
   // Optimistic toggle backed by the shared useWatchlist hook, which POSTs to

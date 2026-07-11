@@ -250,10 +250,10 @@ export default function Markets() {
                   <TokenLogo src={coin.image || undefined} symbol={coin.symbol} address={coin.address} chain={coin.chain} size={36} />
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-semibold text-white">{coin.name}</span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-sm font-semibold text-white truncate min-w-0">{coin.name}</span>
                       {coin.source === 'dex' && coin.chain && (
-                        <span className="text-[9px] px-1 py-0.5 bg-[#0066FF]/20 text-[#0066FF] rounded font-medium">
+                        <span className="flex-shrink-0 text-[9px] px-1 py-0.5 bg-[#0066FF]/20 text-[#0066FF] rounded font-medium">
                           {CHAIN_LABEL[coin.chain] || coin.chain.slice(0, 4).toUpperCase()}
                         </span>
                       )}
