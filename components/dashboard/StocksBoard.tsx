@@ -37,11 +37,26 @@ interface RwaRow {
   changePct: number | null;
   spark: number[];
   asOf: string | null;
+  feed?: string | null;
 }
 
 type ApiResponse =
   | { available: true; source: 'twelvedata' | 'pyth'; asOf: string; rows: RwaRow[] }
   | { available: false; reason: string };
+
+// Lazily-loaded daily series for a single ticker (fetched on expand from
+// /api/markets/rwa/history — real Pyth benchmark candles, keyless).
+type LazyHistory =
+  | { state: 'loading' }
+  | { state: 'ready'; closes: number[]; changeAbs: number | null; changePct: number | null }
+  | { state: 'none' };
+
+interface HistoryResponse {
+  available: boolean;
+  closes?: number[];
+  changeAbs?: number | null;
+  changePct?: number | null;
+}
 
 const UP = '#10B981';
 const DOWN = '#EF4444';
@@ -53,7 +68,14 @@ const DOWN = '#EF4444';
 
 type TabKey = 'stocks' | 'rwa' | 'ai' | 'watchlist';
 
-const AI_SYMBOLS = new Set(['NVDA', 'MSFT', 'GOOGL', 'AMD']);
+// The AI-exposed basket — semis, hyperscalers and AI-native names. Only the
+// ones the live feed actually prices ever render (intersection with the
+// universe), so this never pads the tab with unpriced rows.
+const AI_SYMBOLS = new Set([
+  'NVDA', 'MSFT', 'GOOGL', 'GOOG', 'AMD', 'AVGO', 'TSM', 'SMCI', 'AMZN', 'META',
+  'PLTR', 'ARM', 'MU', 'INTC', 'ASML', 'ORCL', 'CRM', 'ADBE', 'NOW', 'SNOW',
+  'AI', 'DELL', 'ANET', 'MRVL', 'QCOM', 'IBM', 'CRWD', 'PANW', 'TSLA', 'APP',
+]);
 
 const TABS: Array<{ key: TabKey; label: string }> = [
   { key: 'stocks', label: 'Stocks' },
@@ -252,6 +274,7 @@ function Row({
   starred,
   canStar,
   onToggleStar,
+  lazy,
 }: {
   row: RwaRow;
   open: boolean;
@@ -259,11 +282,24 @@ function Row({
   starred: boolean;
   canStar: boolean;
   onToggleStar: () => void;
+  lazy?: LazyHistory;
 }) {
-  const hasChange = row.changePct != null && Number.isFinite(row.changePct);
-  const up = (row.changePct ?? 0) >= 0;
-  const hasSeries = row.spark.filter((n) => Number.isFinite(n)).length >= 2;
-  const seriesLen = row.spark.filter((n) => Number.isFinite(n)).length;
+  // The list row may carry no series (keyless spot rows). On expand the board
+  // fetches a real daily series and passes it in as `lazy`; prefer that.
+  const lazyCloses = lazy && lazy.state === 'ready' ? lazy.closes : [];
+  const series = row.spark.filter((n) => Number.isFinite(n)).length >= 2 ? row.spark : lazyCloses;
+  // Change: the row's own (Twelve Data) change wins; otherwise the lazy series' change.
+  const changePct = row.changePct != null && Number.isFinite(row.changePct)
+    ? row.changePct
+    : (lazy && lazy.state === 'ready' ? lazy.changePct : null);
+  const changeAbs = row.changeAbs != null && Number.isFinite(row.changeAbs)
+    ? row.changeAbs
+    : (lazy && lazy.state === 'ready' ? lazy.changeAbs : null);
+  const hasChange = changePct != null && Number.isFinite(changePct);
+  const up = (changePct ?? 0) >= 0;
+  const hasSeries = series.filter((n) => Number.isFinite(n)).length >= 2;
+  const seriesLen = series.filter((n) => Number.isFinite(n)).length;
+  const lazyLoading = lazy?.state === 'loading';
 
   return (
     <div className="border-b border-white/[0.05] last:border-b-0">
@@ -298,7 +334,7 @@ function Row({
 
           {hasSeries && (
             <div className="shrink-0 hidden sm:block">
-              <Sparkline data={row.spark} width={64} height={24} stroke={up ? UP : DOWN} />
+              <Sparkline data={series} width={64} height={24} stroke={up ? UP : DOWN} />
             </div>
           )}
 
@@ -309,7 +345,7 @@ function Row({
                 className="mt-0.5 rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums text-white"
                 style={{ backgroundColor: up ? UP : DOWN }}
               >
-                {fmtChangePct(row.changePct)}
+                {fmtChangePct(changePct)}
               </div>
             ) : (
               <div className="mt-0.5 text-[11px] text-white/35">Spot price</div>
@@ -322,21 +358,26 @@ function Row({
         <div className="px-1 pb-4 pt-1">
           {hasSeries ? (
             <>
-              <PriceChart data={row.spark} up={up} />
+              <PriceChart data={series} up={up} />
               <div className="mt-2 flex items-center justify-between text-xs">
                 <span className="text-white/45">Last {seriesLen} sessions</span>
                 {hasChange && (
                   <span className="font-semibold tabular-nums" style={{ color: up ? UP : DOWN }}>
-                    {fmtChangeAbs(row.changeAbs)} ({fmtChangePct(row.changePct)})
+                    {fmtChangeAbs(changeAbs)} ({fmtChangePct(changePct)})
                   </span>
                 )}
               </div>
             </>
+          ) : lazyLoading ? (
+            <div className="flex items-center justify-center gap-2 py-8 text-xs text-white/45">
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/20 border-t-white/60" />
+              Loading chart…
+            </div>
           ) : (
             <div className="rounded-xl bg-white/[0.03] border border-white/[0.05] px-4 py-6 text-center">
               <div className="text-[13px] font-semibold text-white/80">Chart unavailable</div>
               <div className="text-xs text-white/45 mt-1">
-                The current feed provides a live spot price only, with no daily series to plot.
+                No daily series is published for this ticker right now.
               </div>
             </div>
           )}
@@ -375,6 +416,8 @@ export default function StocksBoard() {
   const [tab, setTab] = useState<TabKey>('stocks');
   const [openSymbol, setOpenSymbol] = useState<string | null>(null);
   const [watchlist, setWatchlist] = useState<string[]>([]);
+  // Per-symbol lazily-loaded chart series (keyed by display symbol).
+  const [history, setHistory] = useState<Record<string, LazyHistory>>({});
 
   // Hydrate the on-device watchlist once the signed-in user is known.
   useEffect(() => {
@@ -413,6 +456,46 @@ export default function StocksBoard() {
     const id = setInterval(load, 60_000);
     return () => clearInterval(id);
   }, [load]);
+
+  // On expand, lazily pull a real daily series for the opened ticker so every
+  // row (not just the Twelve Data core) gets a chart. Rows that already carry a
+  // series, or have no Pyth feed to chart, are skipped.
+  useEffect(() => {
+    if (!openSymbol) return;
+    const allRows = data && data.available ? data.rows : [];
+    const row = allRows.find((r) => r.symbol === openSymbol);
+    if (!row || !row.feed) return;
+    if (row.spark.filter((n) => Number.isFinite(n)).length >= 2) return; // already has a series
+    if (history[openSymbol]) return; // already fetched / fetching
+
+    let cancelled = false;
+    setHistory((h) => ({ ...h, [openSymbol]: { state: 'loading' } }));
+    fetch(`/api/markets/rwa/history?feed=${encodeURIComponent(row.feed)}`, { cache: 'no-store' })
+      .then((r) => (r.ok ? (r.json() as Promise<HistoryResponse>) : null))
+      .then((j) => {
+        if (cancelled) return;
+        if (j && j.available && Array.isArray(j.closes) && j.closes.length >= 2) {
+          setHistory((h) => ({
+            ...h,
+            [openSymbol]: {
+              state: 'ready',
+              closes: j.closes as number[],
+              changeAbs: j.changeAbs ?? null,
+              changePct: j.changePct ?? null,
+            },
+          }));
+        } else {
+          setHistory((h) => ({ ...h, [openSymbol]: { state: 'none' } }));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setHistory((h) => ({ ...h, [openSymbol]: { state: 'none' } }));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [openSymbol, data, history]);
 
   const asOf = data && data.available ? fmtDate(data.asOf) : '';
   const sourceLabel =
@@ -555,6 +638,7 @@ export default function StocksBoard() {
                   starred={starred.has(r.symbol)}
                   canStar={canStar}
                   onToggleStar={() => toggleStar(r.symbol)}
+                  lazy={history[r.symbol]}
                 />
               ))}
             </div>
