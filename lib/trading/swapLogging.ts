@@ -145,5 +145,5 @@ export async function recordFeeRevenue(db: SupabaseClient, row: FeeRevenueRow): 
  */
 export const PLATFORM_FEE_BPS = Number(process.env.NEXT_PUBLIC_STEINZ_FEE_BPS) || 50;
 
-/** The platform fee as a decimal string (e.g. "0.004"). */
+/** The platform fee as a decimal string (e.g. "0.005"). */
 export const PLATFORM_FEE_DECIMAL = (PLATFORM_FEE_BPS / 10000).toString();

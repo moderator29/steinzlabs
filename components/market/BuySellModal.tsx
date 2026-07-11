@@ -7,6 +7,12 @@ import { formatPrice } from '@/lib/market/formatters';
 import { TokenLogo } from './TokenLogo';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { useFocusTrap } from '@/lib/a11y/useFocusTrap';
+import { PLATFORM_FEE_BPS } from '@/lib/trading/swapLogging';
+
+// Single source of truth for the platform fee (NEXT_PUBLIC_STEINZ_FEE_BPS),
+// so this modal's fee + label always match the swap engine and can never drift.
+const FEE_RATE = PLATFORM_FEE_BPS / 10000;
+const FEE_LABEL = `${(PLATFORM_FEE_BPS / 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`;
 
 interface BuySellModalProps {
   tokenId?: string;
@@ -54,7 +60,7 @@ export function BuySellModal({ symbol, name, logo, priceUSD, chain, tokenAddress
 
   const amountNum = parseFloat(amount) || 0;
   const tokenAmount = priceUSD > 0 ? amountNum / priceUSD : 0;
-  const fee = amountNum * 0.004; // 0.4% platform fee
+  const fee = amountNum * FEE_RATE;
 
   const handleExecute = async () => {
     if (!amountNum) return;
@@ -207,7 +213,7 @@ export function BuySellModal({ symbol, name, logo, priceUSD, chain, tokenAddress
                   <span className="text-white font-mono">{formatPrice(priceUSD)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Fee (0.4%)</span>
+                  <span className="text-gray-400">Fee ({FEE_LABEL})</span>
                   <span className="text-white font-mono">${fee.toFixed(4)}</span>
                 </div>
                 <div className="flex justify-between">

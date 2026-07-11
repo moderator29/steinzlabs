@@ -347,6 +347,19 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
       volumeAddress = chosen[1];
     }
   }
+  // Every on-chain coin should chart like DexScreener: if no pool/platform
+  // source resolved above but this page's own address is a real contract on a
+  // GeckoTerminal-supported network, route the chart straight to that contract
+  // so GT resolves the deepest pool and returns real candles + volume. This is
+  // what makes any DEX-traded token (memecoins, long-tail) render a full,
+  // functioning chart instead of an empty panel.
+  if (!volumeNetwork) {
+    const addrIsContract = isEvmAddress || /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address);
+    if (addrIsContract && GT_SUPPORTED_NETS.has(chain)) {
+      volumeNetwork = chain;
+      volumeAddress = address;
+    }
+  }
 
   return (
     <div className="flex flex-col min-h-screen w-full max-w-full overflow-x-clip text-white pb-20 md:pb-0">
