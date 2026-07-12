@@ -33,6 +33,7 @@ import SteinzLogo from '@/components/ui/SteinzLogo';
 // Dominance / Chains Tracked.
 import { RenderWidgets } from '@/components/dashboard/RenderWidgets';
 import { DailyPulseSummary } from '@/components/dashboard/DailyPulseSummary';
+import { OverviewPreviews } from '@/components/dashboard/OverviewPreviews';
 import { FirstRunTour } from '@/components/dashboard/FirstRunTour';
 
 const ContextFeed    = lazy(() => import('@/components/ContextFeed'));
@@ -599,6 +600,9 @@ export default function Dashboard() {
           <OverviewHero name={heroName} />
           <DailyPulseSummary />
           <RenderWidgets />
+          {/* Quick-access previews under the portfolio: Watchlist, Messages and
+              Swap — real data, deep-linked into each surface. */}
+          <OverviewPreviews />
         </>
       );
     }
