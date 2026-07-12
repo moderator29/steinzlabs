@@ -1,88 +1,59 @@
 'use client';
 
 /**
- * On-device stock price alerts. Stored per signed-in user in localStorage. While
- * the Stocks board is open it refreshes prices every minute and fires a browser
- * notification + toast when a target is crossed, then marks the alert fired.
- * Honest + clear: these are device-local, live-while-open alerts (no server cron
- * needed), which is exactly what a "watch this price" alert should feel like in
- * the app.
+ * Stock price alerts client. Backed by the server (`/api/stocks/alerts` + the
+ * stock-alerts cron), so an alert fires as an in-app notification EVEN WHEN the
+ * app is closed and syncs across a user's devices. Thin async wrappers over the
+ * API; all failures resolve to safe empty results so the UI never throws.
  */
 
 export interface StockAlert {
   id: string;
   symbol: string;
-  name: string;
+  name: string | null;
   target: number;
   direction: 'above' | 'below';
-  createdAt: number;
-  firedAt?: number;
+  active: boolean;
+  fired_at: string | null;
+  created_at: string;
 }
 
-function key(uid: string | null): string | null {
-  return uid ? `nl-stock-alerts:${uid}` : null;
-}
-
-export function getAlerts(uid: string | null): StockAlert[] {
-  const k = key(uid);
-  if (!k || typeof window === 'undefined') return [];
+export async function getAlerts(): Promise<StockAlert[]> {
   try {
-    const raw = window.localStorage.getItem(k);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
+    const r = await fetch('/api/stocks/alerts', { cache: 'no-store' });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return Array.isArray(j.alerts) ? j.alerts : [];
   } catch {
     return [];
   }
 }
 
-function save(uid: string | null, alerts: StockAlert[]): void {
-  const k = key(uid);
-  if (!k || typeof window === 'undefined') return;
+export async function alertsForSymbol(symbol: string): Promise<StockAlert[]> {
+  const all = await getAlerts();
+  return all.filter((a) => a.symbol === symbol);
+}
+
+export async function addAlert(a: { symbol: string; name: string | null; target: number; direction: 'above' | 'below' }): Promise<StockAlert | null> {
   try {
-    window.localStorage.setItem(k, JSON.stringify(alerts));
+    const r = await fetch('/api/stocks/alerts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(a),
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j.alert ?? null;
   } catch {
-    /* storage full / unavailable */
+    return null;
   }
 }
 
-export function addAlert(uid: string | null, a: Omit<StockAlert, 'id' | 'createdAt'>): StockAlert[] {
-  const list = getAlerts(uid);
-  const id = `${a.symbol}-${a.direction}-${a.target}`;
-  const next = [...list.filter((x) => x.id !== id), { ...a, id, createdAt: Date.now() }];
-  save(uid, next);
-  return next;
-}
-
-export function removeAlert(uid: string | null, id: string): StockAlert[] {
-  const next = getAlerts(uid).filter((a) => a.id !== id);
-  save(uid, next);
-  return next;
-}
-
-export function alertsForSymbol(uid: string | null, symbol: string): StockAlert[] {
-  return getAlerts(uid).filter((a) => a.symbol === symbol);
-}
-
-/**
- * Check every armed alert against the latest prices and fire the ones that
- * crossed. Returns the list of alerts that fired this pass (for a toast).
- */
-export function checkAlerts(uid: string | null, priceBySymbol: Map<string, number>): StockAlert[] {
-  const list = getAlerts(uid);
-  if (list.length === 0) return [];
-  const fired: StockAlert[] = [];
-  let changed = false;
-  for (const a of list) {
-    if (a.firedAt) continue;
-    const price = priceBySymbol.get(a.symbol);
-    if (price == null) continue;
-    const cross = a.direction === 'above' ? price >= a.target : price <= a.target;
-    if (cross) {
-      a.firedAt = Date.now();
-      fired.push(a);
-      changed = true;
-    }
+export async function removeAlert(id: string): Promise<boolean> {
+  try {
+    const r = await fetch(`/api/stocks/alerts?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    return r.ok;
+  } catch {
+    return false;
   }
-  if (changed) save(uid, list);
-  return fired;
 }

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CandlestickChart, Star, Search, TrendingUp, TrendingDown, X } from 'lucide-react';
 import { Sparkline } from '@/components/ui/Sparkline';
 import { StockDetailSheet } from '@/components/stocks/StockDetailSheet';
-import { checkAlerts } from '@/lib/stocks/alerts';
 import { useAuth } from '@/lib/hooks/useAuth';
 
 /**
@@ -160,19 +159,9 @@ export default function StocksBoard() {
       setRows(list);
       if (Array.isArray(j.ticker) && j.ticker.length) setTicker(j.ticker);
       setErrored(!j.available && tab !== 'watchlist');
-
-      // Fire any device-local price alerts that just crossed (works while open).
-      const priceMap = new Map<string, number>();
-      rowCache.current.forEach((r, s) => { if (Number.isFinite(r.price)) priceMap.set(s, r.price); });
-      const fired = checkAlerts(uid, priceMap);
-      for (const a of fired) {
-        setToast(`${a.symbol.replace(/^\^/, '')} is ${a.direction} ${a.target}`);
-        try { if (typeof Notification !== 'undefined' && Notification.permission === 'granted') new Notification('Naka price alert', { body: `${a.symbol.replace(/^\^/, '')} crossed ${a.direction} ${a.target}` }); } catch { /* ignore */ }
-      }
-      if (fired.length) setTimeout(() => setToast(null), 4000);
     } catch { setErrored(true); }
     finally { setLoading(false); }
-  }, [tab, apiTab, showAll, uid]);
+  }, [tab, apiTab, showAll]);
 
   useEffect(() => { load(); const id = setInterval(load, 60_000); return () => clearInterval(id); }, [load]);
 
@@ -336,14 +325,6 @@ export default function StocksBoard() {
           onToggleStar={canStar ? () => toggleStar(openSymbol.symbol) : undefined}
           onClose={() => setOpenSymbol(null)}
         />
-      )}
-
-      {toast && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[110] pointer-events-none">
-          <div className="nl-glass rounded-full px-4 py-2 text-sm text-white/90 inline-flex items-center gap-2 shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
-            <Star className="w-4 h-4 text-[#F5B841]" /><span className="truncate max-w-[70vw]">{toast}</span>
-          </div>
-        </div>
       )}
     </div>
   );

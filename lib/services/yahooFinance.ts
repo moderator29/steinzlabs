@@ -17,6 +17,70 @@ import 'server-only';
 const BASES = ['https://query1.finance.yahoo.com', 'https://query2.finance.yahoo.com'];
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36';
 
+// ─── Crumb + cookie (for the auth-gated /v7/finance/quote endpoint) ────────────
+// Yahoo gated its quote endpoint behind a cookie + crumb in 2024 (this is what
+// carries P/E, market cap and average volume). We fetch a session cookie, then a
+// crumb, and cache the pair ~25 min. Every step is best-effort: if it fails, the
+// caller simply gets no extra stats (the chart-meta stats still show).
+let crumbCache: { crumb: string; cookie: string; at: number } | null = null;
+
+async function getCrumb(): Promise<{ crumb: string; cookie: string } | null> {
+  if (crumbCache && Date.now() - crumbCache.at < 25 * 60_000) return crumbCache;
+  try {
+    const c1 = new AbortController();
+    const t1 = setTimeout(() => c1.abort(), 8000);
+    const res1 = await fetch('https://fc.yahoo.com/', { headers: { 'User-Agent': UA }, signal: c1.signal }).catch(() => null);
+    clearTimeout(t1);
+    const setCookies = (res1 as any)?.headers?.getSetCookie?.() as string[] | undefined;
+    const cookie = (setCookies?.map((c) => c.split(';')[0]).join('; ')) || '';
+
+    const c2 = new AbortController();
+    const t2 = setTimeout(() => c2.abort(), 8000);
+    const res2 = await fetch('https://query2.finance.yahoo.com/v1/test/getcrumb', {
+      headers: { 'User-Agent': UA, ...(cookie ? { Cookie: cookie } : {}) },
+      signal: c2.signal,
+    });
+    clearTimeout(t2);
+    if (!res2.ok) return null;
+    const crumb = (await res2.text()).trim();
+    if (!crumb || crumb.length > 40) return null; // a real crumb is short
+    crumbCache = { crumb, cookie, at: Date.now() };
+    return crumbCache;
+  } catch {
+    return null;
+  }
+}
+
+export interface QuoteExtra { peRatio: number | null; marketCap: number | null; avgVolume: number | null; }
+
+/** Auth-gated quote stats (P/E, market cap, avg volume) for a set of symbols. */
+export async function getQuoteExtras(symbols: string[]): Promise<Map<string, QuoteExtra>> {
+  const map = new Map<string, QuoteExtra>();
+  const c = await getCrumb();
+  if (!c) return map;
+  const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols.map(encodeURIComponent).join(',')}&crumb=${encodeURIComponent(c.crumb)}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': UA, ...(c.cookie ? { Cookie: c.cookie } : {}) }, signal: controller.signal, cache: 'no-store' });
+    if (!res.ok) return map;
+    const j = await res.json();
+    for (const q of j?.quoteResponse?.result ?? []) {
+      if (!q?.symbol) continue;
+      map.set(q.symbol, {
+        peRatio: Number.isFinite(q.trailingPE) ? q.trailingPE : null,
+        marketCap: Number.isFinite(q.marketCap) ? q.marketCap : null,
+        avgVolume: Number.isFinite(q.averageDailyVolume3Month) ? q.averageDailyVolume3Month : null,
+      });
+    }
+  } catch {
+    /* extras stay empty */
+  } finally {
+    clearTimeout(timer);
+  }
+  return map;
+}
+
 async function yfetch(path: string, timeoutMs = 8000): Promise<any | null> {
   for (const base of BASES) {
     const controller = new AbortController();
@@ -182,6 +246,9 @@ export async function getStockDetail(symbol: string, tf = '1D'): Promise<StockDe
   const change = prevClose != null ? price - prevClose : null;
   const changePct = prevClose ? (change! / prevClose) * 100 : null;
 
+  // Enrich with the auth-gated stats (P/E, market cap, avg volume). Best-effort.
+  const extra = (await getQuoteExtras([symbol])).get(symbol) ?? null;
+
   return {
     symbol,
     name: meta.shortName || meta.longName || symbol,
@@ -200,11 +267,11 @@ export async function getStockDetail(symbol: string, tf = '1D'): Promise<StockDe
       high: num(meta.regularMarketDayHigh),
       low: num(meta.regularMarketDayLow),
       volume: num(meta.regularMarketVolume),
-      peRatio: null, // not in chart meta; the quote endpoint is crumb-gated
-      marketCap: null,
+      peRatio: extra?.peRatio ?? null,
+      marketCap: extra?.marketCap ?? null,
       week52High: num(meta.fiftyTwoWeekHigh),
       week52Low: num(meta.fiftyTwoWeekLow),
-      avgVolume: null,
+      avgVolume: extra?.avgVolume ?? null,
     },
   };
 }

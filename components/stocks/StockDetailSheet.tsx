@@ -57,19 +57,22 @@ export function StockDetailSheet({ symbol, name, onClose, uid, starred, onToggle
   const [alertTarget, setAlertTarget] = useState('');
   const [alertDir, setAlertDir] = useState<'above' | 'below'>('above');
 
-  useEffect(() => { setAlerts(alertsForSymbol(uid ?? null, symbol)); }, [uid, symbol]);
+  useEffect(() => {
+    let cancelled = false;
+    if (!uid) { setAlerts([]); return; }
+    alertsForSymbol(symbol).then((a) => { if (!cancelled) setAlerts(a); });
+    return () => { cancelled = true; };
+  }, [uid, symbol]);
 
-  const saveAlert = () => {
+  const saveAlert = async () => {
     const t = parseFloat(alertTarget);
     if (!Number.isFinite(t) || t <= 0) return;
-    const next = addAlert(uid ?? null, { symbol, name: detail?.name || name, target: t, direction: alertDir });
-    setAlerts(next.filter((a) => a.symbol === symbol));
+    const created = await addAlert({ symbol, name: detail?.name || name, target: t, direction: alertDir });
+    if (created) setAlerts((cur) => [created, ...cur.filter((a) => a.id !== created.id)]);
     setAlertTarget('');
     setAlertOpen(false);
-    // Ask for notification permission so the board can fire it when crossed.
-    if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
   };
-  const dropAlert = (id: string) => { const next = removeAlert(uid ?? null, id); setAlerts(next.filter((a) => a.symbol === symbol)); };
+  const dropAlert = async (id: string) => { const ok = await removeAlert(id); if (ok) setAlerts((cur) => cur.filter((a) => a.id !== id)); };
 
   useEffect(() => {
     let cancelled = false;
@@ -104,9 +107,12 @@ export function StockDetailSheet({ symbol, name, onClose, uid, starred, onToggle
 
   const STAT_ROWS: Array<[string, string]> = detail ? [
     ['Open', fmt(detail.stats.open)],
-    ['High', fmt(detail.stats.high)],
-    ['Low', fmt(detail.stats.low)],
     ['Vol', fmtBig(detail.stats.volume)],
+    ['Mkt Cap', fmtBig(detail.stats.marketCap)],
+    ['High', fmt(detail.stats.high)],
+    ['P/E', fmt(detail.stats.peRatio)],
+    ['Avg Vol', fmtBig(detail.stats.avgVolume)],
+    ['Low', fmt(detail.stats.low)],
     ['52W H', fmt(detail.stats.week52High)],
     ['52W L', fmt(detail.stats.week52Low)],
   ] : [];
@@ -158,7 +164,7 @@ export function StockDetailSheet({ symbol, name, onClose, uid, starred, onToggle
                   <div className="space-y-1.5 mb-2">
                     {alerts.map((a) => (
                       <div key={a.id} className="flex items-center justify-between gap-2 text-xs">
-                        <span className="text-white/70">Alert when {a.direction} <span className="font-semibold text-white tabular-nums">{fmt(a.target)}</span>{a.firedAt ? <span className="ml-1.5 text-emerald-300">· triggered</span> : ''}</span>
+                        <span className="text-white/70">Alert when {a.direction} <span className="font-semibold text-white tabular-nums">{fmt(Number(a.target))}</span>{a.fired_at ? <span className="ml-1.5 text-emerald-300">· triggered</span> : ''}</span>
                         <button onClick={() => dropAlert(a.id)} className="text-white/40 hover:text-rose-300" aria-label="Remove alert"><X className="w-3.5 h-3.5" /></button>
                       </div>
                     ))}
