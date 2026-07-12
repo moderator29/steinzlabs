@@ -1,6 +1,6 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
-import { getStockDetail } from '@/lib/services/yahooFinance';
+import { getStockDetailResilient } from '@/lib/services/pythStocks';
 
 /**
  * Stock detail — timeframe chart + key stats.
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ symbol: str
     return NextResponse.json(hit.body, { status: 200 });
   }
 
-  const detail = await getStockDetail(symbol, tf);
+  const detail = await getStockDetailResilient(symbol, tf, symbol);
   if (!detail) {
     return NextResponse.json({ available: false, symbol }, { status: 200 });
   }

@@ -10,7 +10,8 @@ import {
 import { VerifiedGoldBadge } from '@/components/ui/VerifiedGoldBadge';
 import { wireTopicLabel } from '@/lib/wire/topics';
 import { wireRelativeTime } from '@/lib/wire/format';
-import { SignalRail, SignalChip } from './WireSignalRail';
+import { SignalRail } from './WireSignalRail';
+import { SuccessRateBadge } from '@/components/social/SuccessRateBadge';
 import { CashtagChip } from './CashtagChip';
 import { WirePrediction as WirePredictionInline } from './WirePrediction';
 import { WireActionBar } from './WireActionBar';
@@ -73,6 +74,9 @@ export interface WirePost {
   reposted_at?: string | null;
   /** The author's transparent 0-100 signal score (real, computed feed-side). */
   authorSignal?: number | null;
+  /** The author's real success rate (0-100) from user_reputation — the SAME
+   *  badge shown on the profile. Null when the author hides it. */
+  authorSuccessRate?: number | null;
   /** An inline mini-prediction attached to this wire, if any. */
   prediction?: WirePrediction | null;
 }
@@ -398,7 +402,9 @@ function WireBody({
               <span className={`font-semibold text-white truncate max-w-[10rem] ${inset ? 'text-sm' : ''}`}>{name}</span>
             )}
             {author?.is_verified ? <VerifiedGoldBadge size={inset ? 13 : 15} title="Verified" /> : null}
-            <SignalChip signal={post.authorSignal} />
+            {/* The real success-rate badge (same as the profile), not an abstract
+                signal number. Hidden when the author has no rate / hides it. */}
+            <SuccessRateBadge value={post.authorSuccessRate ?? null} />
             {handle ? (
               profileHref ? (
                 <Link href={profileHref} onClick={(e) => e.stopPropagation()} className="text-white/45 text-sm truncate hover:underline">

@@ -1,6 +1,6 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
-import { getStockRows } from '@/lib/services/yahooFinance';
+import { getStockRowsResilient } from '@/lib/services/pythStocks';
 import { getUniverse, getTickerStripSymbols, nameMapFor, type StockTab } from '@/lib/services/stockUniverse';
 
 /**
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   const nameMap = nameMapFor(allDefs);
 
   const symbols = Array.from(new Set(allDefs.map((d) => d.symbol)));
-  const rows = await getStockRows(symbols, nameMap);
+  const rows = await getStockRowsResilient(symbols, nameMap);
   const bySym = new Map(rows.map((r) => [r.symbol, r]));
 
   const list = defs.map((d) => bySym.get(d.symbol)).filter(Boolean);

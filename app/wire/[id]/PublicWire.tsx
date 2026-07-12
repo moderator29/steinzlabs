@@ -1,9 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { Repeat, ArrowUpRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Repeat, ArrowUpRight, ArrowLeft } from 'lucide-react';
 import { VerifiedGoldBadge } from '@/components/ui/VerifiedGoldBadge';
-import { SignalRail, SignalChip } from '@/components/wire/WireSignalRail';
+import { SignalRail } from '@/components/wire/WireSignalRail';
+import { SuccessRateBadge } from '@/components/social/SuccessRateBadge';
 import { CashtagChip } from '@/components/wire/CashtagChip';
 import { WirePrediction } from '@/components/wire/WirePrediction';
 import { WireThread } from '@/components/wire/WireThread';
@@ -69,6 +71,30 @@ function Stat({ icon, n }: { icon: React.ReactNode; n: number | null | undefined
   );
 }
 
+/**
+ * Back control for the wire detail page — sits at the very top. Uses history
+ * back when there is somewhere to return to, otherwise falls back to the Wire
+ * feed so a visitor landing on a shared link is never dead-ended.
+ */
+export function WireBackButton() {
+  const router = useRouter();
+  const goBack = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) router.back();
+    else router.push('/dashboard?subtab=wire');
+  };
+  return (
+    <button
+      type="button"
+      onClick={goBack}
+      aria-label="Back"
+      className="inline-flex items-center gap-1.5 mb-4 rounded-full nl-glass border border-white/10 pl-2 pr-3 py-1.5 text-sm text-white/80 hover:text-white transition-colors"
+    >
+      <ArrowLeft className="w-4 h-4" />
+      Back
+    </button>
+  );
+}
+
 export function PublicWire({ post }: { post: WirePost }) {
   const isRepost = !!post.repost_of;
   const original = post.original && !post.original.deleted_at ? post.original : null;
@@ -101,7 +127,8 @@ export function PublicWire({ post }: { post: WirePost }) {
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="font-semibold text-white truncate max-w-[12rem]">{name}</span>
               {a?.is_verified ? <VerifiedGoldBadge size={15} title="Verified" /> : null}
-              <SignalChip signal={shown.authorSignal} />
+              {/* Real success-rate badge (same as the profile), not the signal number. */}
+              <SuccessRateBadge value={shown.authorSuccessRate ?? null} />
               {handle ? <span className="text-white/45 text-sm truncate">{handle}</span> : null}
               <span className="text-white/30 text-sm">·</span>
               <time className="text-white/45 text-sm" dateTime={shown.created_at}>

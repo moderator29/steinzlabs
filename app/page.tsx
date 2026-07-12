@@ -4,6 +4,7 @@ import { FloatingCoins } from '@/components/landing/FloatingCoins';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { LiveOverviewCard } from '@/components/landing/LiveOverviewCard';
 import { FeatureCarousel } from '@/components/landing/FeatureCarousel';
+import { HowItWorks } from '@/components/landing/HowItWorks';
 import { VTXSection } from '@/components/landing/VTXSection';
 import { StatsSection } from '@/components/landing/StatsSection';
 import { SecurityShowcase } from '@/components/landing/SecurityShowcase';
@@ -101,6 +102,7 @@ export default function LandingPage() {
         <HeroSection />
         <LiveOverviewCard />
         <FeatureCarousel />
+        <HowItWorks />
         <VTXSection />
         <StatsSection />
         <SecurityShowcase />

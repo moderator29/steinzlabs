@@ -1,7 +1,7 @@
 import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { getStockRows } from '@/lib/services/yahooFinance';
+import { getStockRowsResilient } from '@/lib/services/pythStocks';
 import { verifyCron } from '../_shared';
 
 /**
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
   if (list.length === 0) return NextResponse.json({ ok: true, checked: 0, fired: 0 });
 
   const symbols = Array.from(new Set(list.map((a) => a.symbol)));
-  const rows = await getStockRows(symbols);
+  const rows = await getStockRowsResilient(symbols);
   const priceBySym = new Map(rows.map((r) => [r.symbol, r.price]));
 
   let fired = 0;
