@@ -68,26 +68,32 @@
 }
 .nl-aurora-bg::before {
   background:
-    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(0, 102, 255, 0.18) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 80% at 80% 20%, rgba(220, 20, 60, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse 100% 60% at 50% 80%, rgba(0, 200, 255, 0.12) 0%, transparent 50%),
-    radial-gradient(ellipse 40% 40% at 70% 60%, rgba(120, 60, 200, 0.06) 0%, transparent 50%);
+    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(0, 102, 255, 0.30) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 80% at 80% 20%, rgba(220, 20, 60, 0.14) 0%, transparent 55%),
+    radial-gradient(ellipse 100% 60% at 50% 80%, rgba(0, 200, 255, 0.20) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 40% at 70% 60%, rgba(120, 60, 200, 0.12) 0%, transparent 55%);
+  /* Slow breathing pulse so the hotspots feel alive even where the conic
+     ribbon is off-screen. */
+  animation: nl-aurora-pulse 12s ease-in-out infinite;
 }
 .nl-aurora-bg::after {
   inset: -50%;
   background: conic-gradient(from 0deg at 50% 50%,
     transparent 0deg,
-    rgba(0, 102, 255, 0.18)  60deg,
+    rgba(0, 102, 255, 0.30)  60deg,
     transparent 120deg,
-    rgba(220, 20, 60, 0.10) 180deg,
+    rgba(220, 20, 60, 0.18) 180deg,
     transparent 240deg,
-    rgba(0, 200, 255, 0.14) 300deg,
+    rgba(0, 200, 255, 0.26) 300deg,
     transparent 360deg);
-  /* Fuller, richer aurora — the owner wants the motion/glow turned back up
-     (it reads premium, not slop). Kept a smooth 34s rotation so it feels alive
-     without being frantic. */
-  animation: nl-aurora-drift 34s linear infinite;
-  opacity: 0.42;
+  /* Fuller, richer aurora — the owner wants the motion/glow clearly visible.
+     A smooth 30s rotation keeps it alive without being frantic. */
+  animation: nl-aurora-drift 30s linear infinite;
+  opacity: 0.7;
+}
+@keyframes nl-aurora-pulse {
+  0%, 100% { opacity: 0.7; }
+  50%      { opacity: 1;   }
 }
 /* Lift content above the ::before/::after aurora layers, but DO NOT touch
    fixed/sticky overlays — they manage their own stacking via Tailwind z-*
@@ -352,7 +358,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .nl-aurora-bg::after { animation: none; }
+  .nl-aurora-bg::before { animation: none; }
+  .nl-aurora-bg::after  { animation: none; }
   .nl-loader            { animation-duration: 2400ms; }
 }
 

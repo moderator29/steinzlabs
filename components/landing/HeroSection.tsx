@@ -7,12 +7,12 @@ import SteinzLogo from '@/components/ui/SteinzLogo';
 import { AskChainHero } from '@/components/landing/AskChainHero';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
-// Honest, defensible stat chips only. 8 supported chains, 400+ tracked
+// Honest, defensible stat chips only. 8 supported chains, 1,000+ tracked
 // smart-money wallets, the real 0.5% swap fee, and the 8 automatic security
 // layers documented in SecurityShowcase. No fabricated live market numbers.
 const CHIPS: Array<{ value: string; label: string }> = [
   { value: '8', label: 'Chains' },
-  { value: '400+', label: 'Wallets tracked' },
+  { value: '1,000+', label: 'Wallets tracked' },
   { value: '0.5%', label: 'Swap fee' },
   { value: '8', label: 'Security layers' },
 ];
