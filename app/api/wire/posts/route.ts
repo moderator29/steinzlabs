@@ -34,7 +34,7 @@ import { computeAuthorSignals } from '@/lib/wire/signal';
 // posting look like it failed even though the row was written. Authors and
 // repost originals are attached with plain batched queries (fetchAuthors /
 // annotate) that a stale relationship cache can never break.
-const AUTHOR_COLS = 'id,username,display_name,avatar_url,is_verified';
+const AUTHOR_COLS = 'id,username,display_name,avatar_url,is_verified,show_success_rate';
 const POST_SELECT = '*';
 const CREATE_SELECT = '*';
 
@@ -493,6 +493,19 @@ async function annotate(
   // Author profiles for every wire + original on the page (plain query, no embed).
   const authorMap = await fetchAuthors(sb, authorIds);
 
+  // Real success rate (0-100) per author — the SAME metric shown on the profile
+  // badge. Gated by the author's show_success_rate flag so it stays private
+  // when they hide it. null → the badge simply does not render.
+  const rateByUser = new Map<string, number>();
+  if (authorIds.length) {
+    const { data: reps } = await sb.from('user_reputation').select('user_id, success_rate').in('user_id', authorIds);
+    for (const r of reps ?? []) if (r?.success_rate != null) rateByUser.set(r.user_id, Number(r.success_rate));
+  }
+  const successRateFor = (aid: string) => {
+    const prof = authorMap.get(aid);
+    return prof?.show_success_rate ? rateByUser.get(aid) ?? null : null;
+  };
+
   // Predictions attached to any wire on the page.
   const { data: preds } = await sb.from('wire_predictions').select('*').in('post_id', allIds);
   const predByPost = new Map<string, any>();
@@ -525,6 +538,7 @@ async function annotate(
     liked: likedSet.has(p?.id),
     reposted: repostedSet.has(p?.id),
     authorSignal: signals.has(p?.author_id) ? signals.get(p?.author_id) : null,
+    authorSuccessRate: successRateFor(p?.author_id),
     prediction: shapePrediction(predByPost.get(p?.id), agreedSet),
   });
 

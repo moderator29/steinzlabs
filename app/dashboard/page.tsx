@@ -623,7 +623,13 @@ export default function Dashboard() {
       {/* iOS safe-area — naka-safe-top adds env(safe-area-inset-top) so
           the header clears the iPhone 14+ dynamic island / notch instead
           of being overlapped by it. No-op on Android / web. */}
-      <div className="fixed top-0 w-full z-40 bg-[#080b14]/80 backdrop-blur-xl border-b border-white/[0.06] naka-safe-top">
+      {/* Header uses the brand glass container colour (deep navy blue + blue
+          hairline), not the old near-black bar, so it reads as part of the
+          platform surface. Matches nl-glass cards. */}
+      <div
+        className="fixed top-0 w-full z-40 backdrop-blur-xl border-b border-[#0066FF]/20 naka-safe-top"
+        style={{ background: 'linear-gradient(180deg, rgba(11,16,48,0.92) 0%, rgba(10,15,36,0.86) 100%)' }}
+      >
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2.5">
             <button onClick={() => setMenuOpen(!menuOpen)} className="-ms-1 p-1 text-white/80 hover:text-white transition-colors" aria-label="Open menu">
@@ -701,7 +707,7 @@ export default function Dashboard() {
                     onClick={() => setActiveTab(id)}
                     role="tab"
                     aria-selected={isActive}
-                    className={`relative z-10 shrink-0 snap-start flex flex-col items-center justify-center gap-1 whitespace-nowrap px-3.5 py-2 text-[11px] font-semibold rounded-2xl transition-colors duration-200 ${
+                    className={`relative z-10 shrink-0 lg:flex-1 snap-start flex flex-col items-center justify-center gap-1 whitespace-nowrap px-3.5 py-2 text-[11px] font-semibold rounded-2xl transition-colors duration-200 ${
                       isActive ? 'text-white' : 'text-gray-400 hover:text-white'
                     }`}
                   >

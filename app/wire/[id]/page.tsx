@@ -6,7 +6,7 @@ import { getSiteUrl } from '@/lib/siteUrl';
 import { computeAuthorSignals } from '@/lib/wire/signal';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import type { WirePost } from '@/components/wire/WirePostCard';
-import { PublicWire, OpenInAppCta, WireComments } from './PublicWire';
+import { PublicWire, OpenInAppCta, WireComments, WireBackButton } from './PublicWire';
 
 /**
  * app/wire/[id] - the PUBLIC, signed-out-safe page for a single wire.
@@ -25,7 +25,7 @@ export const dynamic = 'force-dynamic';
 // that embed 500/return null, which used to send getWire() → null → notFound(),
 // i.e. every "open post" and every username/avatar tap dead-ended on the 404
 // page. Fetching authors with a plain batched query removes that failure mode.
-const AUTHOR_COLS = 'id,username,display_name,avatar_url,is_verified';
+const AUTHOR_COLS = 'id,username,display_name,avatar_url,is_verified,show_success_rate';
 
 function shapePrediction(raw: any): WirePost['prediction'] {
   if (!raw) return null;
@@ -72,17 +72,28 @@ async function getWire(id: string): Promise<WirePost | null> {
   if (post.original) post.original.author = authorMap.get(post.original.author_id) ?? null;
 
   const allIds = [post.id, post.original?.id].filter(Boolean);
-  const [signals, { data: preds }] = await Promise.all([
+  const [signals, { data: preds }, { data: reps }] = await Promise.all([
     computeAuthorSignals(sb, authorIds),
     sb.from('wire_predictions').select('*').in('post_id', allIds),
+    // Real success rate (0-100) per author — the SAME badge shown on the
+    // profile. Gated per-author by profiles.show_success_rate below.
+    sb.from('user_reputation').select('user_id, success_rate').in('user_id', authorIds),
   ]);
   const predByPost = new Map<string, any>();
   for (const pr of preds ?? []) predByPost.set(pr.post_id, pr);
+  const rateByUser = new Map<string, number>();
+  for (const r of reps ?? []) if (r?.success_rate != null) rateByUser.set(r.user_id, Number(r.success_rate));
+
+  // Only surface the rate when the author opted to show it (privacy parity
+  // with the profile). null → the badge simply hides.
+  const rateFor = (u: any) => (u?.show_success_rate ? rateByUser.get(u.id) ?? null : null);
 
   post.authorSignal = signals.has(post.author_id) ? signals.get(post.author_id) : null;
+  post.authorSuccessRate = rateFor(post.author);
   post.prediction = shapePrediction(predByPost.get(post.id));
   if (post.original) {
     post.original.authorSignal = signals.has(post.original.author_id) ? signals.get(post.original.author_id) : null;
+    post.original.authorSuccessRate = rateFor(post.original.author);
     post.original.prediction = shapePrediction(predByPost.get(post.original.id));
   }
   return post as WirePost;
@@ -140,6 +151,7 @@ export default async function PublicWirePage({ params }: { params: Promise<{ id:
     <AuroraBackground fullHeight>
       <div className="min-h-screen px-4 py-8 sm:py-12">
         <div className="mx-auto w-full max-w-xl">
+          <WireBackButton />
           <Link href="/dashboard?subtab=wire" className="inline-flex items-center gap-2 mb-5">
             <img src="/steinz-logo-64.png" alt="" className="w-7 h-7" />
             <span className="text-white font-semibold">The Wire</span>
