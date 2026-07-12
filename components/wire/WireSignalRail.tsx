@@ -63,9 +63,9 @@ export function SignalChip({ signal }: { signal?: number | null }) {
           e.stopPropagation();
           setOpen((v) => !v);
         }}
-        className="inline-flex items-center gap-0.5 rounded-full border border-[#0066FF]/30 bg-[#0066FF]/10 px-1.5 py-[1px] text-[10px] font-semibold text-[#8fb6ff] tabular-nums leading-none transition-colors hover:bg-[#0066FF]/20"
+        className="inline-flex items-center gap-0.5 px-0.5 text-[11px] font-semibold text-[#8fb6ff] tabular-nums leading-none transition-colors hover:text-white"
       >
-        <Activity className="w-2.5 h-2.5" />
+        <Activity className="w-3 h-3" />
         {s}
       </button>
       {open ? (

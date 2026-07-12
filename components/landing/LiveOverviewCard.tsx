@@ -39,7 +39,7 @@ const TILES: Tile[] = [
   {
     icon: Wallet,
     label: 'Smart money',
-    value: '400+ Wallets',
+    value: '1,000+ Wallets',
     sub: 'Whale + smart-money addresses tracked',
   },
   {

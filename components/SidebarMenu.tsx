@@ -42,15 +42,13 @@ interface NavItem {
 // admin panel are appended conditionally at render time (see below).
 const NAV_CATEGORIES: NavCategory[] = [
   {
-    title: 'Home',
+    // Quick actions — Swap sits at the very top so members can trade in one tap.
+    // The Wire / Context Feed / News / Stocks / Market / Prediction / Overview all
+    // live in the dashboard's own sub-tabs, so they were removed from here to
+    // stop duplicating navigation.
+    title: 'Quick',
     items: [
-      { icon: LayoutGrid, label: 'Overview', path: '/dashboard' },
-      { icon: Rss, label: 'The Wire', path: '/dashboard?subtab=wire' },
-      { icon: Radio, label: 'Context Feed', path: '/dashboard?subtab=context' },
-      { icon: Newspaper, label: 'News', path: '/dashboard?subtab=news' },
-      { icon: CandlestickChart, label: 'Stocks', path: '/dashboard?subtab=stocks' },
-      { icon: LineChart, label: 'Market', path: '/dashboard?subtab=markets' },
-      { icon: Sparkles, label: 'Prediction', path: '/dashboard?subtab=prediction' },
+      { icon: ArrowLeftRight, label: 'Swap', path: '/dashboard/swap' },
     ],
   },
   {
@@ -68,7 +66,6 @@ const NAV_CATEGORIES: NavCategory[] = [
   {
     title: 'Social',
     items: [
-      { icon: Compass, label: 'Discover', path: '/discover' },
       { icon: MessageCircle, label: 'Messages', path: '/dashboard/messages' },
     ],
   },
@@ -108,7 +105,6 @@ const NAV_CATEGORIES: NavCategory[] = [
   {
     title: 'Tools',
     items: [
-      { icon: Wallet, label: 'Wallet', path: '/dashboard/wallet-page', badge: 'BETA' },
       { icon: Bot, label: 'VTX Agent', path: '/dashboard/vtx-ai' },
       { icon: Crosshair, label: 'Sniper Bot', path: '/dashboard/sniper', badge: 'BETA' },
       { icon: LineChart, label: 'Market Maker', path: '/dashboard/market-maker', badge: 'BETA' },

@@ -165,12 +165,18 @@ export function WireComments({ postId }: { postId: string }) {
         authorAvatarUrl={(user as { avatar_url?: string | null } | null)?.avatar_url ?? null}
         authorDisplayName={user?.first_name || user?.username || 'You'}
         onGift={() => {}}
+        stickyComposer
       />
     </div>
   );
 }
 
 export function OpenInAppCta() {
+  // Signed-in members are already inside Naka Labs and get the inline reply
+  // composer — the big "Open in Naka Labs" button only made sense for signed-out
+  // visitors landing on a shared wire, so hide it once a session exists.
+  const { user } = useAuth();
+  if (user) return null;
   return (
     <Link
       href="/dashboard?subtab=wire"

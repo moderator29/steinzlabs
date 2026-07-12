@@ -62,8 +62,8 @@ export function LandingNav() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
           <Link href="/" className="flex items-center gap-2.5 min-w-0 flex-shrink">
-            <SteinzLogo size={28} animated={false} />
-            <span className="font-bold text-[13px] sm:text-[14px] text-white truncate" style={{ letterSpacing: 2 }}>NAKA LABS</span>
+            <SteinzLogo size={40} animated={false} />
+            <span className="font-bold text-[14px] sm:text-[15px] text-white truncate" style={{ letterSpacing: 2 }}>NAKA LABS</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
@@ -124,8 +124,8 @@ export function LandingNav() {
 
               <div className="relative flex items-center justify-between px-6 pt-6 pb-5">
                 <div className="flex items-center gap-2.5">
-                  <SteinzLogo size={26} animated={false} />
-                  <span className="font-bold text-[13px] text-white" style={{ letterSpacing: 2 }}>NAKA LABS</span>
+                  <SteinzLogo size={36} animated={false} />
+                  <span className="font-bold text-[14px] text-white" style={{ letterSpacing: 2 }}>NAKA LABS</span>
                 </div>
                 <button
                   onClick={() => setOpen(false)}

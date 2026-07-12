@@ -27,6 +27,9 @@ export interface WireThreadProps {
   onGift: (post: WirePost) => void;
   /** Fired after a reply is created / deleted so the parent count stays live. */
   onCountDelta?: (delta: number) => void;
+  /** Pin the reply composer to the bottom of the viewport (X-style), with the
+   *  replies listed above it. Used on the dedicated /wire/[id] page. */
+  stickyComposer?: boolean;
 }
 
 export function WireThread({
@@ -36,6 +39,7 @@ export function WireThread({
   authorDisplayName,
   onGift,
   onCountDelta,
+  stickyComposer,
 }: WireThreadProps) {
   const [replies, setReplies] = useState<WirePost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -201,120 +205,137 @@ export function WireThread({
   const canReply = body.trim().length > 0 && !over && !posting;
   const initial = (authorDisplayName || '?').trim().charAt(0).toUpperCase();
 
-  return (
-    <div className="mt-2 ms-3 ps-3 border-s border-white/10 space-y-3">
-      {/* Reply composer — collapsed pill (X-style) that expands on tap */}
-      {currentUserId ? (
-        !expanded && !body.trim() ? (
-          <button
-            type="button"
-            onClick={openComposer}
-            className="w-full flex items-center gap-2.5 nl-glass rounded-full px-3 py-2.5 text-left transition-colors hover:bg-white/[0.04]"
-            aria-label="Post your reply"
-          >
-            {authorAvatarUrl ? (
-              <img src={authorAvatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 flex-shrink-0" />
-            ) : (
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white/90 text-sm font-semibold border border-white/10"
-                style={{ background: 'linear-gradient(135deg,#0066FF33,#5566FF33)' }}
-              >
-                {initial}
-              </div>
-            )}
-            <span className="text-sm text-white/40">Post your reply</span>
-          </button>
+  const composerEl = currentUserId ? (
+    !expanded && !body.trim() ? (
+      <button
+        type="button"
+        onClick={openComposer}
+        className="w-full flex items-center gap-2.5 nl-glass rounded-full px-3 py-2.5 text-left transition-colors hover:bg-white/[0.04]"
+        aria-label="Post your reply"
+      >
+        {authorAvatarUrl ? (
+          <img src={authorAvatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 flex-shrink-0" />
         ) : (
-          <div className="nl-glass rounded-2xl p-3">
-            <div className="flex gap-2.5">
-              {authorAvatarUrl ? (
-                <img src={authorAvatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 flex-shrink-0" />
-              ) : (
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white/90 text-sm font-semibold border border-white/10"
-                  style={{ background: 'linear-gradient(135deg,#0066FF33,#5566FF33)' }}
-                >
-                  {initial}
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <textarea
-                  ref={taRef}
-                  value={body}
-                  onChange={(e) => setBody(e.target.value)}
-                  onBlur={() => { if (!body.trim()) setExpanded(false); }}
-                  onKeyDown={(e) => {
-                    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void submitReply();
-                    if (e.key === 'Escape' && !body.trim()) setExpanded(false);
-                  }}
-                  placeholder="Post your reply"
-                  rows={3}
-                  className="w-full bg-transparent resize-none outline-none text-base sm:text-sm text-white placeholder:text-white/35 leading-relaxed"
-                />
-                {postError ? <div className="mt-1 text-xs text-red-400" role="alert">{postError}</div> : null}
-                <div className="mt-2 flex items-center justify-end gap-3">
-                  <span className={`text-xs tabular-nums ${over ? 'text-red-400' : 'text-white/40'}`}>{len}/{MAX}</span>
-                  <button
-                    type="button"
-                    onClick={() => void submitReply()}
-                    disabled={!canReply}
-                    className="naka-button-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
-                  >
-                    {posting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                    Reply
-                  </button>
-                </div>
-              </div>
-            </div>
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white/90 text-sm font-semibold border border-white/10"
+            style={{ background: 'linear-gradient(135deg,#0066FF33,#5566FF33)' }}
+          >
+            {initial}
           </div>
-        )
-      ) : null}
-
-      {/* Replies */}
-      {loading ? (
-        <div className="flex items-center justify-center py-6 text-white/40">
-          <Loader2 className="w-4 h-4 animate-spin" />
-        </div>
-      ) : error ? (
-        <div className="nl-glass rounded-2xl p-4 text-center">
-          <p className="text-white/60 text-sm">{error}</p>
-          <button type="button" onClick={() => void load()} className="mt-2 text-[#4d94ff] text-sm hover:underline">
-            Try again
-          </button>
-        </div>
-      ) : replies.length === 0 ? (
-        <div className="flex items-center gap-2 text-white/45 text-sm py-3 ps-1">
-          <CornerDownRight className="w-4 h-4" />
-          No replies yet. Be the first to reply.
-        </div>
-      ) : (
-        <div className="space-y-2.5">
-          {replies.map((r) => (
-            <WirePostCard
-              key={r.id}
-              post={r}
-              currentUserId={currentUserId ?? null}
-              compact
-              onLike={handleLike}
-              onRepost={handleRepost}
-              onGift={onGift}
-              onDelete={handleDelete}
+        )}
+        <span className="text-sm text-white/40">Post your reply</span>
+      </button>
+    ) : (
+      <div className="nl-glass rounded-2xl p-3">
+        <div className="flex gap-2.5">
+          {authorAvatarUrl ? (
+            <img src={authorAvatarUrl} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 flex-shrink-0" />
+          ) : (
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white/90 text-sm font-semibold border border-white/10"
+              style={{ background: 'linear-gradient(135deg,#0066FF33,#5566FF33)' }}
+            >
+              {initial}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <textarea
+              ref={taRef}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              onBlur={() => { if (!body.trim()) setExpanded(false); }}
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void submitReply();
+                if (e.key === 'Escape' && !body.trim()) setExpanded(false);
+              }}
+              placeholder="Post your reply"
+              rows={3}
+              className="w-full bg-transparent resize-none outline-none text-base sm:text-sm text-white placeholder:text-white/35 leading-relaxed"
             />
-          ))}
-          {cursor ? (
-            <div className="flex justify-center py-1">
+            {postError ? <div className="mt-1 text-xs text-red-400" role="alert">{postError}</div> : null}
+            <div className="mt-2 flex items-center justify-end gap-3">
+              <span className={`text-xs tabular-nums ${over ? 'text-red-400' : 'text-white/40'}`}>{len}/{MAX}</span>
               <button
                 type="button"
-                onClick={() => void loadMore()}
-                disabled={loadingMore}
-                className="text-sm text-white/60 hover:text-white transition disabled:opacity-60"
+                onClick={() => void submitReply()}
+                disabled={!canReply}
+                className="naka-button-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
               >
-                {loadingMore ? <Loader2 className="w-4 h-4 animate-spin inline" /> : 'Load more replies'}
+                {posting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                Reply
               </button>
             </div>
-          ) : null}
+          </div>
         </div>
-      )}
+      </div>
+    )
+  ) : null;
+
+  const repliesEl = loading ? (
+    <div className="flex items-center justify-center py-6 text-white/40">
+      <Loader2 className="w-4 h-4 animate-spin" />
+    </div>
+  ) : error ? (
+    <div className="nl-glass rounded-2xl p-4 text-center">
+      <p className="text-white/60 text-sm">{error}</p>
+      <button type="button" onClick={() => void load()} className="mt-2 text-[#4d94ff] text-sm hover:underline">
+        Try again
+      </button>
+    </div>
+  ) : replies.length === 0 ? (
+    <div className="flex items-center gap-2 text-white/45 text-sm py-3 ps-1">
+      <CornerDownRight className="w-4 h-4" />
+      No replies yet. Be the first to reply.
+    </div>
+  ) : (
+    <div className="space-y-2.5">
+      {replies.map((r) => (
+        <WirePostCard
+          key={r.id}
+          post={r}
+          currentUserId={currentUserId ?? null}
+          compact
+          onLike={handleLike}
+          onRepost={handleRepost}
+          onGift={onGift}
+          onDelete={handleDelete}
+        />
+      ))}
+      {cursor ? (
+        <div className="flex justify-center py-1">
+          <button
+            type="button"
+            onClick={() => void loadMore()}
+            disabled={loadingMore}
+            className="text-sm text-white/60 hover:text-white transition disabled:opacity-60"
+          >
+            {loadingMore ? <Loader2 className="w-4 h-4 animate-spin inline" /> : 'Load more replies'}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+
+  // Sticky mode (the /wire/[id] page): replies first, composer pinned to the
+  // bottom of the viewport like X. Default mode keeps the composer on top for
+  // the inline in-feed thread.
+  if (stickyComposer) {
+    return (
+      <div className="mt-2 space-y-3">
+        {repliesEl}
+        {composerEl ? (
+          <div className="sticky bottom-0 z-20 -mx-4 px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-[#05080F]/92 backdrop-blur-md border-t border-white/10">
+            {composerEl}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2 ms-3 ps-3 border-s border-white/10 space-y-3">
+      {composerEl}
+      {repliesEl}
     </div>
   );
 }
