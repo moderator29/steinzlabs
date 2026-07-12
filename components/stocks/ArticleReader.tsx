@@ -59,7 +59,7 @@ export function ArticleReader({
   return (
     <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="relative w-full sm:max-w-2xl max-h-[92dvh] overflow-y-auto overscroll-contain nl-glass rounded-t-3xl sm:rounded-3xl"
+        className="relative w-full sm:max-w-2xl max-h-[92dvh] overflow-y-auto overscroll-contain nl-glass rounded-t-3xl sm:rounded-3xl pb-[env(safe-area-inset-bottom)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Sticky header */}

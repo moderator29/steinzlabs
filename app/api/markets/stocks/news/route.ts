@@ -15,7 +15,10 @@ const CACHE_TTL_MS = 90_000;
 const cache = new Map<string, { at: number; body: unknown }>();
 
 export async function GET(req: NextRequest) {
-  const symbol = req.nextUrl.searchParams.get('symbol')?.trim();
+  // Bound the query (and therefore the cache key): a ticker is short and
+  // uppercase, so cap length and normalize. Prevents unbounded cache growth
+  // from a flood of unique ?symbol= values.
+  const symbol = req.nextUrl.searchParams.get('symbol')?.trim().toUpperCase().slice(0, 16) || undefined;
   const query = symbol || 'stock market';
   const key = `news:${query}`;
 

@@ -18,8 +18,13 @@ export const runtime = 'nodejs';
 const CACHE_TTL_MS = 30_000;
 const cache = new Map<string, { at: number; body: unknown }>();
 
+const VALID_TABS: StockTab[] = ['stocks', 'rwa', 'ai'];
+
 export async function GET(req: NextRequest) {
-  const tab = ((req.nextUrl.searchParams.get('tab') as StockTab) || 'stocks');
+  const raw = req.nextUrl.searchParams.get('tab');
+  // Whitelist the tab so the cache keyspace stays bounded (a loop of unique
+  // ?tab= values can't grow the module-level Map without limit).
+  const tab: StockTab = VALID_TABS.includes(raw as StockTab) ? (raw as StockTab) : 'stocks';
   const all = req.nextUrl.searchParams.get('all') === '1';
   const key = `${tab}:${all ? 'all' : 'marquee'}`;
 

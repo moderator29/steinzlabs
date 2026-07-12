@@ -13,10 +13,16 @@ export const runtime = 'nodejs';
 
 const CACHE_TTL_MS = 30_000;
 const cache = new Map<string, { at: number; body: unknown }>();
+const VALID_TF = new Set(['1D', '1W', '1M', '3M', '6M', 'YTD', '1Y', '2Y']);
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ symbol: string }> }) {
-  const { symbol } = await ctx.params;
-  const tf = req.nextUrl.searchParams.get('tf') || '1D';
+  const { symbol: rawSymbol } = await ctx.params;
+  // Bound both cache-key dimensions: a Yahoo ticker is short and uppercase, and
+  // tf is one of a fixed set. This keeps the module-level cache from growing
+  // without limit under a flood of unique ?tf= / path values.
+  const symbol = rawSymbol.trim().toUpperCase().slice(0, 16);
+  const rawTf = req.nextUrl.searchParams.get('tf') || '1D';
+  const tf = VALID_TF.has(rawTf) ? rawTf : '1D';
   const key = `${symbol}:${tf}`;
 
   const hit = cache.get(key);

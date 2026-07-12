@@ -2,6 +2,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { getStockRows } from '@/lib/services/yahooFinance';
+import { verifyCron } from '../_shared';
 
 /**
  * Stock price-alert poller. Runs on the cron dispatcher: pulls every armed
@@ -17,12 +18,10 @@ export const runtime = 'nodejs';
 interface AlertRow { id: string; user_id: string; symbol: string; name: string | null; target: number; direction: 'above' | 'below'; }
 
 export async function GET(req: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get('authorization') || '';
-    const qs = req.nextUrl.searchParams.get('secret') || '';
-    if (auth !== `Bearer ${secret}` && qs !== secret) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  // Shared cron gate: fails CLOSED when CRON_SECRET is missing in non-dev, and
+  // honors the CRONS_PAUSED kill switch — same contract as every other cron.
+  const auth = verifyCron(req);
+  if (!auth.ok) return auth.response!;
 
   const db = getSupabaseAdmin();
   const { data: alerts } = await db
@@ -46,6 +45,18 @@ export async function GET(req: NextRequest) {
     const crossed = a.direction === 'above' ? price >= Number(a.target) : price <= Number(a.target);
     if (!crossed) continue;
 
+    // Claim the row FIRST, conditional on it still being armed. If two runs
+    // overlap only one update matches a still-active/unfired row, so only that
+    // run notifies — no duplicate notifications.
+    const { data: claimed } = await db
+      .from('stock_alerts')
+      .update({ fired_at: new Date().toISOString(), active: false })
+      .eq('id', a.id)
+      .eq('active', true)
+      .is('fired_at', null)
+      .select('id');
+    if (!claimed || claimed.length === 0) continue;
+
     const label = a.symbol.replace(/^\^/, '');
     await db.from('notifications').insert({
       user_id: a.user_id,
@@ -56,7 +67,6 @@ export async function GET(req: NextRequest) {
       url: '/dashboard?subtab=stocks',
       metadata: { symbol: a.symbol, target: a.target, direction: a.direction, price },
     });
-    await db.from('stock_alerts').update({ fired_at: new Date().toISOString(), active: false }).eq('id', a.id);
     fired++;
   }
 

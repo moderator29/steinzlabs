@@ -92,8 +92,8 @@ function StockRowItem({ row, starred, canStar, onStar, onOpen }: { row: Row; sta
           <div className="text-xs text-white/45 truncate">{row.name}</div>
         </div>
         {hasSpark && (
-          <div className="shrink-0 hidden xs:block sm:block">
-            <Sparkline data={row.spark} width={72} height={28} stroke={up ? UP : DOWN} filled />
+          <div className="shrink-0 hidden min-[400px]:block">
+            <Sparkline data={row.spark} width={72} height={28} stroke={hasChange ? (up ? UP : DOWN) : 'rgba(255,255,255,0.35)'} filled />
           </div>
         )}
         <div className="flex flex-col items-end shrink-0 min-w-[92px] gap-1">
@@ -123,7 +123,6 @@ export default function StocksBoard() {
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState(marketStatus());
-  const [toast, setToast] = useState<string | null>(null);
   const rowCache = useRef<Map<string, Row>>(new Map());
 
   // Refresh the market open/closed indicator every minute.

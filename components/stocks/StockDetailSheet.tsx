@@ -120,7 +120,7 @@ export function StockDetailSheet({ symbol, name, onClose, uid, starred, onToggle
   return (
     <>
       <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
-        <div className="w-full sm:max-w-2xl max-h-[94dvh] overflow-y-auto overscroll-contain nl-glass rounded-t-3xl sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+        <div className="w-full sm:max-w-2xl max-h-[94dvh] overflow-y-auto overscroll-contain nl-glass rounded-t-3xl sm:rounded-3xl pb-[env(safe-area-inset-bottom)]" onClick={(e) => e.stopPropagation()}>
           {/* Sticky header */}
           <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-[#0a0e1a]/92 backdrop-blur-md border-b border-white/10 rounded-t-3xl">
             <div className="min-w-0">
