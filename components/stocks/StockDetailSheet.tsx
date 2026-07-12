@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, Loader2, ArrowUpRight } from 'lucide-react';
+import { X, Loader2, ArrowUpRight, Star, Bell } from 'lucide-react';
 import { StockChart } from './StockChart';
 import { ArticleReader } from './ArticleReader';
+import { addAlert, removeAlert, alertsForSymbol, type StockAlert } from '@/lib/stocks/alerts';
 
 const UP = '#10B981';
 const DOWN = '#F43F5E';
@@ -42,12 +43,33 @@ function ago(ts: number): string {
   return `${Math.floor(s / 86400)}d ago`;
 }
 
-export function StockDetailSheet({ symbol, name, onClose }: { symbol: string; name: string; onClose: () => void }) {
+export function StockDetailSheet({ symbol, name, onClose, uid, starred, onToggleStar }: {
+  symbol: string; name: string; onClose: () => void;
+  uid?: string | null; starred?: boolean; onToggleStar?: () => void;
+}) {
   const [tf, setTf] = useState<(typeof TIMEFRAMES)[number]>('1D');
   const [detail, setDetail] = useState<Detail | null>(null);
   const [loading, setLoading] = useState(true);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [reader, setReader] = useState<{ url: string; title: string; publisher: string } | null>(null);
+  const [alerts, setAlerts] = useState<StockAlert[]>([]);
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertTarget, setAlertTarget] = useState('');
+  const [alertDir, setAlertDir] = useState<'above' | 'below'>('above');
+
+  useEffect(() => { setAlerts(alertsForSymbol(uid ?? null, symbol)); }, [uid, symbol]);
+
+  const saveAlert = () => {
+    const t = parseFloat(alertTarget);
+    if (!Number.isFinite(t) || t <= 0) return;
+    const next = addAlert(uid ?? null, { symbol, name: detail?.name || name, target: t, direction: alertDir });
+    setAlerts(next.filter((a) => a.symbol === symbol));
+    setAlertTarget('');
+    setAlertOpen(false);
+    // Ask for notification permission so the board can fire it when crossed.
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+  };
+  const dropAlert = (id: string) => { const next = removeAlert(uid ?? null, id); setAlerts(next.filter((a) => a.symbol === symbol)); };
 
   useEffect(() => {
     let cancelled = false;
@@ -99,7 +121,15 @@ export function StockDetailSheet({ symbol, name, onClose }: { symbol: string; na
               <div className="text-lg font-black text-white leading-none truncate">{symbol.replace(/^\^/, '')}</div>
               <div className="text-[11px] text-white/45 truncate">{detail?.name || name}</div>
             </div>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-white/70" aria-label="Close"><X className="w-4 h-4" /></button>
+            <div className="flex items-center gap-1 shrink-0">
+              {onToggleStar && (
+                <button onClick={onToggleStar} aria-pressed={!!starred} className="p-1.5 rounded-lg hover:bg-white/10" aria-label={starred ? 'Unstar' : 'Add to watchlist'}>
+                  <Star className="w-4 h-4" style={{ color: starred ? '#F5B841' : 'rgba(255,255,255,0.55)', fill: starred ? '#F5B841' : 'none' }} />
+                </button>
+              )}
+              <button onClick={() => setAlertOpen((v) => !v)} className={`p-1.5 rounded-lg hover:bg-white/10 ${alerts.length ? 'text-[#4d94ff]' : 'text-white/55'}`} aria-label="Price alert"><Bell className="w-4 h-4" /></button>
+              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-white/70" aria-label="Close"><X className="w-4 h-4" /></button>
+            </div>
           </div>
 
           <div className="px-4 sm:px-6 py-4">
@@ -120,6 +150,33 @@ export function StockDetailSheet({ symbol, name, onClose }: { symbol: string; na
                 </div>
               )}
             </div>
+
+            {/* Price alert (on-device, fires while the app is open) */}
+            {(alertOpen || alerts.length > 0) && (
+              <div className="mt-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] p-3">
+                {alerts.length > 0 && (
+                  <div className="space-y-1.5 mb-2">
+                    {alerts.map((a) => (
+                      <div key={a.id} className="flex items-center justify-between gap-2 text-xs">
+                        <span className="text-white/70">Alert when {a.direction} <span className="font-semibold text-white tabular-nums">{fmt(a.target)}</span>{a.firedAt ? <span className="ml-1.5 text-emerald-300">· triggered</span> : ''}</span>
+                        <button onClick={() => dropAlert(a.id)} className="text-white/40 hover:text-rose-300" aria-label="Remove alert"><X className="w-3.5 h-3.5" /></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {alertOpen && (
+                  <div className="flex items-center gap-2">
+                    <div className="inline-flex rounded-lg bg-white/[0.05] p-0.5">
+                      {(['above', 'below'] as const).map((d) => (
+                        <button key={d} onClick={() => setAlertDir(d)} className={`px-2.5 py-1 rounded-md text-[11px] font-semibold capitalize ${alertDir === d ? 'bg-[#0066FF] text-white' : 'text-white/55'}`}>{d}</button>
+                      ))}
+                    </div>
+                    <input value={alertTarget} onChange={(e) => setAlertTarget(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') saveAlert(); }} inputMode="decimal" placeholder="Target price" className="flex-1 min-w-0 h-9 rounded-lg bg-white/[0.04] border border-white/[0.08] px-3 text-base sm:text-sm text-white placeholder:text-white/35 outline-none focus:border-[#0066FF]/40" />
+                    <button onClick={saveAlert} className="h-9 px-3 rounded-lg bg-[#0066FF] text-white text-xs font-semibold shrink-0">Set</button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Timeframe selector */}
             <div className="mt-3 -mx-1 px-1 overflow-x-auto no-scrollbar">
@@ -154,6 +211,27 @@ export function StockDetailSheet({ symbol, name, onClose }: { symbol: string; na
                     <span className="text-sm font-semibold text-white tabular-nums">{v}</span>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* 52-week range bar — where the price sits between the year's low/high */}
+            {detail && detail.stats.week52Low != null && detail.stats.week52High != null && detail.stats.week52High > detail.stats.week52Low && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-white/40 mb-1.5">
+                  <span>52-week range</span>
+                </div>
+                <div className="relative h-1.5 rounded-full bg-white/[0.08]">
+                  <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: '100%', background: 'linear-gradient(90deg,#F43F5E33,#10B98133)' }} />
+                  {(() => {
+                    const lo = detail.stats.week52Low!, hi = detail.stats.week52High!;
+                    const pct = Math.min(100, Math.max(0, ((detail.price - lo) / (hi - lo)) * 100));
+                    return <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-3.5 w-3.5 rounded-full border-2 border-[#0a0e1a]" style={{ left: `${pct}%`, background: color }} />;
+                  })()}
+                </div>
+                <div className="flex items-center justify-between text-[11px] font-mono text-white/50 mt-1.5">
+                  <span>{fmt(detail.stats.week52Low)}</span>
+                  <span>{fmt(detail.stats.week52High)}</span>
+                </div>
               </div>
             )}
 

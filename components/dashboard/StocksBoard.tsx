@@ -1,9 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CandlestickChart, Star } from 'lucide-react';
+import { CandlestickChart, Star, Search, TrendingUp, TrendingDown, X } from 'lucide-react';
 import { Sparkline } from '@/components/ui/Sparkline';
 import { StockDetailSheet } from '@/components/stocks/StockDetailSheet';
+import { checkAlerts } from '@/lib/stocks/alerts';
 import { useAuth } from '@/lib/hooks/useAuth';
 
 /**
@@ -33,6 +34,34 @@ function fmtPrice(p: number | null | undefined): string {
 function fmtChange(v: number | null | undefined): string {
   if (v == null || !Number.isFinite(v)) return '';
   return `${v > 0 ? '+' : ''}${v.toFixed(2)}`;
+}
+
+// US equity market status (NYSE/Nasdaq regular hours, 9:30–16:00 ET, Mon–Fri).
+// Computed client-side from the browser clock converted to ET — no data needed.
+function marketStatus(): { open: boolean; label: string } {
+  try {
+    const now = new Date();
+    const et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const day = et.getDay(); // 0 Sun .. 6 Sat
+    const mins = et.getHours() * 60 + et.getMinutes();
+    const open = day >= 1 && day <= 5 && mins >= 570 && mins < 960;
+    return { open, label: open ? 'Market open' : 'Market closed' };
+  } catch {
+    return { open: false, label: 'Market closed' };
+  }
+}
+
+// Biggest gainers + losers from the loaded rows (real change % only).
+function pickMovers(rows: Row[]): Row[] {
+  const withChange = rows.filter((r) => r.changePct != null && Number.isFinite(r.changePct) && r.changePct !== 0);
+  if (withChange.length < 2) return [];
+  const sorted = [...withChange].sort((a, b) => (b.changePct ?? 0) - (a.changePct ?? 0));
+  const gainers = sorted.filter((r) => (r.changePct ?? 0) > 0).slice(0, 3);
+  const losers = sorted.filter((r) => (r.changePct ?? 0) < 0).slice(-3).reverse();
+  const seen = new Set<string>();
+  const out: Row[] = [];
+  for (const r of [...gainers, ...losers]) { if (!seen.has(r.symbol)) { seen.add(r.symbol); out.push(r); } }
+  return out;
 }
 
 // ─── On-device watchlist (per signed-in user) ────────────────────────────────
@@ -93,7 +122,20 @@ export default function StocksBoard() {
   const [errored, setErrored] = useState(false);
   const [openSymbol, setOpenSymbol] = useState<{ symbol: string; name: string } | null>(null);
   const [watchlist, setWatchlist] = useState<string[]>([]);
+  const [query, setQuery] = useState('');
+  const [status, setStatus] = useState(marketStatus());
+  const [toast, setToast] = useState<string | null>(null);
   const rowCache = useRef<Map<string, Row>>(new Map());
+
+  // Refresh the market open/closed indicator every minute.
+  useEffect(() => { const id = setInterval(() => setStatus(marketStatus()), 60_000); return () => clearInterval(id); }, []);
+
+  const submitSearch = useCallback(() => {
+    const s = query.trim().toUpperCase();
+    if (!s) return;
+    setOpenSymbol({ symbol: s, name: s });
+    setQuery('');
+  }, [query]);
 
   useEffect(() => { setWatchlist(readWl(uid)); }, [uid]);
   const starred = useMemo(() => new Set(watchlist), [watchlist]);
@@ -118,9 +160,19 @@ export default function StocksBoard() {
       setRows(list);
       if (Array.isArray(j.ticker) && j.ticker.length) setTicker(j.ticker);
       setErrored(!j.available && tab !== 'watchlist');
+
+      // Fire any device-local price alerts that just crossed (works while open).
+      const priceMap = new Map<string, number>();
+      rowCache.current.forEach((r, s) => { if (Number.isFinite(r.price)) priceMap.set(s, r.price); });
+      const fired = checkAlerts(uid, priceMap);
+      for (const a of fired) {
+        setToast(`${a.symbol.replace(/^\^/, '')} is ${a.direction} ${a.target}`);
+        try { if (typeof Notification !== 'undefined' && Notification.permission === 'granted') new Notification('Naka price alert', { body: `${a.symbol.replace(/^\^/, '')} crossed ${a.direction} ${a.target}` }); } catch { /* ignore */ }
+      }
+      if (fired.length) setTimeout(() => setToast(null), 4000);
     } catch { setErrored(true); }
     finally { setLoading(false); }
-  }, [tab, apiTab, showAll]);
+  }, [tab, apiTab, showAll, uid]);
 
   useEffect(() => { load(); const id = setInterval(load, 60_000); return () => clearInterval(id); }, [load]);
 
@@ -128,6 +180,8 @@ export default function StocksBoard() {
     if (tab === 'watchlist') return watchlist.map((s) => rowCache.current.get(s)).filter(Boolean) as Row[];
     return rows;
   }, [tab, rows, watchlist]);
+
+  const movers = useMemo(() => pickMovers(rows), [rows]);
 
   return (
     <div className="space-y-4">
@@ -154,12 +208,33 @@ export default function StocksBoard() {
         </div>
       )}
 
-      {/* Intro */}
-      <div className="nl-glass rounded-2xl px-4 py-3.5 flex items-start gap-3">
-        <div className="p-2 rounded-lg bg-[#0066FF]/[0.10] shrink-0"><CandlestickChart className="w-4 h-4 text-[#4D6BFF]" /></div>
-        <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-white">Stocks &amp; Real-World Assets</h3>
-          <p className="text-xs text-[#B4C0E0] mt-0.5">Live equities, RWA and AI names with real charts and news from Yahoo Finance.</p>
+      {/* Intro + market status + search */}
+      <div className="nl-glass rounded-2xl px-4 py-3.5">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-lg bg-[#0066FF]/[0.10] shrink-0"><CandlestickChart className="w-4 h-4 text-[#4D6BFF]" /></div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-sm font-semibold text-white">Stocks &amp; Real-World Assets</h3>
+              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${status.open ? 'bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/25' : 'bg-white/[0.05] text-white/50 ring-1 ring-inset ring-white/10'}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${status.open ? 'bg-emerald-400 animate-pulse' : 'bg-white/40'}`} />{status.label}
+              </span>
+            </div>
+            <p className="text-xs text-[#B4C0E0] mt-0.5">Live equities, RWA and AI names with real charts and news from Yahoo Finance.</p>
+          </div>
+        </div>
+        {/* Search any ticker */}
+        <div className="mt-3 flex items-center gap-2 h-10 rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 focus-within:border-[#0066FF]/40 transition-colors">
+          <Search className="w-4 h-4 text-white/40 shrink-0" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') submitSearch(); }}
+            placeholder="Search any ticker (AAPL, NVDA, TSLA…)"
+            className="flex-1 min-w-0 bg-transparent appearance-none border-0 outline-none text-base sm:text-sm text-white placeholder:text-white/35"
+          />
+          {query ? (
+            <button onClick={() => setQuery('')} aria-label="Clear" className="text-white/40 hover:text-white shrink-0"><X className="w-4 h-4" /></button>
+          ) : null}
         </div>
       </div>
 
@@ -179,6 +254,33 @@ export default function StocksBoard() {
             })}
           </div>
         </div>
+
+        {/* Top movers (real change % only; hidden on watchlist / when thin) */}
+        {tab !== 'watchlist' && movers.length > 0 && (
+          <div className="mb-3">
+            <div className="flex items-center gap-1.5 mb-1.5 px-0.5">
+              <TrendingUp className="w-3.5 h-3.5 text-[#4D6BFF]" />
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-white/45">Top movers</span>
+            </div>
+            <div className="-mx-1 px-1 overflow-x-auto no-scrollbar">
+              <div className="flex gap-2 min-w-min">
+                {movers.map((r) => {
+                  const up = (r.changePct ?? 0) >= 0;
+                  return (
+                    <button key={r.symbol} onClick={() => setOpenSymbol({ symbol: r.symbol, name: r.name })}
+                      className="shrink-0 flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/[0.06] px-3 py-2 text-left hover:bg-white/[0.07] transition-colors">
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-bold text-white leading-tight truncate max-w-[90px]">{r.symbol.replace(/^\^/, '')}</div>
+                        <div className="text-[13px] font-semibold tabular-nums leading-tight" style={{ color: up ? UP : DOWN }}>{up ? '+' : ''}{(r.changePct ?? 0).toFixed(2)}%</div>
+                      </div>
+                      {up ? <TrendingUp className="w-4 h-4 shrink-0" style={{ color: UP }} /> : <TrendingDown className="w-4 h-4 shrink-0" style={{ color: DOWN }} />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* List */}
         <div className="max-h-[70vh] overflow-y-auto no-scrollbar -mx-1 px-1">
@@ -225,7 +327,24 @@ export default function StocksBoard() {
         </div>
       </div>
 
-      {openSymbol && <StockDetailSheet symbol={openSymbol.symbol} name={openSymbol.name} onClose={() => setOpenSymbol(null)} />}
+      {openSymbol && (
+        <StockDetailSheet
+          symbol={openSymbol.symbol}
+          name={openSymbol.name}
+          uid={uid}
+          starred={starred.has(openSymbol.symbol)}
+          onToggleStar={canStar ? () => toggleStar(openSymbol.symbol) : undefined}
+          onClose={() => setOpenSymbol(null)}
+        />
+      )}
+
+      {toast && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[110] pointer-events-none">
+          <div className="nl-glass rounded-full px-4 py-2 text-sm text-white/90 inline-flex items-center gap-2 shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
+            <Star className="w-4 h-4 text-[#F5B841]" /><span className="truncate max-w-[70vw]">{toast}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
