@@ -3,9 +3,8 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Repeat, ArrowUpRight, ArrowLeft } from 'lucide-react';
-import { VerifiedGoldBadge } from '@/components/ui/VerifiedGoldBadge';
+import { TierBadge } from '@/components/ui/TierBadge';
 import { SignalRail } from '@/components/wire/WireSignalRail';
-import { SuccessRateBadge } from '@/components/social/SuccessRateBadge';
 import { CashtagChip } from '@/components/wire/CashtagChip';
 import { WirePrediction } from '@/components/wire/WirePrediction';
 import { WireThread } from '@/components/wire/WireThread';
@@ -126,9 +125,8 @@ export function PublicWire({ post }: { post: WirePost }) {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="font-semibold text-white truncate max-w-[12rem]">{name}</span>
-              {a?.is_verified ? <VerifiedGoldBadge size={15} title="Verified" /> : null}
-              {/* Real success-rate badge (same as the profile), not the signal number. */}
-              <SuccessRateBadge value={shown.authorSuccessRate ?? null} />
+              {/* The REAL verified mark — the same tier badge shown on the profile. */}
+              <TierBadge tier={(a as { tier?: string | null } | null)?.tier} size={16} nonInteractive />
               {handle ? <span className="text-white/45 text-sm truncate">{handle}</span> : null}
               <span className="text-white/30 text-sm">·</span>
               <time className="text-white/45 text-sm" dateTime={shown.created_at}>
