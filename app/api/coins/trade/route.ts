@@ -76,6 +76,13 @@ export async function POST(req: NextRequest) {
   const tokenAmount = Number(b.tokenAmount) || 0;
   if (usdAmount <= 0 || tokenAmount <= 0) return NextResponse.json({ error: 'Invalid amounts' }, { status: 400 });
 
+  // A trade is only recorded against a real settled transaction hash, and the
+  // unique (chain, tx_hash) index blocks replay. This keeps the public holders,
+  // PnL and revenue honest: no hash, no record.
+  const txHash = b.txHash ? String(b.txHash) : '';
+  const validHash = chain === 'solana' ? /^[1-9A-HJ-NP-Za-km-z]{43,100}$/.test(txHash) : /^0x[0-9a-fA-F]{64}$/.test(txHash);
+  if (!validHash) return NextResponse.json({ error: 'A valid transaction hash is required' }, { status: 400 });
+
   const rec = await recordTrade({
     userId: user.id,
     chain,
@@ -86,8 +93,10 @@ export async function POST(req: NextRequest) {
     tokenAmount,
     priceUsd: b.priceUsd != null ? Number(b.priceUsd) : null,
     marketCapUsd: b.marketCapUsd != null ? Number(b.marketCapUsd) : null,
-    txHash: b.txHash ? String(b.txHash) : null,
+    txHash,
   });
-  if (!rec) return NextResponse.json({ error: 'Could not record trade' }, { status: 500 });
-  return NextResponse.json({ id: rec.id });
+  // A null here is almost always the unique-hash guard rejecting a replay, which
+  // is not an error for the caller.
+  if (!rec) return NextResponse.json({ ok: true, recorded: false });
+  return NextResponse.json({ id: rec.id, recorded: true });
 }

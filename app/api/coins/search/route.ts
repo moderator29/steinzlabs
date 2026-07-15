@@ -48,7 +48,11 @@ async function searchCoins(q: string) {
 async function searchPeople(q: string) {
   try {
     const sb = getSupabaseAdmin();
-    const like = `%${q.replace(/[%_]/g, '')}%`;
+    // Strip PostgREST filter metacharacters so the .or() grammar cannot break
+    // or be reinterpreted, then wrap the pattern in quotes.
+    const safe = q.replace(/[%_,()".*\\]/g, '').trim();
+    if (!safe) return [];
+    const like = `"%${safe}%"`;
     const { data } = await sb
       .from('profiles')
       .select('id, username, display_name, avatar_url, is_verified, verified_badge')

@@ -1,13 +1,14 @@
 -- ============================================================
--- FOMO coins feature: registry, watchlist, trades, thesis
+-- Coins feature: registry, watchlist, trades, thesis
 -- Non-custodial. Graduated-DEX coins on solana / ethereum / bsc.
 -- Applied to the live project via MCP apply_migration; mirrored here for parity.
 -- ============================================================
 
--- 1) Wallet balance public-by-default (feature launches public; users can hide in settings)
+-- 1) Wallet balance public-by-default for NEW profiles (users can hide in settings).
+--    Only the column default changes; existing rows are left untouched so a
+--    deliberate visibility choice is never overridden.
 alter table public.profiles alter column show_wallet_balance set default true;
-update public.profiles set show_wallet_balance = true where show_wallet_balance = false;
--- Also expose held coins publicly by default, with its own toggle.
+-- Also expose held coins publicly by default for new profiles, with its own toggle.
 alter table public.profiles add column if not exists show_holdings boolean not null default true;
 
 -- 2) Coin registry: cached metadata for discovery, wire/group embeds, logos.

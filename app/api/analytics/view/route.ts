@@ -19,18 +19,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid profileId' }, { status: 400 });
   }
 
-  // Do not inflate a user's own view count when they open their own profile.
+  // Only signed-in viewers count, and only once per profile per day, so the
+  // number cannot be inflated by anonymous or repeated requests.
   const viewer = await getAuthenticatedUser(req);
-  if (viewer && viewer.id === profileId) {
+  if (!viewer || viewer.id === profileId) {
     return NextResponse.json({ ok: true, counted: false });
   }
 
   const sb = getSupabaseAdmin();
-  const { error } = await sb.rpc('bump_profile_view', {
-    p_profile: profileId,
-    p_new_viewer: !!viewer,
-  });
-  if (error) return NextResponse.json({ error: 'Could not record view' }, { status: 500 });
+  const today = new Date().toISOString().slice(0, 10);
+  // Claim a (profile, viewer, day) slot; a conflict means already counted today.
+  const { data: claim } = await sb
+    .from('profile_view_log')
+    .upsert({ profile_id: profileId, viewer_id: viewer.id, day: today }, { onConflict: 'profile_id,viewer_id,day', ignoreDuplicates: true })
+    .select('profile_id');
+  const isNewToday = Array.isArray(claim) && claim.length > 0;
+  if (!isNewToday) return NextResponse.json({ ok: true, counted: false });
 
+  const { error } = await sb.rpc('bump_profile_view', { p_profile: profileId, p_new_viewer: true });
+  if (error) return NextResponse.json({ error: 'Could not record view' }, { status: 500 });
   return NextResponse.json({ ok: true, counted: true });
 }

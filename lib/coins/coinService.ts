@@ -311,7 +311,9 @@ export async function getDiscovery(tab: DiscoveryTab, chain?: string): Promise<C
           // Augment Solana with Birdeye trending when GT is thin.
           const bd = await getTrendingByVolume(20, 'solana').catch(() => []);
           const extra: DexPair[] = bd
-            .filter((t) => t.address)
+            // Only include coins whose real liquidity clears the graduation bar.
+            // Missing liquidity stays null so we never invent a graduated coin.
+            .filter((t) => t.address && (t.liquidity ?? 0) >= GRAD_MIN_LIQUIDITY_USD)
             .map((t) => ({
               chainId: 'solana',
               dexId: '',
@@ -324,7 +326,7 @@ export async function getDiscovery(tab: DiscoveryTab, chain?: string): Promise<C
               txns: { m5: { buys: 0, sells: 0 }, h1: { buys: 0, sells: 0 }, h6: { buys: 0, sells: 0 }, h24: { buys: 0, sells: 0 } },
               volume: { h24: t.volume24hUSD ?? 0, h6: 0, h1: 0, m5: 0 },
               priceChange: { m5: 0, h1: 0, h6: 0, h24: t.priceChange24hPercent ?? 0 },
-              liquidity: { usd: t.liquidity ?? GRAD_MIN_LIQUIDITY_USD, base: 0, quote: 0 },
+              liquidity: { usd: t.liquidity, base: 0, quote: 0 },
               marketCap: t.marketCap,
               fdv: t.marketCap,
               info: t.logoURI ? { imageUrl: t.logoURI } : undefined,

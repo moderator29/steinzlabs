@@ -111,14 +111,28 @@ export function TradeCard({ coin, livePrice, liveMcap }: { coin: Coin; livePrice
     const tokenAmount = side === 'buy' ? receivedCoin : sellAmount;
     const usdAmount = side === 'buy' ? usd : (price != null ? sellAmount * price : 0);
     setDone(true);
-    void fetch('/api/coins/trade', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chain: coin.chain, address: coin.tokenAddress, symbol: coin.symbol, side,
-        usdAmount, tokenAmount, priceUsd: price, marketCapUsd: liveMcap ?? coin.marketCapUsd, txHash,
-      }),
-    }).catch(() => { /* best-effort */ });
+    (async () => {
+      // A sell needs a real USD notional; if we somehow lack a price, fetch a
+      // fresh one rather than record a zero that the API would reject.
+      let priceForRecord = price;
+      let usdForRecord = usdAmount;
+      if (side === 'sell' && (priceForRecord == null || usdForRecord <= 0)) {
+        try {
+          const r = await fetch(`/api/coins/${coin.chain}/${encodeURIComponent(coin.tokenAddress)}/price`, { cache: 'no-store' });
+          const j = await r.json();
+          if (j?.priceUsd != null) { priceForRecord = Number(j.priceUsd); usdForRecord = sellAmount * priceForRecord; }
+        } catch { /* leave as-is */ }
+      }
+      if (usdForRecord <= 0 || tokenAmount <= 0) return;
+      await fetch('/api/coins/trade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chain: coin.chain, address: coin.tokenAddress, symbol: coin.symbol, side,
+          usdAmount: usdForRecord, tokenAmount, priceUsd: priceForRecord, marketCapUsd: liveMcap ?? coin.marketCapUsd, txHash,
+        }),
+      }).catch(() => { /* best-effort */ });
+    })();
     window.dispatchEvent(new Event('steinz:balance-changed'));
   }, [txHash]); // eslint-disable-line react-hooks/exhaustive-deps
 

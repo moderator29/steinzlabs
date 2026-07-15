@@ -72,9 +72,13 @@ export function CoinChart({ candles, mode, height = 260, up = true, markers = []
       }
 
       // Overlay the user's own buys (green +) and sells (rose -) as markers.
+      // Only markers inside the loaded candle window can render, so we clamp to
+      // it; markers outside this timeframe simply do not show for this range.
       if (markers.length && series) {
+        const first = candles[0]?.time ?? -Infinity;
+        const last = candles[candles.length - 1]?.time ?? Infinity;
         const marks = markers
-          .filter((m) => Number.isFinite(m.time))
+          .filter((m) => Number.isFinite(m.time) && m.time >= first && m.time <= last)
           .sort((a, b) => a.time - b.time)
           .map((m) => ({
             // eslint-disable-next-line @typescript-eslint/no-explicit-any

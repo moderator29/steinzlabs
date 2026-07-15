@@ -329,13 +329,17 @@ export async function getUserPositions(userId: string, openOnly = false): Promis
     .limit(10000);
   const rows = (data as FullTradeRow[]) ?? [];
 
-  const byCoin = new Map<string, UserPosition & { sellTokens: number; sellProceedsUsd: number }>();
+  // Rows are time-ordered, so we carry a running-average cost basis per coin and
+  // realize PnL at the moment of each sell. This matches the statement math and
+  // does not let a buy made after a sale retroactively change realized PnL.
+  interface Acc extends UserPosition { costTokens: number; costUsd: number }
+  const byCoin = new Map<string, Acc>();
   for (const r of rows) {
     const key = `${r.chain}:${r.token_key}`;
     const p = byCoin.get(key) ?? {
       chain: r.chain, tokenKey: r.token_key, tokenAddress: r.token_address, symbol: r.symbol,
       netTokens: 0, buyTokens: 0, buyCostUsd: 0, realizedUsd: 0, avgBuyPrice: null,
-      firstBuyMs: null, lastTradeMs: null, tradeCount: 0, sellTokens: 0, sellProceedsUsd: 0,
+      firstBuyMs: null, lastTradeMs: null, tradeCount: 0, costTokens: 0, costUsd: 0,
     };
     const tok = Number(r.token_amount) || 0;
     const usd = Number(r.usd_amount) || 0;
@@ -344,24 +348,28 @@ export async function getUserPositions(userId: string, openOnly = false): Promis
     p.lastTradeMs = p.lastTradeMs == null ? ts : Math.max(p.lastTradeMs, ts);
     if (r.side === 'buy') {
       p.netTokens += tok; p.buyTokens += tok; p.buyCostUsd += usd;
+      p.costTokens += tok; p.costUsd += usd;
       if (p.firstBuyMs == null || ts < p.firstBuyMs) p.firstBuyMs = ts;
     } else {
-      p.netTokens -= tok; p.sellTokens += tok; p.sellProceedsUsd += usd;
+      const avg = p.costTokens > 0 ? p.costUsd / p.costTokens : 0;
+      p.realizedUsd += usd - tok * avg;
+      p.netTokens -= tok;
+      p.costTokens = Math.max(0, p.costTokens - tok);
+      p.costUsd = Math.max(0, p.costUsd - tok * avg);
     }
-    if (!r.symbol && p.symbol) { /* keep first known symbol */ } else if (r.symbol) p.symbol = r.symbol;
+    if (r.symbol) p.symbol = r.symbol;
     byCoin.set(key, p);
   }
 
   const out: UserPosition[] = [];
   for (const p of byCoin.values()) {
-    const avgBuyPrice = p.buyTokens > 0 ? p.buyCostUsd / p.buyTokens : null;
-    // Realized PnL: proceeds minus the average cost of the tokens sold.
-    const realizedUsd = avgBuyPrice != null ? p.sellProceedsUsd - p.sellTokens * avgBuyPrice : 0;
+    // Basis of the open position is the remaining running average.
+    const avgBuyPrice = p.costTokens > 0 ? p.costUsd / p.costTokens : (p.buyTokens > 0 ? p.buyCostUsd / p.buyTokens : null);
     if (openOnly && p.netTokens <= 0.0000001) continue;
     out.push({
       chain: p.chain, tokenKey: p.tokenKey, tokenAddress: p.tokenAddress, symbol: p.symbol,
       netTokens: p.netTokens, buyTokens: p.buyTokens, buyCostUsd: p.buyCostUsd,
-      realizedUsd, avgBuyPrice, firstBuyMs: p.firstBuyMs, lastTradeMs: p.lastTradeMs, tradeCount: p.tradeCount,
+      realizedUsd: p.realizedUsd, avgBuyPrice, firstBuyMs: p.firstBuyMs, lastTradeMs: p.lastTradeMs, tradeCount: p.tradeCount,
     });
   }
   out.sort((a, b) => (b.lastTradeMs ?? 0) - (a.lastTradeMs ?? 0));
