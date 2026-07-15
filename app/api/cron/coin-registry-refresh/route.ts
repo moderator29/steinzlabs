@@ -2,6 +2,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { resolveCoin } from '@/lib/coins/coinService';
+import { getRealHolderCount, persistHolderCount } from '@/lib/coins/holders';
 import { verifyCron } from '../_shared';
 
 /**
@@ -58,7 +59,13 @@ export async function GET(req: NextRequest) {
         try {
           const coin = await resolveCoin(row.chain, row.token_address);
           // resolveCoin upserts a fresh snapshot (incl. refreshed_at) on success.
-          if (coin) return true;
+          if (coin) {
+            // Also refresh the real holder count (GoPlus, cached) so discovery,
+            // "Most held" and the terminal show a real number, never "-".
+            const hc = await getRealHolderCount(row.chain, row.token_address);
+            if (hc != null) await persistHolderCount(row.chain, row.token_key, hc);
+            return true;
+          }
           // No resolvable coin (delisted / below liquidity bar): bump refreshed_at
           // so the scanner rotates past this row on the next tick.
           await db

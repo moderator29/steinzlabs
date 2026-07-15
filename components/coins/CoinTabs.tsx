@@ -152,6 +152,8 @@ export function InfoTab({ coin, stats }: { coin: Coin; stats: Stats | null }) {
           <Stat label="Market cap" value={compactUsd(coin.marketCapUsd)} />
           <Stat label="Liquidity" value={compactUsd(coin.liquidityUsd)} />
           <Stat label="Volume 24h" value={compactUsd(coin.volume24hUsd)} />
+          <Stat label="Holders" value={coin.holdersCount != null ? compactNum(coin.holdersCount) : '—'} />
+          {coin.fdvUsd != null && coin.fdvUsd !== coin.marketCapUsd ? <Stat label="FDV" value={compactUsd(coin.fdvUsd)} /> : null}
           <Stat label="24h" value={coin.change24h != null ? signedPct(coin.change24h) : '—'} valueClass={coin.change24h != null && coin.change24h < 0 ? 'text-rose-400' : 'text-emerald-400'} />
         </div>
       </div>
