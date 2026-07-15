@@ -35,7 +35,6 @@ type Side = 'buy' | 'sell';
 export function TradeCard({ coin, livePrice, liveMcap, initialBuyUsd }: { coin: Coin; livePrice: number | null; liveMcap: number | null; initialBuyUsd?: number | null }) {
   const { address, balance } = useWallet();
   const native = NATIVE[coin.chain];
-  const noFunds = (balance?.totalUsd ?? 0) <= 0;
   const [side, setSide] = useState<Side>('buy');
   const [usd, setUsd] = useState<number>(initialBuyUsd && initialBuyUsd > 0 ? Math.round(initialBuyUsd) : 25);
   const [pct, setPct] = useState<number>(50);
@@ -82,6 +81,17 @@ export function TradeCard({ coin, livePrice, liveMcap, initialBuyUsd }: { coin: 
   const nativeAmount = nativePriceUsd && nativePriceUsd > 0 ? usd / nativePriceUsd : null;
   const sellAmount = myTokens > 0 ? (myTokens * pct) / 100 : 0;
   const canSell = coin.decimals != null && myTokens > 0;
+
+  // Buying a memecoin with fiat is a two-step reality: a card on-ramp delivers
+  // NATIVE (SOL/ETH/BNB) to the wallet, then that native is swapped to the coin.
+  // So we check whether the user already holds enough native on THIS coin's
+  // chain to cover the selected buy; if not, we surface a "Top up with card"
+  // that funds exactly this chain, after which the same one-tap buy works.
+  const nativeSym = native?.symbol;
+  const nativeBalance = nativeSym ? (balance?.tokens?.[nativeSym] ?? 0) : 0;
+  const nativeBalanceUsd = nativePriceUsd != null ? nativeBalance * nativePriceUsd : null;
+  // A small headroom for gas so a top-up covers the swap fee too.
+  const needsTopUp = side === 'buy' && (nativeBalanceUsd == null ? (balance?.totalUsd ?? 0) <= 0 : nativeBalanceUsd < usd * 1.02);
 
   const buildParams = useCallback(() => {
     if (!address || !native) return null;
@@ -267,10 +277,26 @@ export function TradeCard({ coin, livePrice, liveMcap, initialBuyUsd }: { coin: 
         {done ? 'Done' : executing ? 'Confirm in wallet' : side === 'buy' ? `Buy ${coin.symbol}` : `Sell ${coin.symbol}`}
       </button>
 
-      {noFunds && side === 'buy' ? (
-        <div className="mt-2">
-          <FundButton address={address} chain={coin.chain} label="Fund with card to buy" />
-        </div>
+      {side === 'buy' ? (
+        needsTopUp ? (
+          <div className="mt-2.5 rounded-xl bg-[#0066FF]/[0.08] border border-[#0066FF]/25 p-2.5">
+            <div className="text-[12px] text-white/70 mb-2">
+              {nativeBalanceUsd != null && nativeBalanceUsd > 0
+                ? `Not enough ${nativeSym} for a $${usd} buy. Top up with a card, then buy ${coin.symbol} in a tap.`
+                : `To buy ${coin.symbol} you need ${nativeSym ?? 'funds'} on ${coin.chain === 'solana' ? 'Solana' : coin.chain === 'bsc' ? 'BNB Chain' : 'Ethereum'}. Add it with a card in a tap.`}
+            </div>
+            <FundButton address={address} chain={coin.chain} label={`Top up ${nativeSym ?? ''} with card`} />
+          </div>
+        ) : (
+          <div className="mt-2 flex justify-center">
+            <FundButton
+              address={address}
+              chain={coin.chain}
+              label={`Top up ${nativeSym ?? ''} with card`}
+              className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-white/45 hover:text-[#7FB2FF] transition-colors"
+            />
+          </div>
+        )
       ) : null}
 
       <p className="text-[11px] text-white/35 text-center mt-2">Signed by your own wallet. Non-custodial. {(PLATFORM_FEE_BPS / 100).toString()}% fee.</p>
