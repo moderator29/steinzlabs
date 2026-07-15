@@ -2,8 +2,14 @@
 
 import { use, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { Globe, Lock, ShieldQuestion, Check, Loader2, Trash2, UserPlus, Copy } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+
+const SECTION = {
+  initial: { opacity: 0, y: 10 },
+  animate: { opacity: 1, y: 0 },
+};
 
 interface Group { id: string; name: string; slug: string; description: string | null; privacy: string; invite_code?: string; owner_id: string; }
 interface Member { user_id: string; role: string; status: string; profile: { username: string | null; display_name: string | null; avatar_url: string | null } | null; }
@@ -80,7 +86,7 @@ export default function GroupSettingsPage({ params }: { params: Promise<{ slug: 
   const invitable = friends.filter((f) => !memberIds.has(f.id));
 
   return (
-    <div className="min-h-screen text-white max-w-2xl mx-auto px-4 py-5 pb-28">
+    <motion.div {...SECTION} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} className="min-h-screen text-white max-w-2xl mx-auto px-4 py-5 pb-28">
       <div className="flex items-center gap-2 mb-5">
         <BackButton href={`/dashboard/groups/${slug}`} />
         <h1 className="text-lg font-bold">Group settings</h1>
@@ -169,6 +175,6 @@ export default function GroupSettingsPage({ params }: { params: Promise<{ slug: 
       {isOwner && (
         <button type="button" onClick={del} className="w-full rounded-xl py-2.5 text-[13px] font-semibold text-rose-300 bg-rose-500/10 border border-rose-500/25 inline-flex items-center justify-center gap-1.5"><Trash2 className="w-4 h-4" /> Delete group</button>
       )}
-    </div>
+    </motion.div>
   );
 }

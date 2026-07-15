@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { Users, Plus, Lock, Globe, ShieldQuestion, ChevronRight } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 
@@ -13,10 +14,11 @@ function PrivacyIcon({ p }: { p: string }) {
   return <Lock className="w-3.5 h-3.5" />;
 }
 
-function GroupCard({ g }: { g: Group }) {
+function GroupCard({ g, i = 0 }: { g: Group; i?: number }) {
   const initial = g.name.trim().charAt(0).toUpperCase();
   return (
-    <Link href={`/dashboard/groups/${g.slug}`} className="flex items-center gap-3 nl-glass rounded-2xl p-3 hover:bg-white/[0.04] transition-colors">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: Math.min(i * 0.04, 0.3), ease: [0.22, 1, 0.36, 1] }} whileHover={{ y: -2 }}>
+    <Link href={`/dashboard/groups/${g.slug}`} className="flex items-center gap-3 nl-glass rounded-2xl p-3 hover:bg-white/[0.05] transition-colors" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.14)' }}>
       {g.avatar_url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={g.avatar_url} alt="" className="w-12 h-12 rounded-xl object-cover shrink-0" />
@@ -32,6 +34,7 @@ function GroupCard({ g }: { g: Group }) {
       </div>
       <ChevronRight className="w-4 h-4 text-white/30 shrink-0" />
     </Link>
+    </motion.div>
   );
 }
 
@@ -93,7 +96,7 @@ export default function GroupsPage() {
         ) : mine.length === 0 ? (
           <div className="nl-glass rounded-2xl p-5 text-center text-white/50 text-sm">You are not in any group yet. Create one or join from Discover.</div>
         ) : (
-          <div className="space-y-2">{mine.map((g) => <GroupCard key={g.id} g={g} />)}</div>
+          <div className="space-y-2">{mine.map((g, i) => <GroupCard key={g.id} g={g} i={i} />)}</div>
         )}
       </section>
 
@@ -102,7 +105,7 @@ export default function GroupsPage() {
         {discover.length === 0 ? (
           <div className="nl-glass rounded-2xl p-5 text-center text-white/50 text-sm">No public groups yet. Be the first to create one.</div>
         ) : (
-          <div className="space-y-2">{discover.map((g) => <GroupCard key={g.id} g={g} />)}</div>
+          <div className="space-y-2">{discover.map((g, i) => <GroupCard key={g.id} g={g} i={i} />)}</div>
         )}
       </section>
     </div>

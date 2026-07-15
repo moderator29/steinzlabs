@@ -2,8 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Globe, Lock, ShieldQuestion, Check, ArrowRight, Loader2, Users } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+
+const STEP_MOTION = {
+  initial: { opacity: 0, x: 24 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: -24 },
+  transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+};
 
 /**
  * Group create flow — a clean three-step wizard (Identity → Privacy → Invite),
@@ -67,8 +75,9 @@ export default function CreateGroupPage() {
         ))}
       </div>
 
+      <AnimatePresence mode="wait">
       {step === 1 && (
-        <div className="space-y-4">
+        <motion.div key="s1" {...STEP_MOTION} className="space-y-4">
           <div>
             <label className="text-[13px] font-semibold text-white/80">Group name</label>
             <input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="Alpha Callers" className="mt-1.5 w-full h-11 rounded-xl bg-white/[0.04] border border-white/[0.1] px-3.5 text-base text-white placeholder:text-white/35 outline-none focus:border-[#0066FF]/50" />
@@ -77,11 +86,11 @@ export default function CreateGroupPage() {
             <label className="text-[13px] font-semibold text-white/80">Description <span className="text-white/40 font-normal">(optional)</span></label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={300} rows={3} placeholder="What is this group about?" className="mt-1.5 w-full rounded-xl bg-white/[0.04] border border-white/[0.1] px-3.5 py-2.5 text-[15px] text-white placeholder:text-white/35 outline-none focus:border-[#0066FF]/50 resize-none" />
           </div>
-        </div>
+        </motion.div>
       )}
 
       {step === 2 && (
-        <div className="space-y-2.5">
+        <motion.div key="s2" {...STEP_MOTION} className="space-y-2.5">
           {PRIVACY_OPTS.map(({ value, label, desc, Icon }) => {
             const active = privacy === value;
             return (
@@ -95,11 +104,11 @@ export default function CreateGroupPage() {
               </button>
             );
           })}
-        </div>
+        </motion.div>
       )}
 
       {step === 3 && (
-        <div>
+        <motion.div key="s3" {...STEP_MOTION}>
           <p className="text-[13px] text-white/60 mb-3">Invite friends (people you both follow who allow invites). You can add more later.</p>
           {friends.length === 0 ? (
             <div className="nl-glass rounded-2xl p-5 text-center text-white/50 text-sm">No friends to invite yet. You can share the group link after creating.</div>
@@ -126,8 +135,9 @@ export default function CreateGroupPage() {
               })}
             </div>
           )}
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {error ? <div className="mt-4 text-sm text-rose-400">{error}</div> : null}
 

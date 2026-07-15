@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Bell, BellRing } from 'lucide-react';
 
 /**
@@ -78,8 +79,16 @@ export function NotifyBell({ targetId, self }: { targetId: string; self?: boolea
         {subscribed ? <BellRing className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
       </button>
 
+      <AnimatePresence>
       {open && subscribed ? (
-        <div className="absolute right-0 top-12 z-50 w-60 rounded-xl border border-white/10 bg-[#0b1022]/95 backdrop-blur p-3 shadow-2xl">
+        <motion.div
+          initial={{ opacity: 0, y: -6, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -6, scale: 0.96 }}
+          transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+          className="absolute right-0 top-12 z-50 w-60 rounded-xl border border-[#0066FF]/20 bg-[#0b1022]/95 backdrop-blur p-3 shadow-2xl"
+          style={{ boxShadow: '0 10px 40px -10px rgba(0,102,255,.5), 0 2px 8px rgba(0,0,0,.45)' }}
+        >
           <div className="text-[12px] font-semibold text-white mb-2">Notifications for this user</div>
           <label className="flex items-center justify-between gap-2 py-1.5 text-[13px] text-white/80">
             <span>New posts</span>
@@ -101,8 +110,9 @@ export function NotifyBell({ targetId, self }: { targetId: string; self?: boolea
           >
             Turn off
           </button>
-        </div>
+        </motion.div>
       ) : null}
+      </AnimatePresence>
     </div>
   );
 }

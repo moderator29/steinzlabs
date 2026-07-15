@@ -2,9 +2,11 @@
 
 import { use, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Users, Lock, Globe, ShieldQuestion, Settings, Send, Share2, Loader2, Check } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Users, Lock, Globe, ShieldQuestion, Settings, Share2, Loader2, Check } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { renderRichText } from '@/lib/wire/richText';
+import { GroupComposer } from '@/components/groups/GroupComposer';
 
 interface Group { id: string; name: string; slug: string; description: string | null; avatar_url: string | null; privacy: string; member_count: number; owner_id: string; invite_code?: string; }
 type Membership = { role: string; status: string } | null;
@@ -23,8 +25,6 @@ export default function GroupPage({ params }: { params: Promise<{ slug: string }
   const [membership, setMembership] = useState<Membership>(null);
   const [loading, setLoading] = useState(true);
   const [msgs, setMsgs] = useState<Msg[]>([]);
-  const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
   const [joining, setJoining] = useState(false);
   const [copied, setCopied] = useState(false);
   const endRef = useRef<HTMLDivElement | null>(null);
@@ -60,18 +60,6 @@ export default function GroupPage({ params }: { params: Promise<{ slug: string }
     try { await fetch(`/api/groups/${group.id}/members`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) }); await loadGroup(); } catch { /* ignore */ } finally { setJoining(false); }
   };
 
-  const send = async () => {
-    if (!group || !draft.trim() || sending) return;
-    setSending(true);
-    const body = draft.trim();
-    setDraft('');
-    try {
-      const r = await fetch(`/api/groups/${group.id}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body }) });
-      const j = await r.json();
-      if (j?.message) setMsgs((prev) => [...prev, j.message]);
-    } catch { setDraft(body); } finally { setSending(false); }
-  };
-
   const share = async () => {
     const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/dashboard/groups/${slug}`;
     try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { /* ignore */ }
@@ -102,8 +90,8 @@ export default function GroupPage({ params }: { params: Promise<{ slug: string }
       </div>
 
       {!active ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-16 gap-4">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold text-white" style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF 60%,#7C3AED)' }}>{initial}</div>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }} className="flex-1 flex flex-col items-center justify-center text-center px-6 py-16 gap-4">
+          <motion.div initial={{ scale: 0.85 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 18 }} className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold text-white" style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF 60%,#7C3AED)', boxShadow: '0 0 34px rgba(0,102,255,.5)' }}>{initial}</motion.div>
           <div>
             <div className="text-lg font-bold text-white">{group.name}</div>
             {group.description ? <p className="text-sm text-white/55 mt-1 max-w-sm">{group.description}</p> : null}
@@ -120,7 +108,7 @@ export default function GroupPage({ params }: { params: Promise<{ slug: string }
           ) : (
             <div className="text-sm text-white/50">This group is invite only.</div>
           )}
-        </div>
+        </motion.div>
       ) : (
         <>
           <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-3">
@@ -129,7 +117,14 @@ export default function GroupPage({ params }: { params: Promise<{ slug: string }
             ) : msgs.map((m) => {
               const nm = m.author?.display_name || m.author?.username || 'Member';
               return (
-                <div key={m.id} className="flex gap-2.5">
+                <motion.div
+                  key={m.id}
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                  className="flex gap-2.5"
+                >
                   {m.author?.avatar_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={m.author.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
@@ -140,21 +135,18 @@ export default function GroupPage({ params }: { params: Promise<{ slug: string }
                     <div className="text-[13px]"><span className="font-semibold text-white">{nm}</span></div>
                     {m.body ? <div className="text-[14px] text-white/90 whitespace-pre-wrap break-words leading-relaxed">{renderRichText(m.body)}</div> : null}
                     {m.media_urls?.length ? (
-                      <div className={`mt-1.5 grid gap-1 rounded-xl overflow-hidden border border-white/10 ${m.media_urls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                      <div className={`mt-1.5 grid gap-1 rounded-xl overflow-hidden border border-white/10 ${m.media_urls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`} style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.15)' }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         {m.media_urls.slice(0, 4).map((u) => <img key={u} src={u} alt="" className="w-full max-h-[300px] object-cover" />)}
                       </div>
                     ) : null}
                   </div>
-                </div>
+                </motion.div>
               );
             })}
             <div ref={endRef} />
           </div>
-          <form onSubmit={(e) => { e.preventDefault(); void send(); }} className="sticky bottom-0 flex items-end gap-2 px-4 py-3 bg-[#05080F]/92 backdrop-blur-md border-t border-white/10 naka-safe-bottom">
-            <textarea value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(); } }} rows={1} placeholder="Message the group…" className="flex-1 min-w-0 resize-none bg-[#0066FF]/[0.06] border border-[#0066FF]/25 rounded-2xl px-4 py-2.5 text-base text-white placeholder:text-white/40 outline-none focus:border-[#0066FF]/60" />
-            <button type="submit" disabled={sending || !draft.trim()} aria-label="Send" className="w-10 h-10 shrink-0 rounded-full text-white inline-flex items-center justify-center disabled:opacity-40" style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF)' }}><Send className="w-4 h-4" /></button>
-          </form>
+          <GroupComposer groupId={group.id} onSent={(m) => setMsgs((prev) => [...prev, m as unknown as Msg])} />
         </>
       )}
     </div>
