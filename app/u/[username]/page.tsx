@@ -8,6 +8,7 @@ import { MessageButton } from '@/components/social/MessageButton';
 import { MoreMenu } from '@/components/social/MoreMenu';
 import { UserListRow } from '@/components/social/UserListRow';
 import { TierBadge } from '@/components/ui/TierBadge';
+import { NotifyBell } from '@/components/social/NotifyBell';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import WireProfileTabs from '@/components/wire/WireProfileTabs';
@@ -190,6 +191,8 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
             onChange={() => load()}
           />
           <MessageButton peerId={p.id} permission={dmPermissionView} />
+          {/* Per-user notify bell — turn on alerts for this user's posts / online. */}
+          <NotifyBell targetId={p.id} />
           {rel.pending_incoming && (
             <Link
               href="#"

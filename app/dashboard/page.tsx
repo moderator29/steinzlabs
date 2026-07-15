@@ -34,6 +34,7 @@ import SteinzLogo from '@/components/ui/SteinzLogo';
 import { RenderWidgets } from '@/components/dashboard/RenderWidgets';
 import { DailyPulseSummary } from '@/components/dashboard/DailyPulseSummary';
 import { OverviewPreviews } from '@/components/dashboard/OverviewPreviews';
+import { PresenceHeartbeat } from '@/components/presence/PresenceHeartbeat';
 import { FirstRunTour } from '@/components/dashboard/FirstRunTour';
 
 const ContextFeed    = lazy(() => import('@/components/ContextFeed'));
@@ -619,6 +620,9 @@ export default function Dashboard() {
     // `clip` (not `hidden`) so it doesn't establish a vertical scroll container
     // that would break position:sticky descendants.
     <div className="min-h-screen text-white pb-28 sm:pb-24 overflow-x-clip">
+      {/* Presence heartbeat — keeps this user's "online" state fresh so others
+          can see it and "came online" alerts can fire. Renders nothing. */}
+      <PresenceHeartbeat />
       {/* Only run the lightweight tour AFTER the full onboarding flow is done
           (onboardedAt is a real date). Previously both the 10-card
           OnboardingGate and this 3-step tour mounted at z-[200] for a

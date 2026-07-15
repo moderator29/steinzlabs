@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { WIRE_TOPIC_SET, WIRE_MAX_TAGS } from '@/lib/wire/topics';
 import { computeAuthorSignals } from '@/lib/wire/signal';
+import { notifyNewPostToSubscribers } from '@/lib/social/subscriberNotify';
 
 /**
  * The Wire - native social feed API.
@@ -144,6 +145,20 @@ export async function POST(req: NextRequest) {
   // Attach the author via a plain query (no embed) so the create response can
   // never fail on a stale relationship cache.
   const authorMap = await fetchAuthors(sb, [user.id]);
+
+  // Per-user "notify" fanout: anyone who turned ON the bell for this author gets
+  // an in-app (+ Telegram) ping. Only genuine top-level wires, never replies or
+  // reposts. Fire-and-forget so it never delays or fails the create response.
+  if (!data.reply_to && !data.repost_of) {
+    const a = authorMap.get(user.id) as { display_name?: string | null; username?: string | null } | undefined;
+    void notifyNewPostToSubscribers({
+      authorId: user.id,
+      authorName: a?.display_name || a?.username || 'Someone',
+      postId: data.id,
+      snippet: String(data.body ?? '').trim(),
+    });
+  }
+
   return NextResponse.json({
     post: { ...data, author: authorMap.get(user.id) ?? null, original: null, liked: false, reposted: false },
   });
