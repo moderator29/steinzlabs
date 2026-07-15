@@ -14,6 +14,7 @@ import { Loader2, Check, Wallet as WalletIcon } from 'lucide-react';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { useSwapExecution } from '@/lib/hooks/useSwapExecution';
 import { getBuiltinWalletAddress } from '@/lib/wallet/builtinWallet';
+import { FundButton } from './FundButton';
 import type { Coin } from '@/lib/coins/types';
 import { compactUsd, coinPrice } from '@/lib/coins/format';
 
@@ -267,9 +268,9 @@ export function TradeCard({ coin, livePrice, liveMcap, initialBuyUsd }: { coin: 
       </button>
 
       {noFunds && side === 'buy' ? (
-        <Link href="/dashboard?tab=wallet" className="mt-2 flex items-center justify-center gap-1.5 rounded-xl py-2 text-[12px] font-semibold text-[#7FB2FF] bg-[#0066FF]/10 border border-[#0066FF]/25">
-          Add funds to your wallet to buy
-        </Link>
+        <div className="mt-2">
+          <FundButton address={address} chain={coin.chain} label="Fund with card to buy" />
+        </div>
       ) : null}
 
       <p className="text-[11px] text-white/35 text-center mt-2">Signed by your own wallet. Non-custodial. {(PLATFORM_FEE_BPS / 100).toString()}% fee.</p>

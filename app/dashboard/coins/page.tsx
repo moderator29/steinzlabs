@@ -19,6 +19,7 @@ import { ChainFilter, type ChainFilterValue } from '@/components/coins/ChainFilt
 import { TopTrades } from '@/components/coins/TopTrades';
 import { CircleBuying } from '@/components/coins/CircleBuying';
 import { LiveTape } from '@/components/coins/LiveTape';
+import { CoinMomentsStrip } from '@/components/coins/CoinMomentsStrip';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { useWallet } from '@/lib/hooks/useWallet';
 import type { Coin } from '@/lib/coins/types';
@@ -135,6 +136,9 @@ export default function CoinsPage() {
             <>
               {/* Featured hero */}
               {featured ? <FeaturedCoin coin={featured} /> : null}
+
+              {/* Auto-detected coin moments (milestones, your circle aping). */}
+              <CoinMomentsStrip />
 
               {/* Leaderboard entry */}
               <Link

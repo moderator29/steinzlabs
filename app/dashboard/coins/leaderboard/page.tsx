@@ -14,6 +14,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Trophy, Users2, Globe2 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { CoinLogo } from '@/components/coins/atoms';
+import CopyTraderButton from '@/components/coins/CopyTraderButton';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { compactUsd, signedPct } from '@/lib/coins/format';
 
@@ -194,10 +195,11 @@ export default function LeaderboardPage() {
                   </>
                 );
                 return (
-                  <motion.div key={t.user.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22, delay: Math.min(i * 0.03, 0.25) }}>
+                  <motion.div key={t.user.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22, delay: Math.min(i * 0.03, 0.25) }} className={CARD}>
                     {t.user.username
-                      ? <Link href={`/u/${t.user.username}`} className={CARD}>{inner}</Link>
-                      : <div className={CARD}>{inner}</div>}
+                      ? <Link href={`/u/${t.user.username}`} className="flex items-center gap-3 min-w-0 flex-1">{inner}</Link>
+                      : <div className="flex items-center gap-3 min-w-0 flex-1">{inner}</div>}
+                    <CopyTraderButton leaderUserId={t.user.id} leaderName={nm} />
                   </motion.div>
                 );
               })

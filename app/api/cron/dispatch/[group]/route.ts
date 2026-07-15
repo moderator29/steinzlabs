@@ -41,7 +41,7 @@ const GROUPS: Record<string, string[]> = {
   // Every ~30 minutes.
   'half-hourly': [
     'whale-activity-poll', 'whale-activity-price', 'bitquery-activity-poll', 'dca-executor', 'pending-trades-cleanup',
-    'receipt-reconciliation', 'notification-retry', 'telegram-retry-failures', 'stock-alerts', 'coin-alerts', 'coin-intent-monitor', 'coin-social-buy-monitor',
+    'receipt-reconciliation', 'notification-retry', 'telegram-retry-failures', 'stock-alerts', 'coin-alerts', 'coin-intent-monitor', 'coin-social-buy-monitor', 'coin-moments', 'coin-copy-monitor',
     'pumpfun-velocity-poll', 'cult-resolve-proposals', 'cult-ape-resolve', 'health-watch',
     // Free MEV fallback (ZeroMEV, Ethereum) — scans recent blocks into a rolling
     // 30d per-victim aggregate for MEV Radar when Dune's MEV surface is empty.

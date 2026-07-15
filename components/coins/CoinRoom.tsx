@@ -16,6 +16,7 @@ import { shortAgo } from '@/lib/coins/format';
 import type { Coin } from '@/lib/coins/types';
 
 const POLL_MS = 6000;
+const HEARTBEAT_MS = 30000;
 const MAX_BODY = 500;
 
 interface RoomAuthor {
@@ -65,10 +66,13 @@ function Avatar({ author, size = 30 }: { author: RoomAuthor | null; size?: numbe
 export function CoinRoom({ coin, canPost }: { coin: Coin; canPost: boolean }) {
   const symbol = (coin.symbol || '').trim();
   const [messages, setMessages] = useState<RoomMessage[] | null>(null);
+  const [watching, setWatching] = useState(0);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
   const atBottomRef = useRef(true);
+
+  const presenceUrl = `/api/coins/${coin.chain}/${encodeURIComponent(coin.tokenAddress)}/presence`;
 
   const load = useCallback(async () => {
     try {
@@ -81,11 +85,48 @@ export function CoinRoom({ coin, canPost }: { coin: Coin; canPost: boolean }) {
     }
   }, [coin.chain, coin.tokenAddress]);
 
+  // Real watcher count: distinct users with a fresh heartbeat (last 60s). Never
+  // fabricated. Failures leave the last honest value untouched.
+  const loadCount = useCallback(async () => {
+    try {
+      const r = await fetch(presenceUrl, { cache: 'no-store' });
+      if (!r.ok) return;
+      const j = await r.json();
+      if (typeof j.count === 'number') setWatching(j.count);
+    } catch {
+      /* keep the last honest count */
+    }
+  }, [presenceUrl]);
+
   useEffect(() => {
     void load();
-    const id = setInterval(() => { void load(); }, POLL_MS);
+    void loadCount();
+    const id = setInterval(() => { void load(); void loadCount(); }, POLL_MS);
     return () => clearInterval(id);
-  }, [load]);
+  }, [load, loadCount]);
+
+  // Signed-in watchers announce their presence: a heartbeat on mount and every
+  // ~30s while the room stays open. The response carries the fresh count, so the
+  // pill updates without waiting for the next poll. The interval is cleaned up on
+  // unmount, letting a departed watcher's heartbeat go stale and drop from the
+  // count.
+  useEffect(() => {
+    if (!canPost) return;
+    let alive = true;
+    const beat = async () => {
+      try {
+        const r = await fetch(presenceUrl, { method: 'POST' });
+        if (!r.ok) return;
+        const j = await r.json();
+        if (alive && typeof j.count === 'number') setWatching(j.count);
+      } catch {
+        /* transient: the next beat retries */
+      }
+    };
+    void beat();
+    const id = setInterval(() => { void beat(); }, HEARTBEAT_MS);
+    return () => { alive = false; clearInterval(id); };
+  }, [canPost, presenceUrl]);
 
   // Keep the view pinned to the newest message when the user is already at the
   // bottom, so incoming chat doesn't yank them away mid-scroll.
@@ -139,8 +180,17 @@ export function CoinRoom({ coin, canPost }: { coin: Coin; canPost: boolean }) {
         <h3 className="text-[14px] font-bold text-white">
           {symbol ? `$${symbol} room` : 'Coin room'}
         </h3>
+        {watching >= 1 ? (
+          <span className="ms-auto inline-flex items-center gap-1.5 rounded-full bg-[#10B981]/10 ring-1 ring-inset ring-[#10B981]/25 px-2 py-[3px] text-[11px] font-semibold text-[#10B981] tabular-nums">
+            <span className="relative flex w-1.5 h-1.5">
+              <span className="absolute inline-flex w-full h-full rounded-full bg-[#10B981] opacity-60 animate-ping" />
+              <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+            </span>
+            {watching} watching
+          </span>
+        ) : null}
         {messages && messages.length > 0 ? (
-          <span className="ms-auto text-[11px] font-semibold text-white/40 tabular-nums">
+          <span className={`${watching >= 1 ? '' : 'ms-auto '}text-[11px] font-semibold text-white/40 tabular-nums`}>
             {messages.length} {messages.length === 1 ? 'message' : 'messages'}
           </span>
         ) : null}

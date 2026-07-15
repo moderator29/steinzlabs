@@ -8,8 +8,8 @@
  */
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { CoinLogo, PriceDelta } from './atoms';
+import { PeekableCoin } from './CoinPeek';
 import { coinPrice, compactUsd } from '@/lib/coins/format';
 
 interface MiniCoin { chain: string; tokenAddress: string; symbol: string; name: string; logoUrl: string | null; priceUsd: number | null; marketCapUsd: number | null; change24h: number | null; verified: boolean }
@@ -51,10 +51,11 @@ export function CoinCardsFromText({ text }: { text: string }) {
   return (
     <div className="mt-2 space-y-1.5">
       {coins.map((c) => (
-        <Link
+        <PeekableCoin
           key={`${c.chain}:${c.tokenAddress}`}
-          href={`/dashboard/coins/${c.chain}/${encodeURIComponent(c.tokenAddress)}`}
-          className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 bg-white/[0.03] border border-[#0066FF]/20 hover:bg-white/[0.05] transition-colors"
+          chain={c.chain}
+          address={c.tokenAddress}
+          className="w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 bg-white/[0.03] border border-[#0066FF]/20 hover:bg-white/[0.05] transition-colors text-left"
         >
           <CoinLogo logoUrl={c.logoUrl} symbol={c.symbol} chain={c.chain} size={34} verified={c.verified} />
           <div className="min-w-0 flex-1">
@@ -65,7 +66,7 @@ export function CoinCardsFromText({ text }: { text: string }) {
             <div className="text-[13px] font-semibold text-white tabular-nums">{coinPrice(c.priceUsd)}</div>
             <PriceDelta value={c.change24h} className="text-[11px]" />
           </div>
-        </Link>
+        </PeekableCoin>
       ))}
     </div>
   );
