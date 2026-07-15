@@ -433,6 +433,79 @@ export async function getUserTradeStatement(userId: string, month: string): Prom
   return { month, days, totals };
 }
 
+export interface TopTrade {
+  user: ProfileLite;
+  chain: string;
+  tokenAddress: string;
+  tokenKey: string;
+  symbol: string | null;
+  logoUrl: string | null;
+  pnlUsd: number;
+  pnlPct: number | null;
+}
+
+/**
+ * Our own weekly leaderboard: the best-performing coin positions across the
+ * platform over the last N days, from real trades (realized plus unrealized at
+ * live registry prices). Positive results only, ranked by PnL. Empty when there
+ * are no trades yet.
+ */
+export async function getTopTrades(days = 7, limit = 12): Promise<TopTrade[]> {
+  const sb = getSupabaseAdmin();
+  const since = new Date(Date.now() - days * 86400000).toISOString();
+  const { data } = await sb
+    .from('coin_trades')
+    .select('user_id, chain, token_key, token_address, symbol, side, usd_amount, token_amount, created_at')
+    .gte('created_at', since)
+    .order('created_at', { ascending: true })
+    .limit(20000);
+  const rows = (data as FullTradeRow[]) ?? [];
+  if (rows.length === 0) return [];
+
+  interface Agg { userId: string; chain: string; tokenKey: string; tokenAddress: string; symbol: string | null; net: number; costTokens: number; costUsd: number; realized: number; buyCost: number }
+  const byKey = new Map<string, Agg>();
+  for (const r of rows) {
+    const key = `${r.user_id}:${r.chain}:${r.token_key}`;
+    const a = byKey.get(key) ?? { userId: r.user_id, chain: r.chain, tokenKey: r.token_key, tokenAddress: r.token_address, symbol: r.symbol, net: 0, costTokens: 0, costUsd: 0, realized: 0, buyCost: 0 };
+    const tok = Number(r.token_amount) || 0;
+    const usd = Number(r.usd_amount) || 0;
+    if (r.side === 'buy') { a.net += tok; a.costTokens += tok; a.costUsd += usd; a.buyCost += usd; }
+    else {
+      const avg = a.costTokens > 0 ? a.costUsd / a.costTokens : 0;
+      a.realized += usd - tok * avg; a.net -= tok; a.costTokens = Math.max(0, a.costTokens - tok); a.costUsd = Math.max(0, a.costUsd - tok * avg);
+    }
+    if (r.symbol) a.symbol = r.symbol;
+    byKey.set(key, a);
+  }
+
+  const aggs = [...byKey.values()];
+  const keys = [...new Set(aggs.map((a) => a.tokenKey))];
+  const priceMap = new Map<string, { price: number | null; logo: string | null; symbol: string | null }>();
+  if (keys.length) {
+    const { data: reg } = await sb.from('coin_registry').select('chain, token_key, price_usd, logo_url, symbol').in('token_key', keys);
+    for (const r of (reg as Array<Record<string, unknown>>) ?? []) priceMap.set(`${r.chain}:${r.token_key}`, { price: r.price_usd != null ? Number(r.price_usd) : null, logo: (r.logo_url as string) ?? null, symbol: (r.symbol as string) ?? null });
+  }
+
+  const scored = aggs.map((a) => {
+    const meta = priceMap.get(`${a.chain}:${a.tokenKey}`);
+    const price = meta?.price ?? null;
+    const avg = a.costTokens > 0 ? a.costUsd / a.costTokens : null;
+    const unrealized = price != null && a.net > 0 && avg != null ? a.net * (price - avg) : 0;
+    const pnlUsd = a.realized + unrealized;
+    const pnlPct = a.buyCost > 0 ? (pnlUsd / a.buyCost) * 100 : null;
+    return { agg: a, pnlUsd, pnlPct, logo: meta?.logo ?? null, symbol: a.symbol ?? meta?.symbol ?? null };
+  }).filter((s) => s.pnlUsd > 0).sort((x, y) => y.pnlUsd - x.pnlUsd).slice(0, limit);
+
+  const profiles = await fetchProfiles([...new Set(scored.map((s) => s.agg.userId))]);
+  return scored
+    .map((s) => {
+      const user = profiles.get(s.agg.userId);
+      if (!user) return null;
+      return { user, chain: s.agg.chain, tokenAddress: s.agg.tokenAddress, tokenKey: s.agg.tokenKey, symbol: s.symbol, logoUrl: s.logo, pnlUsd: s.pnlUsd, pnlPct: s.pnlPct } as TopTrade;
+    })
+    .filter((x): x is TopTrade => x !== null);
+}
+
 // ─── Watchlist ─────────────────────────────────────────────────────────────────
 
 export async function getWatchlistKeys(userId: string): Promise<Set<string>> {

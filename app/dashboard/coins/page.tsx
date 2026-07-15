@@ -9,18 +9,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, X, Star, Flame, Sprout, Users2 } from 'lucide-react';
+import { Search, X, Star, Flame, Sprout, Users2, Plus } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { CoinRow } from '@/components/coins/CoinRow';
 import { CoinLogo, PriceDelta } from '@/components/coins/atoms';
 import { ChainFilter, type ChainFilterValue } from '@/components/coins/ChainFilter';
+import { TopTrades } from '@/components/coins/TopTrades';
+import { useWallet } from '@/lib/hooks/useWallet';
 import type { Coin } from '@/lib/coins/types';
 import { coinPrice, compactUsd } from '@/lib/coins/format';
 
 type Tab = 'trending' | 'graduated' | 'most_held' | 'watchlist';
 const TABS: { id: Tab; label: string; Icon: typeof Flame }[] = [
   { id: 'trending', label: 'Trending', Icon: Flame },
-  { id: 'graduated', label: 'Graduated', Icon: Sprout },
+  { id: 'graduated', label: 'Fresh', Icon: Sprout },
   { id: 'most_held', label: 'Most held', Icon: Users2 },
   { id: 'watchlist', label: 'Watchlist', Icon: Star },
 ];
@@ -36,6 +38,8 @@ export default function CoinsPage() {
   const [searchCoins, setSearchCoins] = useState<Coin[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { address, balance } = useWallet();
+  const hasFunds = (balance?.totalUsd ?? 0) > 0;
 
   const loadTab = useCallback(async () => {
     setCoins(null);
@@ -73,6 +77,21 @@ export default function CoinsPage() {
       <div className="flex items-center gap-2 mb-3">
         <BackButton href="/dashboard" />
         <h1 className="text-lg font-bold">Coins</h1>
+        <div className="ms-auto flex items-center gap-2">
+          {address ? (
+            <div className="text-right leading-tight">
+              <div className="text-[15px] font-bold text-white tabular-nums">{compactUsd(balance?.totalUsd ?? 0)}</div>
+              <div className="text-[10px] text-white/40">Wallet</div>
+            </div>
+          ) : null}
+          <Link
+            href="/dashboard?tab=wallet"
+            className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[13px] font-semibold text-white"
+            style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF)', boxShadow: hasFunds ? 'none' : '0 6px 20px rgba(0,102,255,.4)' }}
+          >
+            <Plus className="w-4 h-4" /> Deposit
+          </Link>
+        </div>
       </div>
 
       {/* Unified search */}
@@ -95,6 +114,8 @@ export default function CoinsPage() {
         <SearchResults searching={searching} coins={searchCoins} people={people} />
       ) : (
         <>
+          <TopTrades />
+
           <div className="mb-3">
             <ChainFilter value={chain} onChange={setChain} />
           </div>

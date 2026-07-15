@@ -29,8 +29,9 @@ const SLIPPAGE_BPS = 150;
 type Side = 'buy' | 'sell';
 
 export function TradeCard({ coin, livePrice, liveMcap }: { coin: Coin; livePrice: number | null; liveMcap: number | null }) {
-  const { address } = useWallet();
+  const { address, balance } = useWallet();
   const native = NATIVE[coin.chain];
+  const noFunds = (balance?.totalUsd ?? 0) <= 0;
   const [side, setSide] = useState<Side>('buy');
   const [usd, setUsd] = useState<number>(25);
   const [pct, setPct] = useState<number>(50);
@@ -136,6 +137,17 @@ export function TradeCard({ coin, livePrice, liveMcap }: { coin: Coin; livePrice
     window.dispatchEvent(new Event('steinz:balance-changed'));
   }, [txHash]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Only coins that have really graduated onto a DEX (a real pool with real
+  // liquidity) are tradable here. This blocks bonding-curve and fake tokens.
+  if (!coin.isGraduated) {
+    return (
+      <div className="nl-glass rounded-2xl p-4 text-center">
+        <div className="text-[14px] font-semibold text-white">Not tradable yet</div>
+        <p className="text-[12px] text-white/50 mt-1">This coin has not graduated onto a DEX with real liquidity, so it cannot be traded on Naka yet.</p>
+      </div>
+    );
+  }
+
   if (!address) {
     return (
       <div className="nl-glass rounded-2xl p-4 text-center">
@@ -234,6 +246,12 @@ export function TradeCard({ coin, livePrice, liveMcap }: { coin: Coin; livePrice
         {executing ? <Loader2 className="w-4 h-4 animate-spin" /> : done ? <Check className="w-4 h-4" /> : null}
         {done ? 'Done' : executing ? 'Confirm in wallet' : side === 'buy' ? `Buy ${coin.symbol}` : `Sell ${coin.symbol}`}
       </button>
+
+      {noFunds && side === 'buy' ? (
+        <Link href="/dashboard?tab=wallet" className="mt-2 flex items-center justify-center gap-1.5 rounded-xl py-2 text-[12px] font-semibold text-[#7FB2FF] bg-[#0066FF]/10 border border-[#0066FF]/25">
+          Add funds to your wallet to buy
+        </Link>
+      ) : null}
 
       <p className="text-[11px] text-white/35 text-center mt-2">Signed by your own wallet. Non-custodial. 0.5% fee.</p>
 

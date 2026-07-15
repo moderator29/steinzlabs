@@ -8,7 +8,7 @@
 
 import { use, useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, Share2, Check, Loader2, CandlestickChart as CandleIcon, Activity, ArrowLeftRight } from 'lucide-react';
+import { Star, Share2, Check, Loader2, CandlestickChart as CandleIcon, Activity, ArrowLeftRight, ShieldAlert, ShieldCheck } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { CoinLogo, Copyable, PriceDelta } from '@/components/coins/atoms';
 import { CoinChart, type ChartMode, type TradeMarker } from '@/components/coins/CoinChart';
@@ -154,6 +154,12 @@ export default function CoinDetailPage({ params }: { params: Promise<{ chain: st
           <button type="button" onClick={() => setChartMode((m) => m === 'line' ? 'candle' : 'line')} aria-label="Chart type" className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-[#7FB2FF] hover:bg-white/[0.06]">
             {chartMode === 'line' ? <CandleIcon className="w-4 h-4" /> : <Activity className="w-4 h-4" />}
           </button>
+        </div>
+
+        {/* Honest verification state before the trade action. */}
+        <div className={`flex items-center gap-2 rounded-xl px-3 py-2 mb-2.5 text-[12px] ${coin.verified ? 'bg-emerald-500/[0.08] border border-emerald-500/20 text-emerald-300' : 'bg-amber-500/[0.08] border border-amber-500/20 text-amber-200/90'}`}>
+          {coin.verified ? <ShieldCheck className="w-4 h-4 shrink-0" /> : <ShieldAlert className="w-4 h-4 shrink-0" />}
+          <span>{coin.verified ? 'Verified by Naka. Still a volatile asset, trade with care.' : 'Unverified coin. Anyone can launch a coin, so trade with heightened caution.'}</span>
         </div>
 
         {/* Trade (in flow, not pinned) */}

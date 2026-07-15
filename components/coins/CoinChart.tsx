@@ -86,7 +86,8 @@ export function CoinChart({ candles, mode, height = 260, up = true, markers = []
             position: (m.side === 'buy' ? 'belowBar' : 'aboveBar') as 'belowBar' | 'aboveBar',
             color: m.side === 'buy' ? '#10B981' : '#F43F5E',
             shape: 'circle' as const,
-            text: m.side === 'buy' ? '+' : '-',
+            // Our own marker glyphs: a buy reads as a green star, a sell as a rose hash.
+            text: m.side === 'buy' ? '*' : '#',
           }));
         try { createSeriesMarkers(series, marks); } catch { /* markers unsupported on this build */ }
       }
