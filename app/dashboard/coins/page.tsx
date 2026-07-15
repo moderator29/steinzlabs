@@ -15,6 +15,7 @@ import { CoinRow } from '@/components/coins/CoinRow';
 import { CoinLogo, PriceDelta } from '@/components/coins/atoms';
 import { ChainFilter, type ChainFilterValue } from '@/components/coins/ChainFilter';
 import { TopTrades } from '@/components/coins/TopTrades';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { useWallet } from '@/lib/hooks/useWallet';
 import type { Coin } from '@/lib/coins/types';
 import { coinPrice, compactUsd } from '@/lib/coins/format';
@@ -73,10 +74,11 @@ export default function CoinsPage() {
   const showSearch = query.trim().length > 0;
 
   return (
+    <AuroraBackground fullHeight>
     <div className="min-h-screen text-white max-w-2xl mx-auto px-3 sm:px-4 py-4 pb-28">
       <div className="flex items-center gap-2 mb-3">
         <BackButton href="/dashboard" />
-        <h1 className="text-lg font-bold">Coins</h1>
+        <h1 className="text-lg font-bold bg-gradient-to-r from-white to-[#8fb4ff] bg-clip-text text-transparent">Coins</h1>
         <div className="ms-auto flex items-center gap-2">
           {address ? (
             <div className="text-right leading-tight">
@@ -101,7 +103,7 @@ export default function CoinsPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search for anything"
-          className="w-full h-11 rounded-2xl bg-white/[0.04] border border-white/10 pl-10 pr-10 text-[15px] text-white placeholder:text-white/35 outline-none focus:border-[#0066FF]/50"
+          className="w-full h-12 rounded-2xl nl-glass pl-10 pr-10 text-[15px] text-white placeholder:text-white/35 outline-none focus:shadow-[0_0_22px_-6px_rgba(0,102,255,.7)] transition-shadow"
         />
         {query ? (
           <button type="button" onClick={() => setQuery('')} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white">
@@ -129,8 +131,8 @@ export default function CoinsPage() {
                   key={id}
                   type="button"
                   onClick={() => setTab(id)}
-                  className={`inline-flex items-center gap-1.5 shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-semibold border transition-colors ${
-                    active ? 'bg-[#0066FF]/15 border-[#0066FF]/45 text-white' : 'bg-white/[0.03] border-white/10 text-white/55 hover:text-white'
+                  className={`inline-flex items-center gap-1.5 shrink-0 rounded-full px-4 py-2 text-[13px] font-semibold border transition-all duration-200 ${
+                    active ? 'bg-[#0066FF]/18 border-[#0066FF]/60 text-white shadow-[0_0_18px_-4px_rgba(0,102,255,.8)]' : 'bg-white/[0.03] border-white/10 text-white/55 hover:text-white hover:border-white/20'
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" /> {label}
@@ -155,6 +157,7 @@ export default function CoinsPage() {
         </>
       )}
     </div>
+    </AuroraBackground>
   );
 }
 

@@ -26,10 +26,10 @@ export function ChainFilter({ value, onChange }: { value: ChainFilterValue; onCh
             key={o.id}
             type="button"
             onClick={() => onChange(o.id)}
-            className={`inline-flex items-center gap-1.5 shrink-0 rounded-full px-3 py-1.5 text-[13px] font-semibold border transition-colors ${
+            className={`inline-flex items-center gap-1.5 shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-semibold border transition-all duration-200 ${
               active
-                ? 'bg-[#0066FF]/15 border-[#0066FF]/45 text-white'
-                : 'bg-white/[0.03] border-white/10 text-white/60 hover:text-white'
+                ? 'bg-[#0066FF]/18 border-[#0066FF]/60 text-white shadow-[0_0_18px_-4px_rgba(0,102,255,.8)]'
+                : 'bg-white/[0.03] border-white/10 text-white/55 hover:text-white hover:border-white/20'
             }`}
           >
             {o.id !== 'all' ? <ChainBadge chain={o.id} size={15} /> : null}

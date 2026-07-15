@@ -40,15 +40,16 @@ export function TopTrades() {
             <motion.div key={`${t.user.id}:${t.tokenKey}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: Math.min(i * 0.04, 0.3) }}>
               <Link
                 href={`/dashboard/coins/${t.chain}/${encodeURIComponent(t.tokenAddress)}`}
-                className="block w-[172px] shrink-0 rounded-2xl p-3 nl-glass hover:bg-white/[0.05] transition-colors"
-                style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.16)' }}
+                className="group relative block w-[176px] shrink-0 rounded-2xl p-3.5 nl-glass overflow-hidden transition-all duration-200 hover:-translate-y-[2px] hover:shadow-[0_14px_36px_-12px_rgba(0,102,255,.6)]"
               >
-                <div className="flex items-center gap-2 mb-2">
+                <span className="absolute -top-8 -right-8 w-20 h-20 rounded-full bg-[#0066FF]/25 blur-2xl group-hover:bg-[#0066FF]/40 transition-colors" />
+                <span className="absolute top-2.5 right-3 text-[11px] font-bold text-white/30">#{i + 1}</span>
+                <div className="flex items-center gap-2 mb-2 relative">
                   {t.user.avatar_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={t.user.avatar_url} alt="" className="w-7 h-7 rounded-full object-cover" />
+                    <img src={t.user.avatar_url} alt="" className="w-7 h-7 rounded-full object-cover ring-1 ring-white/10" />
                   ) : (
-                    <span className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold text-white" style={{ background: 'linear-gradient(135deg,#0066FF33,#5566FF33)' }}>{nm.charAt(0).toUpperCase()}</span>
+                    <span className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold text-white ring-1 ring-white/10" style={{ background: 'linear-gradient(135deg,#0066FF,#7C3AED)' }}>{nm.charAt(0).toUpperCase()}</span>
                   )}
                   <span className="text-[13px] font-semibold text-white truncate">{nm}</span>
                 </div>

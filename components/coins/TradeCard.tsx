@@ -259,8 +259,8 @@ export function TradeCard({ coin, livePrice, liveMcap }: { coin: Coin; livePrice
         type="button"
         onClick={submit}
         disabled={executing || loading || !buildParams()}
-        className="w-full rounded-xl py-3 text-[15px] font-semibold text-white inline-flex items-center justify-center gap-2 disabled:opacity-45"
-        style={{ background: side === 'buy' ? 'linear-gradient(135deg,#12b981,#0e9f6e)' : 'linear-gradient(135deg,#f43f5e,#e11d48)' }}
+        className={`w-full rounded-xl py-3.5 text-[15px] font-bold text-white inline-flex items-center justify-center gap-2 disabled:opacity-45 transition-transform active:scale-[0.99] ${side === 'buy' ? 'shadow-[0_12px_32px_-10px_rgba(16,185,129,.7)]' : 'shadow-[0_12px_32px_-10px_rgba(244,63,94,.7)]'}`}
+        style={{ background: side === 'buy' ? 'linear-gradient(135deg,#14c48a,#0e9f6e)' : 'linear-gradient(135deg,#fb5170,#e11d48)' }}
       >
         {executing ? <Loader2 className="w-4 h-4 animate-spin" /> : done ? <Check className="w-4 h-4" /> : null}
         {done ? 'Done' : executing ? 'Confirm in wallet' : side === 'buy' ? `Buy ${coin.symbol}` : `Sell ${coin.symbol}`}

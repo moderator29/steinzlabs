@@ -10,6 +10,7 @@ import { use, useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star, Share2, Check, Loader2, CandlestickChart as CandleIcon, Activity, ShieldAlert, ShieldCheck } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { CoinLogo, Copyable, PriceDelta } from '@/components/coins/atoms';
 import { CoinChart, type ChartMode, type TradeMarker } from '@/components/coins/CoinChart';
 import { TradeCard } from '@/components/coins/TradeCard';
@@ -100,9 +101,10 @@ export default function CoinDetailPage({ params }: { params: Promise<{ chain: st
   if (!coin) return <div className="min-h-screen flex items-center justify-center text-white/40"><Loader2 className="w-6 h-6 animate-spin" /></div>;
 
   return (
+    <AuroraBackground fullHeight>
     <div className="min-h-screen text-white max-w-2xl mx-auto pb-28">
       {/* Header */}
-      <div className="sticky top-0 z-20 flex items-center gap-2.5 px-3 sm:px-4 py-3 bg-[#080b14]/85 backdrop-blur-xl border-b border-[#0066FF]/20">
+      <div className="sticky top-0 z-20 flex items-center gap-2.5 px-3 sm:px-4 py-3 bg-[#070a12]/70 backdrop-blur-xl border-b border-[#0066FF]/25">
         <BackButton href="/dashboard/coins" />
         <CoinLogo logoUrl={coin.logoUrl} symbol={coin.symbol} chain={coin.chain} size={36} verified={coin.verified} />
         <div className="min-w-0 flex-1">
@@ -118,17 +120,17 @@ export default function CoinDetailPage({ params }: { params: Promise<{ chain: st
       </div>
 
       <div className="px-3 sm:px-4">
-        {/* Price */}
-        <div className="flex items-end justify-between pt-4 pb-2">
-          <div>
-            <div className={`text-3xl font-bold tabular-nums transition-colors ${live.flash === 'up' ? 'text-emerald-400' : live.flash === 'down' ? 'text-rose-400' : 'text-white'}`}>
+        {/* Price hero with a soft brand glow */}
+        <div className="relative flex items-end justify-between pt-5 pb-3">
+          <span className="pointer-events-none absolute -top-2 -left-6 w-52 h-24 rounded-full bg-[#0066FF]/20 blur-3xl" />
+          <div className="relative">
+            <div className={`text-[34px] leading-none font-extrabold tracking-tight tabular-nums transition-colors ${live.flash === 'up' ? 'text-emerald-400' : live.flash === 'down' ? 'text-rose-400' : 'text-white'}`}>
               {coinPrice(live.price)}
             </div>
-            <PriceDelta value={live.change24h} className="text-[14px] font-semibold" />
-            <span className="text-white/35 text-[13px] ml-1">24h</span>
+            <div className="mt-1.5"><PriceDelta value={live.change24h} className="text-[14px] font-bold" /><span className="text-white/35 text-[13px] ml-1">24h</span></div>
           </div>
-          <div className="text-right">
-            <div className="text-white/45 text-[11px] justify-end">Market cap</div>
+          <div className="relative text-right rounded-2xl nl-glass px-3.5 py-2">
+            <div className="text-white/45 text-[10px] uppercase tracking-wide">Market cap</div>
             <Copyable text={String(Math.round(live.marketCap ?? coin.marketCapUsd ?? 0))} label={compactUsd(live.marketCap ?? coin.marketCapUsd)} className="text-[17px] font-bold text-white" />
           </div>
         </div>
@@ -182,5 +184,6 @@ export default function CoinDetailPage({ params }: { params: Promise<{ chain: st
         </div>
       </div>
     </div>
+    </AuroraBackground>
   );
 }

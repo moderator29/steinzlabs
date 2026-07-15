@@ -39,12 +39,12 @@ export function CoinLogo({ logoUrl, symbol, chain, size = 44, verified = false }
           src={logoUrl}
           alt={symbol}
           onError={() => setBroken(true)}
-          className="rounded-full object-cover w-full h-full bg-white/[0.04]"
+          className="rounded-full object-cover w-full h-full bg-white/[0.04] ring-1 ring-inset ring-white/10"
         />
       ) : (
         <div
-          className="rounded-full flex items-center justify-center font-bold text-white w-full h-full"
-          style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF 60%,#7C3AED)', fontSize: size * 0.4 }}
+          className="rounded-full flex items-center justify-center font-bold text-white w-full h-full ring-1 ring-inset ring-white/10"
+          style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF 55%,#7C3AED)', fontSize: size * 0.4, boxShadow: 'inset 0 1px 0 rgba(255,255,255,.15)' }}
         >
           {letter}
         </div>
