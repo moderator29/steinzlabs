@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Users, Lock, Globe, ShieldQuestion, Settings, Share2, Loader2, Check } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { renderRichText } from '@/lib/wire/richText';
+import { CoinCardsFromText } from '@/components/coins/CoinCardsFromText';
 import { GroupComposer } from '@/components/groups/GroupComposer';
 
 interface Group { id: string; name: string; slug: string; description: string | null; avatar_url: string | null; privacy: string; member_count: number; owner_id: string; invite_code?: string; }
@@ -134,6 +135,7 @@ export default function GroupPage({ params }: { params: Promise<{ slug: string }
                   <div className="min-w-0 flex-1">
                     <div className="text-[13px]"><span className="font-semibold text-white">{nm}</span></div>
                     {m.body ? <div className="text-[14px] text-white/90 whitespace-pre-wrap break-words leading-relaxed">{renderRichText(m.body)}</div> : null}
+                    {m.body ? <CoinCardsFromText text={m.body} /> : null}
                     {m.media_urls?.length ? (
                       <div className={`mt-1.5 grid gap-1 rounded-xl overflow-hidden border border-white/10 ${m.media_urls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`} style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.15)' }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}

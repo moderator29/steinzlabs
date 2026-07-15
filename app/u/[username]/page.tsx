@@ -12,6 +12,7 @@ import { NotifyBell } from '@/components/social/NotifyBell';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import WireProfileTabs from '@/components/wire/WireProfileTabs';
+import { ProfileCoins } from '@/components/coins/ProfileCoins';
 
 /**
  * /u/[username] — public profile.
@@ -78,6 +79,13 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
   }, [username]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // Count a real profile view (the endpoint skips self-views).
+  useEffect(() => {
+    const id = data?.profile?.id;
+    if (!id) return;
+    void fetch('/api/analytics/view', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profileId: id }) }).catch(() => {});
+  }, [data?.profile?.id]);
 
   const unblock = async () => {
     if (!blocked) return;
@@ -224,6 +232,9 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
           <StatCard label="Following" value={data.counts.following.toLocaleString()} clickable />
         </Link>
       </div>
+
+      {/* Public coins: balance value + coins they hold on Naka. */}
+      {p.username ? <div className="mb-5"><ProfileCoins username={p.username} isOwner={false} /></div> : null}
 
       {data.success_rate !== null && (
         <div className="mb-5 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/[0.08] border border-emerald-500/25 text-emerald-300 text-[12px] font-semibold">

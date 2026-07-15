@@ -17,7 +17,11 @@
 import { useState, useCallback } from 'react';
 import { SwapQuote } from '@/lib/market/types';
 import { useSwapBroadcast, detectWalletKind } from '@/lib/hooks/useSwapBroadcast';
-import { PLATFORM_FEE_BPS } from '@/lib/trading/swapLogging';
+
+// Client-safe mirror of the platform fee (same single source of truth,
+// NEXT_PUBLIC_STEINZ_FEE_BPS). Read directly here rather than importing from
+// the server-only swap-logging module so this hook stays client-buildable.
+const PLATFORM_FEE_BPS = Number(process.env.NEXT_PUBLIC_STEINZ_FEE_BPS) || 50;
 
 interface SwapExecutionParams {
   chain: string;

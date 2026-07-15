@@ -12,6 +12,7 @@ import { wireTopicLabel } from '@/lib/wire/topics';
 import { wireRelativeTime } from '@/lib/wire/format';
 import { SignalRail } from './WireSignalRail';
 import { renderRichText } from '@/lib/wire/richText';
+import { CoinCardsFromText } from '@/components/coins/CoinCardsFromText';
 import { WirePrediction as WirePredictionInline } from './WirePrediction';
 import { WireActionBar } from './WireActionBar';
 
@@ -442,6 +443,8 @@ function WireBody({
             {renderRichText(post.body, { onHashtag })}
           </p>
         ) : null}
+
+        {post.body ? <CoinCardsFromText text={post.body} /> : null}
 
         <MediaGallery urls={galleryUrls} />
 

@@ -193,7 +193,8 @@ const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNa
   const navItems = [
     { id: 'home', icon: Home, label: 'Home', href: null },
     { id: 'find', icon: Search, label: 'Find', href: '/discover' },
-    { id: 'vtxai', icon: MessageSquare, label: 'VTX Agent', href: '/dashboard/vtx-ai' },
+    { id: 'coins', icon: Coins, label: 'Coins', href: '/dashboard/coins' },
+    { id: 'vtxai', icon: MessageSquare, label: 'VTX', href: '/dashboard/vtx-ai' },
     { id: 'wallet', icon: Wallet, label: 'Wallet', href: null },
     { id: 'profile', icon: User, label: 'Profile', href: null },
   ];
@@ -215,7 +216,7 @@ const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNa
           WebkitBackdropFilter: 'blur(24px) saturate(180%)',
         }}
       >
-        <div className="grid grid-cols-5 gap-1">
+        <div className="grid grid-cols-6 gap-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeNav === item.id;

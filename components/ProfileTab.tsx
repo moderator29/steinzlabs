@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, Award, BarChart3, Bell, Shield, Settings, HelpCircle, LogOut, ChevronRight, Lock, Crown, Dna, PieChart, Mail, Wallet, Calendar, Copy, Check, ExternalLink, Globe, Eye, EyeOff, Smartphone, Key, FileText, MessageCircle, ChevronDown, ArrowLeft, TrendingUp, AlertTriangle, Target, Flame, ShieldAlert, Send, Bot, Headphones, Loader2, X } from 'lucide-react';
+import { User, Award, BarChart3, Bell, Shield, Settings, HelpCircle, LogOut, ChevronRight, Lock, Crown, Dna, PieChart, Mail, Wallet, Calendar, Copy, Check, ExternalLink, Globe, Eye, EyeOff, Smartphone, Key, FileText, MessageCircle, ChevronDown, ArrowLeft, TrendingUp, AlertTriangle, Target, Flame, ShieldAlert, Send, Bot, Headphones, Loader2, X, Activity } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useTier } from '@/lib/hooks/useTier';
 import { useWallet } from '@/lib/hooks/useWallet';
@@ -12,6 +12,7 @@ import { getLocalNotifications, getNotificationPrefs, saveNotificationPrefs, typ
 import { VerifiedGoldBadge } from '@/components/ui/VerifiedGoldBadge';
 import { TierBadge } from '@/components/ui/TierBadge';
 import { TelegramConnectCard } from '@/components/settings/TelegramConnectCard';
+import { ProfileCoins } from '@/components/coins/ProfileCoins';
 import { VtxWalletAccessCard } from '@/components/profile/VtxWalletAccessCard';
 import { ProfileEmailCard } from '@/components/profile/ProfileEmailCard';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
@@ -1650,6 +1651,8 @@ export default function ProfileTab() {
         </div>
       )}
 
+      {user?.username ? <div className="mb-3"><ProfileCoins username={user.username} isOwner /></div> : null}
+
       {isConnected && (
         <div className="glass rounded-lg p-3 mb-4 border border-white/10">
           <div className="flex items-center gap-2">
@@ -1714,7 +1717,8 @@ export default function ProfileTab() {
       <SectionLabel>Quick Actions</SectionLabel>
       <ProfileRow icon={PieChart} label="Portfolio" sub="View your holdings & P&L" onClick={() => router.push('/dashboard/portfolio')} />
       <ProfileRow icon={Dna} label="Trading DNA" sub="AI analysis of your trading" onClick={() => router.push('/dashboard/dna-analyzer')} />
-      <ProfileRow icon={BarChart3} label="Analytics" sub="View your stats" onClick={() => router.push('/dashboard/trends')} />
+      <ProfileRow icon={Activity} label="Analytics" sub="Trading & account insights" onClick={() => router.push('/dashboard/analytics')} />
+      <ProfileRow icon={BarChart3} label="Trends" sub="On-chain momentum & signals" onClick={() => router.push('/dashboard/trends')} />
 
       <SectionLabel>Settings</SectionLabel>
       <div className="glass rounded-lg border border-white/10 mb-2 overflow-hidden">

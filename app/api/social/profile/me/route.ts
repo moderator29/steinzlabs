@@ -15,6 +15,7 @@ const Body = z.object({
   dm_permission:        z.enum(['everyone','following','mutual','nobody']).optional(),
   show_success_rate:    z.boolean().optional(),
   show_wallet_balance:  z.boolean().optional(),
+  show_holdings:        z.boolean().optional(),
   show_activity:        z.boolean().optional(),
   // Whether mutual-follow friends may add me to a group without asking first.
   allow_group_invites:  z.boolean().optional(),
