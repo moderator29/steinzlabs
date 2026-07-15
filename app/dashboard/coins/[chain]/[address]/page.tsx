@@ -184,7 +184,7 @@ export default function CoinDetailPage({ params }: { params: Promise<{ chain: st
 
   return (
     <AuroraBackground fullHeight>
-    <div className="min-h-screen text-white max-w-2xl mx-auto pb-28">
+    <div className="min-h-screen text-white max-w-6xl mx-auto pb-28">
       {/* Header */}
       <div className="sticky top-0 z-20 flex items-center gap-2.5 px-3 sm:px-4 py-3 bg-[#070a12]/70 backdrop-blur-xl border-b border-[#0066FF]/25">
         <BackButton href="/dashboard/coins" />
@@ -266,7 +266,10 @@ export default function CoinDetailPage({ params }: { params: Promise<{ chain: st
         </button>
       </div>
 
-      <div className="px-3 sm:px-4">
+      {/* Two-column terminal: market + trade on the left, a live rail
+          (Wire / Holders / Info) on the right. Stacks to one column on mobile. */}
+      <div className="px-3 sm:px-4 lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start">
+      <div className="lg:col-span-7 xl:col-span-8">
         {/* Price hero with a soft brand glow */}
         <div className="relative flex items-end justify-between pt-5 pb-3">
           <span className="pointer-events-none absolute -top-2 -left-6 w-52 h-24 rounded-full bg-[#0066FF]/20 blur-3xl" />
@@ -304,22 +307,6 @@ export default function CoinDetailPage({ params }: { params: Promise<{ chain: st
             {chartMode === 'line' ? <CandleIcon className="w-4 h-4" /> : <Activity className="w-4 h-4" />}
           </button>
         </div>
-
-        {/* Tabs (house rule: chart first, then the tabs, then the trade area) */}
-        <div className="flex items-center border-b border-white/10 mb-3">
-          {(['holders', 'wire', 'info'] as Tab[]).map((t) => (
-            <button key={t} type="button" onClick={() => setTab(t)} className={`flex-1 py-2.5 text-[14px] font-semibold capitalize relative ${tab === t ? 'text-white' : 'text-white/45'}`}>
-              {t === 'wire' ? 'Wire' : t}
-              {tab === t ? <motion.span layoutId="coin-tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0066FF]" /> : null}
-            </button>
-          ))}
-        </div>
-
-        <AnimatePresence mode="wait">
-          <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-            {tab === 'holders' ? <HoldersTab coin={coin} /> : tab === 'wire' ? <WireTab coin={coin} canPost={signedIn} /> : <InfoTab coin={coin} stats={stats} />}
-          </motion.div>
-        </AnimatePresence>
 
         {/* Honest verification state, then the in-flow trade action last. */}
         <div className={`flex items-center gap-2 rounded-xl px-3 py-2 mt-4 mb-2 text-[12px] ${coin.verified ? 'bg-emerald-500/[0.08] border border-emerald-500/20 text-emerald-300' : 'bg-amber-500/[0.08] border border-amber-500/20 text-amber-200/90'}`}>
@@ -387,7 +374,28 @@ export default function CoinDetailPage({ params }: { params: Promise<{ chain: st
         <div className="mb-4">
           <TradeCard coin={coin} livePrice={live.price} liveMcap={live.marketCap} />
         </div>
-      </div>
+      </div>{/* /left column */}
+
+      {/* Right rail: the coin's live social terminal (Wire / Holders / Info).
+          Sticky beside the chart on desktop, a stacked block on mobile. */}
+      <div className="lg:col-span-5 xl:col-span-4 mt-2 lg:mt-5 lg:sticky lg:top-[68px]">
+        <div className="flex items-center border-b border-white/10 mb-3">
+          {(['wire', 'holders', 'info'] as Tab[]).map((t) => (
+            <button key={t} type="button" onClick={() => setTab(t)} className={`flex-1 py-2.5 text-[14px] font-semibold capitalize relative ${tab === t ? 'text-white' : 'text-white/45'}`}>
+              {t === 'wire' ? 'Wire' : t}
+              {tab === t ? <motion.span layoutId="coin-tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0066FF]" /> : null}
+            </button>
+          ))}
+        </div>
+        <div className="lg:max-h-[calc(100vh-150px)] lg:overflow-y-auto no-scrollbar lg:pr-1">
+          <AnimatePresence mode="wait">
+            <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
+              {tab === 'holders' ? <HoldersTab coin={coin} /> : tab === 'wire' ? <WireTab coin={coin} canPost={signedIn} /> : <InfoTab coin={coin} stats={stats} />}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>{/* /right rail */}
+      </div>{/* /grid */}
     </div>
     </AuroraBackground>
   );

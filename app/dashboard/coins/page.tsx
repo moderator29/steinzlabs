@@ -1,9 +1,11 @@
 'use client';
 
 /**
- * Coins discovery. Graduated DEX coins across Solana, Ethereum and BNB with a
- * chain filter (All by default), discovery tabs, and a unified "search for
- * anything" that returns coins and people together. Real data only.
+ * Coins home. A store-front, not a scanner list: a featured coin leads, then
+ * swipeable rails (Trending, Fresh, Most held, Watchlist) interleaved with the
+ * social floor (your circle, top trades, live tape). A chain filter scopes
+ * every rail, and a unified "search for anything" returns coins and people
+ * together. Real data only, graduated DEX coins across Solana, Ethereum, BNB.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -11,8 +13,8 @@ import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Search, X, Star, Flame, Sprout, Users2, Plus, Trophy } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
-import { CoinRow } from '@/components/coins/CoinRow';
 import { CoinLogo, PriceDelta } from '@/components/coins/atoms';
+import { FeaturedCoin, CoinRail } from '@/components/coins/CoinRails';
 import { ChainFilter, type ChainFilterValue } from '@/components/coins/ChainFilter';
 import { TopTrades } from '@/components/coins/TopTrades';
 import { CircleBuying } from '@/components/coins/CircleBuying';
@@ -22,20 +24,14 @@ import { useWallet } from '@/lib/hooks/useWallet';
 import type { Coin } from '@/lib/coins/types';
 import { coinPrice, compactUsd } from '@/lib/coins/format';
 
-type Tab = 'trending' | 'graduated' | 'most_held' | 'watchlist';
-const TABS: { id: Tab; label: string; Icon: typeof Flame }[] = [
-  { id: 'trending', label: 'Trending', Icon: Flame },
-  { id: 'graduated', label: 'Fresh', Icon: Sprout },
-  { id: 'most_held', label: 'Most held', Icon: Users2 },
-  { id: 'watchlist', label: 'Watchlist', Icon: Star },
-];
+type Cat = 'trending' | 'graduated' | 'most_held' | 'watchlist';
+const CATS: Cat[] = ['trending', 'graduated', 'most_held', 'watchlist'];
 
 interface Person { id: string; username: string | null; display_name: string | null; avatar_url: string | null; verified: boolean }
 
 export default function CoinsPage() {
-  const [tab, setTab] = useState<Tab>('trending');
   const [chain, setChain] = useState<ChainFilterValue>('all');
-  const [coins, setCoins] = useState<Coin[] | null>(null);
+  const [cats, setCats] = useState<Record<Cat, Coin[]> | null>(null);
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [searchCoins, setSearchCoins] = useState<Coin[]>([]);
@@ -44,18 +40,22 @@ export default function CoinsPage() {
   const { address, balance } = useWallet();
   const hasFunds = (balance?.totalUsd ?? 0) > 0;
 
-  const loadTab = useCallback(async () => {
-    setCoins(null);
-    const params = new URLSearchParams({ tab });
-    if (chain !== 'all') params.set('chain', chain);
-    try {
-      const r = await fetch(`/api/coins?${params.toString()}`, { cache: 'no-store' });
-      const j = await r.json();
-      setCoins(Array.isArray(j.coins) ? j.coins : []);
-    } catch { setCoins([]); }
-  }, [tab, chain]);
+  const loadCats = useCallback(async () => {
+    setCats(null);
+    const one = async (cat: Cat): Promise<Coin[]> => {
+      const params = new URLSearchParams({ tab: cat });
+      if (chain !== 'all') params.set('chain', chain);
+      try {
+        const r = await fetch(`/api/coins?${params.toString()}`, { cache: 'no-store' });
+        const j = await r.json();
+        return Array.isArray(j.coins) ? j.coins : [];
+      } catch { return []; }
+    };
+    const [trending, graduated, most_held, watchlist] = await Promise.all(CATS.map(one));
+    setCats({ trending, graduated, most_held, watchlist });
+  }, [chain]);
 
-  useEffect(() => { if (!query) void loadTab(); }, [loadTab, query]);
+  useEffect(() => { if (!query) void loadCats(); }, [loadCats, query]);
 
   useEffect(() => {
     if (!query.trim()) { setSearchCoins([]); setPeople([]); setSearching(false); return; }
@@ -74,6 +74,9 @@ export default function CoinsPage() {
   }, [query]);
 
   const showSearch = query.trim().length > 0;
+  const featured = cats?.trending[0] ?? null;
+  const trendingRail = cats ? cats.trending.slice(1) : [];
+  const anyCoins = cats && (cats.trending.length || cats.graduated.length || cats.most_held.length || cats.watchlist.length);
 
   return (
     <AuroraBackground fullHeight>
@@ -99,7 +102,7 @@ export default function CoinsPage() {
       </div>
 
       {/* Unified search */}
-      <div className="relative mb-3">
+      <div className="relative mb-4">
         <Search className="w-4 h-4 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
         <input
           value={query}
@@ -117,60 +120,48 @@ export default function CoinsPage() {
       {showSearch ? (
         <SearchResults searching={searching} coins={searchCoins} people={people} />
       ) : (
-        <>
-          <Link
-            href="/dashboard/coins/leaderboard"
-            className="flex items-center gap-2 mb-3 rounded-2xl px-3.5 py-2.5 nl-glass transition-all hover:-translate-y-[1px] hover:shadow-[0_10px_30px_-10px_rgba(0,102,255,.55)]"
-          >
-            <Trophy className="w-4 h-4 text-[#F0B90B] shrink-0" />
-            <span className="text-[13px] font-semibold text-white">Leaderboard</span>
-            <span className="text-[12px] text-white/45 truncate">Top traders and trades</span>
-            <span className="ms-auto text-[12px] font-semibold text-[#7FB2FF] shrink-0">View</span>
-          </Link>
+        <div className="space-y-5">
+          {/* Chain filter scopes every rail */}
+          <ChainFilter value={chain} onChange={setChain} />
 
-          <TopTrades />
+          {cats === null ? (
+            <div className="space-y-5">
+              <div className="h-[200px] rounded-3xl bg-white/[0.03] animate-pulse" />
+              <div className="flex gap-2.5">{[0, 1, 2].map((i) => <div key={i} className="w-[168px] h-[104px] rounded-2xl bg-white/[0.03] animate-pulse" />)}</div>
+            </div>
+          ) : !anyCoins ? (
+            <div className="nl-glass rounded-2xl p-8 text-center text-white/50 text-sm">No coins to show on this chain right now. Try another chain.</div>
+          ) : (
+            <>
+              {/* Featured hero */}
+              {featured ? <FeaturedCoin coin={featured} /> : null}
 
-          <CircleBuying />
+              {/* Leaderboard entry */}
+              <Link
+                href="/dashboard/coins/leaderboard"
+                className="flex items-center gap-2 rounded-2xl px-3.5 py-2.5 nl-glass transition-all hover:-translate-y-[1px] hover:shadow-[0_10px_30px_-10px_rgba(0,102,255,.55)]"
+              >
+                <Trophy className="w-4 h-4 text-[#F0B90B] shrink-0" />
+                <span className="text-[13px] font-semibold text-white">Leaderboard</span>
+                <span className="text-[12px] text-white/45 truncate">Top traders and trades</span>
+                <span className="ms-auto text-[12px] font-semibold text-[#7FB2FF] shrink-0">View</span>
+              </Link>
 
-          <div className="mb-3">
-            <ChainFilter value={chain} onChange={setChain} />
-          </div>
+              <AnimatePresence mode="wait">
+                <motion.div key={chain} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="space-y-5">
+                  <CoinRail title="Trending" Icon={Flame} coins={trendingRail} accent="#FF7847" />
+                  <CircleBuying />
+                  <CoinRail title="Fresh graduates" Icon={Sprout} coins={cats.graduated} accent="#10B981" />
+                  <TopTrades />
+                  <CoinRail title="Most held" Icon={Users2} coins={cats.most_held} accent="#7FB2FF" />
+                  <CoinRail title="Your watchlist" Icon={Star} coins={cats.watchlist} accent="#F0B90B" />
+                </motion.div>
+              </AnimatePresence>
 
-          {/* Discovery tabs */}
-          <div className="flex items-center gap-1.5 mb-3 overflow-x-auto no-scrollbar -mx-1 px-1">
-            {TABS.map(({ id, label, Icon }) => {
-              const active = tab === id;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setTab(id)}
-                  className={`inline-flex items-center gap-1.5 shrink-0 rounded-full px-4 py-2 text-[13px] font-semibold border transition-all duration-200 ${
-                    active ? 'bg-[#0066FF]/18 border-[#0066FF]/60 text-white shadow-[0_0_18px_-4px_rgba(0,102,255,.8)]' : 'bg-white/[0.03] border-white/10 text-white/55 hover:text-white hover:border-white/20'
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5" /> {label}
-                </button>
-              );
-            })}
-          </div>
-
-          <AnimatePresence mode="wait">
-            <motion.div key={`${tab}:${chain}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="space-y-2">
-              {coins === null ? (
-                [0, 1, 2, 3, 4].map((i) => <div key={i} className="h-[66px] rounded-2xl bg-white/[0.03] animate-pulse" />)
-              ) : coins.length === 0 ? (
-                <div className="nl-glass rounded-2xl p-6 text-center text-white/50 text-sm">
-                  {tab === 'watchlist' ? 'No coins on your watchlist yet. Tap the star on any coin to add it.' : 'No coins to show right now. Try another chain or tab.'}
-                </div>
-              ) : (
-                coins.map((c, i) => <CoinRow key={`${c.chain}:${c.tokenKey}`} coin={c} index={i} />)
-              )}
-            </motion.div>
-          </AnimatePresence>
-
-          <LiveTape />
-        </>
+              <LiveTape />
+            </>
+          )}
+        </div>
       )}
     </div>
     </AuroraBackground>
