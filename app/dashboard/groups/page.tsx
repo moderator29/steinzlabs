@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Users, Plus, Lock, Globe, ShieldQuestion, ChevronRight } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { CoinRoomsStrip } from '@/components/coins/CoinRoomsStrip';
 
 interface Group { id: string; name: string; slug: string; description: string | null; avatar_url: string | null; privacy: string; member_count: number; myStatus?: string; }
 
@@ -88,6 +89,11 @@ export default function GroupsPage() {
           <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${allowInvites ? 'translate-x-5' : ''}`} />
         </button>
       </label>
+
+      {/* Live coin rooms: per-coin chat, ties the coins world into groups. */}
+      <div className="mb-6">
+        <CoinRoomsStrip />
+      </div>
 
       <section className="mb-6">
         <h2 className="text-[13px] font-semibold text-white/70 mb-2 px-0.5">Your groups</h2>

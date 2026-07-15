@@ -7,6 +7,7 @@
  */
 
 import { use, useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star, Share2, Check, Loader2, CandlestickChart as CandleIcon, Activity, ShieldAlert, ShieldCheck, Shield, Sparkles, Bell, X, Trash2 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
@@ -15,12 +16,14 @@ import { CoinLogo, Copyable, PriceDelta } from '@/components/coins/atoms';
 import { CoinChart, type ChartMode, type TradeMarker } from '@/components/coins/CoinChart';
 import { TradeCard } from '@/components/coins/TradeCard';
 import { HoldersTab, WireTab, InfoTab } from '@/components/coins/CoinTabs';
+import { CoinRoom } from '@/components/coins/CoinRoom';
+import { LimitBuyPanel } from '@/components/coins/LimitBuyPanel';
 import { useLivePrice } from '@/components/coins/useLivePrice';
 import type { Coin, CoinCandle, CoinTimeframe } from '@/lib/coins/types';
 import { coinPrice, compactUsd, formatAddress } from '@/lib/coins/format';
 
 const TIMEFRAMES: CoinTimeframe[] = ['1H', '4H', '1D', '7D', '3M', 'ALL'];
-type Tab = 'holders' | 'wire' | 'info';
+type Tab = 'wire' | 'room' | 'holders' | 'info';
 
 type RiskLevel = 'low' | 'medium' | 'high' | 'unknown';
 interface RiskRead { level: RiskLevel; reasons: string[] }
@@ -39,6 +42,9 @@ const ALERT_KIND_LABEL: Record<AlertKind, string> = {
 export default function CoinDetailPage({ params }: { params: Promise<{ chain: string; address: string }> }) {
   const { chain, address: raw } = use(params);
   const address = decodeURIComponent(raw);
+  // A triggered limit buy deep-links here with ?buy=<usd> to prefill the amount.
+  const sp = useSearchParams();
+  const buyPrefill = (() => { const n = Number(sp.get('buy')); return Number.isFinite(n) && n > 0 ? n : null; })();
 
   const [coin, setCoin] = useState<Coin | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -372,7 +378,12 @@ export default function CoinDetailPage({ params }: { params: Promise<{ chain: st
         </AnimatePresence>
 
         <div className="mb-4">
-          <TradeCard coin={coin} livePrice={live.price} liveMcap={live.marketCap} />
+          <TradeCard coin={coin} livePrice={live.price} liveMcap={live.marketCap} initialBuyUsd={buyPrefill} />
+        </div>
+
+        {/* Limit buy: arm a buy that pings you to sign when the trigger hits. */}
+        <div className="mb-4">
+          <LimitBuyPanel coin={coin} signedIn={signedIn} />
         </div>
       </div>{/* /left column */}
 
@@ -380,7 +391,7 @@ export default function CoinDetailPage({ params }: { params: Promise<{ chain: st
           Sticky beside the chart on desktop, a stacked block on mobile. */}
       <div className="lg:col-span-5 xl:col-span-4 mt-2 lg:mt-5 lg:sticky lg:top-[68px]">
         <div className="flex items-center border-b border-white/10 mb-3">
-          {(['wire', 'holders', 'info'] as Tab[]).map((t) => (
+          {(['wire', 'room', 'holders', 'info'] as Tab[]).map((t) => (
             <button key={t} type="button" onClick={() => setTab(t)} className={`flex-1 py-2.5 text-[14px] font-semibold capitalize relative ${tab === t ? 'text-white' : 'text-white/45'}`}>
               {t === 'wire' ? 'Wire' : t}
               {tab === t ? <motion.span layoutId="coin-tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0066FF]" /> : null}
@@ -390,7 +401,10 @@ export default function CoinDetailPage({ params }: { params: Promise<{ chain: st
         <div className="lg:max-h-[calc(100vh-150px)] lg:overflow-y-auto no-scrollbar lg:pr-1">
           <AnimatePresence mode="wait">
             <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-              {tab === 'holders' ? <HoldersTab coin={coin} /> : tab === 'wire' ? <WireTab coin={coin} canPost={signedIn} /> : <InfoTab coin={coin} stats={stats} />}
+              {tab === 'holders' ? <HoldersTab coin={coin} />
+                : tab === 'wire' ? <WireTab coin={coin} canPost={signedIn} />
+                : tab === 'room' ? <CoinRoom coin={coin} canPost={signedIn} />
+                : <InfoTab coin={coin} stats={stats} />}
             </motion.div>
           </AnimatePresence>
         </div>

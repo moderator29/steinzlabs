@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 // Naka Labs brand icons — User, Shield, Bell, Wallet, Eye, EyeOff,
 // AlertTriangle swapped. Loader2 stays on lucide.
-import { User, Shield, Bell, Wallet, Eye, EyeOff, AlertTriangle, Loader2, Download, RotateCcw } from 'lucide-react';
+import { User, Shield, Bell, Wallet, Eye, EyeOff, AlertTriangle, Loader2, Download, RotateCcw, Gift } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
+import { ReferralPanel } from '@/components/referral/ReferralPanel';
 import { Toggle } from '@/components/ui/Toggle';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -210,6 +211,7 @@ export default function SettingsPage() {
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'trading', label: 'Trading', icon: Wallet },
+    { id: 'refer', label: 'Refer & earn', icon: Gift },
     { id: 'account', label: 'Account', icon: Download },
   ];
 
@@ -504,6 +506,12 @@ export default function SettingsPage() {
                   </div>
                   <p className="text-xs text-gray-400">Preferences are saved automatically.</p>
                 </div>
+              </div>
+            )}
+
+            {activeSection === 'refer' && (
+              <div className="space-y-4">
+                <ReferralPanel />
               </div>
             )}
 

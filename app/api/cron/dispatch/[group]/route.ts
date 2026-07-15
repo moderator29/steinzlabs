@@ -41,7 +41,7 @@ const GROUPS: Record<string, string[]> = {
   // Every ~30 minutes.
   'half-hourly': [
     'whale-activity-poll', 'whale-activity-price', 'bitquery-activity-poll', 'dca-executor', 'pending-trades-cleanup',
-    'receipt-reconciliation', 'notification-retry', 'telegram-retry-failures', 'stock-alerts', 'coin-alerts',
+    'receipt-reconciliation', 'notification-retry', 'telegram-retry-failures', 'stock-alerts', 'coin-alerts', 'coin-intent-monitor',
     'pumpfun-velocity-poll', 'cult-resolve-proposals', 'cult-ape-resolve', 'health-watch',
     // Free MEV fallback (ZeroMEV, Ethereum) — scans recent blocks into a rolling
     // 30d per-victim aggregate for MEV Radar when Dune's MEV surface is empty.
@@ -58,7 +58,7 @@ const GROUPS: Record<string, string[]> = {
   ],
   // Hourly.
   hourly: [
-    'price-cache-refresh', 'market-stats-snapshot', 'watchlist-refresh',
+    'price-cache-refresh', 'market-stats-snapshot', 'watchlist-refresh', 'coin-registry-refresh',
     'token-popularity-aggregator', 'cult-signal-feed', 'smart-money-convergence',
     // Whale discovery pulled to hourly for the directory fill-up: 8 chains via
     // Bitquery, top ~500 active traders each, ranked by real 7d DEX volume. The

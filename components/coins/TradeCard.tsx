@@ -31,12 +31,12 @@ const SLIPPAGE_BPS = 150;
 
 type Side = 'buy' | 'sell';
 
-export function TradeCard({ coin, livePrice, liveMcap }: { coin: Coin; livePrice: number | null; liveMcap: number | null }) {
+export function TradeCard({ coin, livePrice, liveMcap, initialBuyUsd }: { coin: Coin; livePrice: number | null; liveMcap: number | null; initialBuyUsd?: number | null }) {
   const { address, balance } = useWallet();
   const native = NATIVE[coin.chain];
   const noFunds = (balance?.totalUsd ?? 0) <= 0;
   const [side, setSide] = useState<Side>('buy');
-  const [usd, setUsd] = useState<number>(25);
+  const [usd, setUsd] = useState<number>(initialBuyUsd && initialBuyUsd > 0 ? Math.round(initialBuyUsd) : 25);
   const [pct, setPct] = useState<number>(50);
   const [nativePriceUsd, setNativePriceUsd] = useState<number | null>(null);
   const [myTokens, setMyTokens] = useState<number>(0);
