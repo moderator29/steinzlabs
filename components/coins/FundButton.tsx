@@ -22,16 +22,24 @@ function addressMatchesChain(address: string, chain: string): boolean {
   return /^0x[a-fA-F0-9]{40}$/.test(address);
 }
 
+// The house fund button: edge-lit glass with a left blue accent stride and a
+// hover lift+glow, so every fund / deposit / top-up reads as one system.
+const GLASS_FUND =
+  'relative overflow-hidden w-full inline-flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-[13px] font-semibold text-white nl-glass transition-all hover:-translate-y-[1px] hover:shadow-[0_10px_30px_-10px_rgba(0,102,255,.55)]';
+
 export function FundButton({
   address,
   chain,
   label = 'Fund with card',
   className,
+  stride = true,
 }: {
   address: string | null | undefined;
   chain: string;
   label?: string;
   className?: string;
+  /** Show the left blue accent stride (the house treatment). */
+  stride?: boolean;
 }) {
   const router = useRouter();
   const onClick = useCallback(() => {
@@ -44,12 +52,11 @@ export function FundButton({
   }, [address, chain, router]);
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={className ?? 'w-full inline-flex items-center justify-center gap-1.5 rounded-xl py-2 text-[12px] font-semibold text-[#7FB2FF] bg-[#0066FF]/10 border border-[#0066FF]/25 hover:text-white transition-colors'}
-    >
-      <Plus className="w-3.5 h-3.5" /> {label}
+    <button type="button" onClick={onClick} className={className ?? GLASS_FUND}>
+      {stride ? (
+        <span className="pointer-events-none absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-gradient-to-b from-[#1E90FF] to-[#0066FF] opacity-80" />
+      ) : null}
+      <Plus className="w-3.5 h-3.5 text-[#7FB2FF]" /> {label}
     </button>
   );
 }

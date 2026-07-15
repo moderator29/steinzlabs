@@ -97,7 +97,7 @@ export default function CoinsPage() {
             address={address}
             chain={address && isSolanaAddress(address) ? 'solana' : 'ethereum'}
             label="Deposit"
-            className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[13px] font-semibold text-white shrink-0 bg-[linear-gradient(135deg,#1E90FF,#0066FF)] shadow-[0_6px_20px_rgba(0,102,255,.4)]"
+            className="relative overflow-hidden inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-[13px] font-semibold text-white shrink-0 nl-glass transition-all hover:-translate-y-[1px] hover:shadow-[0_10px_30px_-10px_rgba(0,102,255,.55)]"
           />
         </div>
       </div>

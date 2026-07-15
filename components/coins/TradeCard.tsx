@@ -293,6 +293,7 @@ export function TradeCard({ coin, livePrice, liveMcap, initialBuyUsd }: { coin: 
               address={address}
               chain={coin.chain}
               label={`Top up ${nativeSym ?? ''} with card`}
+              stride={false}
               className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-white/45 hover:text-[#7FB2FF] transition-colors"
             />
           </div>
