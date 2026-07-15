@@ -374,9 +374,14 @@ function WireBody({
         ? [post.media_url]
         : [];
 
-  // Author profile link — avatar + name/handle route to /u/[username]. Guarded
-  // so a wire whose author has no username stays non-navigating (never a 404).
-  const profileHref = author?.username ? `/u/${author.username}` : null;
+  // Author profile link — avatar + name/handle route to the author's profile.
+  // When the author IS the viewer, route to their OWN profile tab (editable, in
+  // the dashboard) instead of the public /u/[username] "view as visitor" page.
+  // Guarded so a wire whose author has no username stays non-navigating.
+  const isSelf = !!currentUserId && author?.id === currentUserId;
+  const profileHref = isSelf
+    ? '/dashboard?tab=profile'
+    : author?.username ? `/u/${author.username}` : null;
 
   return (
     <div className="flex gap-3">

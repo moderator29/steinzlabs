@@ -31,6 +31,13 @@ export default function ComposePage() {
   }, [loading, user, router]);
 
   const backToWire = () => router.push('/dashboard?subtab=wire');
+  // Signal the feed to refetch on return. Next.js's client router cache can
+  // otherwise restore the Wire with a stale snapshot, so a just-published wire
+  // would not appear until a hard reload. WireTab reads + clears this flag.
+  const postedAndBack = () => {
+    try { localStorage.setItem('nl-wire-posted', String(Date.now())); } catch { /* ignore */ }
+    backToWire();
+  };
 
   if (loading) {
     return (
@@ -68,7 +75,7 @@ export default function ComposePage() {
           displayName={user.first_name || user.username || 'You'}
           username={user.username ?? null}
           userId={user.id}
-          onPosted={backToWire}
+          onPosted={postedAndBack}
         />
 
         <p className="mt-4 text-center text-xs text-white/35">

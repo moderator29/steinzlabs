@@ -3,16 +3,14 @@
 import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { AlertTriangle, ArrowLeft, Lock, LockOpen, Send, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Send } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import {
   decryptMessage,
   encryptMessage,
-  generateConversationKey,
   openConversationKey,
-  sealConversationKey,
 } from '@/lib/social/encryption';
-import { ensureKeyVault, fetchPeerPublicKey } from '@/lib/social/keyVault';
+import { ensureKeyVault } from '@/lib/social/keyVault';
 import { sanitizeMessageBody } from '@/lib/social/sanitizeMessageBody';
 
 /**
@@ -65,14 +63,9 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
   const [convKey, setConvKey] = useState<Uint8Array | null>(null);
   // Plaintext mode — set when the conversation opened without E2E keys.
   const [plaintext, setPlaintext] = useState(false);
-  // The conversation's REAL encryption state (from the server row). The header
-  // only claims "Encrypted" when this is true AND the key is actually loaded,
-  // so the UI never overstates what's happening to the bytes.
+  // Legacy field kept only so the plaintext send path reads false. DMs run in
+  // Normal mode now (server-stored, TLS + at rest), never device-bound E2E.
   const [isEncrypted, setIsEncrypted] = useState(false);
-  // TOFU: true when the peer's server-provided public key differs from the one
-  // first pinned for them. Encryption is server-mediated (the server hands back
-  // the peer key), so a change may indicate a MITM key swap — warn, don't hide.
-  const [peerKeyChanged, setPeerKeyChanged] = useState(false);
   const [me, setMe] = useState<string | null>(null);
   // #43: whether *I* have blocked the peer. The send API shadow-accepts a
   // blocked peer's message (they don't learn they're blocked), so the row
@@ -158,28 +151,12 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
       if (cancelled) return;
       setMe(user.id);
 
-      // Try to establish E2E material BEFORE creating the conversation, so a
-      // brand-new thread is encrypted from the first message. Best-effort: any
-      // failure (peer has no key, vault error) falls through to plaintext.
-      let sealedSelf: string | undefined;
-      let sealedPeer: string | undefined;
-      let freshKey: Uint8Array | null = null;
-      let myKeys: { publicKey: string; privateKey: string } | null = null;
-      try {
-        myKeys = await ensureKeyVault();
-        const peerKey = await fetchPeerPublicKey(peerId);
-        if (!cancelled && peerKey.changed) setPeerKeyChanged(true);
-        freshKey = await generateConversationKey();
-        sealedSelf = await sealConversationKey(freshKey, myKeys.publicKey);
-        sealedPeer = await sealConversationKey(freshKey, peerKey.publicKey);
-      } catch {
-        // Peer has no published key (or vault failed) — plaintext fallback.
-        sealedSelf = undefined;
-        sealedPeer = undefined;
-        freshKey = null;
-      }
-      if (cancelled) return;
-
+      // DM policy: NORMAL (like mainstream social apps). Messages are secured in
+      // transit (TLS) and at rest in the database, but we do NOT use device-bound
+      // end-to-end encryption — that locked whole threads whenever the secret key
+      // was not on the current device ("can't be unlocked on this device") and
+      // stalled the composer forever. A conversation now ALWAYS opens and sends
+      // on any device. New threads are created plaintext (no sealed keys).
       let conv:
         | { id: string; request_state?: string; requested_by?: string | null; sealed_conversation_key?: string; is_encrypted?: boolean }
         | null = null;
@@ -187,7 +164,7 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
         const res = await fetch('/api/social/dm/conversations', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ peer_id: peerId, sealed_key_self: sealedSelf, sealed_key_peer: sealedPeer }),
+          body: JSON.stringify({ peer_id: peerId }),
         });
         if (!res.ok) { const j = await res.json().catch(() => null); if (!cancelled) setError(j?.error ?? 'Could not open conversation'); return; }
         conv = await res.json();
@@ -199,37 +176,21 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
       setConversationId(conv.id);
       setRequestState(conv.request_state ?? 'accepted');
       setRequestedBy(conv.requested_by ?? null);
-      setIsEncrypted(!!conv.is_encrypted);
+      // Always usable, always plaintext send — never lock the thread.
+      setPlaintext(true);
+      setIsEncrypted(false);
 
+      // Best-effort ONLY: if this is a legacy thread that was encrypted and this
+      // device still holds the key, open it so old history stays readable. New
+      // messages always send as plaintext regardless. Failure is silent — old
+      // encrypted rows simply show as unavailable, the thread still works.
       const sealed = conv.sealed_conversation_key;
       if (sealed && sealed !== 'plain') {
-        // The server returns the authoritative stored key. For a brand-new
-        // encrypted thread it's the one we just sealed (use freshKey directly);
-        // for an existing thread, unseal with my keypair.
-        if (freshKey && sealedSelf && sealed === sealedSelf) {
-          setConvKey(freshKey);
-        } else {
-          try {
-            const keys = myKeys ?? (await ensureKeyVault());
-            const opened = await openConversationKey(sealed, keys.publicKey, keys.privateKey);
-            if (!cancelled) setConvKey(opened);
-          } catch {
-            // Can't open the stored key on this device (key rotation / lost
-            // device). Do NOT downgrade to plaintext — that would send cleartext
-            // into a thread the peer reads as encrypted. Keep it locked: leave
-            // convKey null + plaintext false so the composer stays disabled, and
-            // surface why. History stays unreadable here (correct — the key is
-            // genuinely unavailable on this device).
-            if (!cancelled) {
-              setIsEncrypted(true);
-              setError('This encrypted conversation can’t be unlocked on this device.');
-            }
-          }
-        }
-      } else {
-        // No real key stored — plaintext conversation.
-        setPlaintext(true);
-        setIsEncrypted(false);
+        try {
+          const keys = await ensureKeyVault();
+          const opened = await openConversationKey(sealed, keys.publicKey, keys.privateKey);
+          if (!cancelled) setConvKey(opened);
+        } catch { /* legacy encrypted history stays locked; thread still usable */ }
       }
     })();
     return () => { cancelled = true; };
@@ -495,46 +456,27 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
           {peer?.avatar_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={peer.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10" />
-          ) : (
+          ) : peer ? (
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0066FF)] to-[#7C3AED] flex items-center justify-center text-xs font-bold text-white">
-              {(peer?.display_name || peer?.username || '?').slice(0, 1).toUpperCase()}
+              {(peer.display_name || peer.username || '?').slice(0, 1).toUpperCase()}
             </div>
+          ) : (
+            // Peer profile still loading — skeleton instead of a placeholder
+            // name flash ("Conversation" / "Unknown user").
+            <div className="w-8 h-8 rounded-full bg-white/[0.06] animate-pulse" />
           )}
           <div className="min-w-0">
-            <div className="text-sm font-semibold text-white truncate leading-tight">{peerName}</div>
-            <div
-              className="inline-flex items-center gap-1 text-[10px] leading-tight"
-              title={
-                isEncrypted && convKey
-                  ? 'Encrypted. Message content is encrypted with libsodium, but public keys are distributed through our server, so we do not call this fully end-to-end verified.'
-                  : 'Not encrypted'
-              }
-            >
-              {isEncrypted && convKey
-                ? peerKeyChanged
-                  ? <span className="text-amber-300 inline-flex items-center gap-1"><AlertTriangle className="w-2.5 h-2.5" />Key changed</span>
-                  : <span className="text-emerald-300/90 inline-flex items-center gap-1"><ShieldCheck className="w-2.5 h-2.5" />Encrypted</span>
-                : plaintext
-                  ? <span className="text-slate-500 inline-flex items-center gap-1"><LockOpen className="w-2.5 h-2.5" />Not encrypted</span>
-                  : <span className="text-slate-500">{peer?.username ? `@${peer.username}` : ''}</span>}
-            </div>
+            {peer ? (
+              <div className="text-sm font-semibold text-white truncate leading-tight">{peerName}</div>
+            ) : (
+              <div className="h-3.5 w-24 rounded bg-white/[0.08] animate-pulse" />
+            )}
+            {peer?.username ? (
+              <div className="text-[11px] leading-tight text-slate-500 truncate">@{peer.username}</div>
+            ) : null}
           </div>
         </Link>
       </div>
-
-      {/* Peer key changed — TOFU warning. The key distributed by the server for
-          this peer differs from the one we first pinned, which can mean the peer
-          reset their device/keypair OR that key distribution was tampered with.
-          Surface it instead of silently trusting the new key. */}
-      {peerKeyChanged && (
-        <div className="mx-3 mt-3 rounded-xl border border-amber-400/40 bg-amber-400/[0.08] p-3 flex items-start gap-2 shrink-0">
-          <AlertTriangle className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
-          <div className="min-w-0 text-[12px] text-amber-100/90">
-            <span className="font-semibold text-amber-200">This contact’s encryption key changed.</span>{' '}
-            New messages are encrypted to the new key. This is expected if they reset their device, but if you weren’t expecting it, verify with them through another channel before sharing anything sensitive.
-          </div>
-        </div>
-      )}
 
       {/* Incoming request banner */}
       {isIncomingRequest && (
@@ -588,9 +530,8 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
             >
               View Profile
             </Link>
-            <p className="text-[11px] text-slate-500 max-w-xs inline-flex items-center gap-1.5 mt-1">
-              {isEncrypted && convKey ? <Lock className="w-3 h-3" /> : <LockOpen className="w-3 h-3" />}
-              {isEncrypted && convKey ? 'Messages in this thread are encrypted. Keys are distributed through our server.' : 'Messages are not encrypted.'}
+            <p className="text-[11px] text-slate-500 max-w-xs mt-1">
+              Say hi. Messages are private and secured on our servers.
             </p>
           </div>
         ) : (
