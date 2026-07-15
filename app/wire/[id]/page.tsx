@@ -25,7 +25,7 @@ export const dynamic = 'force-dynamic';
 // that embed 500/return null, which used to send getWire() → null → notFound(),
 // i.e. every "open post" and every username/avatar tap dead-ended on the 404
 // page. Fetching authors with a plain batched query removes that failure mode.
-const AUTHOR_COLS = 'id,username,display_name,avatar_url,is_verified,show_success_rate';
+const AUTHOR_COLS = 'id,username,display_name,avatar_url,is_verified,tier,show_success_rate';
 
 function shapePrediction(raw: any): WirePost['prediction'] {
   if (!raw) return null;

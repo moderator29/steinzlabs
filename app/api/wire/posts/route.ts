@@ -34,7 +34,7 @@ import { computeAuthorSignals } from '@/lib/wire/signal';
 // posting look like it failed even though the row was written. Authors and
 // repost originals are attached with plain batched queries (fetchAuthors /
 // annotate) that a stale relationship cache can never break.
-const AUTHOR_COLS = 'id,username,display_name,avatar_url,is_verified,show_success_rate';
+const AUTHOR_COLS = 'id,username,display_name,avatar_url,is_verified,tier,show_success_rate';
 const POST_SELECT = '*';
 const CREATE_SELECT = '*';
 

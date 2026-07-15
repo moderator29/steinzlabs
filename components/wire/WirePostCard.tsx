@@ -7,11 +7,10 @@ import {
   Trash2, Repeat, X, ChevronLeft, ChevronRight, MoreHorizontal,
   VolumeX, Volume2, Share2, Check, Sparkles,
 } from 'lucide-react';
-import { VerifiedGoldBadge } from '@/components/ui/VerifiedGoldBadge';
+import { TierBadge } from '@/components/ui/TierBadge';
 import { wireTopicLabel } from '@/lib/wire/topics';
 import { wireRelativeTime } from '@/lib/wire/format';
 import { SignalRail } from './WireSignalRail';
-import { SuccessRateBadge } from '@/components/social/SuccessRateBadge';
 import { CashtagChip } from './CashtagChip';
 import { WirePrediction as WirePredictionInline } from './WirePrediction';
 import { WireActionBar } from './WireActionBar';
@@ -36,6 +35,9 @@ export interface WireAuthor {
   display_name: string | null;
   avatar_url: string | null;
   is_verified: boolean | null;
+  /** Subscription tier — drives the real TierBadge (the gold Max coin etc.),
+   *  the SAME verified mark shown on the profile. */
+  tier?: string | null;
 }
 
 export interface WirePrediction {
@@ -401,10 +403,9 @@ function WireBody({
             ) : (
               <span className={`font-semibold text-white truncate max-w-[10rem] ${inset ? 'text-sm' : ''}`}>{name}</span>
             )}
-            {author?.is_verified ? <VerifiedGoldBadge size={inset ? 13 : 15} title="Verified" /> : null}
-            {/* The real success-rate badge (same as the profile), not an abstract
-                signal number. Hidden when the author has no rate / hides it. */}
-            <SuccessRateBadge value={post.authorSuccessRate ?? null} />
+            {/* The REAL verified mark — the same tier badge (gold Max coin etc.)
+                shown next to the name on the profile. Free users get none. */}
+            <TierBadge tier={author?.tier} size={inset ? 15 : 17} nonInteractive />
             {handle ? (
               profileHref ? (
                 <Link href={profileHref} onClick={(e) => e.stopPropagation()} className="text-white/45 text-sm truncate hover:underline">
