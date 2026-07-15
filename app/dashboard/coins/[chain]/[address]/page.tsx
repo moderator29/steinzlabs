@@ -6,7 +6,7 @@
  * Contract address and market cap are copyable. Real data only.
  */
 
-import { use, useCallback, useEffect, useMemo, useState } from 'react';
+import { use, useCallback, useEffect, useMemo, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star, Share2, Check, Loader2, CandlestickChart as CandleIcon, Activity, ShieldAlert, ShieldCheck, Shield, Sparkles, Bell, X, Trash2 } from 'lucide-react';
@@ -40,6 +40,16 @@ const ALERT_KIND_LABEL: Record<AlertKind, string> = {
 };
 
 export default function CoinDetailPage({ params }: { params: Promise<{ chain: string; address: string }> }) {
+  // useSearchParams (for the ?buy= prefill) must sit under a Suspense boundary
+  // so this route does not force the whole tree into a client-side render bail.
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-white/40"><Loader2 className="w-6 h-6 animate-spin" /></div>}>
+      <CoinDetail params={params} />
+    </Suspense>
+  );
+}
+
+function CoinDetail({ params }: { params: Promise<{ chain: string; address: string }> }) {
   const { chain, address: raw } = use(params);
   const address = decodeURIComponent(raw);
   // A triggered limit buy deep-links here with ?buy=<usd> to prefill the amount.
@@ -281,9 +291,9 @@ export default function CoinDetailPage({ params }: { params: Promise<{ chain: st
           <span className="pointer-events-none absolute -top-2 -left-6 w-52 h-24 rounded-full bg-[#0066FF]/20 blur-3xl" />
           <div className="relative">
             <div className={`text-[34px] leading-none font-extrabold tracking-tight tabular-nums transition-colors ${live.flash === 'up' ? 'text-emerald-400' : live.flash === 'down' ? 'text-rose-400' : 'text-white'}`}>
-              {coinPrice(live.price)}
+              {coinPrice(live.price ?? coin.priceUsd)}
             </div>
-            <div className="mt-1.5"><PriceDelta value={live.change24h} className="text-[14px] font-bold" /><span className="text-white/35 text-[13px] ml-1">24h</span></div>
+            <div className="mt-1.5"><PriceDelta value={live.change24h ?? coin.change24h} className="text-[14px] font-bold" /><span className="text-white/35 text-[13px] ml-1">24h</span></div>
           </div>
           <div className="relative text-right rounded-2xl nl-glass px-3.5 py-2">
             <div className="text-white/45 text-[10px] uppercase tracking-wide">Market cap</div>

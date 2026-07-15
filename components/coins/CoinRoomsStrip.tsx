@@ -71,7 +71,7 @@ export function CoinRoomsStrip() {
                     </div>
                     <div className="relative flex items-center justify-between">
                       <span className="text-[12px] font-semibold text-[#7FB2FF] tabular-nums">
-                        {room.messageCount} chatting
+                        {room.messageCount} {room.messageCount === 1 ? 'message' : 'messages'}
                       </span>
                       <span className="text-[11px] text-white/40 tabular-nums">
                         {shortAgo(new Date(room.lastAt).getTime())}

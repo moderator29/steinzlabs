@@ -16,7 +16,7 @@ import { discoverHowItWorks } from '@/lib/howItWorks/content/discover';
 import { useFeatureUsageLog } from '@/lib/hooks/useFeatureUsageLog';
 
 /**
- * /discover — the hub: search box, recommendations strip, 5 visible
+ * /discover: the hub. Search box, recommendations strip, 5 visible
  * leaderboards (Top Success / Top Followers / New Users / Max Tier /
  * Top Traders). The full 8-board grid lives at /leaderboard/[kind].
  *

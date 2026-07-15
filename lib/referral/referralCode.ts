@@ -1,10 +1,10 @@
 /**
  * Referral code generation + verification. Deterministic per user
- * (same user → same code) so emails / shares stay stable across
- * sessions. Pure — no IO. Caller is responsible for storage if it
+ * (same user, same code) so emails / shares stay stable across
+ * sessions. Pure, no IO. Caller is responsible for storage if it
  * wants to enforce uniqueness against the user table.
  *
- * Audit §5.4 / B.17 — fresh primitive for the onboarding referral
+ * Audit 5.4 / B.17: fresh primitive for the onboarding referral
  * loop.
  */
 

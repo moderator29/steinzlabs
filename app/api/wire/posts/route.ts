@@ -388,7 +388,23 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const posts = Array.isArray(data) ? data : [];
-  const annotated = await annotate(sb, posts, viewer?.id);
+  // The DB `.or(body.ilike.%$WIF%,...)` is a coarse prefilter that over-matches
+  // short tickers (e.g. $AI would catch $AIMOVE). Refine in JS to a real cashtag
+  // boundary in the body OR an exact ticker tag, so the coin Wire only shows
+  // posts that genuinely reference this coin.
+  let filtered = posts;
+  if (cashtag) {
+    const re = new RegExp(`\\$${cashtag}\\b`, 'i');
+    const lc = cashtag.toLowerCase();
+    filtered = posts.filter((p) => {
+      const inBody = typeof p.body === 'string' && re.test(p.body);
+      const inTags = Array.isArray(p.tags) && p.tags.some((t: unknown) => String(t).toLowerCase() === lc);
+      return inBody || inTags;
+    });
+  }
+  const annotated = await annotate(sb, filtered, viewer?.id);
+  // Pagination follows the raw DB page so the cursor advances even if JS
+  // filtering dropped some rows from this page.
   const nextCursor = posts.length === PAGE_SIZE ? posts[posts.length - 1]?.created_at ?? null : null;
   return NextResponse.json({ posts: annotated, nextCursor });
 }

@@ -5,6 +5,8 @@ import { recordTrade, getUserPositions, getUserTradeStatement } from '@/lib/coin
 import { getUserWalletAddresses, verifyTradeTx } from '@/lib/coins/verify';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { isCoinChain } from '@/lib/coins/types';
+import { normalizeAddress } from '@/lib/utils/addressNormalize';
+import { resolveCoin } from '@/lib/coins/coinService';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,18 +79,38 @@ export async function POST(req: NextRequest) {
   const tokenAmount = Number(b.tokenAmount) || 0;
   if (usdAmount <= 0 || tokenAmount <= 0) return NextResponse.json({ error: 'Invalid amounts' }, { status: 400 });
 
+  // Only coins that really graduated onto a DEX can be recorded, matching the
+  // trade gate on the client. A fast registry lookup avoids a live fan-out for
+  // already-known coins; unknown coins fall back to a full resolve.
+  const sbGate = getSupabaseAdmin();
+  const evm = chain !== 'solana';
+  const lookupAddr = evm ? normalizeAddress(address, 'ethereum') : address;
+  const { data: regRow } = await sbGate
+    .from('coin_registry')
+    .select('is_graduated')
+    .eq('chain', chain)
+    .eq('token_address', lookupAddr)
+    .maybeSingle();
+  let graduated = (regRow as { is_graduated?: boolean } | null)?.is_graduated === true;
+  if (!graduated) {
+    const coin = await resolveCoin(chain, address).catch(() => null);
+    graduated = !!coin?.isGraduated;
+  }
+  if (!graduated) return NextResponse.json({ error: 'This coin has not graduated onto a DEX and cannot be recorded' }, { status: 400 });
+
   // A trade is only recorded against a real settled transaction hash, and the
-  // unique (chain, tx_hash) index blocks replay. This keeps the public holders,
-  // PnL and revenue honest: no hash, no record.
-  const txHash = b.txHash ? String(b.txHash) : '';
-  const validHash = chain === 'solana' ? /^[1-9A-HJ-NP-Za-km-z]{43,100}$/.test(txHash) : /^0x[0-9a-fA-F]{64}$/.test(txHash);
+  // unique (chain, tx_hash) index blocks replay. EVM hashes are lowercased so a
+  // re-cased resubmission cannot bypass the replay guard. No hash, no record.
+  const rawHash = b.txHash ? String(b.txHash) : '';
+  const txHash = evm ? rawHash.toLowerCase() : rawHash;
+  const validHash = chain === 'solana' ? /^[1-9A-HJ-NP-Za-km-z]{43,100}$/.test(txHash) : /^0x[0-9a-f]{64}$/.test(txHash);
   if (!validHash) return NextResponse.json({ error: 'A valid transaction hash is required' }, { status: 400 });
 
-  // Verify the tx really exists on chain and was sent by one of the caller's
-  // own wallets before recording it. Fails closed so fabricated trades cannot
-  // pollute holders, PnL or revenue.
+  // Verify the tx settled successfully, was sent by one of the caller's own
+  // wallets, AND actually touched this token before recording it. Fails closed
+  // so fabricated or unrelated trades cannot pollute holders, PnL or revenue.
   const addrs = await getUserWalletAddresses(user.id);
-  const verified = await verifyTradeTx(chain, txHash, addrs);
+  const verified = await verifyTradeTx(chain, txHash, addrs, lookupAddr);
   if (!verified) return NextResponse.json({ error: 'Could not verify this transaction on chain' }, { status: 400 });
 
   const rec = await recordTrade({

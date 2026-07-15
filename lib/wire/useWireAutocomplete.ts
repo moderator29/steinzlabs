@@ -49,11 +49,15 @@ const DEBOUNCE_MS = 200;
 function detectToken(value: string, caret: number): ActiveToken | null {
   let start = caret;
   while (start > 0 && !/\s/.test(value[start - 1])) start--;
-  const raw = value.slice(start, caret);
+  // Extend forward to the end of the token so editing mid-token (caret after
+  // "$WI" in "$WIF") still matches and replaces the WHOLE token, not a prefix.
+  let end = caret;
+  while (end < value.length && !/\s/.test(value[end])) end++;
+  const raw = value.slice(start, end);
   const coin = /^\$([A-Za-z0-9]+)$/.exec(raw);
-  if (coin) return { start, end: caret, kind: 'coin', term: coin[1] };
+  if (coin) return { start, end, kind: 'coin', term: coin[1] };
   const person = /^@(\w+)$/.exec(raw);
-  if (person) return { start, end: caret, kind: 'person', term: person[1] };
+  if (person) return { start, end, kind: 'person', term: person[1] };
   return null;
 }
 

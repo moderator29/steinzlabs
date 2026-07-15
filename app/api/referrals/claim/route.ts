@@ -7,7 +7,7 @@ import { normalizeReferralCode } from '@/lib/referral/referralCode';
 export const dynamic = 'force-dynamic';
 
 /**
- * POST /api/referrals/claim { code } — the caller applies a friend's referral
+ * POST /api/referrals/claim { code }: the caller applies a friend's referral
  * code. A user can be referred once, ever (referrals.referee_id is unique), so
  * a repeat claim returns a clear "already referred" message rather than a 500.
  */

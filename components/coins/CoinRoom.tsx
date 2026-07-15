@@ -141,7 +141,7 @@ export function CoinRoom({ coin, canPost }: { coin: Coin; canPost: boolean }) {
         </h3>
         {messages && messages.length > 0 ? (
           <span className="ms-auto text-[11px] font-semibold text-white/40 tabular-nums">
-            {messages.length} live
+            {messages.length} {messages.length === 1 ? 'message' : 'messages'}
           </span>
         ) : null}
       </div>

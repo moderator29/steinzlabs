@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
   const sb = getSupabaseAdmin();
   const { data: prof } = await sb
     .from('profiles')
-    .select('id, username, display_name')
+    .select('id, username, display_name, show_holdings')
     .ilike('username', user)
     .maybeSingle();
 
@@ -116,6 +116,10 @@ export async function GET(request: NextRequest) {
     );
 
   if (!prof) return noPosition('No Naka profile found');
+
+  // Respect the same privacy gate as the profile holdings view: if the user
+  // hid their holdings, the shareable card must not expose a position for them.
+  if ((prof as { show_holdings?: boolean }).show_holdings === false) return noPosition('This position is private');
 
   // Real position from the user's on-platform trades for this coin.
   const tokenKey = tokenKeyFor(chain, address);

@@ -10,7 +10,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Coins, ChevronRight } from 'lucide-react';
+import { Coins } from 'lucide-react';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { compactUsd } from '@/lib/coins/format';
 
@@ -51,7 +51,7 @@ export function CoinsWalletWidget() {
           className="inline-flex items-center gap-1 rounded-xl px-3.5 py-2 text-[13px] font-semibold text-white shrink-0 transition-transform hover:scale-[1.02] active:scale-[0.98]"
           style={{ background: 'linear-gradient(135deg,#1E90FF 0%,#0066FF 100%)', boxShadow: '0 6px 20px rgba(0,102,255,0.35)' }}
         >
-          Trade coins <ChevronRight className="w-4 h-4" />
+          Trade coins
         </Link>
       </div>
     </div>

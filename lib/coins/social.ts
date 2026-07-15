@@ -368,7 +368,7 @@ export async function getUserPositions(userId: string, openOnly = false): Promis
       if (p.costTokens > 0) {
         const avg = p.costUsd / p.costTokens;
         const sold = Math.min(tok, p.costTokens);
-        p.realizedUsd += (usd * (sold / tok || 1)) - sold * avg;
+        p.realizedUsd += (usd * (tok > 0 ? sold / tok : 0)) - sold * avg;
         p.costTokens = Math.max(0, p.costTokens - tok);
         p.costUsd = Math.max(0, p.costUsd - sold * avg);
       }
@@ -436,7 +436,7 @@ export async function getUserTradeStatement(userId: string, month: string): Prom
       // basis-unknown and is not counted as a win or a loss.
       const avg = c.usd / c.tokens;
       const sold = Math.min(tok, c.tokens);
-      const realized = (usd * (sold / tok || 1)) - sold * avg;
+      const realized = (usd * (tok > 0 ? sold / tok : 0)) - sold * avg;
       d.realizedUsd += realized;
       if (realized >= 0) d.wins += 1; else d.losses += 1;
       c.tokens = Math.max(0, c.tokens - tok);
@@ -496,7 +496,7 @@ export async function getTopTrades(days = 7, limit = 12): Promise<TopTrade[]> {
       if (a.costTokens > 0) {
         const avg = a.costUsd / a.costTokens;
         const sold = Math.min(tok, a.costTokens);
-        a.realized += (usd * (sold / tok || 1)) - sold * avg;
+        a.realized += (usd * (tok > 0 ? sold / tok : 0)) - sold * avg;
         a.costTokens = Math.max(0, a.costTokens - tok);
         a.costUsd = Math.max(0, a.costUsd - sold * avg);
       }
@@ -592,7 +592,7 @@ export async function getTopTraders(days = 7, limit = 25, followingOf?: string):
       if (a.costTokens > 0) {
         const avg = a.costUsd / a.costTokens;
         const sold = Math.min(tok, a.costTokens);
-        a.realized += (usd * (sold / tok || 1)) - sold * avg;
+        a.realized += (usd * (tok > 0 ? sold / tok : 0)) - sold * avg;
         a.costTokens = Math.max(0, a.costTokens - tok);
         a.costUsd = Math.max(0, a.costUsd - sold * avg);
       }

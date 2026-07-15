@@ -21,7 +21,7 @@ interface RefereeRow {
 }
 
 /**
- * GET /api/referrals — the caller's referral dashboard.
+ * GET /api/referrals: the caller's referral dashboard.
  *
  * Ensures the caller's deterministic code is stored (so a share link resolves
  * back to them), then returns their code, share URL, referred users, and the

@@ -432,7 +432,7 @@ export default function SettingsPage() {
                     <div>
                       <div className="text-white font-medium">Browser Push Notifications</div>
                       <div className="text-gray-400 text-sm">
-                        {pushPermission === 'denied' ? 'Blocked by browser — allow in site settings' : 'Instant alerts in your browser'}
+                        {pushPermission === 'denied' ? 'Blocked by browser. Allow in site settings' : 'Instant alerts in your browser'}
                       </div>
                     </div>
                     <Toggle
@@ -542,7 +542,7 @@ function AccountActionsCard() {
         .update({ onboarding_completed_at: null })
         .eq('id', user.id);
       if (error) throw error;
-      toast.success('Onboarding reset — refreshing…');
+      toast.success('Onboarding reset, refreshing...');
       setTimeout(() => window.location.assign('/dashboard'), 800);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not reset onboarding');
