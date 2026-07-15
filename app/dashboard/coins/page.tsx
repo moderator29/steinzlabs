@@ -9,12 +9,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, X, Star, Flame, Sprout, Users2, Plus } from 'lucide-react';
+import { Search, X, Star, Flame, Sprout, Users2, Plus, Trophy } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { CoinRow } from '@/components/coins/CoinRow';
 import { CoinLogo, PriceDelta } from '@/components/coins/atoms';
 import { ChainFilter, type ChainFilterValue } from '@/components/coins/ChainFilter';
 import { TopTrades } from '@/components/coins/TopTrades';
+import { CircleBuying } from '@/components/coins/CircleBuying';
+import { LiveTape } from '@/components/coins/LiveTape';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { useWallet } from '@/lib/hooks/useWallet';
 import type { Coin } from '@/lib/coins/types';
@@ -116,7 +118,19 @@ export default function CoinsPage() {
         <SearchResults searching={searching} coins={searchCoins} people={people} />
       ) : (
         <>
+          <Link
+            href="/dashboard/coins/leaderboard"
+            className="flex items-center gap-2 mb-3 rounded-2xl px-3.5 py-2.5 nl-glass transition-all hover:-translate-y-[1px] hover:shadow-[0_10px_30px_-10px_rgba(0,102,255,.55)]"
+          >
+            <Trophy className="w-4 h-4 text-[#F0B90B] shrink-0" />
+            <span className="text-[13px] font-semibold text-white">Leaderboard</span>
+            <span className="text-[12px] text-white/45 truncate">Top traders and trades</span>
+            <span className="ms-auto text-[12px] font-semibold text-[#7FB2FF] shrink-0">View</span>
+          </Link>
+
           <TopTrades />
+
+          <CircleBuying />
 
           <div className="mb-3">
             <ChainFilter value={chain} onChange={setChain} />
@@ -154,6 +168,8 @@ export default function CoinsPage() {
               )}
             </motion.div>
           </AnimatePresence>
+
+          <LiveTape />
         </>
       )}
     </div>

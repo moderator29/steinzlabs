@@ -11,16 +11,15 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Heart, MessageCircle, Clock, Gem, Zap, TrendingUp, Send, Loader2, Globe } from 'lucide-react';
+import { Clock, Gem, Zap, TrendingUp, Send, Globe } from 'lucide-react';
 import type { Coin } from '@/lib/coins/types';
 import { compactUsd, compactNum, holdTime, shortAgo, signedPct } from '@/lib/coins/format';
-import { renderRichText } from '@/lib/wire/richText';
 import { PriceDelta } from './atoms';
+import { CoinWireFeed } from './CoinWireFeed';
 
 interface Profile { id: string; username: string | null; display_name: string | null; avatar_url: string | null; tier?: string | null; is_verified?: boolean }
 interface Holder { user: Profile; usdValue: number; pnlPct: number | null; avgHoldMs: number | null }
 interface Trade { timestamp: number; side: 'buy' | 'sell'; usdAmount: number; marketCapUsd: number | null; user?: Profile | null; source: string }
-interface WirePost { id: string; body: string; media_urls: string[]; like_count: number; reply_count: number; repost_count: number; created_at: string; author: Profile | null }
 interface Stats { buys: number | null; sells: number | null; buyers: number | null; sellers: number | null }
 
 function Avatar({ p, size = 34 }: { p: Profile | null | undefined; size?: number }) {
@@ -122,73 +121,13 @@ export function HoldersTab({ coin }: { coin: Coin }) {
   );
 }
 
-/** The coin's slice of The Wire: real posts carrying the ticker. */
+/**
+ * The coin's slice of The Wire. Renders the platform's real WirePostCard (signal
+ * rail, tier badge, rich text, inline coin cards, action bar, gift, threads)
+ * scoped to this coin, so it is the same Wire view, not a look-alike.
+ */
 export function WireTab({ coin, canPost }: { coin: Coin; canPost: boolean }) {
-  const [posts, setPosts] = useState<WirePost[] | null>(null);
-  const [draft, setDraft] = useState('');
-  const [posting, setPosting] = useState(false);
-
-  const load = async () => {
-    try {
-      const r = await fetch(`/api/coins/${coin.chain}/${encodeURIComponent(coin.tokenAddress)}/wire`, { cache: 'no-store' });
-      const j = await r.json();
-      setPosts(Array.isArray(j.posts) ? j.posts : []);
-    } catch { setPosts([]); }
-  };
-  useEffect(() => { void load(); }, [coin.chain, coin.tokenAddress]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const post = async () => {
-    const body = draft.trim();
-    if (!body) return;
-    setPosting(true);
-    try {
-      await fetch(`/api/coins/${coin.chain}/${encodeURIComponent(coin.tokenAddress)}/wire`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body }) });
-      setDraft(''); await load();
-    } finally { setPosting(false); }
-  };
-
-  return (
-    <div>
-      {canPost ? (
-        <div className="nl-glass rounded-2xl p-3 mb-3">
-          <textarea value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={500} rows={2} placeholder={`Post to $${coin.symbol} on The Wire`} className="w-full bg-transparent text-[15px] text-white placeholder:text-white/35 outline-none resize-none" />
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-[11px] text-white/35">Posts with ${coin.symbol} land here and on the main Wire.</span>
-            <button type="button" onClick={post} disabled={posting || !draft.trim()} className="rounded-lg px-3.5 py-1.5 text-[13px] font-semibold text-white inline-flex items-center gap-1.5 disabled:opacity-40" style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF)' }}>
-              {posting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />} Post
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {posts === null ? <ListSkeleton /> : posts.length === 0 ? <Empty text={`No posts about $${coin.symbol} yet. Start the conversation.`} /> : (
-        <div className="space-y-2">
-          {posts.map((p) => (
-            <div key={p.id} className="nl-glass rounded-2xl p-3">
-              <div className="flex items-center gap-2 mb-1.5">
-                <Avatar p={p.author} size={30} />
-                <div className="min-w-0">
-                  <div className="text-[13px] font-semibold text-white truncate">{p.author?.display_name || p.author?.username || 'Naka user'}</div>
-                  {p.author?.username ? <div className="text-[11px] text-white/40">@{p.author.username} · {shortAgo(Date.parse(p.created_at))}</div> : null}
-                </div>
-              </div>
-              <div className="text-[14px] text-white/90 whitespace-pre-wrap break-words leading-relaxed">{renderRichText(p.body)}</div>
-              {p.media_urls?.length ? (
-                <div className={`mt-2 grid gap-1 rounded-xl overflow-hidden ${p.media_urls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  {p.media_urls.slice(0, 4).map((u) => <img key={u} src={u} alt="" className="w-full max-h-[280px] object-cover" />)}
-                </div>
-              ) : null}
-              <div className="flex items-center gap-4 mt-2 text-white/40 text-[12px]">
-                <span className="inline-flex items-center gap-1"><Heart className="w-3.5 h-3.5" /> {p.like_count}</span>
-                <span className="inline-flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5" /> {p.reply_count}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return <CoinWireFeed coin={coin} canPost={canPost} />;
 }
 
 export function InfoTab({ coin, stats }: { coin: Coin; stats: Stats | null }) {

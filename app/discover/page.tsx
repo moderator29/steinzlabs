@@ -11,6 +11,7 @@ import BackButton from '@/components/ui/BackButton';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { HowItWorksButton } from '@/components/common/HowItWorks';
+import { DiscoverCoinsStrip } from '@/components/coins/DiscoverCoinsStrip';
 import { discoverHowItWorks } from '@/lib/howItWorks/content/discover';
 import { useFeatureUsageLog } from '@/lib/hooks/useFeatureUsageLog';
 
@@ -36,7 +37,7 @@ function DiscoverInner() {
           <BackButton />
           <div className="flex items-center gap-2">
             <Compass className="w-5 h-5 text-[var(--nl-blue,#0066FF)]" />
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Discover users</h1>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-[#8fb4ff] bg-clip-text text-transparent">Discover</h1>
           </div>
           <HowItWorksButton content={discoverHowItWorks} className="ms-auto shrink-0" />
         </div>
@@ -54,6 +55,7 @@ function DiscoverInner() {
 function DiscoverHub() {
   return (
     <div className="space-y-4">
+      <DiscoverCoinsStrip />
       <RecommendationsStrip />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <LeaderboardColumn kind="success-rate" title="Top Success Rate" description="Verified performers by composite score" />

@@ -173,6 +173,12 @@ export async function GET(req: NextRequest) {
   const feed = params.get('feed'); // 'signal' | 'pack' | null
   const tag = params.get('tag');   // legacy single canonical topic value | null
   const tagsParam = params.get('tags'); // comma-separated canonical topics | null
+  // A coin ticker (cashtag) filter, used by a coin's own Wire slice: keep only
+  // top-level wires that carry $TICKER in the body or the ticker in tags[]. The
+  // rest of the pipeline (audience, annotate, signals) is identical to the main
+  // feed so the coin's Wire is the SAME view, just scoped to one coin.
+  const cashtagRaw = params.get('cashtag');
+  const cashtag = cashtagRaw ? cashtagRaw.replace(/[^a-zA-Z0-9]/g, '') : '';
 
   if (tag && !WIRE_TOPIC_SET.has(tag)) {
     return NextResponse.json({ error: 'Unknown topic' }, { status: 400 });
@@ -372,6 +378,8 @@ export async function GET(req: NextRequest) {
   }
   if (mediaOnly) q = q.not('media_url', 'is', null);
   if (topicFilter.length) q = q.overlaps('tags', topicFilter);
+  // Coin-scoped Wire: $TICKER in the body or the ticker present in tags[].
+  if (cashtag) q = q.or(`body.ilike.%$${cashtag}%,tags.cs.{${cashtag.toLowerCase()}}`);
   // Hide muted authors from the main feed, but not from a single-author timeline.
   if (mutedList && !author) q = q.not('author_id', 'in', mutedList);
   if (cursor) q = q.lt('created_at', cursor);

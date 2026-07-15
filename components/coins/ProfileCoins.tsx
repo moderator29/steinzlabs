@@ -10,10 +10,11 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Coins as CoinsIcon, Eye, EyeOff } from 'lucide-react';
+import { Coins as CoinsIcon, Eye, EyeOff, Share2 } from 'lucide-react';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { CoinLogo, PriceDelta } from './atoms';
 import { compactUsd } from '@/lib/coins/format';
+import { MiniChart, MINI_CHART_BRAND } from '@/components/analytics/MiniChart';
 
 interface Holding { chain: string; tokenAddress: string; tokenKey: string; symbol: string; logoUrl: string | null; usdValue: number | null; change24h: number | null }
 
@@ -23,6 +24,8 @@ export function ProfileCoins({ username, isOwner = false }: { username: string; 
   const [showHoldings, setShowHoldings] = useState(true);
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [coinsValueUsd, setCoinsValueUsd] = useState(0);
+  const [flow, setFlow] = useState<number[]>([]);
+  const [sharingKey, setSharingKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const { balance } = useWallet();
 
@@ -36,7 +39,37 @@ export function ProfileCoins({ username, isOwner = false }: { username: string; 
       setCoinsValueUsd(Number(j.coinsValueUsd) || 0);
     } catch { /* keep defaults */ } finally { setLoaded(true); }
   };
-  useEffect(() => { void load(); }, [username]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cost-basis flow sparkline: net invested valued at today's price over 30d.
+  const loadFlow = async () => {
+    try {
+      const r = await fetch(`/api/coins/portfolio/${encodeURIComponent(username)}/history`, { cache: 'no-store' });
+      const j = await r.json();
+      const pts = Array.isArray(j.points) ? j.points.map((p: { valueUsd: number }) => Number(p.valueUsd) || 0) : [];
+      setFlow(pts);
+    } catch { setFlow([]); }
+  };
+  useEffect(() => { void load(); void loadFlow(); }, [username]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch the branded position-card PNG for a holding and trigger a download.
+  const sharePosition = async (h: Holding) => {
+    const key = `${h.chain}:${h.tokenKey}`;
+    setSharingKey(key);
+    try {
+      const url = `/api/coins/position-card?chain=${encodeURIComponent(h.chain)}&address=${encodeURIComponent(h.tokenAddress)}&user=${encodeURIComponent(username)}`;
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const objUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objUrl;
+      a.download = `naka-${(h.symbol || 'position').toLowerCase()}-position.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objUrl);
+    } catch { /* ignore, honest no-op on failure */ } finally { setSharingKey(null); }
+  };
 
   const toggleVisibility = async (next: boolean) => {
     setShowBalance(next); setShowHoldings(next); setSaving(true);
@@ -63,9 +96,17 @@ export function ProfileCoins({ username, isOwner = false }: { username: string; 
       </div>
 
       {(isOwner || showBalance) ? (
-        <div className="mb-3">
-          <div className="text-[11px] text-white/45">{isOwner ? 'Wallet value' : 'Coins value'}</div>
-          <div className="text-2xl font-bold text-white tabular-nums">{compactUsd(headlineValue)}</div>
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="text-[11px] text-white/45">{isOwner ? 'Wallet value' : 'Coins value'}</div>
+            <div className="text-2xl font-bold text-white tabular-nums">{compactUsd(headlineValue)}</div>
+          </div>
+          {flow.length >= 2 ? (
+            <div className="w-full sm:w-32 shrink-0">
+              <MiniChart data={flow} height={40} color={MINI_CHART_BRAND} ariaLabel="Coins cost-basis flow, last 30 days" />
+              <div className="mt-0.5 text-[10px] text-white/40 leading-tight">Coins flow · net invested at today's price · 30d</div>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -75,14 +116,28 @@ export function ProfileCoins({ username, isOwner = false }: { username: string; 
         ) : (
           <div className="space-y-1.5">
             {holdings.slice(0, 8).map((h) => (
-              <Link key={`${h.chain}:${h.tokenKey}`} href={`/dashboard/coins/${h.chain}/${encodeURIComponent(h.tokenAddress)}`} className="flex items-center gap-2.5 rounded-xl px-1.5 py-1.5 hover:bg-white/[0.04]">
-                <CoinLogo logoUrl={h.logoUrl} symbol={h.symbol} chain={h.chain} size={32} />
-                <div className="min-w-0 flex-1 text-[14px] font-semibold text-white truncate">{h.symbol}</div>
-                <div className="text-right">
-                  <div className="text-[14px] font-semibold text-white tabular-nums">{compactUsd(h.usdValue)}</div>
-                  <PriceDelta value={h.change24h} className="text-[11px]" />
-                </div>
-              </Link>
+              <div key={`${h.chain}:${h.tokenKey}`} className="flex items-center gap-2.5 rounded-xl px-1.5 py-1.5 hover:bg-white/[0.04]">
+                <Link href={`/dashboard/coins/${h.chain}/${encodeURIComponent(h.tokenAddress)}`} className="flex min-w-0 flex-1 items-center gap-2.5">
+                  <CoinLogo logoUrl={h.logoUrl} symbol={h.symbol} chain={h.chain} size={32} />
+                  <div className="min-w-0 flex-1 text-[14px] font-semibold text-white truncate">{h.symbol}</div>
+                  <div className="text-right">
+                    <div className="text-[14px] font-semibold text-white tabular-nums">{compactUsd(h.usdValue)}</div>
+                    <PriceDelta value={h.change24h} className="text-[11px]" />
+                  </div>
+                </Link>
+                {isOwner ? (
+                  <button
+                    type="button"
+                    onClick={() => void sharePosition(h)}
+                    disabled={sharingKey === `${h.chain}:${h.tokenKey}`}
+                    aria-label={`Share ${h.symbol} position`}
+                    title="Share position"
+                    className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-lg text-white/50 hover:text-[#7FB2FF] hover:bg-white/[0.06] disabled:opacity-40"
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </button>
+                ) : null}
+              </div>
             ))}
           </div>
         )

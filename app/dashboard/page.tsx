@@ -34,6 +34,7 @@ import SteinzLogo from '@/components/ui/SteinzLogo';
 import { RenderWidgets } from '@/components/dashboard/RenderWidgets';
 import { DailyPulseSummary } from '@/components/dashboard/DailyPulseSummary';
 import { OverviewPreviews } from '@/components/dashboard/OverviewPreviews';
+import { CoinsWalletWidget } from '@/components/dashboard/CoinsWalletWidget';
 import { PresenceHeartbeat } from '@/components/presence/PresenceHeartbeat';
 import { FirstRunTour } from '@/components/dashboard/FirstRunTour';
 
@@ -602,6 +603,9 @@ export default function Dashboard() {
           <OverviewHero name={heroName} />
           <DailyPulseSummary />
           <RenderWidgets />
+          {/* Compact Coins wallet funnel: live wallet total + open coin
+              positions, routing straight into Coins to trade. */}
+          <CoinsWalletWidget />
           {/* Quick-access previews under the portfolio: Watchlist, Messages and
               Swap — real data, deep-linked into each surface. */}
           <OverviewPreviews />

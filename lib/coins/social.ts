@@ -534,6 +534,109 @@ export async function getTopTrades(days = 7, limit = 12): Promise<TopTrade[]> {
     .filter((x): x is TopTrade => x !== null);
 }
 
+export interface TopTrader {
+  user: ProfileLite;
+  pnlUsd: number;
+  tradeCount: number;
+}
+
+/**
+ * Realized-plus-unrealized PnL leaderboard by trader: each account's PnL summed
+ * across every coin it traded in the window, ranked by that total. Positive only.
+ * When `followingOf` is passed we restrict to the accounts that user follows
+ * (accepted follows), so the "friends" scope only ranks people they follow. Uses
+ * the same running-average-at-sale basis as getTopTrades, so a pre-window or
+ * off-platform sell is not booked as full profit. Empty when nothing qualifies.
+ */
+export async function getTopTraders(days = 7, limit = 25, followingOf?: string): Promise<TopTrader[]> {
+  const sb = getSupabaseAdmin();
+
+  // Friends scope: resolve who the caller follows first; no follows means an
+  // honest empty leaderboard rather than the global one.
+  let followingIds: string[] | null = null;
+  if (followingOf) {
+    const { data: follows } = await sb
+      .from('social_follows')
+      .select('following_id')
+      .eq('follower_id', followingOf)
+      .eq('status', 'accepted');
+    followingIds = [...new Set(((follows as Array<{ following_id: string }>) ?? []).map((f) => f.following_id))];
+    if (followingIds.length === 0) return [];
+  }
+
+  const since = new Date(Date.now() - days * 86400000).toISOString();
+  let q = sb
+    .from('coin_trades')
+    .select('user_id, chain, token_key, token_address, symbol, side, usd_amount, token_amount, created_at')
+    .gte('created_at', since)
+    .order('created_at', { ascending: true })
+    .limit(20000);
+  if (followingIds) q = q.in('user_id', followingIds);
+  const { data } = await q;
+  const rows = (data as FullTradeRow[]) ?? [];
+  if (rows.length === 0) return [];
+
+  // Per (user, coin) running-average basis so realized PnL lines up with the
+  // rest of the platform math; then rolled up to one number per user.
+  interface Agg { userId: string; chain: string; tokenKey: string; net: number; costTokens: number; costUsd: number; realized: number; tradeCount: number }
+  const byKey = new Map<string, Agg>();
+  for (const r of rows) {
+    const key = `${r.user_id}:${r.chain}:${r.token_key}`;
+    const a = byKey.get(key) ?? { userId: r.user_id, chain: r.chain, tokenKey: r.token_key, net: 0, costTokens: 0, costUsd: 0, realized: 0, tradeCount: 0 };
+    const tok = Number(r.token_amount) || 0;
+    const usd = Number(r.usd_amount) || 0;
+    a.tradeCount += 1;
+    if (r.side === 'buy') { a.net += tok; a.costTokens += tok; a.costUsd += usd; }
+    else {
+      // Realize only against a known basis, matching getTopTrades.
+      if (a.costTokens > 0) {
+        const avg = a.costUsd / a.costTokens;
+        const sold = Math.min(tok, a.costTokens);
+        a.realized += (usd * (sold / tok || 1)) - sold * avg;
+        a.costTokens = Math.max(0, a.costTokens - tok);
+        a.costUsd = Math.max(0, a.costUsd - sold * avg);
+      }
+      a.net -= tok;
+    }
+    byKey.set(key, a);
+  }
+
+  const aggs = [...byKey.values()];
+  const keys = [...new Set(aggs.map((a) => a.tokenKey))];
+  const priceMap = new Map<string, number | null>();
+  if (keys.length) {
+    const { data: reg } = await sb.from('coin_registry').select('chain, token_key, price_usd').in('token_key', keys);
+    for (const r of (reg as Array<Record<string, unknown>>) ?? []) priceMap.set(`${r.chain}:${r.token_key}`, r.price_usd != null ? Number(r.price_usd) : null);
+  }
+
+  // Sum realized plus live unrealized PnL across each user's coins.
+  const byUser = new Map<string, { pnlUsd: number; tradeCount: number }>();
+  for (const a of aggs) {
+    const price = priceMap.get(`${a.chain}:${a.tokenKey}`) ?? null;
+    const avg = a.costTokens > 0 ? a.costUsd / a.costTokens : null;
+    const unrealized = price != null && a.net > 0 && avg != null ? a.net * (price - avg) : 0;
+    const roll = byUser.get(a.userId) ?? { pnlUsd: 0, tradeCount: 0 };
+    roll.pnlUsd += a.realized + unrealized;
+    roll.tradeCount += a.tradeCount;
+    byUser.set(a.userId, roll);
+  }
+
+  const scored = [...byUser.entries()]
+    .map(([userId, r]) => ({ userId, pnlUsd: r.pnlUsd, tradeCount: r.tradeCount }))
+    .filter((s) => s.pnlUsd > 0)
+    .sort((x, y) => y.pnlUsd - x.pnlUsd)
+    .slice(0, limit);
+
+  const profiles = await fetchProfiles([...new Set(scored.map((s) => s.userId))]);
+  return scored
+    .map((s) => {
+      const user = profiles.get(s.userId);
+      if (!user) return null;
+      return { user, pnlUsd: s.pnlUsd, tradeCount: s.tradeCount } as TopTrader;
+    })
+    .filter((x): x is TopTrader => x !== null);
+}
+
 // ─── Watchlist ─────────────────────────────────────────────────────────────────
 
 export async function getWatchlistKeys(userId: string): Promise<Set<string>> {
