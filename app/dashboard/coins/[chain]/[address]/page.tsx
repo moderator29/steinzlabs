@@ -8,7 +8,7 @@
 
 import { use, useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, Share2, Check, Loader2, CandlestickChart as CandleIcon, Activity, ArrowLeftRight, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Star, Share2, Check, Loader2, CandlestickChart as CandleIcon, Activity, ShieldAlert, ShieldCheck } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { CoinLogo, Copyable, PriceDelta } from '@/components/coins/atoms';
 import { CoinChart, type ChartMode, type TradeMarker } from '@/components/coins/CoinChart';
@@ -110,7 +110,7 @@ export default function CoinDetailPage({ params }: { params: Promise<{ chain: st
           <Copyable text={coin.tokenAddress} label={formatAddress(coin.tokenAddress)} className="text-[11px]" />
         </div>
         <button type="button" onClick={toggleWatch} aria-label="Watchlist" className="w-9 h-9 rounded-lg inline-flex items-center justify-center text-white/70 hover:text-white hover:bg-white/[0.06]">
-          <Star className={`w-4.5 h-4.5 ${watchlisted ? 'fill-amber-400 text-amber-400' : ''}`} />
+          <Star className={`w-[18px] h-[18px] ${watchlisted ? 'fill-amber-400 text-amber-400' : ''}`} />
         </button>
         <button type="button" onClick={share} aria-label="Share" className="w-9 h-9 rounded-lg inline-flex items-center justify-center text-white/70 hover:text-white hover:bg-white/[0.06]">
           {shared ? <Check className="w-4 h-4 text-emerald-300" /> : <Share2 className="w-4 h-4" />}
@@ -128,7 +128,7 @@ export default function CoinDetailPage({ params }: { params: Promise<{ chain: st
             <span className="text-white/35 text-[13px] ml-1">24h</span>
           </div>
           <div className="text-right">
-            <div className="text-white/45 text-[11px] inline-flex items-center gap-1 justify-end"><ArrowLeftRight className="w-3 h-3" /> Market cap</div>
+            <div className="text-white/45 text-[11px] justify-end">Market cap</div>
             <Copyable text={String(Math.round(live.marketCap ?? coin.marketCapUsd ?? 0))} label={compactUsd(live.marketCap ?? coin.marketCapUsd)} className="text-[17px] font-bold text-white" />
           </div>
         </div>
@@ -156,18 +156,7 @@ export default function CoinDetailPage({ params }: { params: Promise<{ chain: st
           </button>
         </div>
 
-        {/* Honest verification state before the trade action. */}
-        <div className={`flex items-center gap-2 rounded-xl px-3 py-2 mb-2.5 text-[12px] ${coin.verified ? 'bg-emerald-500/[0.08] border border-emerald-500/20 text-emerald-300' : 'bg-amber-500/[0.08] border border-amber-500/20 text-amber-200/90'}`}>
-          {coin.verified ? <ShieldCheck className="w-4 h-4 shrink-0" /> : <ShieldAlert className="w-4 h-4 shrink-0" />}
-          <span>{coin.verified ? 'Verified by Naka. Still a volatile asset, trade with care.' : 'Unverified coin. Anyone can launch a coin, so trade with heightened caution.'}</span>
-        </div>
-
-        {/* Trade (in flow, not pinned) */}
-        <div className="mb-4">
-          <TradeCard coin={coin} livePrice={live.price} liveMcap={live.marketCap} />
-        </div>
-
-        {/* Tabs */}
+        {/* Tabs (house rule: chart first, then the tabs, then the trade area) */}
         <div className="flex items-center border-b border-white/10 mb-3">
           {(['holders', 'wire', 'info'] as Tab[]).map((t) => (
             <button key={t} type="button" onClick={() => setTab(t)} className={`flex-1 py-2.5 text-[14px] font-semibold capitalize relative ${tab === t ? 'text-white' : 'text-white/45'}`}>
@@ -182,6 +171,15 @@ export default function CoinDetailPage({ params }: { params: Promise<{ chain: st
             {tab === 'holders' ? <HoldersTab coin={coin} /> : tab === 'wire' ? <WireTab coin={coin} canPost={signedIn} /> : <InfoTab coin={coin} stats={stats} />}
           </motion.div>
         </AnimatePresence>
+
+        {/* Honest verification state, then the in-flow trade action last. */}
+        <div className={`flex items-center gap-2 rounded-xl px-3 py-2 mt-4 mb-2.5 text-[12px] ${coin.verified ? 'bg-emerald-500/[0.08] border border-emerald-500/20 text-emerald-300' : 'bg-amber-500/[0.08] border border-amber-500/20 text-amber-200/90'}`}>
+          {coin.verified ? <ShieldCheck className="w-4 h-4 shrink-0" /> : <ShieldAlert className="w-4 h-4 shrink-0" />}
+          <span>{coin.verified ? 'Verified by Naka. Still a volatile asset, trade with care.' : 'Unverified coin. Anyone can launch a coin, so trade with heightened caution.'}</span>
+        </div>
+        <div className="mb-4">
+          <TradeCard coin={coin} livePrice={live.price} liveMcap={live.marketCap} />
+        </div>
       </div>
     </div>
   );

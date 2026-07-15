@@ -159,10 +159,13 @@ export default function AdminCoinsPage() {
   };
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return coins;
+    const raw = query.trim();
+    if (!raw) return coins;
+    const q = raw.toLowerCase();
+    // Symbol/name/chain match case-insensitively; the address is matched
+    // case-sensitively since Solana addresses are case-sensitive.
     return coins.filter(c =>
-      [c.symbol, c.name, c.chain, c.token_address].some(v => v?.toLowerCase().includes(q)),
+      [c.symbol, c.name, c.chain].some(v => v?.toLowerCase().includes(q)) || c.token_address?.includes(raw),
     );
   }, [coins, query]);
 
@@ -170,7 +173,7 @@ export default function AdminCoinsPage() {
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <div className="flex items-center gap-3 mb-5">
         <div className="w-9 h-9 rounded-xl bg-[#0066FF]/10 flex items-center justify-center flex-shrink-0">
-          <Coins className="w-4.5 h-4.5 text-[#0066FF]" />
+          <Coins className="w-[18px] h-[18px] text-[#0066FF]" />
         </div>
         <div>
           <h1 className="text-lg sm:text-xl font-bold text-white">Coins</h1>

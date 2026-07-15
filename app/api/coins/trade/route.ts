@@ -2,6 +2,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 import { recordTrade, getUserPositions, getUserTradeStatement } from '@/lib/coins/social';
+import { getUserWalletAddresses, verifyTradeTx } from '@/lib/coins/verify';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { isCoinChain } from '@/lib/coins/types';
 
@@ -82,6 +83,13 @@ export async function POST(req: NextRequest) {
   const txHash = b.txHash ? String(b.txHash) : '';
   const validHash = chain === 'solana' ? /^[1-9A-HJ-NP-Za-km-z]{43,100}$/.test(txHash) : /^0x[0-9a-fA-F]{64}$/.test(txHash);
   if (!validHash) return NextResponse.json({ error: 'A valid transaction hash is required' }, { status: 400 });
+
+  // Verify the tx really exists on chain and was sent by one of the caller's
+  // own wallets before recording it. Fails closed so fabricated trades cannot
+  // pollute holders, PnL or revenue.
+  const addrs = await getUserWalletAddresses(user.id);
+  const verified = await verifyTradeTx(chain, txHash, addrs);
+  if (!verified) return NextResponse.json({ error: 'Could not verify this transaction on chain' }, { status: 400 });
 
   const rec = await recordTrade({
     userId: user.id,

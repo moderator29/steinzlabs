@@ -198,8 +198,8 @@ function SearchResults({ searching, coins, people }: { searching: boolean; coins
           <div className="space-y-2">
             {people.map((p) => {
               const nm = p.display_name || p.username || 'Naka user';
-              return (
-                <Link key={p.id} href={p.username ? `/u/${p.username}` : '#'} className="flex items-center gap-3 rounded-2xl px-3 py-2.5 nl-glass hover:bg-white/[0.05]">
+              const inner = (
+                <>
                   {p.avatar_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={p.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
@@ -210,8 +210,12 @@ function SearchResults({ searching, coins, people }: { searching: boolean; coins
                     <div className="text-[15px] font-semibold text-white truncate">{nm}</div>
                     {p.username ? <div className="text-[12px] text-white/45 truncate">@{p.username}</div> : null}
                   </div>
-                </Link>
+                </>
               );
+              const cls = 'flex items-center gap-3 rounded-2xl px-3 py-2.5 nl-glass';
+              return p.username
+                ? <Link key={p.id} href={`/u/${p.username}`} className={`${cls} hover:bg-white/[0.05]`}>{inner}</Link>
+                : <div key={p.id} className={cls}>{inner}</div>;
             })}
           </div>
         </section>

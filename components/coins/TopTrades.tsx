@@ -56,7 +56,7 @@ export function TopTrades() {
                   <CoinLogo logoUrl={t.logoUrl} symbol={t.symbol || ''} chain={t.chain} size={22} />
                   <span className="text-[12px] text-white/60 truncate">{t.symbol}</span>
                 </div>
-                <div className="text-[18px] font-bold text-emerald-400 tabular-nums leading-tight">+{compactUsd(t.pnlUsd).replace('$', '$')}</div>
+                <div className="text-[18px] font-bold text-emerald-400 tabular-nums leading-tight">+{compactUsd(t.pnlUsd)}</div>
                 {t.pnlPct != null ? <div className="text-[12px] font-semibold text-emerald-400/80">{signedPct(t.pnlPct)}</div> : null}
               </Link>
             </motion.div>

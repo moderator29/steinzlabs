@@ -94,31 +94,43 @@ export async function getPlatformHolders(
     .limit(5000);
   const rows = (data as TradeRow[]) ?? [];
 
-  // Aggregate per user: net tokens, cost basis, first-buy time (for avg hold).
+  // Aggregate per user with a running-average basis so the holder PnL matches
+  // the portfolio math, and scale the hold-time weighting down on sells so it
+  // reflects the tokens still held rather than every token ever bought.
   interface Agg {
     netTokens: number;
-    buyTokens: number;
-    buyCostUsd: number;
-    firstBuyMs: number | null;
-    weightedHoldNumer: number; // Σ tokens_i * age_i
-    weightedHoldDenom: number; // Σ tokens_i
+    costTokens: number;
+    costUsd: number;
+    weightedHoldNumer: number; // Σ heldTokens_i * age_i
+    weightedHoldDenom: number; // Σ heldTokens_i
   }
   const now = Date.now();
   const byUser = new Map<string, Agg>();
   for (const r of rows) {
-    const a = byUser.get(r.user_id) ?? { netTokens: 0, buyTokens: 0, buyCostUsd: 0, firstBuyMs: null, weightedHoldNumer: 0, weightedHoldDenom: 0 };
+    const a = byUser.get(r.user_id) ?? { netTokens: 0, costTokens: 0, costUsd: 0, weightedHoldNumer: 0, weightedHoldDenom: 0 };
     const tok = Number(r.token_amount) || 0;
     const usd = Number(r.usd_amount) || 0;
     const ts = Date.parse(r.created_at);
     if (r.side === 'buy') {
       a.netTokens += tok;
-      a.buyTokens += tok;
-      a.buyCostUsd += usd;
-      if (a.firstBuyMs == null || ts < a.firstBuyMs) a.firstBuyMs = ts;
+      a.costTokens += tok;
+      a.costUsd += usd;
       a.weightedHoldNumer += tok * Math.max(0, now - ts);
       a.weightedHoldDenom += tok;
     } else {
+      if (a.costTokens > 0) {
+        const avg = a.costUsd / a.costTokens;
+        const sold = Math.min(tok, a.costTokens);
+        a.costTokens = Math.max(0, a.costTokens - tok);
+        a.costUsd = Math.max(0, a.costUsd - sold * avg);
+      }
+      const before = a.netTokens;
       a.netTokens -= tok;
+      if (before > 0) {
+        const frac = Math.max(0, a.netTokens) / before;
+        a.weightedHoldNumer *= frac;
+        a.weightedHoldDenom *= frac;
+      }
     }
     byUser.set(r.user_id, a);
   }
@@ -126,7 +138,7 @@ export async function getPlatformHolders(
   const holders: Array<{ userId: string; usdValue: number; pnlPct: number | null; avgHoldMs: number | null }> = [];
   for (const [userId, a] of byUser) {
     if (a.netTokens <= 0.0000001) continue; // exited
-    const avgBuyPrice = a.buyTokens > 0 ? a.buyCostUsd / a.buyTokens : null;
+    const avgBuyPrice = a.costTokens > 0 ? a.costUsd / a.costTokens : null;
     const usdValue = currentPrice != null ? a.netTokens * currentPrice : 0;
     const pnlPct = avgBuyPrice && avgBuyPrice > 0 && currentPrice != null ? ((currentPrice - avgBuyPrice) / avgBuyPrice) * 100 : null;
     const avgHoldMs = a.weightedHoldDenom > 0 ? a.weightedHoldNumer / a.weightedHoldDenom : null;
@@ -351,11 +363,16 @@ export async function getUserPositions(userId: string, openOnly = false): Promis
       p.costTokens += tok; p.costUsd += usd;
       if (p.firstBuyMs == null || ts < p.firstBuyMs) p.firstBuyMs = ts;
     } else {
-      const avg = p.costTokens > 0 ? p.costUsd / p.costTokens : 0;
-      p.realizedUsd += usd - tok * avg;
+      // Only realize PnL against a known on-platform basis. Tokens sold without
+      // a recorded buy (funded off-platform) are basis-unknown, not pure profit.
+      if (p.costTokens > 0) {
+        const avg = p.costUsd / p.costTokens;
+        const sold = Math.min(tok, p.costTokens);
+        p.realizedUsd += (usd * (sold / tok || 1)) - sold * avg;
+        p.costTokens = Math.max(0, p.costTokens - tok);
+        p.costUsd = Math.max(0, p.costUsd - sold * avg);
+      }
       p.netTokens -= tok;
-      p.costTokens = Math.max(0, p.costTokens - tok);
-      p.costUsd = Math.max(0, p.costUsd - tok * avg);
     }
     if (r.symbol) p.symbol = r.symbol;
     byCoin.set(key, p);
@@ -414,13 +431,16 @@ export async function getUserTradeStatement(userId: string, month: string): Prom
     const c = cost.get(key) ?? { tokens: 0, usd: 0 };
     if (r.side === 'buy') {
       c.tokens += tok; c.usd += usd;
-    } else {
-      const avg = c.tokens > 0 ? c.usd / c.tokens : 0;
-      const realized = usd - tok * avg;
+    } else if (c.tokens > 0) {
+      // Realize only against a known basis; a sell of off-platform tokens is
+      // basis-unknown and is not counted as a win or a loss.
+      const avg = c.usd / c.tokens;
+      const sold = Math.min(tok, c.tokens);
+      const realized = (usd * (sold / tok || 1)) - sold * avg;
       d.realizedUsd += realized;
       if (realized >= 0) d.wins += 1; else d.losses += 1;
       c.tokens = Math.max(0, c.tokens - tok);
-      c.usd = Math.max(0, c.usd - tok * avg);
+      c.usd = Math.max(0, c.usd - sold * avg);
     }
     cost.set(key, c);
     byDay.set(day, d);
@@ -471,8 +491,16 @@ export async function getTopTrades(days = 7, limit = 12): Promise<TopTrade[]> {
     const usd = Number(r.usd_amount) || 0;
     if (r.side === 'buy') { a.net += tok; a.costTokens += tok; a.costUsd += usd; a.buyCost += usd; }
     else {
-      const avg = a.costTokens > 0 ? a.costUsd / a.costTokens : 0;
-      a.realized += usd - tok * avg; a.net -= tok; a.costTokens = Math.max(0, a.costTokens - tok); a.costUsd = Math.max(0, a.costUsd - tok * avg);
+      // Realize only against a known basis, so a pre-window or off-platform sell
+      // does not book its full proceeds as profit and top the leaderboard.
+      if (a.costTokens > 0) {
+        const avg = a.costUsd / a.costTokens;
+        const sold = Math.min(tok, a.costTokens);
+        a.realized += (usd * (sold / tok || 1)) - sold * avg;
+        a.costTokens = Math.max(0, a.costTokens - tok);
+        a.costUsd = Math.max(0, a.costUsd - sold * avg);
+      }
+      a.net -= tok;
     }
     if (r.symbol) a.symbol = r.symbol;
     byKey.set(key, a);

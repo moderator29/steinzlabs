@@ -13,8 +13,11 @@ import Link from 'next/link';
 import { Loader2, Check, Wallet as WalletIcon } from 'lucide-react';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { useSwapExecution } from '@/lib/hooks/useSwapExecution';
+import { getBuiltinWalletAddress } from '@/lib/wallet/builtinWallet';
 import type { Coin } from '@/lib/coins/types';
 import { compactUsd, coinPrice } from '@/lib/coins/format';
+
+const PLATFORM_FEE_BPS = Number(process.env.NEXT_PUBLIC_STEINZ_FEE_BPS) || 50;
 
 const NATIVE: Record<string, { symbol: string; decimals: number }> = {
   solana: { symbol: 'SOL', decimals: 9 },
@@ -81,12 +84,16 @@ export function TradeCard({ coin, livePrice, liveMcap }: { coin: Coin; livePrice
 
   const buildParams = useCallback(() => {
     if (!address || !native) return null;
+    // Force the built-in Naka wallet to sign with itself rather than an external
+    // wallet that may also be present in the browser.
+    const walletKind = getBuiltinWalletAddress() === address ? ('builtin' as const) : undefined;
     if (side === 'buy') {
       if (!nativeAmount || nativeAmount <= 0) return null;
-      return { chain: coin.chain, inputToken: native.symbol, outputToken: coin.tokenAddress, inputAmount: nativeAmount.toFixed(9), inputDecimals: native.decimals, userAddress: address, slippageBps: SLIPPAGE_BPS };
+      return { chain: coin.chain, inputToken: native.symbol, outputToken: coin.tokenAddress, inputAmount: nativeAmount.toFixed(9), inputDecimals: native.decimals, userAddress: address, slippageBps: SLIPPAGE_BPS, walletKind };
     }
-    if (!canSell || sellAmount <= 0) return null;
-    return { chain: coin.chain, inputToken: coin.tokenAddress, outputToken: native.symbol, inputAmount: String(sellAmount), inputDecimals: coin.decimals ?? 18, userAddress: address, slippageBps: SLIPPAGE_BPS };
+    // Never guess decimals for a sell: without them we cannot size base units.
+    if (!canSell || sellAmount <= 0 || coin.decimals == null) return null;
+    return { chain: coin.chain, inputToken: coin.tokenAddress, outputToken: native.symbol, inputAmount: String(sellAmount), inputDecimals: coin.decimals, userAddress: address, slippageBps: SLIPPAGE_BPS, walletKind };
   }, [address, native, side, nativeAmount, canSell, sellAmount, coin]);
 
   // Debounced live quote as the amount changes.
@@ -226,7 +233,7 @@ export function TradeCard({ coin, livePrice, liveMcap }: { coin: Coin; livePrice
           <>
             <span className="text-white/60">You receive</span>
             <span className="text-white font-semibold tabular-nums">
-              {side === 'buy' ? `${(parseFloat(quote.amountOut) || 0).toLocaleString('en-US', { maximumFractionDigits: 4 })} ${coin.symbol}` : `~${native ? native.symbol : ''}`}
+              {`${(parseFloat(quote.amountOut) || 0).toLocaleString('en-US', { maximumFractionDigits: side === 'buy' ? 4 : 6 })} ${side === 'buy' ? coin.symbol : (native?.symbol ?? '')}`}
             </span>
           </>
         ) : (
@@ -240,7 +247,7 @@ export function TradeCard({ coin, livePrice, liveMcap }: { coin: Coin; livePrice
         type="button"
         onClick={submit}
         disabled={executing || loading || !buildParams()}
-        className={`w-full rounded-xl py-3 text-[15px] font-semibold text-white inline-flex items-center justify-center gap-2 disabled:opacity-45 ${side === 'buy' ? '' : ''}`}
+        className="w-full rounded-xl py-3 text-[15px] font-semibold text-white inline-flex items-center justify-center gap-2 disabled:opacity-45"
         style={{ background: side === 'buy' ? 'linear-gradient(135deg,#12b981,#0e9f6e)' : 'linear-gradient(135deg,#f43f5e,#e11d48)' }}
       >
         {executing ? <Loader2 className="w-4 h-4 animate-spin" /> : done ? <Check className="w-4 h-4" /> : null}
@@ -253,7 +260,7 @@ export function TradeCard({ coin, livePrice, liveMcap }: { coin: Coin; livePrice
         </Link>
       ) : null}
 
-      <p className="text-[11px] text-white/35 text-center mt-2">Signed by your own wallet. Non-custodial. 0.5% fee.</p>
+      <p className="text-[11px] text-white/35 text-center mt-2">Signed by your own wallet. Non-custodial. {(PLATFORM_FEE_BPS / 100).toString()}% fee.</p>
 
       {/* Built-in wallet unlock prompt surfaced by the signer. */}
       {unlockRequest ? (
@@ -266,7 +273,14 @@ export function TradeCard({ coin, livePrice, liveMcap }: { coin: Coin; livePrice
 function UnlockModal({ onSubmit, onCancel }: { onSubmit: (pw: string) => void; onCancel: () => void }) {
   const [pw, setPw] = useState('');
   return (
-    <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onCancel}>
+    <div
+      className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      onClick={onCancel}
+      onKeyDown={(e) => { if (e.key === 'Escape') onCancel(); }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Unlock wallet"
+    >
       <div className="w-full max-w-sm nl-glass rounded-2xl p-4" onClick={(e) => e.stopPropagation()}>
         <div className="text-[15px] font-semibold text-white mb-1">Unlock wallet</div>
         <p className="text-[12px] text-white/50 mb-3">Enter your wallet password to sign this trade. It never leaves your device.</p>

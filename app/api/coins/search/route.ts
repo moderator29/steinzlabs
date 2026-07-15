@@ -26,7 +26,7 @@ async function searchCoins(q: string) {
     const results = await universalSearch(q);
     return results
       .filter((r) => isCoinChain(r.chain))
-      .filter((r) => (r.liquidityUSD ?? r.liquidity ?? 0) >= MIN_LIQ || (r.marketCap ?? 0) > 0)
+      .filter((r) => (r.liquidityUSD ?? r.liquidity ?? 0) >= MIN_LIQ)
       .slice(0, 20)
       .map((r) => ({
         chain: r.chain,

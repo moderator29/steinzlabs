@@ -164,6 +164,10 @@ export async function resolveCoin(chain: string, address: string): Promise<Coin 
   if (!pair) return null;
 
   const coin = coinFromPair(chain, address, pair);
+  // Only coins that have really graduated onto a DEX (a real pool clearing the
+  // liquidity bar) are surfaced. This matches discovery and the trade gate, so
+  // a low-liquidity or bonding-curve token never opens as a tradable coin.
+  if (!coin.isGraduated) return null;
   if (flags) {
     coin.verified = flags.verified;
     coin.featured = flags.featured;
@@ -301,8 +305,14 @@ export async function getDiscovery(tab: DiscoveryTab, chain?: string): Promise<C
     chains.map(async (c) => {
       try {
         if (tab === 'graduated') {
-          const pairs = await getNewPairs(GRAD_MIN_LIQUIDITY_USD, c).catch(() => [] as DexPair[]);
-          return mapPoolPairs(c, pairs);
+          // GeckoTerminal new_pools covers all three chains (the older pumpfun
+          // search only returned Solana, leaving ETH and BSC empty). mapPoolPairs
+          // keeps only pools that clear the real-liquidity graduation bar.
+          const [fresh, pumpish] = await Promise.all([
+            getPoolsForIngest(c, 1, 'new_pools').catch(() => [] as DexPair[]),
+            c === 'solana' ? getNewPairs(GRAD_MIN_LIQUIDITY_USD, c).catch(() => [] as DexPair[]) : Promise.resolve([] as DexPair[]),
+          ]);
+          return mapPoolPairs(c, [...fresh, ...pumpish]);
         }
         // trending: GeckoTerminal trending pools are the shared keyless source.
         const pairs = await getPoolsForIngest(c, 1, 'trending_pools').catch(() => [] as DexPair[]);
@@ -361,12 +371,17 @@ export async function getDiscovery(tab: DiscoveryTab, chain?: string): Promise<C
 async function getMostHeldFromRegistry(chains: CoinChain[]): Promise<Coin[]> {
   try {
     const sb = getSupabaseAdmin();
+    // Only rows refreshed recently and still above the liquidity bar, so a
+    // rugged or stale coin is never shown with a live-looking price.
+    const freshSince = new Date(Date.now() - 30 * 60 * 1000).toISOString();
     const { data } = await sb
       .from('coin_registry')
       .select('*')
       .in('chain', chains)
       .eq('hidden', false)
       .eq('is_graduated', true)
+      .gte('refreshed_at', freshSince)
+      .gte('liquidity_usd', GRAD_MIN_LIQUIDITY_USD)
       .order('holders_count', { ascending: false, nullsFirst: false })
       .order('volume_24h_usd', { ascending: false, nullsFirst: false })
       .limit(50);

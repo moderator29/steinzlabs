@@ -16,7 +16,7 @@
 
 import { useState, useCallback } from 'react';
 import { SwapQuote } from '@/lib/market/types';
-import { useSwapBroadcast, detectWalletKind } from '@/lib/hooks/useSwapBroadcast';
+import { useSwapBroadcast, detectWalletKind, type WalletKind } from '@/lib/hooks/useSwapBroadcast';
 
 // Client-safe mirror of the platform fee (same single source of truth,
 // NEXT_PUBLIC_STEINZ_FEE_BPS). Read directly here rather than importing from
@@ -31,6 +31,9 @@ interface SwapExecutionParams {
   inputDecimals: number;
   userAddress: string;
   slippageBps: number;
+  // Explicit wallet kind so a built-in Naka wallet is not misrouted to an
+  // external wallet when one is also present in the browser.
+  walletKind?: WalletKind;
 }
 
 interface MevRisk {
@@ -134,7 +137,7 @@ export function useSwapExecution() {
       const data = await res.json().catch(() => ({} as { error?: string }));
       if (!res.ok) throw new Error((data as { error?: string }).error ?? `Quote failed (${res.status})`);
 
-      const walletKind = detectWalletKind(params.chain, null);
+      const walletKind = params.walletKind ?? detectWalletKind(params.chain, null);
       const hash = await broadcast({ quote: data, chain: params.chain, walletKind, address: params.userAddress });
       setTxHash(hash);
 

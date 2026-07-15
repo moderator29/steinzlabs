@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     const results = await universalSearch(sym);
     const best = results
       .filter((r) => isCoinChain(r.chain) && r.symbol?.toUpperCase() === sym)
-      .filter((r) => (r.liquidityUSD ?? r.liquidity ?? 0) >= 1000 || (r.marketCap ?? 0) > 0)
+      .filter((r) => (r.liquidityUSD ?? r.liquidity ?? 0) >= 1000)
       .sort((a, b) => (b.volumeUSD ?? 0) - (a.volumeUSD ?? 0))[0];
     if (!best) return NextResponse.json({ coin: null });
     return NextResponse.json({
