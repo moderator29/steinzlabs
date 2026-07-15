@@ -216,17 +216,26 @@ export default function MessagesInboxPage() {
 
   const ConvoRow = ({ c }: { c: Conversation }) => {
     const peer = peers[c.peer_id];
+    // `peer` is undefined until the batched profile fetch resolves. Show a
+    // subtle skeleton during that window instead of flashing "Unknown user".
+    const loaded = peer !== undefined;
     const initial = (peer?.display_name || peer?.username || '?').slice(0, 1).toUpperCase();
     return (
       <Link key={c.id} href={`/dashboard/messages/${c.peer_id}`} className="flex items-center gap-3 p-3 hover:bg-white/[0.025]">
         {peer?.avatar_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={peer.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover border border-white/10" />
-        ) : (
+        ) : loaded ? (
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0066FF)] to-[#7C3AED] flex items-center justify-center text-sm font-bold text-white">{initial}</div>
+        ) : (
+          <div className="w-10 h-10 rounded-full bg-white/[0.06] animate-pulse" />
         )}
         <div className="min-w-0 flex-1">
-          <div className={`text-sm truncate ${c.unread ? 'font-bold text-white' : 'font-semibold text-white'}`}>{peer?.display_name || peer?.username || 'Unknown user'}</div>
+          {loaded ? (
+            <div className={`text-sm truncate ${c.unread ? 'font-bold text-white' : 'font-semibold text-white'}`}>{peer?.display_name || peer?.username || 'Member'}</div>
+          ) : (
+            <div className="h-3.5 w-28 rounded bg-white/[0.08] animate-pulse" />
+          )}
           <div className={`text-[11px] truncate ${c.unread ? 'text-slate-300' : 'text-slate-500'}`}>{previewText(c)}</div>
         </div>
         <div className="flex flex-col items-end gap-1">

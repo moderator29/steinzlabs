@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowRight, BookOpen } from 'lucide-react';
 import SteinzLogo from '@/components/ui/SteinzLogo';
-import { AskChainHero } from '@/components/landing/AskChainHero';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 // Honest, defensible stat chips only. 8 supported chains, 1,000+ tracked
@@ -102,9 +101,6 @@ export function HeroSection() {
             <BookOpen className="w-[15px] h-[15px]" /> Docs
           </Link>
         </div>
-
-        {/* Live "Ask the chain" prompt: the signature AI surface up front. */}
-        <AskChainHero />
 
         {/* Honest stat chips: a tidy 2x2 grid on mobile, a single spec row on
             desktop with thin dividers. No 3+1 wrap. */}

@@ -133,6 +133,33 @@ export default function WireTab({ onGift, author, reposts, repliesBy, mediaAutho
     void load();
   }, [load]);
 
+  // Show a just-published wire immediately. The compose page sets the
+  // `nl-wire-posted` flag on success; when we return here (mount or the tab
+  // regaining focus) we refetch the latest feed and clear the flag. This
+  // defeats Next.js's client router cache restoring a stale snapshot, which is
+  // why a new wire previously only appeared after a hard reload.
+  const lastPostedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isMainFeed) return;
+    const maybeRefresh = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      let flag: string | null = null;
+      try { flag = window.localStorage.getItem('nl-wire-posted'); } catch { /* ignore */ }
+      if (flag && flag !== lastPostedRef.current) {
+        lastPostedRef.current = flag;
+        try { window.localStorage.removeItem('nl-wire-posted'); } catch { /* ignore */ }
+        void load();
+      }
+    };
+    maybeRefresh();
+    window.addEventListener('focus', maybeRefresh);
+    document.addEventListener('visibilitychange', maybeRefresh);
+    return () => {
+      window.removeEventListener('focus', maybeRefresh);
+      document.removeEventListener('visibilitychange', maybeRefresh);
+    };
+  }, [isMainFeed, load]);
+
   const loadMore = useCallback(async () => {
     if (loadingMore || done || !cursor) return;
     setLoadingMore(true);

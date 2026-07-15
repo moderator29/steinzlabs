@@ -495,13 +495,21 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
           {peer?.avatar_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={peer.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10" />
-          ) : (
+          ) : peer ? (
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--nl-blue,#0066FF)] to-[#7C3AED] flex items-center justify-center text-xs font-bold text-white">
-              {(peer?.display_name || peer?.username || '?').slice(0, 1).toUpperCase()}
+              {(peer.display_name || peer.username || '?').slice(0, 1).toUpperCase()}
             </div>
+          ) : (
+            // Peer profile still loading — skeleton instead of a placeholder
+            // name flash ("Conversation" / "Unknown user").
+            <div className="w-8 h-8 rounded-full bg-white/[0.06] animate-pulse" />
           )}
           <div className="min-w-0">
-            <div className="text-sm font-semibold text-white truncate leading-tight">{peerName}</div>
+            {peer ? (
+              <div className="text-sm font-semibold text-white truncate leading-tight">{peerName}</div>
+            ) : (
+              <div className="h-3.5 w-24 rounded bg-white/[0.08] animate-pulse" />
+            )}
             <div
               className="inline-flex items-center gap-1 text-[10px] leading-tight"
               title={
