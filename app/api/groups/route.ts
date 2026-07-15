@@ -44,7 +44,13 @@ export async function GET() {
     .order('member_count', { ascending: false })
     .limit(30);
 
-  return NextResponse.json({ mine, discover: discover ?? [] });
+  let allowGroupInvites = true;
+  if (user) {
+    const { data: prof } = await db.from('profiles').select('allow_group_invites').eq('id', user.id).maybeSingle();
+    allowGroupInvites = prof?.allow_group_invites !== false;
+  }
+
+  return NextResponse.json({ mine, discover: discover ?? [], allowGroupInvites });
 }
 
 export async function POST(req: NextRequest) {

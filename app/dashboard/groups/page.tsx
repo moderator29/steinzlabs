@@ -38,6 +38,7 @@ function GroupCard({ g }: { g: Group }) {
 export default function GroupsPage() {
   const [mine, setMine] = useState<Group[] | null>(null);
   const [discover, setDiscover] = useState<Group[]>([]);
+  const [allowInvites, setAllowInvites] = useState(true);
 
   useEffect(() => {
     (async () => {
@@ -46,9 +47,17 @@ export default function GroupsPage() {
         const j = await r.json();
         setMine(Array.isArray(j.mine) ? j.mine : []);
         setDiscover(Array.isArray(j.discover) ? j.discover : []);
+        setAllowInvites(j.allowGroupInvites !== false);
       } catch { setMine([]); }
     })();
   }, []);
+
+  const toggleInvites = async (next: boolean) => {
+    setAllowInvites(next); // optimistic
+    try {
+      await fetch('/api/social/profile/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ allow_group_invites: next }) });
+    } catch { setAllowInvites(!next); }
+  };
 
   return (
     <div className="min-h-screen text-white max-w-2xl mx-auto px-4 py-5 pb-28">
@@ -59,6 +68,23 @@ export default function GroupsPage() {
           <Plus className="w-4 h-4" /> Create
         </Link>
       </div>
+
+      {/* Invite consent: let friends add me to groups without asking. */}
+      <label className="flex items-center gap-3 nl-glass rounded-2xl p-3.5 mb-5 cursor-pointer">
+        <span className="min-w-0 flex-1">
+          <span className="block text-[14px] font-semibold text-white">Let friends add me to groups</span>
+          <span className="block text-[12px] text-white/45">When off, friends must send an invite you accept first.</span>
+        </span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={allowInvites}
+          onClick={() => toggleInvites(!allowInvites)}
+          className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${allowInvites ? 'bg-[#0066FF]' : 'bg-white/15'}`}
+        >
+          <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${allowInvites ? 'translate-x-5' : ''}`} />
+        </button>
+      </label>
 
       <section className="mb-6">
         <h2 className="text-[13px] font-semibold text-white/70 mb-2 px-0.5">Your groups</h2>

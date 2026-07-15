@@ -16,6 +16,8 @@ const Body = z.object({
   show_success_rate:    z.boolean().optional(),
   show_wallet_balance:  z.boolean().optional(),
   show_activity:        z.boolean().optional(),
+  // Whether mutual-follow friends may add me to a group without asking first.
+  allow_group_invites:  z.boolean().optional(),
   bio:                  z.string().max(500).optional(),
   // z.string().url() ALSO accepts javascript:/data: URIs, which become a stored
   // XSS the moment a viewer clicks the link on the public profile. Constrain the
