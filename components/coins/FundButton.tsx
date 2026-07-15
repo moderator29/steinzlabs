@@ -13,6 +13,14 @@ import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { getOnrampUrl } from '@/lib/wallet/onramp';
+import { isSolanaAddress } from '@/lib/utils/addressNormalize';
+
+/** Funds-safety: only build an on-ramp URL when the address format matches the
+ *  chain, so the provider never delivers to the wrong network. */
+function addressMatchesChain(address: string, chain: string): boolean {
+  if (chain === 'solana') return isSolanaAddress(address);
+  return /^0x[a-fA-F0-9]{40}$/.test(address);
+}
 
 export function FundButton({
   address,
@@ -27,7 +35,10 @@ export function FundButton({
 }) {
   const router = useRouter();
   const onClick = useCallback(() => {
-    const url = address ? getOnrampUrl({ address, chain }) : null;
+    // Only open the direct on-ramp when the address genuinely belongs to this
+    // chain; otherwise route to the wallet, which resolves the correct per-chain
+    // address (e.g. the derived Solana address) before funding.
+    const url = address && addressMatchesChain(address, chain) ? getOnrampUrl({ address, chain }) : null;
     if (url) window.open(url, '_blank', 'noopener,noreferrer');
     else router.push('/dashboard?tab=wallet');
   }, [address, chain, router]);

@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import * as Sentry from '@sentry/nextjs';
-import { Wallet, ArrowDown, ArrowUp, Camera, RotateCcw, ExternalLink, Plus, Key } from 'lucide-react';
+import { Wallet, ArrowDown, ArrowUp, Camera, RotateCcw, ExternalLink, Plus, Key, ShoppingCart, Coins as CoinsIcon } from 'lucide-react';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { useRouter } from 'next/navigation';
+import { getOnrampUrl } from '@/lib/wallet/onramp';
+import { isSolanaAddress } from '@/lib/utils/addressNormalize';
 
 interface TokenBalance {
   symbol: string;
@@ -33,6 +35,7 @@ interface BalancesResponse {
 
 export default function WalletTab() {
   const { address: walletAddress, shortAddress, provider, isConnected, connectAuto, connecting } = useWallet();
+  const router = useRouter();
   const [balances, setBalances] = useState<TokenBalance[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,22 +110,32 @@ export default function WalletTab() {
         <div className="text-sm text-gray-400 mb-4">
           Open the portfolio dashboard for live USD pricing and 24h moves.
         </div>
-        <div className="flex justify-center gap-6">
-          {[
-            { icon: ArrowDown, label: 'Receive' },
-            { icon: ArrowUp, label: 'Send' },
-            { icon: Camera, label: 'Scan' },
-          ].map((action) => {
-            const Icon = action.icon;
-            return (
-              <button key={action.label} className="flex flex-col items-center gap-1.5">
-                <div className="w-10 h-10 border border-[#0066FF]/30 rounded-full flex items-center justify-center hover:bg-[#0066FF]/10 transition-colors">
-                  <Icon className="w-4 h-4 text-[#0066FF]" />
-                </div>
-                <span className="text-[10px] text-gray-400">{action.label}</span>
-              </button>
-            );
-          })}
+        <div className="flex justify-center gap-4 flex-wrap">
+          {(() => {
+            // Fund with card via the real on-ramp. Chain is derived from the
+            // wallet address format so the provider always delivers to the
+            // right network; falls back to the full wallet page otherwise.
+            const buyChain = walletAddress && isSolanaAddress(walletAddress) ? 'solana' : 'ethereum';
+            const buyUrl = walletAddress ? getOnrampUrl({ address: walletAddress, chain: buyChain }) : null;
+            const actions: Array<{ icon: typeof ArrowDown; label: string; onClick?: () => void }> = [
+              { icon: ShoppingCart, label: 'Buy', onClick: () => { if (buyUrl) window.open(buyUrl, '_blank', 'noopener,noreferrer'); else router.push('/dashboard/wallet-page'); } },
+              { icon: CoinsIcon, label: 'Coins', onClick: () => router.push('/dashboard/coins') },
+              { icon: ArrowDown, label: 'Receive' },
+              { icon: ArrowUp, label: 'Send' },
+              { icon: Camera, label: 'Scan' },
+            ];
+            return actions.map((action) => {
+              const Icon = action.icon;
+              return (
+                <button key={action.label} type="button" onClick={action.onClick} className="flex flex-col items-center gap-1.5">
+                  <div className="w-10 h-10 border border-[#0066FF]/30 rounded-full flex items-center justify-center hover:bg-[#0066FF]/10 transition-colors">
+                    <Icon className="w-4 h-4 text-[#0066FF]" />
+                  </div>
+                  <span className="text-[10px] text-gray-400">{action.label}</span>
+                </button>
+              );
+            });
+          })()}
         </div>
       </div>
 

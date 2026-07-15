@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, X, Star, Flame, Sprout, Users2, Plus, Trophy } from 'lucide-react';
+import { Search, X, Star, Flame, Sprout, Users2, Trophy } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { CoinLogo, PriceDelta } from '@/components/coins/atoms';
 import { FeaturedCoin, CoinRail } from '@/components/coins/CoinRails';
@@ -20,6 +20,8 @@ import { TopTrades } from '@/components/coins/TopTrades';
 import { CircleBuying } from '@/components/coins/CircleBuying';
 import { LiveTape } from '@/components/coins/LiveTape';
 import { CoinMomentsStrip } from '@/components/coins/CoinMomentsStrip';
+import { FundButton } from '@/components/coins/FundButton';
+import { isSolanaAddress } from '@/lib/utils/addressNormalize';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 import { useWallet } from '@/lib/hooks/useWallet';
 import type { Coin } from '@/lib/coins/types';
@@ -39,7 +41,6 @@ export default function CoinsPage() {
   const [people, setPeople] = useState<Person[]>([]);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { address, balance } = useWallet();
-  const hasFunds = (balance?.totalUsd ?? 0) > 0;
 
   const loadCats = useCallback(async () => {
     setCats(null);
@@ -92,13 +93,12 @@ export default function CoinsPage() {
               <div className="text-[10px] text-white/40">Wallet</div>
             </div>
           ) : null}
-          <Link
-            href="/dashboard?tab=wallet"
-            className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[13px] font-semibold text-white"
-            style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF)', boxShadow: hasFunds ? 'none' : '0 6px 20px rgba(0,102,255,.4)' }}
-          >
-            <Plus className="w-4 h-4" /> Deposit
-          </Link>
+          <FundButton
+            address={address}
+            chain={address && isSolanaAddress(address) ? 'solana' : 'ethereum'}
+            label="Deposit"
+            className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[13px] font-semibold text-white shrink-0 bg-[linear-gradient(135deg,#1E90FF,#0066FF)] shadow-[0_6px_20px_rgba(0,102,255,.4)]"
+          />
         </div>
       </div>
 
