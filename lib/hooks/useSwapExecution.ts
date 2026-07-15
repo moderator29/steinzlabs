@@ -50,6 +50,9 @@ export function useSwapExecution() {
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [mevRisk, setMevRisk] = useState<MevRisk | null>(null);
+  // Raw base-unit output amount of the EXECUTED quote (not the display quote),
+  // so callers can record what actually settled rather than an estimate.
+  const [executedOutRaw, setExecutedOutRaw] = useState<string | null>(null);
 
   const reset = useCallback(() => {
     setQuote(null);
@@ -58,6 +61,7 @@ export function useSwapExecution() {
     setError(null);
     setTxHash(null);
     setMevRisk(null);
+    setExecutedOutRaw(null);
   }, []);
 
   const getQuote = useCallback(async (params: SwapExecutionParams) => {
@@ -136,6 +140,9 @@ export function useSwapExecution() {
       const res = await fetch(`/api/swap/quote?${qp.toString()}`, { signal: AbortSignal.timeout(20_000) });
       const data = await res.json().catch(() => ({} as { error?: string }));
       if (!res.ok) throw new Error((data as { error?: string }).error ?? `Quote failed (${res.status})`);
+      // Capture the executable quote's output (base units) for accurate recording.
+      const outRaw = (data as { buyAmount?: string | number }).buyAmount;
+      if (outRaw != null) setExecutedOutRaw(String(outRaw));
 
       const walletKind = params.walletKind ?? detectWalletKind(params.chain, null);
       const hash = await broadcast({ quote: data, chain: params.chain, walletKind, address: params.userAddress });
@@ -169,7 +176,7 @@ export function useSwapExecution() {
   }, [broadcast, quote]);
 
   return {
-    quote, loading, executing, error, txHash, mevRisk,
+    quote, loading, executing, error, txHash, mevRisk, executedOutRaw,
     getQuote, executeSwap, reset,
     unlockRequest, resolveUnlock, cancelUnlock,
   };

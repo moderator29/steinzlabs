@@ -5,6 +5,20 @@ import * as Sentry from '@sentry/nextjs';
 import { getSwapQuote, getChainId } from '@/lib/services/zerox';
 import { getJupiterQuote, buildSwapTransaction } from '@/lib/services';
 import { resolveSwapAddress, resolveSwapDecimals, toBaseUnits } from '@/lib/market/swapTokenMeta';
+import { PublicKey } from '@solana/web3.js';
+
+// Associated Token Account derivation (no spl-token dependency needed).
+const SPL_TOKEN_PROGRAM = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+const ASSOCIATED_TOKEN_PROGRAM = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+function deriveSolanaAta(mint: string, owner: string): string | null {
+  try {
+    const [ata] = PublicKey.findProgramAddressSync(
+      [new PublicKey(owner).toBuffer(), SPL_TOKEN_PROGRAM.toBuffer(), new PublicKey(mint).toBuffer()],
+      ASSOCIATED_TOKEN_PROGRAM,
+    );
+    return ata.toBase58();
+  } catch { return null; }
+}
 
 // §swap-quote — returns the EXECUTABLE blob the wallet signs. Two gaps this
 // route used to have:
@@ -75,11 +89,24 @@ export async function GET(request: NextRequest) {
       if (!Number.isFinite(lamports) || lamports <= 0) {
         return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
       }
-      const quote = await getJupiterQuote(sellAddress, buyAddress, lamports, slippageBps);
+      // Collect the platform fee on Solana too. The fee is taken from the
+      // output mint into the treasury's associated token account for that mint.
+      // If that account cannot be used (for example it does not exist yet for a
+      // brand-new coin), we fall back to a fee-less build so the swap always
+      // settles rather than failing.
+      const feeWallet = process.env.NEXT_PUBLIC_FEE_RECIPIENT_SOL;
+      const feeBps = Number(process.env.NEXT_PUBLIC_STEINZ_FEE_BPS) || 50;
+      const feeAccount = feeWallet ? deriveSolanaAta(buyAddress, feeWallet) : null;
+
+      const quote = await getJupiterQuote(sellAddress, buyAddress, lamports, slippageBps, feeAccount ? feeBps : 0);
       if (!quote) {
         return NextResponse.json({ error: 'Jupiter: no route found for this pair' }, { status: 502 });
       }
-      const built = await buildSwapTransaction(quote, taker);
+      let built = feeAccount ? await buildSwapTransaction(quote, taker, { feeAccount }) : await buildSwapTransaction(quote, taker);
+      if (!built && feeAccount) {
+        const plainQuote = await getJupiterQuote(sellAddress, buyAddress, lamports, slippageBps, 0);
+        built = plainQuote ? await buildSwapTransaction(plainQuote, taker) : null;
+      }
       if (!built) {
         return NextResponse.json({ error: 'Failed to build Solana swap transaction' }, { status: 502 });
       }

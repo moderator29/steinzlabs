@@ -41,7 +41,7 @@ export function TradeCard({ coin, livePrice, liveMcap }: { coin: Coin; livePrice
   const [nativePriceUsd, setNativePriceUsd] = useState<number | null>(null);
   const [myTokens, setMyTokens] = useState<number>(0);
   const [done, setDone] = useState(false);
-  const { quote, loading, executing, error, txHash, getQuote, executeSwap, reset, unlockRequest, resolveUnlock, cancelUnlock } = useSwapExecution();
+  const { quote, loading, executing, error, txHash, executedOutRaw, getQuote, executeSwap, reset, unlockRequest, resolveUnlock, cancelUnlock } = useSwapExecution();
   const quoteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const price = livePrice ?? coin.priceUsd;
@@ -112,24 +112,36 @@ export function TradeCard({ coin, livePrice, liveMcap }: { coin: Coin; livePrice
     await executeSwap(params);
   };
 
-  // Record the settled trade into our coin feed once broadcast confirms.
+  // Record the settled trade into our coin feed once broadcast confirms. We use
+  // the EXECUTED quote's output amount (not the display estimate) so recorded
+  // holdings and PnL match the on-chain fill.
   useEffect(() => {
     if (!txHash) return;
-    const receivedCoin = side === 'buy' && quote ? parseFloat(quote.amountOut) || 0 : 0;
-    const tokenAmount = side === 'buy' ? receivedCoin : sellAmount;
-    const usdAmount = side === 'buy' ? usd : (price != null ? sellAmount * price : 0);
+    const pow = (d: number) => Math.pow(10, d);
     setDone(true);
     (async () => {
-      // A sell needs a real USD notional; if we somehow lack a price, fetch a
-      // fresh one rather than record a zero that the API would reject.
       let priceForRecord = price;
-      let usdForRecord = usdAmount;
-      if (side === 'sell' && (priceForRecord == null || usdForRecord <= 0)) {
-        try {
-          const r = await fetch(`/api/coins/${coin.chain}/${encodeURIComponent(coin.tokenAddress)}/price`, { cache: 'no-store' });
-          const j = await r.json();
-          if (j?.priceUsd != null) { priceForRecord = Number(j.priceUsd); usdForRecord = sellAmount * priceForRecord; }
-        } catch { /* leave as-is */ }
+      // BUY: tokens received = executed output / coin decimals; cost = USD paid.
+      // SELL: native received = executed output / native decimals; proceeds in USD.
+      let tokenAmount: number;
+      let usdForRecord: number;
+      if (side === 'buy') {
+        const received = executedOutRaw && coin.decimals != null
+          ? Number(executedOutRaw) / pow(coin.decimals)
+          : (quote ? parseFloat(quote.amountOut) || 0 : 0);
+        tokenAmount = received;
+        usdForRecord = usd; // what the user actually paid
+      } else {
+        tokenAmount = sellAmount;
+        const nativeReceived = executedOutRaw && native ? Number(executedOutRaw) / pow(native.decimals) : null;
+        usdForRecord = nativeReceived != null && nativePriceUsd ? nativeReceived * nativePriceUsd : (price != null ? sellAmount * price : 0);
+        if (usdForRecord <= 0) {
+          try {
+            const r = await fetch(`/api/coins/${coin.chain}/${encodeURIComponent(coin.tokenAddress)}/price`, { cache: 'no-store' });
+            const j = await r.json();
+            if (j?.priceUsd != null) { priceForRecord = Number(j.priceUsd); usdForRecord = sellAmount * priceForRecord; }
+          } catch { /* leave as-is */ }
+        }
       }
       if (usdForRecord <= 0 || tokenAmount <= 0) return;
       await fetch('/api/coins/trade', {

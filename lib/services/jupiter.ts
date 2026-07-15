@@ -115,9 +115,10 @@ export async function getQuote(
   inputMint: string,
   outputMint: string,
   amountLamports: number,
-  slippageBps = 50
+  slippageBps = 50,
+  platformFeeBps = 0,
 ): Promise<JupiterQuote | null> {
-  const key = cacheKey('jupiter', 'quote', { inputMint, outputMint, amountLamports, slippageBps });
+  const key = cacheKey('jupiter', 'quote', { inputMint, outputMint, amountLamports, slippageBps, platformFeeBps });
   return withCache(key, TTL.SWAP_ROUTE, async () => {
     try {
       const params = new URLSearchParams({
@@ -129,6 +130,9 @@ export async function getQuote(
         // tokens, which is a common cause of quotes that fail at execution.
         restrictIntermediateTokens: 'true',
       });
+      // Reserve the platform fee in the quote so Jupiter takes it from the
+      // output mint at execution (paired with feeAccount on the build).
+      if (platformFeeBps > 0) params.set('platformFeeBps', String(platformFeeBps));
 
       const data = await jupiterFetch(`${QUOTE_URL}/quote?${params}`) as Record<string, unknown>;
 
