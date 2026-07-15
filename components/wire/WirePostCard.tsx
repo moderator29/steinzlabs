@@ -11,7 +11,7 @@ import { TierBadge } from '@/components/ui/TierBadge';
 import { wireTopicLabel } from '@/lib/wire/topics';
 import { wireRelativeTime } from '@/lib/wire/format';
 import { SignalRail } from './WireSignalRail';
-import { CashtagChip } from './CashtagChip';
+import { renderRichText } from '@/lib/wire/richText';
 import { WirePrediction as WirePredictionInline } from './WirePrediction';
 import { WireActionBar } from './WireActionBar';
 
@@ -108,50 +108,6 @@ export interface WirePostCardProps {
    * cards already shown inside a thread (parent card / replies).
    */
   onOpenPost?: (post: WirePost) => void;
-}
-
-// A #hashtag or a $cashtag token. Unicode-aware for non-latin hashtags. A
-// cashtag needs a leading letter so a plain "$100" is never treated as a ticker.
-const TOKEN_RE = /(#[\p{L}\p{N}_]+|\$[A-Za-z][A-Za-z0-9]{0,9})/gu;
-
-/**
- * Render a wire body as React nodes, turning every #hashtag into a blue link and
- * every $cashtag into a live price chip. Whitespace/newlines are preserved by
- * the caller's `whitespace-pre-wrap`.
- */
-function renderBody(text: string, onHashtag?: (tag: string) => void): React.ReactNode[] {
-  const parts = text.split(TOKEN_RE);
-  return parts.map((part, i) => {
-    // Odd indices are the captured tokens.
-    if (i % 2 === 1) {
-      if (part.startsWith('#')) {
-        const tag = part.slice(1).toLowerCase();
-        if (onHashtag) {
-          return (
-            <button
-              key={i}
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onHashtag(tag);
-              }}
-              className="text-[#4d94ff] hover:underline font-medium"
-            >
-              {part}
-            </button>
-          );
-        }
-        return (
-          <span key={i} className="text-[#4d94ff] font-medium">
-            {part}
-          </span>
-        );
-      }
-      // $cashtag
-      return <CashtagChip key={i} symbol={part.slice(1)} />;
-    }
-    return <span key={i}>{part}</span>;
-  });
 }
 
 function fmtUsd(n: number): string {
@@ -483,7 +439,7 @@ function WireBody({
 
         {post.body ? (
           <p className={`mt-1.5 text-white/90 whitespace-pre-wrap break-words leading-relaxed ${inset ? 'text-sm' : 'text-[15px]'}`}>
-            {renderBody(post.body, onHashtag)}
+            {renderRichText(post.body, { onHashtag })}
           </p>
         ) : null}
 
