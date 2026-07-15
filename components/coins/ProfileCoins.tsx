@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Coins as CoinsIcon, Eye, EyeOff, Share2 } from 'lucide-react';
+import { RecapShareButton } from '@/components/coins/RecapShareButton';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { CoinLogo, PriceDelta } from './atoms';
 import { compactUsd } from '@/lib/coins/format';
@@ -89,9 +90,12 @@ export function ProfileCoins({ username, isOwner = false }: { username: string; 
       <div className="flex items-center justify-between mb-3">
         <div className="inline-flex items-center gap-2 text-[13px] font-semibold text-white/80"><CoinsIcon className="w-4 h-4 text-[#7FB2FF]" /> Coins</div>
         {isOwner ? (
-          <button type="button" onClick={() => toggleVisibility(!showBalance)} disabled={saving} className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-white/60 hover:text-white">
-            {showBalance ? <><Eye className="w-3.5 h-3.5" /> Public</> : <><EyeOff className="w-3.5 h-3.5" /> Hidden</>}
-          </button>
+          <div className="flex items-center gap-2">
+            <RecapShareButton username={username} kind="wrapped" period="month" />
+            <button type="button" onClick={() => toggleVisibility(!showBalance)} disabled={saving} className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-white/60 hover:text-white">
+              {showBalance ? <><Eye className="w-3.5 h-3.5" /> Public</> : <><EyeOff className="w-3.5 h-3.5" /> Hidden</>}
+            </button>
+          </div>
         ) : null}
       </div>
 

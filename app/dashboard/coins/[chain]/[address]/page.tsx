@@ -18,6 +18,10 @@ import { TradeCard } from '@/components/coins/TradeCard';
 import { HoldersTab, WireTab, InfoTab } from '@/components/coins/CoinTabs';
 import { CoinRoom } from '@/components/coins/CoinRoom';
 import { LimitBuyPanel } from '@/components/coins/LimitBuyPanel';
+import NakaScoreRing from '@/components/coins/NakaScoreRing';
+import { DeployerReputation } from '@/components/coins/DeployerReputation';
+import { DcaPanel } from '@/components/coins/DcaPanel';
+import SocialAlertToggle from '@/components/coins/SocialAlertToggle';
 import { useLivePrice } from '@/components/coins/useLivePrice';
 import type { Coin, CoinCandle, CoinTimeframe } from '@/lib/coins/types';
 import { coinPrice, compactUsd, formatAddress } from '@/lib/coins/format';
@@ -301,6 +305,13 @@ function CoinDetail({ params }: { params: Promise<{ chain: string; address: stri
           </div>
         </div>
 
+        {/* Signature signal + deployer trust: our own Naka Score ring and the
+            coin deployer's real track record. */}
+        <div className="flex flex-wrap items-center gap-3 mb-3">
+          <NakaScoreRing chain={chain} address={address} />
+          <div className="min-w-0 flex-1"><DeployerReputation chain={chain} address={address} /></div>
+        </div>
+
         {/* Chart first */}
         <div className="rounded-2xl overflow-hidden">
           {chartLoading && candles.length === 0 ? (
@@ -394,6 +405,14 @@ function CoinDetail({ params }: { params: Promise<{ chain: string; address: stri
         {/* Limit buy: arm a buy that pings you to sign when the trigger hits. */}
         <div className="mb-4">
           <LimitBuyPanel coin={coin} signedIn={signedIn} />
+        </div>
+
+        {/* Recurring buys (non-custodial reminders) and social buy alerts. */}
+        <div className="mb-4">
+          <DcaPanel coin={coin} signedIn={signedIn} />
+        </div>
+        <div className="mb-4">
+          <SocialAlertToggle chain={chain} address={address} signedIn={signedIn} />
         </div>
       </div>{/* /left column */}
 

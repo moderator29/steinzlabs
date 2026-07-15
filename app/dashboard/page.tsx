@@ -35,6 +35,7 @@ import { RenderWidgets } from '@/components/dashboard/RenderWidgets';
 import { DailyPulseSummary } from '@/components/dashboard/DailyPulseSummary';
 import { OverviewPreviews } from '@/components/dashboard/OverviewPreviews';
 import { CoinsWalletWidget } from '@/components/dashboard/CoinsWalletWidget';
+import { WatchlistTape } from '@/components/dashboard/WatchlistTape';
 import { PresenceHeartbeat } from '@/components/presence/PresenceHeartbeat';
 import { FirstRunTour } from '@/components/dashboard/FirstRunTour';
 
@@ -606,6 +607,9 @@ export default function Dashboard() {
           {/* Compact Coins wallet funnel: live wallet total + open coin
               positions, routing straight into Coins to trade. */}
           <CoinsWalletWidget />
+          {/* Pinned coin watchlist as a live mini-tape (renders nothing when
+              the watchlist is empty). */}
+          <WatchlistTape />
           {/* Quick-access previews under the portfolio: Watchlist, Messages and
               Swap — real data, deep-linked into each surface. */}
           <OverviewPreviews />
