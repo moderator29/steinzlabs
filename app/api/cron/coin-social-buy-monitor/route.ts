@@ -94,7 +94,10 @@ export async function GET(req: NextRequest) {
 
   let fired = 0;
   for (const a of alerts) {
-    const cohort = a.scope === 'proven' ? (provenIds ?? new Set<string>()) : await followsOf(a.user_id);
+    // Clone the cohort per alert: the shared proven set (and the per-owner
+    // follow cache) must not be mutated by the owner-exclusion below, or a
+    // later alert would see a cohort with members silently removed.
+    const cohort = new Set(a.scope === 'proven' ? (provenIds ?? new Set<string>()) : await followsOf(a.user_id));
     // Never notify the owner about their own buys.
     cohort.delete(a.user_id);
     if (cohort.size === 0) continue;
@@ -143,29 +146,32 @@ export async function GET(req: NextRequest) {
       body = `${lead} and ${buyerIds.length - 1} more bought ${compactUsd(totalUsd)} of ${sym} in total.`;
     }
 
-    await createUserNotification({
-      userId: a.user_id,
-      type: 'coin_social_alert',
-      title,
-      body,
-      url: `/dashboard/coins/${a.chain}/${encodeURIComponent(a.token_address)}`,
-      metadata: {
-        chain: a.chain,
-        token_key: a.token_key,
-        token_address: a.token_address,
-        symbol: a.symbol,
-        scope: a.scope,
-        buyers: buyerIds.length,
-        total_usd: totalUsd,
-        cohort: cohortLabel,
-      },
-    });
+    // One failed notification must not abort the remaining alerts.
+    try {
+      await createUserNotification({
+        userId: a.user_id,
+        type: 'coin_social_alert',
+        title,
+        body,
+        url: `/dashboard/coins/${a.chain}/${encodeURIComponent(a.token_address)}`,
+        metadata: {
+          chain: a.chain,
+          token_key: a.token_key,
+          token_address: a.token_address,
+          symbol: a.symbol,
+          scope: a.scope,
+          buyers: buyerIds.length,
+          total_usd: totalUsd,
+          cohort: cohortLabel,
+        },
+      });
+      fired++;
+    } catch { /* skip this alert's notification; watermark still advances */ }
 
     await db
       .from('coin_social_alerts')
       .update({ last_seen_at: newestAt })
       .eq('id', a.id);
-    fired++;
   }
 
   return NextResponse.json({ ok: true, checked: alerts.length, fired });

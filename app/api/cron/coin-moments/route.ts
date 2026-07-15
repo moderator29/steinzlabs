@@ -134,15 +134,18 @@ export async function GET(req: NextRequest) {
     const sym = (a.symbol || '').trim();
     const tag = sym ? `$${sym}` : 'a coin';
     const n = a.buyers.size;
+    // Bucket the count into stable bands and fire only the highest band cleared.
+    // The unique key (kind, chain, token_key, headline) then dedupes: a widening
+    // burst notifies at most once per band (3+, 10+, 25+, 50+), never once per
+    // new buyer. This bounds circle-buying pushes exactly like mcap milestones.
+    const band = n >= 50 ? 50 : n >= 25 ? 25 : n >= 10 ? 10 : CIRCLE_MIN_BUYERS;
     inserts.push({
       kind: 'circle_buying',
       chain: a.chain,
       token_key: a.token_key,
       token_address: a.token_address,
       symbol: sym || null,
-      // Bucket the count into the headline so a growing burst can fire again as
-      // it widens, while the unique key stops identical re-fires.
-      headline: `${n} traders aped ${tag} in the last ${CIRCLE_WINDOW_HOURS}h`,
+      headline: `${band}+ traders aped ${tag} in the last ${CIRCLE_WINDOW_HOURS}h`,
       detail: null,
       market_cap_usd: null,
       actor_user_ids: [...a.buyers],

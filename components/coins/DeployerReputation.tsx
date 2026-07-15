@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * DeployerReputation — a compact, honest chip for the coin page that reports
+ * DeployerReputation: a compact, honest chip for the coin page that reports
  * the token creator's track record from the shared deployer-history service
  * (the same on-chain data behind the Security Panel and Deployer DNA). It loads
  * on demand so it never blocks the coin page, shows an emerald / amber / rose

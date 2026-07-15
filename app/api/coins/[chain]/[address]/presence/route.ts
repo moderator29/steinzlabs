@@ -2,7 +2,8 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
-import { resolveCoin } from '@/lib/coins/coinService';
+import { tokenKeyFor } from '@/lib/coins/coinService';
+import { isCoinChain } from '@/lib/coins/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,11 +35,14 @@ async function watcherCount(
  */
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ chain: string; address: string }> }) {
   const { chain, address } = await ctx.params;
-  const coin = await resolveCoin(chain, decodeURIComponent(address)).catch(() => null);
-  if (!coin) return NextResponse.json({ error: 'Coin not found' }, { status: 404 });
+  const decoded = decodeURIComponent(address);
+  // Presence is a hot, public, repeated heartbeat: derive the key cheaply
+  // instead of a full resolveCoin (which hits external DEX APIs + upserts).
+  if (!isCoinChain(chain) || !decoded) return NextResponse.json({ count: 0 });
+  const tokenKey = tokenKeyFor(chain, decoded);
 
   const sb = getSupabaseAdmin();
-  const count = await watcherCount(sb, coin.chain, coin.tokenKey);
+  const count = await watcherCount(sb, chain, tokenKey);
   return NextResponse.json({ count });
 }
 
@@ -52,16 +56,17 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ chain: str
   const user = await getAuthenticatedUser(req);
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
 
-  const coin = await resolveCoin(chain, decodeURIComponent(address)).catch(() => null);
-  if (!coin) return NextResponse.json({ error: 'Coin not found' }, { status: 404 });
+  const decoded = decodeURIComponent(address);
+  if (!isCoinChain(chain) || !decoded) return NextResponse.json({ error: 'Bad request' }, { status: 400 });
+  const tokenKey = tokenKeyFor(chain, decoded);
 
   const sb = getSupabaseAdmin();
   const { error } = await sb
     .from('coin_room_presence')
     .upsert(
       {
-        chain: coin.chain,
-        token_key: coin.tokenKey,
+        chain,
+        token_key: tokenKey,
         user_id: user.id,
         last_seen_at: new Date().toISOString(),
       },
@@ -69,6 +74,6 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ chain: str
     );
   if (error) return NextResponse.json({ error: 'Could not record presence' }, { status: 500 });
 
-  const count = await watcherCount(sb, coin.chain, coin.tokenKey);
+  const count = await watcherCount(sb, chain, tokenKey);
   return NextResponse.json({ count });
 }

@@ -107,6 +107,9 @@ export async function POST(req: NextRequest) {
       require_confirmation: true,
       enabled: true,
       paused: false,
+      // Seed the cursor to now so the monitor only mirrors buys made AFTER the
+      // follower opted in, never a leader's pre-existing trades.
+      coin_last_seen_at: new Date().toISOString(),
     },
     { onConflict: 'user_id,leader_user_id' },
   );
