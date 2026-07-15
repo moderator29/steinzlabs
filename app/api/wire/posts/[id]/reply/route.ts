@@ -42,8 +42,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const sb = getSupabaseAdmin();
 
-  // Parent must exist and be live. Replies to a reply are not supported (single
-  // level) - reject if the target is itself a reply to keep threads honest.
+  // Parent must exist and be live. Threaded replies ARE supported now: a user
+  // can reply to a comment, not only the original post, so conversations happen
+  // inside the thread. reply_to points at whichever wire is being replied to.
   const { data: parent } = await sb
     .from('wire_posts')
     .select('id, deleted_at, reply_to')
@@ -51,9 +52,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     .maybeSingle();
   if (!parent || parent.deleted_at) {
     return NextResponse.json({ error: 'Wire not found' }, { status: 404 });
-  }
-  if (parent.reply_to) {
-    return NextResponse.json({ error: 'Cannot reply to a reply' }, { status: 400 });
   }
 
   const { data, error } = await sb

@@ -30,7 +30,14 @@ export interface WireThreadProps {
   /** Pin the reply composer to the bottom of the viewport (X-style), with the
    *  replies listed above it. Used on the dedicated /wire/[id] page. */
   stickyComposer?: boolean;
+  /** Nesting depth. Replies can be replied to (threaded); depth caps the visual
+   *  indent so deep chains stay readable on mobile. */
+  depth?: number;
 }
+
+// How many levels of nested replies we render inline before we stop indenting
+// further (deeper replies still thread correctly, just without extra inset).
+const MAX_THREAD_DEPTH = 4;
 
 export function WireThread({
   postId,
@@ -40,8 +47,18 @@ export function WireThread({
   onGift,
   onCountDelta,
   stickyComposer,
+  depth = 0,
 }: WireThreadProps) {
   const [replies, setReplies] = useState<WirePost[]>([]);
+  // Which replies have their own nested reply thread expanded (reply-to-a-reply).
+  const [openThreads, setOpenThreads] = useState<Set<string>>(new Set());
+  const toggleThread = useCallback((id: string) => {
+    setOpenThreads((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -289,18 +306,40 @@ export function WireThread({
     </div>
   ) : (
     <div className="space-y-2.5">
-      {replies.map((r) => (
-        <WirePostCard
-          key={r.id}
-          post={r}
-          currentUserId={currentUserId ?? null}
-          compact
-          onLike={handleLike}
-          onRepost={handleRepost}
-          onGift={onGift}
-          onDelete={handleDelete}
-        />
-      ))}
+      {replies.map((r) => {
+        const threadOpen = openThreads.has(r.id);
+        return (
+          <div key={r.id}>
+            <WirePostCard
+              post={r}
+              currentUserId={currentUserId ?? null}
+              compact
+              onLike={handleLike}
+              onRepost={handleRepost}
+              onGift={onGift}
+              onDelete={handleDelete}
+              // Let users reply to a comment and interact inside the thread,
+              // not only on the original post. Opens this comment's own nested
+              // reply thread inline.
+              onComment={currentUserId ? () => toggleThread(r.id) : undefined}
+              threadOpen={threadOpen}
+            />
+            {threadOpen ? (
+              <div className={depth < MAX_THREAD_DEPTH ? 'ms-3 ps-3 border-s border-white/10 mt-1.5' : 'mt-1.5'}>
+                <WireThread
+                  postId={r.id}
+                  currentUserId={currentUserId}
+                  authorAvatarUrl={authorAvatarUrl}
+                  authorDisplayName={authorDisplayName}
+                  onGift={onGift}
+                  onCountDelta={(d) => patch(r.id, (p) => ({ ...p, reply_count: Math.max(0, (p.reply_count ?? 0) + d) }))}
+                  depth={depth + 1}
+                />
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
       {cursor ? (
         <div className="flex justify-center py-1">
           <button

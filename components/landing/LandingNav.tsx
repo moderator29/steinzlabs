@@ -8,7 +8,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 // invisible on the dark nav; lucide honours the button's currentColor.
 // Twitter renders the X glyph and Send the Telegram paper-plane, matching
 // the social icons already used across the app (SidebarMenu, layout).
-import { Menu, X, ArrowRight, ChevronRight, Twitter, Send } from 'lucide-react';
+import { Menu, X, ChevronRight, Twitter, Send } from 'lucide-react';
 import SteinzLogo from '@/components/ui/SteinzLogo';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
@@ -82,7 +82,6 @@ export function LandingNav() {
               style={SHINY_CTA_STYLE}>
               <span className="sm:hidden">Launch</span>
               <span className="hidden sm:inline">Launch App</span>
-              <ArrowRight className="w-3.5 h-3.5" />
             </Link>
             <button
               className="md:hidden inline-flex items-center justify-center h-10 w-10 rounded-xl text-white/75 hover:text-white transition-colors"
@@ -187,7 +186,7 @@ export function LandingNav() {
                   <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-1/2"
                     style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.22), transparent)' }} />
                   <span className="relative inline-flex items-center gap-2">
-                    Launch App <ArrowRight className="w-4 h-4" />
+                    Launch App
                   </span>
                 </Link>
               </div>
