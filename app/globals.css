@@ -2308,3 +2308,16 @@ html {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Coins: slow flame shimmer on the "hot" (Wildlings) featured hero + active
+   tab. Motion is subtle and respects reduced-motion. */
+@keyframes coinFlame {
+  0% { background-position: 120% 0; }
+  100% { background-position: -120% 0; }
+}
+.coin-flame {
+  animation: coinFlame 3.4s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .coin-flame { animation: none; }
+}

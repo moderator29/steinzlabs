@@ -93,12 +93,16 @@ export default function CoinsPage() {
   }, [query]);
 
   const showSearch = query.trim().length > 0;
-  const featured = cats?.trending[0] ?? null;
   const anyCoins = cats && CATS.some((c) => cats[c].length > 0);
 
   const activeHouse = HOUSES.find((h) => h.key === tab)!;
-  // Heating Up drops its first coin — that one already leads as the featured hero.
-  const activeCoins = !cats ? [] : tab === 'trending' ? cats.trending.slice(1) : cats[tab];
+  const houseCoins = cats ? cats[tab] : [];
+  // The active house's champion leads as the hero; the rest fill the list below.
+  const houseFeatured = houseCoins[0] ?? null;
+  const activeCoins = houseCoins.slice(1);
+  // Per-chain counts for the active house, to badge the chain filter.
+  const chainCounts: Partial<Record<ChainFilterValue, number>> = { all: houseCoins.length };
+  for (const c of houseCoins) { const k = c.chain as ChainFilterValue; chainCounts[k] = (chainCounts[k] ?? 0) + 1; }
 
   return (
     <AuroraBackground fullHeight>
@@ -142,8 +146,8 @@ export default function CoinsPage() {
         <SearchResults searching={searching} coins={searchCoins} people={people} />
       ) : (
         <div className="space-y-5">
-          {/* Chain filter scopes every house */}
-          <ChainFilter value={chain} onChange={setChain} />
+          {/* Chain filter scopes every house, badged with the active house's counts */}
+          <ChainFilter value={chain} onChange={setChain} counts={chainCounts} />
 
           {cats === null ? (
             <div className="space-y-5">
@@ -155,9 +159,6 @@ export default function CoinsPage() {
             <div className="nl-glass rounded-2xl p-8 text-center text-white/50 text-sm">No coins to show on this chain right now. Try another chain.</div>
           ) : (
             <>
-              {/* Featured hero */}
-              {featured ? <FeaturedCoin coin={featured} /> : null}
-
               {/* Auto-detected coin moments (milestones, your circle aping). */}
               <CoinMomentsStrip />
 
@@ -175,11 +176,14 @@ export default function CoinsPage() {
               {/* Houses — the discovery tab bar */}
               <HouseTabs tab={tab} onSelect={setTab} counts={cats} />
 
-              {/* Active house list */}
+              {/* Active house: champion hero + list */}
               <AnimatePresence mode="wait">
-                <motion.div key={`${tab}:${chain}`} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-                  <HouseHeader house={activeHouse} count={activeCoins.length} />
-                  <HouseCoinList coins={activeCoins} house={activeHouse} />
+                <motion.div key={`${tab}:${chain}`} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="space-y-4">
+                  {houseFeatured ? <FeaturedCoin coin={houseFeatured} accent={activeHouse.accent} label={activeHouse.sub} hot={tab === 'trending'} /> : null}
+                  <div>
+                    <HouseHeader house={activeHouse} count={houseCoins.length} />
+                    {houseCoins.length === 0 ? <HouseEmpty house={activeHouse} /> : <HouseCoinList coins={activeCoins} house={activeHouse} />}
+                  </div>
                 </motion.div>
               </AnimatePresence>
 
@@ -242,20 +246,24 @@ function HouseHeader({ house, count }: { house: House; count: number }) {
   );
 }
 
+/** The themed empty state — shown only when a whole house has nothing to show. */
+function HouseEmpty({ house }: { house: House }) {
+  return (
+    <div className="nl-glass rounded-2xl p-8 text-center">
+      <div className="text-[34px] mb-2 leading-none">{house.sigil}</div>
+      <div className="text-white/55 text-[13px] max-w-sm mx-auto">{house.empty}</div>
+    </div>
+  );
+}
+
 /** The active house's coins as a clean vertical list, windowed with "show more".
- *  A themed empty state keeps every house honest when it has nothing to show. */
+ *  Renders nothing when empty — the empty state is owned by HouseEmpty so a
+ *  one-coin house (whose only coin is the hero) doesn't show a false "empty". */
 function HouseCoinList({ coins, house }: { coins: Coin[]; house: House }) {
   const [expanded, setExpanded] = useState(false);
   useEffect(() => { setExpanded(false); }, [house.key]);
 
-  if (coins.length === 0) {
-    return (
-      <div className="nl-glass rounded-2xl p-8 text-center">
-        <div className="text-[34px] mb-2 leading-none">{house.sigil}</div>
-        <div className="text-white/55 text-[13px] max-w-sm mx-auto">{house.empty}</div>
-      </div>
-    );
-  }
+  if (coins.length === 0) return null;
 
   const shown = expanded ? coins : coins.slice(0, 12);
   const remaining = coins.length - shown.length;
