@@ -168,6 +168,12 @@ export default function TokenStatsPanel({
         <MetricCell label="Mkt Cap" value={fmtUsd(stats?.marketCap)} />
       </div>
 
+      {/* Holders — real on-chain count (GoPlus). Honest "—" when unavailable. */}
+      <div className="px-3.5 py-2.5 border-b border-slate-800/60 flex items-center justify-between">
+        <span className="text-[10px] uppercase tracking-wider text-slate-500">Holders</span>
+        <span className="text-xs font-mono font-semibold text-white tabular-nums">{fmtCount(stats?.holders)}</span>
+      </div>
+
       {/* Window selector for the flow metrics */}
       <div className="flex items-center gap-1 px-3.5 pt-3">
         {WINDOWS.map((w) => (

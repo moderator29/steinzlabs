@@ -294,6 +294,14 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
   const change6h = dex?.change_h6 ?? null;
   const change1hUnified = dex?.change_h1 ?? change1h;
   const change24hUnified = dex?.change_h24 ?? change24h;
+  // Recent Trades reads the POOL (pair) address, not the token address — the
+  // DexScreener /pairs and GeckoTerminal /trades endpoints are keyed on the
+  // pool. Passing the token address (as the old code did) always 404'd, so the
+  // tape sat empty. Use the real pair address + its DexScreener chain slug; when
+  // there's no DEX pair (majors), pairAddr stays null and the rail shows its
+  // honest empty state instead of polling a bad address.
+  const pairAddr = dex?.pair_address ?? null;
+  const pairChain = dex?.pair_chain_id ?? chain;
   const symbol = detail?.symbol?.toUpperCase() ?? address.slice(0, 6).toUpperCase();
   const name = detail?.name ?? address;
   const logo = detail?.image?.small;
@@ -672,7 +680,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
             </div>
           )}
           <div className="md:hidden p-3">
-            <RecentTradesRail pairAddress={address} chain={chain} />
+            <RecentTradesRail pairAddress={pairAddr} chain={pairChain} />
           </div>
           {/* Audit P0 #5 — security panel surfaced on mobile under recent
               trades so a buyer can scan rug indicators without leaving
@@ -736,7 +744,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
             <BuySellRatioBar buys={buys24h} sells={sells24h} />
           )}
           <SecurityPanel chain={chain} address={address} liquidityUsd={dex?.liquidity_usd ?? null} />
-          <RecentTradesRail pairAddress={address} chain={chain} />
+          <RecentTradesRail pairAddress={pairAddr} chain={pairChain} />
           {showIntel && (
             <div className="pt-2 border-t border-slate-800/50">
               <TokenIntelligencePanel address={address} chain={chain} symbol={symbol} />

@@ -66,8 +66,14 @@ export async function getPoolTrades(
   const network = geckoNetworkFor(chain);
   if (!network || !poolAddress) return [];
 
+  // EVM pool addresses are case-insensitive hex, so lowercasing is safe and
+  // canonicalises them. Solana pool addresses are base58 and CASE-SENSITIVE —
+  // lowercasing corrupts them, so the /trades lookup 404s and the tape shows
+  // empty forever. Only normalise for EVM; pass Solana through untouched.
+  const pool = network === 'solana' ? poolAddress : poolAddress.toLowerCase();
+
   const url =
-    `${GT_BASE}/networks/${network}/pools/${poolAddress.toLowerCase()}/trades` +
+    `${GT_BASE}/networks/${network}/pools/${pool}/trades` +
     (minVolumeUsd > 0 ? `?trade_volume_in_usd_greater_than=${minVolumeUsd}` : '');
 
   try {
