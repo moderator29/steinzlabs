@@ -1,4 +1,4 @@
-import { Mail, Twitter, MessageCircle, ExternalLink } from 'lucide-react';
+import { Mail, AtSign as Twitter, MessageCircle, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { AuroraBackground } from '@/components/brand/AuroraBackground';
 

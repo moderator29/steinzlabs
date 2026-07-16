@@ -14,7 +14,7 @@ import {
   PieChart, DollarSign, Archive, Circle, FileCode, FlaskConical, FileSearch,
   CheckSquare, Crosshair, Network, Globe, History, MessageCircle, Compass, Gem,
   LineChart, Sparkles, ScanSearch, Settings, ShieldCheck, LayoutGrid, Rss,
-  Newspaper, LogIn, LogOut, UserCircle2, Twitter, Send, LifeBuoy, FileText,
+  Newspaper, LogIn, LogOut, UserCircle2, AtSign as Twitter, Send, LifeBuoy, FileText,
   ChevronRight, Users,
 } from 'lucide-react';
 import { GlobalWhatsNewButton } from '@/components/common/GlobalWhatsNew';

@@ -8,7 +8,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 // invisible on the dark nav; lucide honours the button's currentColor.
 // Twitter renders the X glyph and Send the Telegram paper-plane, matching
 // the social icons already used across the app (SidebarMenu, layout).
-import { Menu, X, ChevronRight, Twitter, Send } from 'lucide-react';
+import { Menu, X, ChevronRight, AtSign as Twitter, Send } from 'lucide-react';
 import SteinzLogo from '@/components/ui/SteinzLogo';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 

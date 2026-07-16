@@ -77,8 +77,8 @@ const ICONS = [
   ['Pause', BrandIcons.Pause],
   // Phase C — comms / brand
   ['Mail',    BrandIcons.Mail],
-  ['Github',  BrandIcons.Github],
-  ['Twitter', BrandIcons.Twitter],
+  ['Github',  BrandIcons.Code2],
+  ['Twitter', BrandIcons.AtSign],
 ] as const;
 
 const SWATCHES: { label: string; cssVar: string }[] = [

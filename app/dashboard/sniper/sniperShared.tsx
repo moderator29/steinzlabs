@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Shield, AlertTriangle, Lock, Globe, Send, Twitter } from 'lucide-react';
+import { Shield, AlertTriangle, Lock, Globe, Send, AtSign as Twitter } from 'lucide-react';
 import { launchpadIconUrl, launchpadLabel } from '@/lib/sniper/launchpads';
 import { normalizeAddress } from '@/lib/utils/addressNormalize';
 
