@@ -14,7 +14,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Search, X, Star, Flame, Sprout, Users2, Trophy } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { CoinLogo, PriceDelta } from '@/components/coins/atoms';
-import { FeaturedCoin, CoinRail } from '@/components/coins/CoinRails';
+import { FeaturedCoin, CoinList } from '@/components/coins/CoinRails';
 import { ChainFilter, type ChainFilterValue } from '@/components/coins/ChainFilter';
 import { TopTrades } from '@/components/coins/TopTrades';
 import { CircleBuying } from '@/components/coins/CircleBuying';
@@ -128,7 +128,7 @@ export default function CoinsPage() {
           {cats === null ? (
             <div className="space-y-5">
               <div className="h-[200px] rounded-3xl bg-white/[0.03] animate-pulse" />
-              <div className="flex gap-2.5">{[0, 1, 2].map((i) => <div key={i} className="w-[168px] h-[104px] rounded-2xl bg-white/[0.03] animate-pulse" />)}</div>
+              <div className="space-y-2">{[0, 1, 2, 3].map((i) => <div key={i} className="h-[68px] rounded-2xl bg-white/[0.03] animate-pulse" />)}</div>
             </div>
           ) : !anyCoins ? (
             <div className="nl-glass rounded-2xl p-8 text-center text-white/50 text-sm">No coins to show on this chain right now. Try another chain.</div>
@@ -153,12 +153,12 @@ export default function CoinsPage() {
 
               <AnimatePresence mode="wait">
                 <motion.div key={chain} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="space-y-5">
-                  <CoinRail title="Trending" Icon={Flame} coins={trendingRail} accent="#FF7847" />
+                  <CoinList title="Trending" Icon={Flame} coins={trendingRail} accent="#FF7847" initial={10} />
                   <CircleBuying />
-                  <CoinRail title="Fresh graduates" Icon={Sprout} coins={cats.graduated} accent="#10B981" />
+                  <CoinList title="Fresh graduates" Icon={Sprout} coins={cats.graduated} accent="#10B981" initial={8} />
                   <TopTrades />
-                  <CoinRail title="Most held" Icon={Users2} coins={cats.most_held} accent="#7FB2FF" />
-                  <CoinRail title="Your watchlist" Icon={Star} coins={cats.watchlist} accent="#F0B90B" />
+                  <CoinList title="Most held" Icon={Users2} coins={cats.most_held} accent="#7FB2FF" initial={8} />
+                  <CoinList title="Your watchlist" Icon={Star} coins={cats.watchlist} accent="#F0B90B" initial={8} />
                 </motion.div>
               </AnimatePresence>
 

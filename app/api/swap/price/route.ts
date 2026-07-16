@@ -3,7 +3,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSwapPrice, getChainId } from '@/lib/services/zerox';
 import { getJupiterQuote } from '@/lib/services';
 import { getDLCoinPrices } from '@/lib/services/defillama';
-import { resolveSwapToken, toBaseUnits, fromBaseUnits } from '@/lib/market/swapTokenMeta';
+import { resolveSwapToken, resolveSwapAddress, toBaseUnits, fromBaseUnits } from '@/lib/market/swapTokenMeta';
+import { getOnchainDecimals } from '@/lib/services/onchainDecimals';
+
+/**
+ * Resolve a token whose ADDRESS is valid but whose decimals the static table
+ * doesn't carry, by reading decimals on-chain. Returns null only when the
+ * input isn't a resolvable address at all.
+ */
+async function resolveWithOnchain(
+  input: string,
+  chain: string,
+  hint: number | undefined,
+): Promise<{ address: string; decimals: number } | null> {
+  const address = resolveSwapAddress(input, chain);
+  if (!address) return null;
+  const decimals = hint ?? (await getOnchainDecimals(chain, address));
+  if (decimals == null) return null;
+  return { address, decimals };
+}
 
 // DeFiLlama chain slugs + native-gas coingecko ids, used ONLY to turn the
 // real quantities 0x already returns (buyAmount, gas, gasPrice) into a
@@ -78,13 +96,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const sell = resolveSwapToken(fromInput, chain, fromDecimalsHint);
-    const buy = resolveSwapToken(toInput, chain, toDecimalsHint);
+    // Resolve each token to { address, decimals }. Address resolution handles
+    // symbols + raw addresses/mints; decimals come from the static table or a
+    // caller hint. When a real address resolves but its decimals are unknown
+    // (a brand-new memecoin the table has never seen), read them straight from
+    // the chain so the quote never fails for a genuinely tradable coin.
+    let sell = resolveSwapToken(fromInput, chain, fromDecimalsHint);
+    let buy = resolveSwapToken(toInput, chain, toDecimalsHint);
+    if (!sell) sell = await resolveWithOnchain(fromInput, chain, fromDecimalsHint);
+    if (!buy) buy = await resolveWithOnchain(toInput, chain, toDecimalsHint);
     if (!sell || !buy) {
       return NextResponse.json(
         {
-          error: `Unsupported token on ${chain}: ${!sell ? fromInput : toInput}. ` +
-            `Pass a contract address (and decimals for unknown Solana mints).`,
+          error: `Unsupported token on ${chain}: ${!sell ? fromInput : toInput}. Pass a valid contract address.`,
           code: 'UNRESOLVED_TOKEN',
         },
         { status: 422 },

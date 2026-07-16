@@ -50,6 +50,11 @@ export interface TokenStats {
   fdv: number | null;
   marketCap: number | null;
 
+  /** Real on-chain holder count (GoPlus, cached ~60s). null when the source
+   *  doesn't carry it (e.g. a major without a scanned contract) so the panel
+   *  renders an honest "—" rather than a fabricated number. */
+  holders: number | null;
+
   /** % price change per window. */
   change: StatTier;
   /** Total USD volume per window. */

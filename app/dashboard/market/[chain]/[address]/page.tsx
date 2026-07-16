@@ -294,6 +294,14 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
   const change6h = dex?.change_h6 ?? null;
   const change1hUnified = dex?.change_h1 ?? change1h;
   const change24hUnified = dex?.change_h24 ?? change24h;
+  // Recent Trades reads the POOL (pair) address, not the token address — the
+  // DexScreener /pairs and GeckoTerminal /trades endpoints are keyed on the
+  // pool. Passing the token address (as the old code did) always 404'd, so the
+  // tape sat empty. Use the real pair address + its DexScreener chain slug; when
+  // there's no DEX pair (majors), pairAddr stays null and the rail shows its
+  // honest empty state instead of polling a bad address.
+  const pairAddr = dex?.pair_address ?? null;
+  const pairChain = dex?.pair_chain_id ?? chain;
   const symbol = detail?.symbol?.toUpperCase() ?? address.slice(0, 6).toUpperCase();
   const name = detail?.name ?? address;
   const logo = detail?.image?.small;
@@ -458,15 +466,15 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
           </div>
         </div>
 
-        {/* Checkprice-style stats strip */}
-        <div className="flex items-center gap-4 px-4 pb-3 overflow-x-auto text-xs whitespace-nowrap [&>*]:shrink-0">
-          <span className="text-lg md:text-xl font-mono font-bold tabular-nums">
+        {/* Live stats strip — a row of premium glass stat pills. */}
+        <div className="flex items-center gap-2 px-4 pb-3 overflow-x-auto text-xs whitespace-nowrap [&>*]:shrink-0">
+          <span className="text-lg md:text-xl font-mono font-bold tabular-nums pe-1">
             {/* Honest price: show a dash while loading AND when the source has
                 no real price (price <= 0), never a fabricated $0.00. */}
             {loading ? '-' : price > 0 ? formatPrice(price) : '-'}
           </span>
           <PriceChangeDisplay value={change24hUnified} size="sm" />
-          <div className="h-4 w-px bg-slate-800/60 hidden md:block" />
+          <div className="h-8 w-px bg-slate-800/60 hidden md:block mx-1" />
           {/*
             Audit P1 #17 — DexScreener parity: 5m / 1h / 6h / 24h tier
             strip. Each tier hides when its source is missing rather
@@ -672,7 +680,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
             </div>
           )}
           <div className="md:hidden p-3">
-            <RecentTradesRail pairAddress={address} chain={chain} />
+            <RecentTradesRail pairAddress={pairAddr} chain={pairChain} />
           </div>
           {/* Audit P0 #5 — security panel surfaced on mobile under recent
               trades so a buyer can scan rug indicators without leaving
@@ -736,7 +744,7 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
             <BuySellRatioBar buys={buys24h} sells={sells24h} />
           )}
           <SecurityPanel chain={chain} address={address} liquidityUsd={dex?.liquidity_usd ?? null} />
-          <RecentTradesRail pairAddress={address} chain={chain} />
+          <RecentTradesRail pairAddress={pairAddr} chain={pairChain} />
           {showIntel && (
             <div className="pt-2 border-t border-slate-800/50">
               <TokenIntelligencePanel address={address} chain={chain} symbol={symbol} />
@@ -798,11 +806,13 @@ export default function CoinDetailPage({ params }: { params: Promise<RouteParams
 }
 
 function StatInline({ label, value, tone }: { label: string; value: string; tone?: 'up' | 'down' }) {
-  const color = tone === 'up' ? 'text-emerald-400' : tone === 'down' ? 'text-red-400' : 'text-slate-200';
+  const color = tone === 'up' ? 'text-emerald-400' : tone === 'down' ? 'text-red-400' : 'text-slate-100';
+  // Premium glass pill: label stacked over value so the strip reads as a row of
+  // clean stat chips rather than a cramped inline list.
   return (
-    <div className="flex items-baseline gap-1.5">
-      <span className="text-[10px] uppercase tracking-wider text-slate-500">{label}</span>
-      <span className={`font-mono tabular-nums ${color}`}>{value}</span>
+    <div className="flex flex-col items-start justify-center rounded-lg px-2.5 py-1 bg-white/[0.03] border border-white/[0.06]">
+      <span className="text-[9px] uppercase tracking-wider text-slate-500 leading-none">{label}</span>
+      <span className={`text-[12px] font-mono font-semibold tabular-nums leading-tight mt-0.5 ${color}`}>{value}</span>
     </div>
   );
 }

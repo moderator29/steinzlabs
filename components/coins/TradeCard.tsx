@@ -13,7 +13,8 @@ import Link from 'next/link';
 import { Loader2, Check, Wallet as WalletIcon } from 'lucide-react';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { useSwapExecution } from '@/lib/hooks/useSwapExecution';
-import { getBuiltinWalletAddress } from '@/lib/wallet/builtinWallet';
+import { getBuiltinWalletAddress, getBuiltinSolanaAddress } from '@/lib/wallet/builtinWallet';
+import { isSolanaAddress } from '@/lib/utils/addressNormalize';
 import { FundButton } from './FundButton';
 import type { Coin } from '@/lib/coins/types';
 import { compactUsd, coinPrice } from '@/lib/coins/format';
@@ -98,13 +99,22 @@ export function TradeCard({ coin, livePrice, liveMcap, initialBuyUsd }: { coin: 
     // Force the built-in Naka wallet to sign with itself rather than an external
     // wallet that may also be present in the browser.
     const walletKind = getBuiltinWalletAddress() === address ? ('builtin' as const) : undefined;
+    // Taker must be chain-correct. The built-in wallet's primary address is its
+    // EVM address; a Solana trade has to be taken from its Solana address. When
+    // an external Solana wallet is connected, `address` is already base58.
+    const taker = coin.chain === 'solana' && !isSolanaAddress(address)
+      ? (getBuiltinSolanaAddress() ?? address)
+      : address;
     if (side === 'buy') {
       if (!nativeAmount || nativeAmount <= 0) return null;
-      return { chain: coin.chain, inputToken: native.symbol, outputToken: coin.tokenAddress, inputAmount: nativeAmount.toFixed(9), inputDecimals: native.decimals, userAddress: address, slippageBps: SLIPPAGE_BPS, walletKind };
+      // Pass the coin's known decimals so the quote route resolves the output
+      // token without a round-trip on-chain lookup, and never rejects a real
+      // coin for "unknown decimals".
+      return { chain: coin.chain, inputToken: native.symbol, outputToken: coin.tokenAddress, inputAmount: nativeAmount.toFixed(9), inputDecimals: native.decimals, outputDecimals: coin.decimals ?? undefined, userAddress: taker, slippageBps: SLIPPAGE_BPS, walletKind };
     }
     // Never guess decimals for a sell: without them we cannot size base units.
     if (!canSell || sellAmount <= 0 || coin.decimals == null) return null;
-    return { chain: coin.chain, inputToken: coin.tokenAddress, outputToken: native.symbol, inputAmount: String(sellAmount), inputDecimals: coin.decimals, userAddress: address, slippageBps: SLIPPAGE_BPS, walletKind };
+    return { chain: coin.chain, inputToken: coin.tokenAddress, outputToken: native.symbol, inputAmount: String(sellAmount), inputDecimals: coin.decimals, userAddress: taker, slippageBps: SLIPPAGE_BPS, walletKind };
   }, [address, native, side, nativeAmount, canSell, sellAmount, coin]);
 
   // Debounced live quote as the amount changes.

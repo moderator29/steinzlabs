@@ -18,7 +18,7 @@ export function ChainFilter({ value, onChange }: { value: ChainFilterValue; onCh
     ...COIN_CHAINS.map((c) => ({ id: c as ChainFilterValue, label: CHAIN_META[c]?.short ?? c })),
   ];
   return (
-    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1">
+    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
       {opts.map((o) => {
         const active = value === o.id;
         return (
@@ -26,13 +26,15 @@ export function ChainFilter({ value, onChange }: { value: ChainFilterValue; onCh
             key={o.id}
             type="button"
             onClick={() => onChange(o.id)}
-            className={`inline-flex items-center gap-1.5 shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-semibold border transition-all duration-200 ${
+            className={`group relative inline-flex items-center gap-1.5 shrink-0 overflow-hidden rounded-xl pl-3.5 pr-3.5 py-2 text-[13px] font-semibold transition-all duration-200 nl-glass ${
               active
-                ? 'bg-[#0066FF]/18 border-[#0066FF]/60 text-white shadow-[0_0_18px_-4px_rgba(0,102,255,.8)]'
-                : 'bg-white/[0.03] border-white/10 text-white/55 hover:text-white hover:border-white/20'
+                ? 'text-white shadow-[0_8px_24px_-10px_rgba(0,102,255,.7)] -translate-y-[1px]'
+                : 'text-white/55 hover:text-white hover:-translate-y-[1px]'
             }`}
           >
-            {o.id !== 'all' ? <ChainBadge chain={o.id} size={15} /> : null}
+            {/* blue accent stride — brighter when active */}
+            <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-gradient-to-b from-[#1E90FF] to-[#0066FF] transition-opacity ${active ? 'opacity-100' : 'opacity-40 group-hover:opacity-70'}`} />
+            {o.id !== 'all' ? <ChainBadge chain={o.id} size={16} className="ml-0.5" /> : <span className="ml-0.5" />}
             {o.label}
           </button>
         );

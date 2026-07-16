@@ -209,6 +209,54 @@ const TF_MAP: Record<CoinTimeframe, { tf: 'minute' | 'hour' | 'day'; aggregate: 
   ALL: { tf: 'day', aggregate: 1, limit: 365 },
 };
 
+/** Seconds-per-candle for each timeframe — mirrors TF_MAP, used to bucket the
+ *  trade-tape fallback below. */
+const BUCKET_SEC: Record<CoinTimeframe, number> = {
+  '1H': 60,        // 1-minute candles
+  '4H': 300,       // 5-minute
+  '1D': 900,       // 15-minute
+  '7D': 14_400,    // 4-hour
+  '3M': 43_200,    // 12-hour
+  ALL: 86_400,     // 1-day
+};
+
+/**
+ * Build real OHLC candles from the pool's individual swap tape.
+ *
+ * Why: GeckoTerminal only serves an OHLCV series once it has indexed a pool,
+ * which can lag for brand-new / very-small-cap coins — so their chart sat empty
+ * ("No chart data yet") even though real trades were happening. This buckets
+ * the REAL per-swap tape (actual on-chain trades, real prices) into candles so
+ * every graduated coin renders a chart. Not fabricated: every point comes from
+ * a real settled swap; we only aggregate them.
+ */
+async function candlesFromTrades(chain: string, pool: string, timeframe: CoinTimeframe): Promise<CoinCandle[]> {
+  const trades = await getPoolTrades(chain, pool).catch(() => []);
+  if (trades.length === 0) return [];
+  const bucketSec = BUCKET_SEC[timeframe] ?? 60;
+  const buckets = new Map<number, CoinCandle & { _first: number; _last: number }>();
+  for (const t of trades) {
+    if (!(t.price > 0) || !t.timestamp) continue;
+    const sec = Math.floor(t.timestamp / 1000);
+    const key = Math.floor(sec / bucketSec) * bucketSec;
+    const vol = Number.isFinite(t.valueUSD) ? t.valueUSD : 0;
+    const e = buckets.get(key);
+    if (!e) {
+      buckets.set(key, { time: key, open: t.price, high: t.price, low: t.price, close: t.price, volume: vol, _first: t.timestamp, _last: t.timestamp });
+    } else {
+      e.high = Math.max(e.high, t.price);
+      e.low = Math.min(e.low, t.price);
+      e.volume += vol;
+      // open = earliest swap in the bucket, close = latest swap in the bucket.
+      if (t.timestamp < e._first) { e.open = t.price; e._first = t.timestamp; }
+      if (t.timestamp > e._last) { e.close = t.price; e._last = t.timestamp; }
+    }
+  }
+  return [...buckets.values()]
+    .map(({ time, open, high, low, close, volume }) => ({ time, open, high, low, close, volume }))
+    .sort((a, b) => a.time - b.time);
+}
+
 /** OHLC candles for the chart. Resolves the deepest pool for the token first. */
 export async function getCandles(
   chain: string,
@@ -221,7 +269,13 @@ export async function getCandles(
   if (!pool) return [];
   const { tf, aggregate, limit } = TF_MAP[timeframe] ?? TF_MAP['1H'];
   const candles = await getGtCandles(chain, pool, tf, limit, aggregate);
-  return candles.map((c) => ({ time: c.time, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume }));
+  if (candles.length > 0) {
+    return candles.map((c) => ({ time: c.time, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume }));
+  }
+  // GeckoTerminal hasn't indexed OHLCV for this pool yet (common for fresh /
+  // sub-$6k coins). Fall back to real candles built from the live swap tape so
+  // the chart is never empty for a coin that is actually trading.
+  return candlesFromTrades(chain, pool, timeframe);
 }
 
 /** Real buyer/seller split for the About tab. */
@@ -286,6 +340,68 @@ function mapPoolPairs(chain: string, pairs: DexPair[]): Coin[] {
 
 export type DiscoveryTab = 'trending' | 'graduated' | 'most_held';
 
+/** Blue-chips + stables never belong in a memecoin discovery feed — they leak
+ *  in as the base token of a big DEX pool. Excluded by symbol so WETH / USDC /
+ *  BTC and friends never headline the store-front. */
+const EXCLUDED_SYMBOLS = new Set([
+  'BTC', 'WBTC', 'CBBTC', 'BTCB', 'TBTC',
+  'ETH', 'WETH', 'STETH', 'WSTETH', 'RETH', 'WEETH', 'CBETH', 'EETH',
+  'BNB', 'WBNB', 'SOL', 'WSOL', 'MSOL', 'JITOSOL', 'BSOL',
+  'USDC', 'USDT', 'DAI', 'USDBC', 'BUSD', 'TUSD', 'USDE', 'FDUSD', 'USDD',
+  'FRAX', 'LUSD', 'PYUSD', 'GUSD', 'USDS', 'SUSDE', 'USDG',
+  'MATIC', 'WMATIC', 'AVAX', 'WAVAX', 'ARB', 'OP',
+]);
+
+/** Coins above this market cap are established assets, not the early low-caps
+ *  this feed is for — dropped so discovery stays about fresh, hot coins. */
+const MAX_DISCOVERY_MCAP = 1_000_000_000;
+
+/** True when a coin is a blue-chip/stable/oversized asset we exclude from the
+ *  memecoin discovery feed. */
+function isExcludedFromDiscovery(c: Coin): boolean {
+  if (EXCLUDED_SYMBOLS.has((c.symbol || '').toUpperCase())) return true;
+  if (c.marketCapUsd != null && c.marketCapUsd > MAX_DISCOVERY_MCAP) return true;
+  return false;
+}
+
+/**
+ * "Hotness" score — how actively/hot a coin is trading RIGHT NOW, from the real
+ * keyless signals we already carry. Rewards high turnover (24h volume relative
+ * to its size), raw trade count, and short-term momentum; the featured hero and
+ * the trending order both rank on this so users land on genuinely hot coins,
+ * not just the biggest pool. Pure data, no fabrication.
+ */
+function hotness(c: Coin): number {
+  const mcap = c.marketCapUsd ?? c.fdvUsd ?? c.liquidityUsd ?? 0;
+  const vol = c.volume24hUsd ?? 0;
+  // Turnover: volume as a multiple of size. A $300k coin doing $1M/day is far
+  // hotter than a $500M coin doing $2M/day. Capped so a thin-liquidity outlier
+  // can't dominate.
+  const turnover = mcap > 0 ? Math.min(vol / mcap, 25) : 0;
+  const txns = c.txns24h ? (c.txns24h.buys ?? 0) + (c.txns24h.sells ?? 0) : 0;
+  const activity = Math.log10(1 + txns); // diminishing returns on raw count
+  const liq = Math.log10(1 + (c.liquidityUsd ?? 0)); // needs real depth to be tradable
+  const momentum = c.change24h != null ? Math.max(-1, Math.min(3, c.change24h / 100)) : 0;
+  const volFloor = Math.log10(1 + vol); // absolute volume still matters a little
+  return turnover * 3 + activity * 1.5 + momentum * 1.2 + liq * 0.4 + volFloor * 0.3;
+}
+
+/** Fill missing logos for the top coins (bounded) from the token /info endpoint
+ *  so freshly graduated coins show a real logo instead of a lettered fallback. */
+async function enrichLogos(coins: Coin[], max = 16): Promise<void> {
+  const missing = coins.slice(0, max).filter((c) => !c.logoUrl);
+  if (missing.length === 0) return;
+  await Promise.all(
+    missing.map(async (c) => {
+      try {
+        const meta = await getTokenMeta(c.chain, c.tokenAddress);
+        if (meta?.logo) c.logoUrl = meta.logo;
+        if (c.decimals == null && meta?.decimals != null) c.decimals = meta.decimals;
+      } catch { /* leave the lettered fallback */ }
+    }),
+  );
+}
+
 /**
  * Discovery list for the Coins area. Keyless: trending + new pools from
  * GeckoTerminal (all three chains) plus Birdeye trending for Solana. Only
@@ -306,17 +422,24 @@ export async function getDiscovery(tab: DiscoveryTab, chain?: string): Promise<C
       try {
         if (tab === 'graduated') {
           // GeckoTerminal new_pools covers all three chains (the older pumpfun
-          // search only returned Solana, leaving ETH and BSC empty). mapPoolPairs
-          // keeps only pools that clear the real-liquidity graduation bar.
-          const [fresh, pumpish] = await Promise.all([
+          // search only returned Solana, leaving ETH and BSC empty). Pull two
+          // pages so the fresh-graduate shelf has depth and rotates as new pools
+          // land. mapPoolPairs keeps only pools that clear the liquidity bar.
+          const [fresh1, fresh2, pumpish] = await Promise.all([
             getPoolsForIngest(c, 1, 'new_pools').catch(() => [] as DexPair[]),
+            getPoolsForIngest(c, 2, 'new_pools').catch(() => [] as DexPair[]),
             c === 'solana' ? getNewPairs(GRAD_MIN_LIQUIDITY_USD, c).catch(() => [] as DexPair[]) : Promise.resolve([] as DexPair[]),
           ]);
-          return mapPoolPairs(c, [...fresh, ...pumpish]);
+          return mapPoolPairs(c, [...fresh1, ...fresh2, ...pumpish]);
         }
         // trending: GeckoTerminal trending pools are the shared keyless source.
-        const pairs = await getPoolsForIngest(c, 1, 'trending_pools').catch(() => [] as DexPair[]);
-        let coins = mapPoolPairs(c, pairs);
+        // Two pages per chain give a deeper, fresher pool of hot low-caps that
+        // rotates as rankings move.
+        const [t1, t2] = await Promise.all([
+          getPoolsForIngest(c, 1, 'trending_pools').catch(() => [] as DexPair[]),
+          getPoolsForIngest(c, 2, 'trending_pools').catch(() => [] as DexPair[]),
+        ]);
+        let coins = mapPoolPairs(c, [...t1, ...t2]);
         if (c === 'solana' && coins.length < 8) {
           // Augment Solana with Birdeye trending when GT is thin.
           const bd = await getTrendingByVolume(20, 'solana').catch(() => []);
@@ -351,18 +474,30 @@ export async function getDiscovery(tab: DiscoveryTab, chain?: string): Promise<C
   );
 
   const flat = perChain.flat();
-  // Dedupe across chains and rank.
+  // Dedupe across chains, then drop blue-chips / stables / oversized assets so
+  // the feed stays about fresh, hot low-caps (no WETH/USDC/BTC headlining).
   const seen = new Set<string>();
   const deduped: Coin[] = [];
   for (const c of flat) {
     const k = `${c.chain}:${c.tokenKey}`;
     if (seen.has(k)) continue;
     seen.add(k);
+    if (isExcludedFromDiscovery(c)) continue;
     deduped.push(c);
   }
-  deduped.sort((a, b) => (b.volume24hUsd ?? 0) - (a.volume24hUsd ?? 0));
 
-  // Decorate with admin flags + hide admin-hidden coins in one registry read.
+  // Rank by what the tab is for: fresh graduates by recency (newest pools
+  // first), everything else by live hotness so the featured hero + trending
+  // order surface genuinely active coins, not just the biggest pool.
+  if (tab === 'graduated') {
+    deduped.sort((a, b) => (b.pairCreatedAt ?? 0) - (a.pairCreatedAt ?? 0));
+  } else {
+    deduped.sort((a, b) => hotness(b) - hotness(a));
+  }
+
+  // Pull real logos for the top coins that are missing one (fresh graduates
+  // often lack a pool-embedded image), then apply admin flags / hide-list.
+  await enrichLogos(deduped);
   return decorateWithRegistry(deduped);
 }
 
@@ -385,7 +520,9 @@ async function getMostHeldFromRegistry(chains: CoinChain[]): Promise<Coin[]> {
       .order('holders_count', { ascending: false, nullsFirst: false })
       .order('volume_24h_usd', { ascending: false, nullsFirst: false })
       .limit(50);
-    return ((data as RegistryRow[]) ?? []).map(registryRowToCoin);
+    // Keep "Most held" consistent with the rest of the feed: no blue-chips /
+    // stables / oversized assets.
+    return ((data as RegistryRow[]) ?? []).map(registryRowToCoin).filter((c) => !isExcludedFromDiscovery(c));
   } catch {
     return [];
   }

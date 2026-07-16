@@ -8,6 +8,7 @@ import {
 import { getPoolStats } from '@/lib/services/geckoterminal';
 import { resolveTokenId } from '@/lib/market/tokenIdMaps';
 import { headlineMarketCap, clampFdv } from '@/lib/market/headline';
+import { getRealHolderCount } from '@/lib/coins/holders';
 import type { TokenStats, StatTier, TxnTier } from '@/lib/market/tokenStats';
 
 export const dynamic = 'force-dynamic';
@@ -110,6 +111,18 @@ async function fromDexScreener(id: string, chain: string): Promise<TokenStats | 
     } catch { /* GT optional — stay null */ }
   }
 
+  // Real on-chain holder count (GoPlus, cached ~60s at source). The terminal
+  // stats panel showed no holders at all; this fills it with a real number for
+  // any scanned contract, staying null (honest "—") when GoPlus can't provide
+  // one. GoPlus's own 60s data-cache + this route's 4s edge-cache keep the
+  // call rate low despite the fast client poll.
+  let holders: number | null = null;
+  if (pairChain && pair.baseToken.address) {
+    try {
+      holders = await getRealHolderCount(pairChain, pair.baseToken.address);
+    } catch { /* holders optional — stay null */ }
+  }
+
   return {
     source: 'dexscreener',
     name: pair.baseToken.name,
@@ -128,6 +141,7 @@ async function fromDexScreener(id: string, chain: string): Promise<TokenStats | 
     liquidityUsd: num(pair.liquidity?.usd),
     fdv: clampedFdv > 0 ? clampedFdv : null,
     marketCap: headlineMc > 0 ? headlineMc : null,
+    holders,
     change,
     volume,
     txns,
@@ -202,6 +216,7 @@ async function fromCoinGecko(id: string, chain: string): Promise<TokenStats | nu
     liquidityUsd: null,
     fdv: num(md.fully_diluted_valuation?.usd),
     marketCap: num(md.market_cap?.usd),
+    holders: null,
     change,
     volume,
     txns: { m5: null, h1: null, h6: null, h24: null },

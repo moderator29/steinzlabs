@@ -22,6 +22,8 @@ interface StoredWalletLike {
   address?: string;
   chain?: string;
   name?: string;
+  solanaAddress?: string;
+  encryptedMnemonic?: string;
 }
 
 function readJson<T>(key: string): T | null {
@@ -72,6 +74,29 @@ export function getBuiltinWalletAddress(): string | null {
 /** True when a built-in Naka wallet exists in this browser. */
 export function hasBuiltinWallet(): boolean {
   return getBuiltinWalletAddress() !== null;
+}
+
+/**
+ * Resolve the built-in wallet's SOLANA address (base58). The built-in wallet
+ * derives both an EVM and a Solana address from one seed; getBuiltinWalletAddress
+ * returns the EVM one, but a Solana trade must be taken from the Solana address.
+ * Matches the active wallet entry, else the first entry that has one. Returns
+ * null when this wallet has no Solana address derived (older imports).
+ */
+export function getBuiltinSolanaAddress(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const wallets = readJson<StoredWalletLike[]>('steinz_wallets');
+    if (!Array.isArray(wallets) || wallets.length === 0) return null;
+    const activeEvm = getBuiltinWalletAddress();
+    const match = activeEvm
+      ? wallets.find((w) => w?.address && w.address.toLowerCase() === activeEvm.toLowerCase())
+      : null;
+    const sol = (match?.solanaAddress || wallets.find((w) => w?.solanaAddress)?.solanaAddress || '').trim();
+    return sol || null;
+  } catch {
+    return null;
+  }
 }
 
 /**

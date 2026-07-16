@@ -7,10 +7,12 @@
  * edge-lit glass, real data only, and render nothing when empty.
  */
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 import { CoinLogo, PriceDelta } from '@/components/coins/atoms';
+import { CoinRow } from '@/components/coins/CoinRow';
 import { coinPrice, compactUsd } from '@/lib/coins/format';
 import type { Coin } from '@/lib/coins/types';
 
@@ -80,6 +82,53 @@ export function CoinRail({ title, Icon, coins, accent = '#7FB2FF', seeAllHref }:
         ))}
       </div>
     </section>
+  );
+}
+
+/**
+ * A labelled VERTICAL list of coin rows. Replaces the horizontal shelf so the
+ * feed reads top-to-bottom, one clean row per coin. Shows an initial window and
+ * expands on tap so a long trending list stays tidy. Renders nothing when empty.
+ */
+export function CoinList({ title, Icon, coins, accent = '#7FB2FF', initial = 8, seeAllHref }: { title: string; Icon: LucideIcon; coins: Coin[]; accent?: string; initial?: number; seeAllHref?: string }) {
+  if (!coins || coins.length === 0) return null;
+  return <CoinListInner title={title} Icon={Icon} coins={coins} accent={accent} initial={initial} seeAllHref={seeAllHref} />;
+}
+
+function CoinListInner({ title, Icon, coins, accent, initial, seeAllHref }: { title: string; Icon: LucideIcon; coins: Coin[]; accent: string; initial: number; seeAllHref?: string }) {
+  return (
+    <section className="mb-1">
+      <div className="flex items-center gap-2 mb-2.5 px-0.5">
+        <Icon className="w-4 h-4 shrink-0" style={{ color: accent }} />
+        <h2 className="text-[15px] font-bold text-white">{title}</h2>
+        <span className="text-[12px] text-white/35 font-semibold">{coins.length}</span>
+        {seeAllHref ? <Link href={seeAllHref} className="ms-auto text-[12px] font-semibold text-[#7FB2FF] hover:text-white">See all</Link> : null}
+      </div>
+      <CoinListRows coins={coins} initial={initial} />
+    </section>
+  );
+}
+
+/** The expandable vertical stack of rows. */
+function CoinListRows({ coins, initial }: { coins: Coin[]; initial: number }) {
+  const [expanded, setExpanded] = useState(false);
+  const shown = expanded ? coins : coins.slice(0, initial);
+  const remaining = coins.length - shown.length;
+  return (
+    <div className="space-y-2">
+      {shown.map((c, i) => (
+        <CoinRow key={`${c.chain}:${c.tokenKey}`} coin={c} index={i} />
+      ))}
+      {remaining > 0 ? (
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="w-full rounded-2xl py-2.5 text-[13px] font-semibold text-[#7FB2FF] nl-glass hover:text-white transition-colors"
+        >
+          Show {remaining} more
+        </button>
+      ) : null}
+    </div>
   );
 }
 
