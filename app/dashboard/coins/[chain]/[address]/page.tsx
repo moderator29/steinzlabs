@@ -28,6 +28,9 @@ import { coinPrice, compactUsd, formatAddress } from '@/lib/coins/format';
 
 const TIMEFRAMES: CoinTimeframe[] = ['1H', '4H', '1D', '7D', '3M', 'ALL'];
 type Tab = 'wire' | 'room' | 'holders' | 'info';
+// Outer trade/social tabs that sit under the chart so the page reads as a clean
+// terminal instead of one long scroll.
+type OuterTab = 'trade' | 'limit' | 'dca' | 'social';
 
 type RiskLevel = 'low' | 'medium' | 'high' | 'unknown';
 interface RiskRead { level: RiskLevel; reasons: string[] }
@@ -69,6 +72,8 @@ function CoinDetail({ params }: { params: Promise<{ chain: string; address: stri
   const [candles, setCandles] = useState<CoinCandle[]>([]);
   const [chartLoading, setChartLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('wire');
+  const [outerTab, setOuterTab] = useState<OuterTab>('trade');
+  const [heldTokens, setHeldTokens] = useState<number>(0);
   const [stats, setStats] = useState<{ buys: number | null; sells: number | null; buyers: number | null; sellers: number | null } | null>(null);
   const [markers, setMarkers] = useState<TradeMarker[]>([]);
   const [shared, setShared] = useState(false);
@@ -97,6 +102,23 @@ function CoinDetail({ params }: { params: Promise<{ chain: string; address: stri
     fetch(`/api/coins/${chain}/${encodeURIComponent(address)}/mytrades`, { cache: 'no-store' })
       .then((r) => r.json()).then((j) => setMarkers(Array.isArray(j.trades) ? j.trades : [])).catch(() => {});
   }, [chain, address]);
+
+  // The caller's net position in THIS coin (from Naka trades), so the chart
+  // header can show "You hold X COIN (~$Y)" when they own some.
+  useEffect(() => {
+    if (!coin) return;
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch('/api/coins/trade?open=1', { cache: 'no-store' });
+        const j = await r.json();
+        const pos = (j.positions as Array<{ tokenKey: string; chain: string; netTokens: number }> | undefined)
+          ?.find((p) => p.chain === coin.chain && p.tokenKey === coin.tokenKey);
+        if (alive) setHeldTokens(pos?.netTokens ?? 0);
+      } catch { /* ignore */ }
+    })();
+    return () => { alive = false; };
+  }, [coin]);
 
   const loadChart = useCallback(async (timeframe: CoinTimeframe, pair?: string | null) => {
     setChartLoading(true);
@@ -205,17 +227,17 @@ function CoinDetail({ params }: { params: Promise<{ chain: string; address: stri
   return (
     <AuroraBackground fullHeight>
     <div className="min-h-screen text-white max-w-6xl mx-auto pb-28">
-      {/* Header */}
-      <div className="sticky top-0 z-20 flex items-center gap-2.5 px-3 sm:px-4 py-3 bg-[#070a12]/70 backdrop-blur-xl border-b border-[#0066FF]/25">
+      {/* Header — compact action cluster so the title has room to breathe. */}
+      <div className="sticky top-0 z-20 flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-[#070a12]/70 backdrop-blur-xl border-b border-[#0066FF]/25">
         <BackButton href="/dashboard/coins" />
-        <CoinLogo logoUrl={coin.logoUrl} symbol={coin.symbol} chain={coin.chain} size={36} verified={coin.verified} />
+        <CoinLogo logoUrl={coin.logoUrl} symbol={coin.symbol} chain={coin.chain} size={34} verified={coin.verified} />
         <div className="min-w-0 flex-1">
           <div className="text-[15px] font-semibold text-white truncate leading-tight">{coin.symbol || coin.name}</div>
           <Copyable text={coin.tokenAddress} label={formatAddress(coin.tokenAddress)} className="text-[11px]" />
         </div>
         <div className="relative">
-          <button type="button" onClick={toggleBell} aria-label="Price alerts" className="w-9 h-9 rounded-lg inline-flex items-center justify-center text-white/70 hover:text-white hover:bg-white/[0.06]">
-            <Bell className={`w-[18px] h-[18px] ${alerts.some((a) => a.active) ? 'fill-[#0066FF]/30 text-[#3B9EFF]' : ''}`} />
+          <button type="button" onClick={toggleBell} aria-label="Price alerts" className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-white/70 hover:text-white hover:bg-white/[0.06]">
+            <Bell className={`w-[17px] h-[17px] ${alerts.some((a) => a.active) ? 'fill-[#0066FF]/30 text-[#3B9EFF]' : ''}`} />
           </button>
           <AnimatePresence>
             {bellOpen ? (
@@ -278,20 +300,20 @@ function CoinDetail({ params }: { params: Promise<{ chain: string; address: stri
             ) : null}
           </AnimatePresence>
         </div>
-        <button type="button" onClick={toggleWatch} aria-label="Watchlist" className="w-9 h-9 rounded-lg inline-flex items-center justify-center text-white/70 hover:text-white hover:bg-white/[0.06]">
-          <Star className={`w-[18px] h-[18px] ${watchlisted ? 'fill-amber-400 text-amber-400' : ''}`} />
+        <button type="button" onClick={toggleWatch} aria-label="Watchlist" className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-white/70 hover:text-white hover:bg-white/[0.06]">
+          <Star className={`w-[17px] h-[17px] ${watchlisted ? 'fill-amber-400 text-amber-400' : ''}`} />
         </button>
-        <button type="button" onClick={share} aria-label="Share" className="w-9 h-9 rounded-lg inline-flex items-center justify-center text-white/70 hover:text-white hover:bg-white/[0.06]">
-          {shared ? <Check className="w-4 h-4 text-emerald-300" /> : <Share2 className="w-4 h-4" />}
+        <button type="button" onClick={share} aria-label="Share" className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-white/70 hover:text-white hover:bg-white/[0.06]">
+          {shared ? <Check className="w-4 h-4 text-emerald-300" /> : <Share2 className="w-[17px] h-[17px]" />}
         </button>
       </div>
 
-      {/* Two-column terminal: market + trade on the left, a live rail
-          (Wire / Holders / Info) on the right. Stacks to one column on mobile. */}
-      <div className="px-3 sm:px-4 lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start">
-      <div className="lg:col-span-7 xl:col-span-8">
+      {/* Single-column terminal: price + chart on top, then a 4-tab deck
+          (Trade / Limit / DCA / Social) under the chart so the page reads as a
+          clean terminal instead of one long scroll. */}
+      <div className="px-3 sm:px-4 max-w-2xl mx-auto">
         {/* Price hero with a soft brand glow */}
-        <div className="relative flex items-end justify-between pt-5 pb-3">
+        <div className="relative flex items-end justify-between pt-4 pb-3">
           <span className="pointer-events-none absolute -top-2 -left-6 w-52 h-24 rounded-full bg-[#0066FF]/20 blur-3xl" />
           <div className="relative">
             <div className={`text-[34px] leading-none font-extrabold tracking-tight tabular-nums transition-colors ${live.flash === 'up' ? 'text-emerald-400' : live.flash === 'down' ? 'text-rose-400' : 'text-white'}`}>
@@ -304,6 +326,19 @@ function CoinDetail({ params }: { params: Promise<{ chain: string; address: stri
             <Copyable text={String(Math.round(live.marketCap ?? coin.marketCapUsd ?? 0))} label={compactUsd(live.marketCap ?? coin.marketCapUsd)} className="text-[17px] font-bold text-white" />
           </div>
         </div>
+
+        {/* Your holding in this coin (only when you own some) — glass with a
+            blue stride so it reads as "yours". */}
+        {heldTokens > 0 ? (
+          <div className="relative flex items-center justify-between rounded-xl nl-glass overflow-hidden px-3.5 py-2.5 mb-3">
+            <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-gradient-to-b from-[#1E90FF] to-[#0066FF]" />
+            <span className="text-[12px] text-white/55 pl-1.5">You hold</span>
+            <span className="text-[13px] font-semibold text-white tabular-nums">
+              {heldTokens.toLocaleString('en-US', { maximumFractionDigits: 4 })} {coin.symbol}
+              {(live.price ?? coin.priceUsd) != null ? <span className="text-[#7FB2FF] ml-1.5">≈ {compactUsd(heldTokens * (live.price ?? coin.priceUsd ?? 0))}</span> : null}
+            </span>
+          </div>
+        ) : null}
 
         {/* Signature signal + deployer trust: our own Naka Score ring and the
             coin deployer's real track record. */}
@@ -398,47 +433,57 @@ function CoinDetail({ params }: { params: Promise<{ chain: string; address: stri
           ) : null}
         </AnimatePresence>
 
-        <div className="mb-4">
-          <TradeCard coin={coin} livePrice={live.price} liveMcap={live.marketCap} initialBuyUsd={buyPrefill} />
-        </div>
-
-        {/* Limit buy: arm a buy that pings you to sign when the trigger hits. */}
-        <div className="mb-4">
-          <LimitBuyPanel coin={coin} signedIn={signedIn} />
-        </div>
-
-        {/* Recurring buys (non-custodial reminders) and social buy alerts. */}
-        <div className="mb-4">
-          <DcaPanel coin={coin} signedIn={signedIn} />
-        </div>
-        <div className="mb-4">
-          <SocialAlertToggle chain={chain} address={address} signedIn={signedIn} />
-        </div>
-      </div>{/* /left column */}
-
-      {/* Right rail: the coin's live social terminal (Wire / Holders / Info).
-          Sticky beside the chart on desktop, a stacked block on mobile. */}
-      <div className="lg:col-span-5 xl:col-span-4 mt-2 lg:mt-5 lg:sticky lg:top-[68px]">
-        <div className="flex items-center border-b border-white/10 mb-3">
-          {(['wire', 'room', 'holders', 'info'] as Tab[]).map((t) => (
-            <button key={t} type="button" onClick={() => setTab(t)} className={`flex-1 py-2.5 text-[14px] font-semibold capitalize relative ${tab === t ? 'text-white' : 'text-white/45'}`}>
-              {t === 'wire' ? 'Wire' : t}
-              {tab === t ? <motion.span layoutId="coin-tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0066FF]" /> : null}
+        {/* ── 4-tab deck under the chart ──────────────────────────────────
+            Trade (Buy/Sell, default) · Limit · DCA · Social (Wire/Room/
+            Holders/Info inner tabs). Replaces the long vertical stack. */}
+        <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/10 mt-4 mb-3">
+          {(['trade', 'limit', 'dca', 'social'] as OuterTab[]).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setOuterTab(t)}
+              className={`relative py-2 rounded-lg text-[13px] font-semibold capitalize transition-colors ${outerTab === t ? 'bg-[#0066FF]/20 text-white' : 'text-white/50 hover:text-white'}`}
+            >
+              {t === 'trade' ? 'Trade' : t === 'limit' ? 'Limit' : t === 'dca' ? 'DCA' : 'Social'}
             </button>
           ))}
         </div>
-        <div className="lg:max-h-[calc(100vh-150px)] lg:overflow-y-auto no-scrollbar lg:pr-1">
-          <AnimatePresence mode="wait">
-            <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-              {tab === 'holders' ? <HoldersTab coin={coin} />
-                : tab === 'wire' ? <WireTab coin={coin} canPost={signedIn} />
-                : tab === 'room' ? <CoinRoom coin={coin} canPost={signedIn} />
-                : <InfoTab coin={coin} stats={stats} />}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </div>{/* /right rail */}
-      </div>{/* /grid */}
+
+        <AnimatePresence mode="wait">
+          <motion.div key={outerTab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="pb-4">
+            {outerTab === 'trade' ? (
+              <div className="space-y-3">
+                <TradeCard coin={coin} livePrice={live.price} liveMcap={live.marketCap} initialBuyUsd={buyPrefill} />
+                {/* Social buy alert lives right in the trade area as a small toggle. */}
+                <SocialAlertToggle chain={chain} address={address} signedIn={signedIn} compact />
+              </div>
+            ) : outerTab === 'limit' ? (
+              <LimitBuyPanel coin={coin} signedIn={signedIn} />
+            ) : outerTab === 'dca' ? (
+              <DcaPanel coin={coin} signedIn={signedIn} />
+            ) : (
+              <div>
+                <div className="flex items-center border-b border-white/10 mb-3">
+                  {(['wire', 'room', 'holders', 'info'] as Tab[]).map((t) => (
+                    <button key={t} type="button" onClick={() => setTab(t)} className={`flex-1 py-2.5 text-[14px] font-semibold capitalize relative ${tab === t ? 'text-white' : 'text-white/45'}`}>
+                      {t === 'wire' ? 'Wire' : t}
+                      {tab === t ? <motion.span layoutId="coin-tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0066FF]" /> : null}
+                    </button>
+                  ))}
+                </div>
+                <AnimatePresence mode="wait">
+                  <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
+                    {tab === 'holders' ? <HoldersTab coin={coin} />
+                      : tab === 'wire' ? <WireTab coin={coin} canPost={signedIn} />
+                      : tab === 'room' ? <CoinRoom coin={coin} canPost={signedIn} />
+                      : <InfoTab coin={coin} stats={stats} />}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </div>{/* /container */}
     </div>
     </AuroraBackground>
   );

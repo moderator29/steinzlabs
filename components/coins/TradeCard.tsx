@@ -100,7 +100,10 @@ export function TradeCard({ coin, livePrice, liveMcap, initialBuyUsd }: { coin: 
     const walletKind = getBuiltinWalletAddress() === address ? ('builtin' as const) : undefined;
     if (side === 'buy') {
       if (!nativeAmount || nativeAmount <= 0) return null;
-      return { chain: coin.chain, inputToken: native.symbol, outputToken: coin.tokenAddress, inputAmount: nativeAmount.toFixed(9), inputDecimals: native.decimals, userAddress: address, slippageBps: SLIPPAGE_BPS, walletKind };
+      // Pass the coin's known decimals so the quote route resolves the output
+      // token without a round-trip on-chain lookup, and never rejects a real
+      // coin for "unknown decimals".
+      return { chain: coin.chain, inputToken: native.symbol, outputToken: coin.tokenAddress, inputAmount: nativeAmount.toFixed(9), inputDecimals: native.decimals, outputDecimals: coin.decimals ?? undefined, userAddress: address, slippageBps: SLIPPAGE_BPS, walletKind };
     }
     // Never guess decimals for a sell: without them we cannot size base units.
     if (!canSell || sellAmount <= 0 || coin.decimals == null) return null;

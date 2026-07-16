@@ -21,7 +21,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { getAccount } from '@wagmi/core';
 import { ProviderController } from '@reown/appkit-controllers';
-import { getWalletSessionKey } from '@/lib/wallet/walletSession';
+import { getWalletSessionKey, setWalletSessionKey } from '@/lib/wallet/walletSession';
 import { normalizeAddress } from '@/lib/utils/addressNormalize';
 import { decryptPrivateKey } from '@/lib/wallet/encryption';
 import { wagmiAdapter } from '@/lib/wallet/appkit';
@@ -247,7 +247,8 @@ export function useSwapBroadcast() {
         throw new Error('No wallet keys found. Please re-import your wallet to sign transactions.');
       }
 
-      let pwd = getWalletSessionKey() || '';
+      const cachedPwd = getWalletSessionKey();
+      let pwd = cachedPwd || '';
       if (!pwd) {
         // Park on the unlock modal; resumes when resolveUnlock() fires.
         pwd = await requestUnlock({
@@ -269,6 +270,12 @@ export function useSwapBroadcast() {
       } catch {
         throw new Error('Failed to decrypt wallet key: wrong password, or this wallet predates AES-256-GCM (re-import the seed phrase from the Wallet page).');
       }
+
+      // The password decrypted cleanly — cache it for the session so the user
+      // isn't re-prompted on every subsequent buy/sell (they unlock once, then
+      // trade freely until the auto-lock TTL expires). Only cache a freshly
+      // entered password; a cached one is already stored.
+      if (!cachedPwd) setWalletSessionKey(pwd);
 
       const { ethers } = await import('ethers');
       const rpcUrl = CHAIN_RPCS[chain] || CHAIN_RPCS.ethereum;

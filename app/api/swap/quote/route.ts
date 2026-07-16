@@ -5,6 +5,7 @@ import * as Sentry from '@sentry/nextjs';
 import { getSwapQuote, getChainId } from '@/lib/services/zerox';
 import { getJupiterQuote, buildSwapTransaction } from '@/lib/services';
 import { resolveSwapAddress, resolveSwapDecimals, toBaseUnits } from '@/lib/market/swapTokenMeta';
+import { getOnchainDecimals } from '@/lib/services/onchainDecimals';
 import { PublicKey } from '@solana/web3.js';
 
 // Associated Token Account derivation (no spl-token dependency needed).
@@ -58,8 +59,7 @@ export async function GET(request: NextRequest) {
     if (!sellAddress || !buyAddress) {
       return NextResponse.json(
         {
-          error: `Unsupported token on ${chain}: ${!sellAddress ? fromInput : toInput}. ` +
-            `Pass a contract address (and decimals for unknown Solana mints).`,
+          error: `Unsupported token on ${chain}: ${!sellAddress ? fromInput : toInput}. Pass a valid contract address.`,
           code: 'UNRESOLVED_TOKEN',
         },
         { status: 422 },
@@ -68,9 +68,12 @@ export async function GET(request: NextRequest) {
 
     // Base units only need decimals when we have to convert a HUMAN amount;
     // a legacy caller that already sent base units skips the decimals lookup.
+    // When the sell token's decimals aren't in the static table (a fresh
+    // memecoin), read them on-chain so the trade still resolves.
     let baseAmount = amountInput;
     if (!amountIsBaseUnits) {
-      const sellDecimals = resolveSwapDecimals(fromInput, chain, fromDecimalsHint);
+      let sellDecimals = resolveSwapDecimals(fromInput, chain, fromDecimalsHint);
+      if (sellDecimals === null) sellDecimals = await getOnchainDecimals(chain, sellAddress);
       if (sellDecimals === null) {
         return NextResponse.json(
           { error: `Unknown decimals for ${fromInput} on ${chain}. Pass fromDecimals.`, code: 'UNKNOWN_DECIMALS' },

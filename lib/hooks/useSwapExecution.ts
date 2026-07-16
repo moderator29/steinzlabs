@@ -29,6 +29,10 @@ interface SwapExecutionParams {
   outputToken: string;
   inputAmount: string;
   inputDecimals: number;
+  /** Output-token decimals when the caller already knows them (e.g. a coin
+   *  page that resolved them). Lets the quote route skip an on-chain lookup
+   *  and never reject a real coin for "unknown decimals". */
+  outputDecimals?: number;
   userAddress: string;
   slippageBps: number;
   // Explicit wallet kind so a built-in Naka wallet is not misrouted to an
@@ -79,6 +83,7 @@ export function useSwapExecution() {
       slippageBps: String(params.slippageBps),
       fromDecimals: String(params.inputDecimals),
     });
+    if (params.outputDecimals != null) priceParams.set('toDecimals', String(params.outputDecimals));
 
     try {
       const [quoteRes, mevRes] = await Promise.allSettled([
@@ -137,6 +142,7 @@ export function useSwapExecution() {
         slippageBps: String(params.slippageBps),
         fromDecimals: String(params.inputDecimals),
       });
+      if (params.outputDecimals != null) qp.set('toDecimals', String(params.outputDecimals));
       const res = await fetch(`/api/swap/quote?${qp.toString()}`, { signal: AbortSignal.timeout(20_000) });
       const data = await res.json().catch(() => ({} as { error?: string }));
       if (!res.ok) throw new Error((data as { error?: string }).error ?? `Quote failed (${res.status})`);

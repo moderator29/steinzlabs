@@ -16,6 +16,9 @@ interface Props {
   chain: string;
   address: string;
   signedIn: boolean;
+  /** Slim inline variant for the buy/sell area: one row of small toggles,
+   *  no big glass card. */
+  compact?: boolean;
 }
 
 interface AlertRow {
@@ -29,7 +32,10 @@ const CHIP_ACTIVE =
   'bg-[#0066FF]/18 border-[#0066FF]/60 text-white shadow-[0_0_18px_-4px_rgba(0,102,255,.8)]';
 const CHIP_IDLE = 'border-white/10 text-white/70 hover:text-white hover:border-white/20';
 
-export default function SocialAlertToggle({ chain, address, signedIn }: Props) {
+const SMALL_BASE =
+  'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold border transition-all duration-200 active:scale-[0.98] disabled:opacity-50';
+
+export default function SocialAlertToggle({ chain, address, signedIn, compact = false }: Props) {
   const [armed, setArmed] = useState<Record<Scope, boolean>>({ following: false, proven: false });
   const [pending, setPending] = useState<Scope | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -76,6 +82,39 @@ export default function SocialAlertToggle({ chain, address, signedIn }: Props) {
     } finally {
       setPending(null);
     }
+  }
+
+  // Slim inline variant used inside the Buy/Sell tab.
+  if (compact) {
+    if (!signedIn) {
+      return (
+        <div className="flex items-center gap-2 rounded-xl bg-white/[0.03] border border-white/10 px-3 py-2 text-[12px] text-white/55">
+          <Bell className="h-3.5 w-3.5 text-[#0066FF] shrink-0" strokeWidth={2} />
+          <span className="min-w-0"><a href="/login" className="text-[#7FB2FF] font-semibold">Sign in</a> to get pinged when your circle or Proven traders buy.</span>
+        </div>
+      );
+    }
+    return (
+      <div className="rounded-xl bg-white/[0.03] border border-white/10 px-3 py-2.5">
+        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-white/60 mb-2">
+          <Bell className="h-3.5 w-3.5 text-[#0066FF]" strokeWidth={2} /> Alert me when they buy
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button" onClick={() => toggle('following')} disabled={!loaded || pending === 'following'} aria-pressed={armed.following}
+            className={`${SMALL_BASE} ${armed.following ? CHIP_ACTIVE : CHIP_IDLE}`}
+          >
+            <Users className="h-3.5 w-3.5" strokeWidth={2} /> I follow
+          </button>
+          <button
+            type="button" onClick={() => toggle('proven')} disabled={!loaded || pending === 'proven'} aria-pressed={armed.proven}
+            className={`${SMALL_BASE} ${armed.proven ? CHIP_ACTIVE : CHIP_IDLE}`}
+          >
+            <Trophy className="h-3.5 w-3.5" strokeWidth={2} /> Proven traders
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (!signedIn) {
