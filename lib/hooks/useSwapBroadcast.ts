@@ -216,16 +216,70 @@ export function useSwapBroadcast() {
 
   const broadcastBuiltin = useCallback(
     async (quote: SwapBroadcastQuote, chain: string, address: string): Promise<string> => {
-      if (!quote.transaction) {
-        throw new Error('No transaction data to sign. Re-fetch the quote and try again.');
-      }
-      const storedWallets = safeLocalParse<Array<{ address?: string; encryptedKey?: string; importMethod?: string; derivationPath?: string }>>('steinz_wallets', []);
+      const storedWallets = safeLocalParse<Array<{ address?: string; encryptedKey?: string; encryptedMnemonic?: string; solanaAddress?: string; accountIndex?: number; importMethod?: string; derivationPath?: string }>>('steinz_wallets', []);
       const activeAddr = safeLocalGet('steinz_active_wallet_address') || address;
+      // Match by EVM address (built-in wallets are keyed on it) or by the Solana
+      // address when the taker passed in is the Solana side.
       const storedWallet = storedWallets.find(
         (w) => w.address && activeAddr && normalizeAddress(w.address) === normalizeAddress(activeAddr),
-      );
+      ) ?? storedWallets.find((w) => w.solanaAddress && w.solanaAddress === address);
       if (!storedWallet) {
         throw new Error('No wallet found. Please re-import your wallet to sign transactions.');
+      }
+
+      // Shared password acquisition: reuse the session-cached password, else
+      // park on the unlock modal. Returns whether it came from cache so the
+      // caller only re-caches a freshly entered one.
+      const acquirePwd = async (encryptedForModal: string): Promise<{ pwd: string; cached: boolean }> => {
+        const cached = getWalletSessionKey();
+        if (cached) return { pwd: cached, cached: true };
+        const entered = await requestUnlock({
+          encryptedKey: encryptedForModal,
+          addressShort: storedWallet.address ? `${storedWallet.address.slice(0, 6)}…${storedWallet.address.slice(-4)}` : undefined,
+        });
+        if (!entered) throw new Error('Wallet session expired. Please unlock your wallet.');
+        return { pwd: entered, cached: false };
+      };
+
+      // ── Solana built-in signing ────────────────────────────────────────
+      // The built-in wallet derives its Solana keypair from the encrypted
+      // mnemonic (the EVM hex key is NOT a Solana key). Decrypt, derive, verify
+      // the key matches this account, then sign + broadcast the Jupiter tx.
+      if (chain === 'solana') {
+        if (!quote.swapTransaction) throw new Error('No Solana transaction data received from the quote.');
+        if (!storedWallet.encryptedMnemonic || !storedWallet.solanaAddress) {
+          throw new Error("This built-in wallet can't sign Solana trades yet. Re-import its seed phrase from the Wallet page.");
+        }
+        const { pwd, cached } = await acquirePwd(storedWallet.encryptedMnemonic);
+        let mnemonic = '';
+        try {
+          mnemonic = await decryptPrivateKey(storedWallet.encryptedMnemonic, pwd);
+        } catch {
+          throw new Error('Failed to decrypt wallet: wrong password, or this wallet predates AES-256-GCM (re-import the seed phrase from the Wallet page).');
+        }
+        if (!cached) setWalletSessionKey(pwd);
+        try {
+          const [{ Connection, VersionedTransaction }, { deriveSolanaKeypair }] = await Promise.all([
+            import('@solana/web3.js'),
+            import('@/lib/wallet/derive'),
+          ]);
+          const keypair = deriveSolanaKeypair(mnemonic, storedWallet.accountIndex ?? 0);
+          // Funds-safety: never broadcast if the derived key isn't this account.
+          if (keypair.publicKey.toBase58() !== storedWallet.solanaAddress) {
+            throw new Error('Derived signing key does not match this account. Aborted for safety.');
+          }
+          const conn = new Connection(process.env.NEXT_PUBLIC_HELIUS_RPC_URL ?? 'https://api.mainnet-beta.solana.com', 'confirmed');
+          const tx = VersionedTransaction.deserialize(Buffer.from(quote.swapTransaction, 'base64'));
+          tx.sign([keypair]);
+          return await conn.sendRawTransaction(tx.serialize(), { skipPreflight: false, maxRetries: 2 });
+        } finally {
+          mnemonic = '';
+        }
+      }
+
+      // ── EVM built-in signing ───────────────────────────────────────────
+      if (!quote.transaction) {
+        throw new Error('No transaction data to sign. Re-fetch the quote and try again.');
       }
 
       // #44 — Ledger hardware wallet: sign the swap tx on the device. No
@@ -247,18 +301,7 @@ export function useSwapBroadcast() {
         throw new Error('No wallet keys found. Please re-import your wallet to sign transactions.');
       }
 
-      const cachedPwd = getWalletSessionKey();
-      let pwd = cachedPwd || '';
-      if (!pwd) {
-        // Park on the unlock modal; resumes when resolveUnlock() fires.
-        pwd = await requestUnlock({
-          encryptedKey: storedWallet.encryptedKey,
-          addressShort: storedWallet.address
-            ? `${storedWallet.address.slice(0, 6)}…${storedWallet.address.slice(-4)}`
-            : undefined,
-        });
-      }
-      if (!pwd) throw new Error('Wallet session expired. Please unlock your wallet.');
+      const { pwd, cached } = await acquirePwd(storedWallet.encryptedKey);
 
       // Decrypt via the shared AES-256-GCM/PBKDF2 helper — the same format
       // the Wallet page wrote with encryptPrivateKey. The previous bespoke
@@ -271,11 +314,9 @@ export function useSwapBroadcast() {
         throw new Error('Failed to decrypt wallet key: wrong password, or this wallet predates AES-256-GCM (re-import the seed phrase from the Wallet page).');
       }
 
-      // The password decrypted cleanly — cache it for the session so the user
-      // isn't re-prompted on every subsequent buy/sell (they unlock once, then
-      // trade freely until the auto-lock TTL expires). Only cache a freshly
-      // entered password; a cached one is already stored.
-      if (!cachedPwd) setWalletSessionKey(pwd);
+      // Cache a freshly entered password for the session so buys/sells don't
+      // re-prompt (they unlock once, then trade until the auto-lock TTL).
+      if (!cached) setWalletSessionKey(pwd);
 
       const { ethers } = await import('ethers');
       const rpcUrl = CHAIN_RPCS[chain] || CHAIN_RPCS.ethereum;
