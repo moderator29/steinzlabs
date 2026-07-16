@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from '@/lib/auth/apiAuth';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { WIRE_TOPIC_SET, WIRE_MAX_TAGS } from '@/lib/wire/topics';
 import { computeAuthorSignals } from '@/lib/wire/signal';
+import { notifyNewPostToSubscribers } from '@/lib/social/subscriberNotify';
 
 /**
  * The Wire - native social feed API.
@@ -144,6 +145,20 @@ export async function POST(req: NextRequest) {
   // Attach the author via a plain query (no embed) so the create response can
   // never fail on a stale relationship cache.
   const authorMap = await fetchAuthors(sb, [user.id]);
+
+  // Per-user "notify" fanout: anyone who turned ON the bell for this author gets
+  // an in-app (+ Telegram) ping. Only genuine top-level wires, never replies or
+  // reposts. Fire-and-forget so it never delays or fails the create response.
+  if (!data.reply_to && !data.repost_of) {
+    const a = authorMap.get(user.id) as { display_name?: string | null; username?: string | null } | undefined;
+    void notifyNewPostToSubscribers({
+      authorId: user.id,
+      authorName: a?.display_name || a?.username || 'Someone',
+      postId: data.id,
+      snippet: String(data.body ?? '').trim(),
+    });
+  }
+
   return NextResponse.json({
     post: { ...data, author: authorMap.get(user.id) ?? null, original: null, liked: false, reposted: false },
   });
@@ -158,6 +173,12 @@ export async function GET(req: NextRequest) {
   const feed = params.get('feed'); // 'signal' | 'pack' | null
   const tag = params.get('tag');   // legacy single canonical topic value | null
   const tagsParam = params.get('tags'); // comma-separated canonical topics | null
+  // A coin ticker (cashtag) filter, used by a coin's own Wire slice: keep only
+  // top-level wires that carry $TICKER in the body or the ticker in tags[]. The
+  // rest of the pipeline (audience, annotate, signals) is identical to the main
+  // feed so the coin's Wire is the SAME view, just scoped to one coin.
+  const cashtagRaw = params.get('cashtag');
+  const cashtag = cashtagRaw ? cashtagRaw.replace(/[^a-zA-Z0-9]/g, '') : '';
 
   if (tag && !WIRE_TOPIC_SET.has(tag)) {
     return NextResponse.json({ error: 'Unknown topic' }, { status: 400 });
@@ -357,6 +378,8 @@ export async function GET(req: NextRequest) {
   }
   if (mediaOnly) q = q.not('media_url', 'is', null);
   if (topicFilter.length) q = q.overlaps('tags', topicFilter);
+  // Coin-scoped Wire: $TICKER in the body or the ticker present in tags[].
+  if (cashtag) q = q.or(`body.ilike.%$${cashtag}%,tags.cs.{${cashtag.toLowerCase()}}`);
   // Hide muted authors from the main feed, but not from a single-author timeline.
   if (mutedList && !author) q = q.not('author_id', 'in', mutedList);
   if (cursor) q = q.lt('created_at', cursor);
@@ -365,7 +388,23 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const posts = Array.isArray(data) ? data : [];
-  const annotated = await annotate(sb, posts, viewer?.id);
+  // The DB `.or(body.ilike.%$WIF%,...)` is a coarse prefilter that over-matches
+  // short tickers (e.g. $AI would catch $AIMOVE). Refine in JS to a real cashtag
+  // boundary in the body OR an exact ticker tag, so the coin Wire only shows
+  // posts that genuinely reference this coin.
+  let filtered = posts;
+  if (cashtag) {
+    const re = new RegExp(`\\$${cashtag}\\b`, 'i');
+    const lc = cashtag.toLowerCase();
+    filtered = posts.filter((p) => {
+      const inBody = typeof p.body === 'string' && re.test(p.body);
+      const inTags = Array.isArray(p.tags) && p.tags.some((t: unknown) => String(t).toLowerCase() === lc);
+      return inBody || inTags;
+    });
+  }
+  const annotated = await annotate(sb, filtered, viewer?.id);
+  // Pagination follows the raw DB page so the cursor advances even if JS
+  // filtering dropped some rows from this page.
   const nextCursor = posts.length === PAGE_SIZE ? posts[posts.length - 1]?.created_at ?? null : null;
   return NextResponse.json({ posts: annotated, nextCursor });
 }

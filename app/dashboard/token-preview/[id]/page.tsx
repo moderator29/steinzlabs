@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ExternalLink, Globe, MessageCircle, Twitter, Copy, CheckCircle, Clock, Shield } from 'lucide-react';
+import { ExternalLink, Globe, MessageCircle, AtSign as Twitter, Copy, CheckCircle, Clock, Shield } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 
 interface TokenListing {

@@ -9,7 +9,7 @@ import {
   Settings, LifeBuoy, Zap, Search, Tag, Star,
   Mail, LogOut, Menu, X, ChevronRight, Lock, FileText,
   Flag, UserMinus, UserCog, ClipboardList, LineChart,
-  MessageSquare, Gift, Newspaper, CandlestickChart, Coins,
+  MessageSquare, Gift, Newspaper, CandlestickChart, Coins, CircleDollarSign,
 } from 'lucide-react';
 import SteinzLogo from '@/components/SteinzLogo';
 import { HealthBadge } from '@/components/admin/HealthBadge';
@@ -50,6 +50,7 @@ const NAV_ITEMS = [
   // Markets.
   { href: '/admin/rwa-markets',            icon: CandlestickChart, label: 'RWA Markets' },
   { href: '/admin/robinhood-chain',        icon: Coins,          label: 'Robinhood Chain' },
+  { href: '/admin/coins',                  icon: CircleDollarSign, label: 'Coins' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

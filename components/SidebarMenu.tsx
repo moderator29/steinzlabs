@@ -14,8 +14,8 @@ import {
   PieChart, DollarSign, Archive, Circle, FileCode, FlaskConical, FileSearch,
   CheckSquare, Crosshair, Network, Globe, History, MessageCircle, Compass, Gem,
   LineChart, Sparkles, ScanSearch, Settings, ShieldCheck, LayoutGrid, Rss,
-  Newspaper, LogIn, LogOut, UserCircle2, Twitter, Send, LifeBuoy, FileText,
-  ChevronRight,
+  Newspaper, LogIn, LogOut, UserCircle2, AtSign as Twitter, Send, LifeBuoy, FileText,
+  ChevronRight, Users,
 } from 'lucide-react';
 import { GlobalWhatsNewButton } from '@/components/common/GlobalWhatsNew';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -67,6 +67,7 @@ const NAV_CATEGORIES: NavCategory[] = [
     title: 'Social',
     items: [
       { icon: MessageCircle, label: 'Messages', path: '/dashboard/messages' },
+      { icon: Users, label: 'Groups', path: '/dashboard/groups' },
     ],
   },
   {

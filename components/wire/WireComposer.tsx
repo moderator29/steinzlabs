@@ -9,6 +9,9 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { WIRE_TOPICS, WIRE_MAX_TAGS } from '@/lib/wire/topics';
+import { useWireAutocomplete } from '@/lib/wire/useWireAutocomplete';
+import { CoinLogo, VerifiedTick } from '@/components/coins/atoms';
+import { compactUsd } from '@/lib/coins/format';
 import type { WirePost } from './WirePostCard';
 
 /**
@@ -98,6 +101,8 @@ export const WireComposer = forwardRef<WireComposerHandle, WireComposerProps>(fu
   ref,
 ) {
   const [body, setBody] = useState('');
+  // Inline $cashtag + @mention autocomplete for the textarea.
+  const ac = useWireAutocomplete(body, setBody);
   const [tags, setTags] = useState<string[]>([]);
   const [showTags, setShowTags] = useState(false);
   // Who can see the wire. Drives the audience pill dropdown + the create call.
@@ -438,19 +443,93 @@ export const WireComposer = forwardRef<WireComposerHandle, WireComposerProps>(fu
         {large ? null : avatar}
 
         <div className="min-w-0 flex-1">
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            onKeyDown={(e) => {
-              if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submit();
-            }}
-            placeholder="What's happening on The Wire?"
-            rows={large ? 6 : 3}
-            autoFocus={large}
-            className={`w-full bg-transparent resize-none outline-none text-white placeholder:text-white/35 leading-relaxed ${
-              large ? 'text-lg min-h-[9rem]' : 'text-[15px]'
-            }`}
-          />
+          <div className="relative">
+            <textarea
+              ref={ac.textareaRef}
+              value={body}
+              onChange={ac.onChange}
+              onSelect={ac.onSelect}
+              onKeyDown={(e) => {
+                if (ac.handleKeyDown(e)) return;
+                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submit();
+              }}
+              placeholder="What's happening on The Wire?"
+              rows={large ? 6 : 3}
+              autoFocus={large}
+              className={`w-full bg-transparent resize-none outline-none text-white placeholder:text-white/35 leading-relaxed ${
+                large ? 'text-lg min-h-[9rem]' : 'text-[15px]'
+              }`}
+            />
+
+            {/* Inline $cashtag / @mention dropdown - real search results only */}
+            {ac.menu.open ? (
+              <div
+                role="listbox"
+                className="absolute left-0 top-full z-40 mt-1 w-72 max-w-full max-h-64 overflow-y-auto no-scrollbar nl-glass rounded-2xl p-1.5 shadow-[0_20px_60px_rgba(0,0,0,0.55)]"
+              >
+                {ac.menu.kind === 'coin'
+                  ? ac.menu.coins.map((c, i) => {
+                      const active = i === ac.menu.activeIndex;
+                      return (
+                        <button
+                          key={`${c.chain}:${c.tokenAddress}`}
+                          type="button"
+                          role="option"
+                          aria-selected={active}
+                          onMouseEnter={() => ac.setActiveIndex(i)}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => ac.selectItem(i)}
+                          className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition min-h-[44px] ${
+                            active ? 'bg-[#0066FF]/18' : 'hover:bg-white/[0.05]'
+                          }`}
+                        >
+                          <CoinLogo logoUrl={c.logoUrl} symbol={c.symbol} chain={c.chain} size={30} verified={c.verified} />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-semibold text-white">${c.symbol}</span>
+                            <span className="block truncate text-[11px] text-white/45">{c.name}</span>
+                          </span>
+                          <span className="flex-shrink-0 text-[11px] tabular-nums text-white/55">{compactUsd(c.marketCapUsd)}</span>
+                        </button>
+                      );
+                    })
+                  : ac.menu.people.map((p, i) => {
+                      const active = i === ac.menu.activeIndex;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          role="option"
+                          aria-selected={active}
+                          onMouseEnter={() => ac.setActiveIndex(i)}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => ac.selectItem(i)}
+                          className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition min-h-[44px] ${
+                            active ? 'bg-[#0066FF]/18' : 'hover:bg-white/[0.05]'
+                          }`}
+                        >
+                          {p.avatar_url ? (
+                            <img src={p.avatar_url} alt="" className="h-8 w-8 flex-shrink-0 rounded-full object-cover border border-white/10" />
+                          ) : (
+                            <div
+                              className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-white/10 text-xs font-semibold text-white/90"
+                              style={{ background: 'linear-gradient(135deg,#0066FF33,#5566FF33)' }}
+                            >
+                              {(p.display_name || p.username || '?').trim().charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-center gap-1 text-sm font-semibold text-white">
+                              <span className="truncate">{p.display_name || p.username}</span>
+                              {p.verified ? <VerifiedTick size={13} /> : null}
+                            </span>
+                            <span className="block truncate text-[11px] text-white/45">@{p.username}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+              </div>
+            ) : null}
+          </div>
 
           {/* Thumbnail row - up to 4 attached images + an add tile */}
           {mediaUrls.length > 0 || uploading ? (

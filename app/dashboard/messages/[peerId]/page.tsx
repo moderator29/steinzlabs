@@ -12,6 +12,7 @@ import {
 } from '@/lib/social/encryption';
 import { ensureKeyVault } from '@/lib/social/keyVault';
 import { sanitizeMessageBody } from '@/lib/social/sanitizeMessageBody';
+import { renderRichText } from '@/lib/wire/richText';
 
 /**
  * /dashboard/messages/[peerId] — DM thread (X-style full page).
@@ -545,7 +546,7 @@ export default function DmThreadPage({ params }: { params: Promise<{ peerId: str
                 style={mine
                   ? { background: 'linear-gradient(135deg, #1E90FF 0%, #0066FF 60%, #2D5BFF 100%)', boxShadow: '0 0 14px rgba(0,102,255,.35), inset 0 1px 0 rgba(255,255,255,.22)' }
                   : { boxShadow: '0 0 0 1px rgba(0,102,255,.18)' }}>
-                  <div className="whitespace-pre-wrap break-words">{sanitizeMessageBody(m.body)}</div>
+                  <div className="whitespace-pre-wrap break-words">{renderRichText(sanitizeMessageBody(m.body))}</div>
                   <div className={`text-[11px] mt-1 ${mine ? 'text-white/70' : 'text-slate-400'}`}>{formatMessageTime(m.created_at)}{mine && m.read_at ? ' · Read' : ''}</div>
                 </div>
               </div>

@@ -34,6 +34,10 @@ import SteinzLogo from '@/components/ui/SteinzLogo';
 import { RenderWidgets } from '@/components/dashboard/RenderWidgets';
 import { DailyPulseSummary } from '@/components/dashboard/DailyPulseSummary';
 import { OverviewPreviews } from '@/components/dashboard/OverviewPreviews';
+import { CoinsWalletWidget } from '@/components/dashboard/CoinsWalletWidget';
+import { WatchlistTape } from '@/components/dashboard/WatchlistTape';
+import StreakXpBar from '@/components/coins/StreakXpBar';
+import { PresenceHeartbeat } from '@/components/presence/PresenceHeartbeat';
 import { FirstRunTour } from '@/components/dashboard/FirstRunTour';
 
 const ContextFeed    = lazy(() => import('@/components/ContextFeed'));
@@ -192,7 +196,8 @@ const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNa
   const navItems = [
     { id: 'home', icon: Home, label: 'Home', href: null },
     { id: 'find', icon: Search, label: 'Find', href: '/discover' },
-    { id: 'vtxai', icon: MessageSquare, label: 'VTX Agent', href: '/dashboard/vtx-ai' },
+    { id: 'coins', icon: Coins, label: 'Coins', href: '/dashboard/coins' },
+    { id: 'vtxai', icon: MessageSquare, label: 'VTX', href: '/dashboard/vtx-ai' },
     { id: 'wallet', icon: Wallet, label: 'Wallet', href: null },
     { id: 'profile', icon: User, label: 'Profile', href: null },
   ];
@@ -214,7 +219,7 @@ const BottomNav = memo(function BottomNav({ activeNav, onNavChange }: { activeNa
           WebkitBackdropFilter: 'blur(24px) saturate(180%)',
         }}
       >
-        <div className="grid grid-cols-5 gap-1">
+        <div className="grid grid-cols-6 gap-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeNav === item.id;
@@ -600,6 +605,14 @@ export default function Dashboard() {
           <OverviewHero name={heroName} />
           <DailyPulseSummary />
           <RenderWidgets />
+          {/* Compact Coins wallet funnel: live wallet total + open coin
+              positions, routing straight into Coins to trade. */}
+          <CoinsWalletWidget />
+          {/* Trading + posting streak and activity XP, from real activity. */}
+          <StreakXpBar />
+          {/* Pinned coin watchlist as a live mini-tape (renders nothing when
+              the watchlist is empty). */}
+          <WatchlistTape />
           {/* Quick-access previews under the portfolio: Watchlist, Messages and
               Swap — real data, deep-linked into each surface. */}
           <OverviewPreviews />
@@ -619,6 +632,9 @@ export default function Dashboard() {
     // `clip` (not `hidden`) so it doesn't establish a vertical scroll container
     // that would break position:sticky descendants.
     <div className="min-h-screen text-white pb-28 sm:pb-24 overflow-x-clip">
+      {/* Presence heartbeat — keeps this user's "online" state fresh so others
+          can see it and "came online" alerts can fire. Renders nothing. */}
+      <PresenceHeartbeat />
       {/* Only run the lightweight tour AFTER the full onboarding flow is done
           (onboardedAt is a real date). Previously both the 10-card
           OnboardingGate and this 3-step tour mounted at z-[200] for a

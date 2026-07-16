@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Repeat, ArrowUpRight, ArrowLeft } from 'lucide-react';
 import { TierBadge } from '@/components/ui/TierBadge';
 import { SignalRail } from '@/components/wire/WireSignalRail';
-import { CashtagChip } from '@/components/wire/CashtagChip';
+import { renderRichText } from '@/lib/wire/richText';
 import { WirePrediction } from '@/components/wire/WirePrediction';
 import { WireThread } from '@/components/wire/WireThread';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -20,23 +20,6 @@ import { Heart, MessageCircle, Repeat2, Gift } from 'lucide-react';
  * a session). Real data only.
  */
 
-const TOKEN_RE = /(#[\p{L}\p{N}_]+|\$[A-Za-z][A-Za-z0-9]{0,9})/gu;
-
-function renderBody(text: string): React.ReactNode[] {
-  return text.split(TOKEN_RE).map((part, i) => {
-    if (i % 2 === 1) {
-      if (part.startsWith('#')) {
-        return (
-          <span key={i} className="text-[#4d94ff] font-medium">
-            {part}
-          </span>
-        );
-      }
-      return <CashtagChip key={i} symbol={part.slice(1)} />;
-    }
-    return <span key={i}>{part}</span>;
-  });
-}
 
 function Avatar({ post, size = 44 }: { post: WirePost; size?: number }) {
   const a = post.author;
@@ -136,7 +119,7 @@ export function PublicWire({ post }: { post: WirePost }) {
 
             {shown.body ? (
               <p className="mt-1.5 text-[15px] text-white/90 whitespace-pre-wrap break-words leading-relaxed">
-                {renderBody(shown.body)}
+                {renderRichText(shown.body)}
               </p>
             ) : null}
 

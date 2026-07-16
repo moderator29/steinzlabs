@@ -41,7 +41,7 @@ const GROUPS: Record<string, string[]> = {
   // Every ~30 minutes.
   'half-hourly': [
     'whale-activity-poll', 'whale-activity-price', 'bitquery-activity-poll', 'dca-executor', 'pending-trades-cleanup',
-    'receipt-reconciliation', 'notification-retry', 'telegram-retry-failures', 'stock-alerts',
+    'receipt-reconciliation', 'notification-retry', 'telegram-retry-failures', 'stock-alerts', 'coin-alerts', 'coin-intent-monitor', 'coin-social-buy-monitor', 'coin-moments', 'coin-copy-monitor',
     'pumpfun-velocity-poll', 'cult-resolve-proposals', 'cult-ape-resolve', 'health-watch',
     // Free MEV fallback (ZeroMEV, Ethereum) — scans recent blocks into a rolling
     // 30d per-victim aggregate for MEV Radar when Dune's MEV surface is empty.
@@ -58,7 +58,7 @@ const GROUPS: Record<string, string[]> = {
   ],
   // Hourly.
   hourly: [
-    'price-cache-refresh', 'market-stats-snapshot', 'watchlist-refresh',
+    'price-cache-refresh', 'market-stats-snapshot', 'watchlist-refresh', 'coin-registry-refresh', 'coin-dca',
     'token-popularity-aggregator', 'cult-signal-feed', 'smart-money-convergence',
     // Whale discovery pulled to hourly for the directory fill-up: 8 chains via
     // Bitquery, top ~500 active traders each, ranked by real 7d DEX volume. The
@@ -77,6 +77,9 @@ const GROUPS: Record<string, string[]> = {
   // editions a day (Morning / Evening).
   'twice-daily': [
     'research-daily-brief',
+    // Weekly trading recap notifier. Self-gates to the Sunday 00:00 UTC slot so
+    // it effectively fires once a week even though it lives in twice-daily.
+    'coin-weekly-recap',
     // Twice-daily crypto news roundup to users who opted in (notification_settings
     // .news_alerts). Exits instantly when nobody has opted in.
     'news-digest',

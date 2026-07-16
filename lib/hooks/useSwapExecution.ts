@@ -16,8 +16,12 @@
 
 import { useState, useCallback } from 'react';
 import { SwapQuote } from '@/lib/market/types';
-import { useSwapBroadcast, detectWalletKind } from '@/lib/hooks/useSwapBroadcast';
-import { PLATFORM_FEE_BPS } from '@/lib/trading/swapLogging';
+import { useSwapBroadcast, detectWalletKind, type WalletKind } from '@/lib/hooks/useSwapBroadcast';
+
+// Client-safe mirror of the platform fee (same single source of truth,
+// NEXT_PUBLIC_STEINZ_FEE_BPS). Read directly here rather than importing from
+// the server-only swap-logging module so this hook stays client-buildable.
+const PLATFORM_FEE_BPS = Number(process.env.NEXT_PUBLIC_STEINZ_FEE_BPS) || 50;
 
 interface SwapExecutionParams {
   chain: string;
@@ -27,6 +31,9 @@ interface SwapExecutionParams {
   inputDecimals: number;
   userAddress: string;
   slippageBps: number;
+  // Explicit wallet kind so a built-in Naka wallet is not misrouted to an
+  // external wallet when one is also present in the browser.
+  walletKind?: WalletKind;
 }
 
 interface MevRisk {
@@ -43,6 +50,9 @@ export function useSwapExecution() {
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [mevRisk, setMevRisk] = useState<MevRisk | null>(null);
+  // Raw base-unit output amount of the EXECUTED quote (not the display quote),
+  // so callers can record what actually settled rather than an estimate.
+  const [executedOutRaw, setExecutedOutRaw] = useState<string | null>(null);
 
   const reset = useCallback(() => {
     setQuote(null);
@@ -51,6 +61,7 @@ export function useSwapExecution() {
     setError(null);
     setTxHash(null);
     setMevRisk(null);
+    setExecutedOutRaw(null);
   }, []);
 
   const getQuote = useCallback(async (params: SwapExecutionParams) => {
@@ -129,8 +140,11 @@ export function useSwapExecution() {
       const res = await fetch(`/api/swap/quote?${qp.toString()}`, { signal: AbortSignal.timeout(20_000) });
       const data = await res.json().catch(() => ({} as { error?: string }));
       if (!res.ok) throw new Error((data as { error?: string }).error ?? `Quote failed (${res.status})`);
+      // Capture the executable quote's output (base units) for accurate recording.
+      const outRaw = (data as { buyAmount?: string | number }).buyAmount;
+      if (outRaw != null) setExecutedOutRaw(String(outRaw));
 
-      const walletKind = detectWalletKind(params.chain, null);
+      const walletKind = params.walletKind ?? detectWalletKind(params.chain, null);
       const hash = await broadcast({ quote: data, chain: params.chain, walletKind, address: params.userAddress });
       setTxHash(hash);
 
@@ -162,7 +176,7 @@ export function useSwapExecution() {
   }, [broadcast, quote]);
 
   return {
-    quote, loading, executing, error, txHash, mevRisk,
+    quote, loading, executing, error, txHash, mevRisk, executedOutRaw,
     getQuote, executeSwap, reset,
     unlockRequest, resolveUnlock, cancelUnlock,
   };

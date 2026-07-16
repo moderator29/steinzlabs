@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 // Naka Labs brand icons — User, Shield, Bell, Wallet, Eye, EyeOff,
 // AlertTriangle swapped. Loader2 stays on lucide.
-import { User, Shield, Bell, Wallet, Eye, EyeOff, AlertTriangle, Loader2, Download, RotateCcw } from 'lucide-react';
+import { User, Shield, Bell, Wallet, Eye, EyeOff, AlertTriangle, Loader2, Download, RotateCcw, Gift } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
+import { ReferralPanel } from '@/components/referral/ReferralPanel';
 import { Toggle } from '@/components/ui/Toggle';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -210,6 +211,7 @@ export default function SettingsPage() {
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'trading', label: 'Trading', icon: Wallet },
+    { id: 'refer', label: 'Refer & earn', icon: Gift },
     { id: 'account', label: 'Account', icon: Download },
   ];
 
@@ -430,7 +432,7 @@ export default function SettingsPage() {
                     <div>
                       <div className="text-white font-medium">Browser Push Notifications</div>
                       <div className="text-gray-400 text-sm">
-                        {pushPermission === 'denied' ? 'Blocked by browser — allow in site settings' : 'Instant alerts in your browser'}
+                        {pushPermission === 'denied' ? 'Blocked by browser. Allow in site settings' : 'Instant alerts in your browser'}
                       </div>
                     </div>
                     <Toggle
@@ -507,6 +509,12 @@ export default function SettingsPage() {
               </div>
             )}
 
+            {activeSection === 'refer' && (
+              <div className="space-y-4">
+                <ReferralPanel />
+              </div>
+            )}
+
             {activeSection === 'account' && (
               <div className="space-y-4">
                 <AccountActionsCard />
@@ -534,7 +542,7 @@ function AccountActionsCard() {
         .update({ onboarding_completed_at: null })
         .eq('id', user.id);
       if (error) throw error;
-      toast.success('Onboarding reset — refreshing…');
+      toast.success('Onboarding reset, refreshing...');
       setTimeout(() => window.location.assign('/dashboard'), 800);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not reset onboarding');

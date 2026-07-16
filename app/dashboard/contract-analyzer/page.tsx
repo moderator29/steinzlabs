@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import {
   Code, Search, AlertTriangle, CheckCircle, XCircle,
   Loader2, Info, ChevronDown, ChevronUp, Brain, ThumbsUp, ThumbsDown,
-  TrendingUp, TrendingDown, ExternalLink, Clock, Rocket, Twitter, Send, Globe,
+  TrendingUp, TrendingDown, ExternalLink, Clock, Rocket, AtSign as Twitter, Send, Globe,
   ShieldCheck, ShieldAlert, FlaskConical, ScanLine, HelpCircle, GitCompareArrows,
   Copy, Check, RefreshCw
 } from 'lucide-react';
