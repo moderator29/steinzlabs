@@ -101,14 +101,18 @@ export async function GET(request: NextRequest) {
       const feeBps = Number(process.env.NEXT_PUBLIC_STEINZ_FEE_BPS) || 50;
       const feeAccount = feeWallet ? deriveSolanaAta(buyAddress, feeWallet) : null;
 
-      const quote = await getJupiterQuote(sellAddress, buyAddress, lamports, slippageBps, feeAccount ? feeBps : 0);
-      if (!quote) {
+      let effectiveQuote = await getJupiterQuote(sellAddress, buyAddress, lamports, slippageBps, feeAccount ? feeBps : 0);
+      if (!effectiveQuote) {
         return NextResponse.json({ error: 'Jupiter: no route found for this pair' }, { status: 502 });
       }
-      let built = feeAccount ? await buildSwapTransaction(quote, taker, { feeAccount }) : await buildSwapTransaction(quote, taker);
+      let built = feeAccount ? await buildSwapTransaction(effectiveQuote, taker, { feeAccount }) : await buildSwapTransaction(effectiveQuote, taker);
       if (!built && feeAccount) {
+        // Fee ATA unusable (e.g. brand-new coin) — rebuild fee-less. Track the
+        // quote we actually built so the reported buyAmount/impact/route match
+        // what settles, not the discarded fee-inclusive quote.
         const plainQuote = await getJupiterQuote(sellAddress, buyAddress, lamports, slippageBps, 0);
         built = plainQuote ? await buildSwapTransaction(plainQuote, taker) : null;
+        if (built && plainQuote) effectiveQuote = plainQuote;
       }
       if (!built) {
         return NextResponse.json({ error: 'Failed to build Solana swap transaction' }, { status: 502 });
@@ -118,9 +122,9 @@ export async function GET(request: NextRequest) {
         chain: 'solana',
         swapTransaction: built.swapTransaction,
         lastValidBlockHeight: built.lastValidBlockHeight,
-        buyAmount: quote.outAmount,
-        priceImpactPct: quote.priceImpactPct,
-        routePlan: quote.routePlan,
+        buyAmount: effectiveQuote.outAmount,
+        priceImpactPct: effectiveQuote.priceImpactPct,
+        routePlan: effectiveQuote.routePlan,
         sellTokenAddress: sellAddress,
         buyTokenAddress: buyAddress,
       });

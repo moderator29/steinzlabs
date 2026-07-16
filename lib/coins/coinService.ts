@@ -520,7 +520,9 @@ async function getMostHeldFromRegistry(chains: CoinChain[]): Promise<Coin[]> {
       .order('holders_count', { ascending: false, nullsFirst: false })
       .order('volume_24h_usd', { ascending: false, nullsFirst: false })
       .limit(50);
-    return ((data as RegistryRow[]) ?? []).map(registryRowToCoin);
+    // Keep "Most held" consistent with the rest of the feed: no blue-chips /
+    // stables / oversized assets.
+    return ((data as RegistryRow[]) ?? []).map(registryRowToCoin).filter((c) => !isExcludedFromDiscovery(c));
   } catch {
     return [];
   }

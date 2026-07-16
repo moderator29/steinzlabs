@@ -359,7 +359,7 @@ export default function MarketDashboard() {
   const filterModal = showFilters ? (
     <div className="fixed inset-0 z-40 flex items-end">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowFilters(false)} />
-      <div className="relative w-full bg-[#111827] rounded-t-2xl p-6 z-10 border-t border-white/[0.06] max-h-[85vh] overflow-y-auto">
+      <div className="relative w-full nl-glass rounded-t-2xl p-6 z-10 max-h-[85vh] overflow-y-auto" style={{ boxShadow: '0 -8px 40px -12px rgba(0,102,255,.5)' }}>
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-bold text-white">Filters</h3>
           <button onClick={() => setShowFilters(false)} aria-label="Close filters" className="text-gray-400 hover:text-white"><X className="w-5 h-5" aria-hidden="true" /></button>
@@ -437,7 +437,8 @@ export default function MarketDashboard() {
         </div>
         {tab === 'prices' && (
           <button onClick={()=>{setPendingFilters(filters);setShowFilters(true);}}
-            className={`relative flex items-center justify-center w-10 h-10 bg-[#111827] border rounded-xl transition-all flex-shrink-0 ${activeFilterCount>0?'border-[#0066FF]/60 text-[#0066FF]':'border-white/[0.06] text-gray-400 hover:text-white'}`}>
+            className={`relative flex items-center justify-center w-10 h-10 nl-glass rounded-xl transition-all flex-shrink-0 ${activeFilterCount>0?'text-[#0066FF]':'text-gray-400 hover:text-white'}`}
+            style={{ boxShadow: activeFilterCount>0 ? '0 0 0 1px rgba(0,102,255,.5)' : '0 0 0 1px rgba(0,102,255,.18)' }}>
             <SlidersHorizontal className="w-4 h-4" />
             {activeFilterCount > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#0066FF] rounded-full text-[9px] text-white flex items-center justify-center font-bold">
@@ -466,7 +467,7 @@ export default function MarketDashboard() {
         watchlistLoading && watchlistCoins.length === 0 ? (
           <div className="grid grid-cols-2 gap-3">
             {Array.from({length:4}).map((_,i)=>(
-              <div key={i} className="h-32 bg-[#111827] rounded-xl animate-pulse" />
+              <div key={i} className="h-32 nl-glass rounded-2xl animate-pulse" />
             ))}
           </div>
         ) : watchlistCoins.length === 0 ? (
@@ -480,7 +481,8 @@ export default function MarketDashboard() {
               const pos = coin.change24h >= 0;
               return (
                 <div key={coin.id} onClick={()=>handleCoinTap(coin)}
-                  className="bg-[#111827] border border-white/[0.06] rounded-xl p-3 cursor-pointer hover:border-[#0066FF]/40 transition-all">
+                  className="group relative overflow-hidden nl-glass rounded-2xl p-3 cursor-pointer transition-all hover:-translate-y-[1px] hover:shadow-[0_12px_32px_-14px_rgba(0,102,255,.6)]">
+                  <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full bg-gradient-to-b from-[#1E90FF] to-[#0066FF] opacity-40 group-hover:opacity-100 transition-opacity" />
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <TokenLogo src={coin.image || undefined} symbol={coin.symbol} address={coin.address} chain={coin.chain} size={32} />
@@ -526,7 +528,7 @@ export default function MarketDashboard() {
         loading ? (
           <div className="space-y-2">
             {Array.from({length:8}).map((_,i)=>(
-              <div key={i} className="h-16 bg-[#111827] rounded-xl animate-pulse" />
+              <div key={i} className="h-16 nl-glass rounded-2xl animate-pulse" />
             ))}
           </div>
         ) : coins.length === 0 && search.length < 2 ? (
@@ -535,9 +537,9 @@ export default function MarketDashboard() {
             <button onClick={fetchCoins} className="text-sm text-[#0066FF] hover:text-blue-400 transition-colors">Retry</button>
           </div>
         ) : (
-          <div className="space-y-0 rounded-xl overflow-hidden border border-white/[0.06]">
+          <div className="rounded-2xl overflow-hidden nl-glass" style={{ boxShadow: '0 0 0 1px rgba(0,102,255,.22), 0 8px 30px -18px rgba(0,102,255,.5)' }}>
             {displayCoins.length === 0 ? (
-              <div className="py-10 text-center text-gray-500 text-sm bg-[#111827]">
+              <div className="py-10 text-center text-gray-500 text-sm">
                 {search.length>=2 ? `No results for "${search}"` : 'No coins match the filters.'}
               </div>
             ) : displayCoins.map((coin,i)=>{
@@ -547,7 +549,9 @@ export default function MarketDashboard() {
                 <div key={`${coin.id}-${i}`} role="button" tabIndex={0}
                   onClick={()=>handleCoinTap(coin)}
                   onKeyDown={e=>{ if (e.key==='Enter'||e.key===' ') { e.preventDefault(); handleCoinTap(coin); } }}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 bg-[#111827] hover:bg-white/[0.03] transition-colors border-b border-white/[0.04] last:border-b-0 text-start cursor-pointer">
+                  className="group relative w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/[0.04] transition-colors border-b border-white/[0.05] last:border-b-0 text-start cursor-pointer">
+                  {/* blue accent stride on hover */}
+                  <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full bg-gradient-to-b from-[#1E90FF] to-[#0066FF] opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="w-6 text-end text-[11px] text-gray-500 flex-shrink-0 font-mono">
                     {coin.rank > 0 ? coin.rank : ''}
                   </div>
