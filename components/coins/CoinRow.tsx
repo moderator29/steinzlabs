@@ -55,7 +55,9 @@ export function CoinRow({ coin, index = 0 }: { coin: Coin; index?: number }) {
             <div className="text-[15px] font-bold text-white truncate max-w-[9rem] tracking-tight">{coin.symbol || coin.name}</div>
             <RiskDot chain={coin.chain} address={coin.tokenAddress} />
           </div>
-          <div className="text-[12px] text-white/45 truncate">{compactUsd(coin.marketCapUsd)} MC</div>
+          <div className="text-[12px] text-white/45 truncate">
+            {compactUsd(coin.marketCapUsd)} MC{coin.volume24hUsd ? ` · Vol ${compactUsd(coin.volume24hUsd)}` : ''}
+          </div>
         </div>
         <div className="text-right shrink-0">
           <div className="text-[15px] font-bold text-white tabular-nums">{coinPrice(coin.priceUsd)}</div>

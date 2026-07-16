@@ -338,7 +338,7 @@ function mapPoolPairs(chain: string, pairs: DexPair[]): Coin[] {
   return out;
 }
 
-export type DiscoveryTab = 'trending' | 'graduated' | 'most_held';
+export type DiscoveryTab = 'trending' | 'graduated' | 'most_held' | 'verified';
 
 /** Blue-chips + stables never belong in a memecoin discovery feed — they leak
  *  in as the base token of a big DEX pool. Excluded by symbol so WETH / USDC /
@@ -448,6 +448,14 @@ export async function getDiscovery(tab: DiscoveryTab, chain?: string): Promise<C
   if (tab === 'most_held') {
     const registryCoins = await getMostHeldFromRegistry(chains);
     if (registryCoins.length >= 8) return registryCoins;
+  }
+
+  // "Verified" (House Stark) = the curated, admin-vetted trusted set. It is a
+  // registry-only view — there is no live-discovery fallback, because a coin is
+  // verified by an explicit human trust decision, never inferred from momentum.
+  // An empty result is honest: it means nothing has been vetted yet.
+  if (tab === 'verified') {
+    return getVerifiedFromRegistry(chains);
   }
 
   const perChain = await Promise.all(
@@ -567,6 +575,36 @@ async function getMostHeldFromRegistry(chains: CoinChain[]): Promise<Coin[]> {
     return ((data as RegistryRow[]) ?? [])
       .map(registryRowToCoin)
       .filter((c) => !isExcludedFromDiscovery(c) && passesDiscoveryQuality(c, DISCOVERY_MIN_VOLUME_24H_USD));
+  } catch {
+    return [];
+  }
+}
+
+/** Verified coins (House Stark) — the admin-vetted trusted set. Trust is an
+ *  explicit human decision, so this only requires the coin to still be a real,
+ *  graduated, tradable market (liquidity + cap bar); the 24h-volume floor is
+ *  relaxed to a nominal $1k so a briefly-quiet blue-chip meme doesn't drop off
+ *  the trusted shelf. Ranked by live turnover, then holders. */
+async function getVerifiedFromRegistry(chains: CoinChain[]): Promise<Coin[]> {
+  try {
+    const sb = getSupabaseAdmin();
+    const freshSince = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const { data } = await sb
+      .from('coin_registry')
+      .select('*')
+      .in('chain', chains)
+      .eq('hidden', false)
+      .eq('verified', true)
+      .eq('is_graduated', true)
+      .gte('refreshed_at', freshSince)
+      .gte('liquidity_usd', DISCOVERY_MIN_LIQUIDITY_USD)
+      .gte('market_cap_usd', DISCOVERY_MIN_MARKET_CAP_USD)
+      .order('volume_24h_usd', { ascending: false, nullsFirst: false })
+      .order('holders_count', { ascending: false, nullsFirst: false })
+      .limit(50);
+    return ((data as RegistryRow[]) ?? [])
+      .map(registryRowToCoin)
+      .filter((c) => !isExcludedFromDiscovery(c) && passesDiscoveryQuality(c, 1_000));
   } catch {
     return [];
   }

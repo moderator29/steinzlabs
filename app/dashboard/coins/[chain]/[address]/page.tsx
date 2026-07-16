@@ -122,12 +122,23 @@ function CoinDetail({ params }: { params: Promise<{ chain: string; address: stri
 
   const loadChart = useCallback(async (timeframe: CoinTimeframe, pair?: string | null) => {
     setChartLoading(true);
+    // Try the requested timeframe first; if a freshly-graduated pool has no
+    // candles indexed for that window yet, widen through the other timeframes
+    // until one has data. Every discovery coin clears the volume bar, so real
+    // trades exist — this guarantees the chart never sits blank for a coin that
+    // is actually trading. Returns on the first non-empty series (normally the
+    // requested one, so it's a single request in the common case).
+    const order: CoinTimeframe[] = [timeframe, ...(['1H', '4H', '1D', '7D', '3M', 'ALL'] as CoinTimeframe[]).filter((t) => t !== timeframe)];
     try {
-      const p = new URLSearchParams({ tf: timeframe });
-      if (pair) p.set('pair', pair);
-      const r = await fetch(`/api/coins/${chain}/${encodeURIComponent(address)}/chart?${p.toString()}`, { cache: 'no-store' });
-      const j = await r.json();
-      setCandles(Array.isArray(j.candles) ? j.candles : []);
+      for (const t of order) {
+        const p = new URLSearchParams({ tf: t });
+        if (pair) p.set('pair', pair);
+        const r = await fetch(`/api/coins/${chain}/${encodeURIComponent(address)}/chart?${p.toString()}`, { cache: 'no-store' });
+        const j = await r.json();
+        const c = Array.isArray(j.candles) ? j.candles : [];
+        if (c.length > 0) { setCandles(c); return; }
+      }
+      setCandles([]);
     } catch { setCandles([]); } finally { setChartLoading(false); }
   }, [chain, address]);
 
