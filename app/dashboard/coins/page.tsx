@@ -1,20 +1,24 @@
 'use client';
 
 /**
- * Coins home. A store-front, not a scanner list: a featured coin leads, then
- * swipeable rails (Trending, Fresh, Most held, Watchlist) interleaved with the
- * social floor (your circle, top trades, live tape). A chain filter scopes
- * every rail, and a unified "search for anything" returns coins and people
- * together. Real data only, graduated DEX coins across Solana, Ethereum, BNB.
+ * Coins home. A store-front, not a scanner list: a featured coin leads, then a
+ * Game-of-Thrones "houses" tab bar switches the discovery list beneath it —
+ * Heating Up (hot now), House Stark (verified/trusted), House Targaryen (just
+ * graduated), the Iron Throne (most held) and your own Watch. A chain filter
+ * scopes every house, and a unified "search for anything" returns coins and
+ * people together. Real data only, graduated DEX coins across Solana, Ethereum,
+ * BNB — every coin surfaced clears the quality bar, so it has a live chart.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, X, Star, Flame, Sprout, Users2, Trophy } from 'lucide-react';
+import { Search, X, Star, Flame, ShieldCheck, Crown, Trophy } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { CoinLogo, PriceDelta } from '@/components/coins/atoms';
-import { FeaturedCoin, CoinList } from '@/components/coins/CoinRails';
+import { FeaturedCoin } from '@/components/coins/CoinRails';
+import { CoinRow } from '@/components/coins/CoinRow';
 import { ChainFilter, type ChainFilterValue } from '@/components/coins/ChainFilter';
 import { TopTrades } from '@/components/coins/TopTrades';
 import { CircleBuying } from '@/components/coins/CircleBuying';
@@ -27,14 +31,26 @@ import { useWallet } from '@/lib/hooks/useWallet';
 import type { Coin } from '@/lib/coins/types';
 import { coinPrice, compactUsd } from '@/lib/coins/format';
 
-type Cat = 'trending' | 'graduated' | 'most_held' | 'watchlist';
-const CATS: Cat[] = ['trending', 'graduated', 'most_held', 'watchlist'];
+type Cat = 'trending' | 'verified' | 'graduated' | 'most_held' | 'watchlist';
+const CATS: Cat[] = ['trending', 'verified', 'graduated', 'most_held', 'watchlist'];
+
+/** The discovery "houses". Sigils + a plain-English sub keep the Game-of-Thrones
+ *  theming fun without hiding what each tab actually does. */
+interface House { key: Cat; name: string; sub: string; sigil: string; accent: string; Icon: LucideIcon; empty: string }
+const HOUSES: House[] = [
+  { key: 'trending',  name: 'Wildlings',     sub: 'Hot now',   sigil: '🔥', accent: '#FF7847', Icon: Flame,       empty: 'Beyond the wall is quiet on this chain right now. Try another chain.' },
+  { key: 'verified',  name: 'Stark',         sub: 'Verified',  sigil: '🐺', accent: '#9DB8DE', Icon: ShieldCheck, empty: 'No coin has earned the wolf yet. Verified coins appear here once our team vets them — real, trusted, no imposters.' },
+  { key: 'graduated', name: 'Targaryen',     sub: 'Graduated', sigil: '🐉', accent: '#E4482E', Icon: Flame,       empty: 'No dragons have hatched here recently. Fresh graduates land here the moment a new pool clears the liquidity bar.' },
+  { key: 'most_held', name: 'Iron Throne',   sub: 'Most held', sigil: '👑', accent: '#F0B90B', Icon: Crown,       empty: 'No coin holds the throne on this chain yet.' },
+  { key: 'watchlist', name: "Night's Watch", sub: 'Watchlist', sigil: '🛡️', accent: '#7FB2FF', Icon: Star,        empty: 'Your watch is empty. Tap the star on any coin to take the black and keep an eye on it.' },
+];
 
 interface Person { id: string; username: string | null; display_name: string | null; avatar_url: string | null; verified: boolean }
 
 export default function CoinsPage() {
   const [chain, setChain] = useState<ChainFilterValue>('all');
   const [cats, setCats] = useState<Record<Cat, Coin[]> | null>(null);
+  const [tab, setTab] = useState<Cat>('trending');
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [searchCoins, setSearchCoins] = useState<Coin[]>([]);
@@ -53,8 +69,9 @@ export default function CoinsPage() {
         return Array.isArray(j.coins) ? j.coins : [];
       } catch { return []; }
     };
-    const [trending, graduated, most_held, watchlist] = await Promise.all(CATS.map(one));
-    setCats({ trending, graduated, most_held, watchlist });
+    // Keyed by category so the result never depends on array order.
+    const entries = await Promise.all(CATS.map(async (c) => [c, await one(c)] as const));
+    setCats(Object.fromEntries(entries) as Record<Cat, Coin[]>);
   }, [chain]);
 
   useEffect(() => { if (!query) void loadCats(); }, [loadCats, query]);
@@ -76,9 +93,16 @@ export default function CoinsPage() {
   }, [query]);
 
   const showSearch = query.trim().length > 0;
-  const featured = cats?.trending[0] ?? null;
-  const trendingRail = cats ? cats.trending.slice(1) : [];
-  const anyCoins = cats && (cats.trending.length || cats.graduated.length || cats.most_held.length || cats.watchlist.length);
+  const anyCoins = cats && CATS.some((c) => cats[c].length > 0);
+
+  const activeHouse = HOUSES.find((h) => h.key === tab)!;
+  const houseCoins = cats ? cats[tab] : [];
+  // The active house's champion leads as the hero; the rest fill the list below.
+  const houseFeatured = houseCoins[0] ?? null;
+  const activeCoins = houseCoins.slice(1);
+  // Per-chain counts for the active house, to badge the chain filter.
+  const chainCounts: Partial<Record<ChainFilterValue, number>> = { all: houseCoins.length };
+  for (const c of houseCoins) { const k = c.chain as ChainFilterValue; chainCounts[k] = (chainCounts[k] ?? 0) + 1; }
 
   return (
     <AuroraBackground fullHeight>
@@ -122,21 +146,19 @@ export default function CoinsPage() {
         <SearchResults searching={searching} coins={searchCoins} people={people} />
       ) : (
         <div className="space-y-5">
-          {/* Chain filter scopes every rail */}
-          <ChainFilter value={chain} onChange={setChain} />
+          {/* Chain filter scopes every house, badged with the active house's counts */}
+          <ChainFilter value={chain} onChange={setChain} counts={chainCounts} />
 
           {cats === null ? (
             <div className="space-y-5">
               <div className="h-[200px] rounded-3xl bg-white/[0.03] animate-pulse" />
+              <div className="h-[52px] rounded-2xl bg-white/[0.03] animate-pulse" />
               <div className="space-y-2">{[0, 1, 2, 3].map((i) => <div key={i} className="h-[68px] rounded-2xl bg-white/[0.03] animate-pulse" />)}</div>
             </div>
           ) : !anyCoins ? (
             <div className="nl-glass rounded-2xl p-8 text-center text-white/50 text-sm">No coins to show on this chain right now. Try another chain.</div>
           ) : (
             <>
-              {/* Featured hero */}
-              {featured ? <FeaturedCoin coin={featured} /> : null}
-
               {/* Auto-detected coin moments (milestones, your circle aping). */}
               <CoinMomentsStrip />
 
@@ -151,24 +173,115 @@ export default function CoinsPage() {
                 <span className="ms-auto text-[12px] font-semibold text-[#7FB2FF] shrink-0">View</span>
               </Link>
 
+              {/* Houses — the discovery tab bar */}
+              <HouseTabs tab={tab} onSelect={setTab} counts={cats} />
+
+              {/* Active house: champion hero + list */}
               <AnimatePresence mode="wait">
-                <motion.div key={chain} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="space-y-5">
-                  <CoinList title="Trending" Icon={Flame} coins={trendingRail} accent="#FF7847" initial={10} />
-                  <CircleBuying />
-                  <CoinList title="Fresh graduates" Icon={Sprout} coins={cats.graduated} accent="#10B981" initial={8} />
-                  <TopTrades />
-                  <CoinList title="Most held" Icon={Users2} coins={cats.most_held} accent="#7FB2FF" initial={8} />
-                  <CoinList title="Your watchlist" Icon={Star} coins={cats.watchlist} accent="#F0B90B" initial={8} />
+                <motion.div key={`${tab}:${chain}`} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }} className="space-y-4">
+                  {houseFeatured ? <FeaturedCoin coin={houseFeatured} accent={activeHouse.accent} label={activeHouse.sub} hot={tab === 'trending'} /> : null}
+                  <div>
+                    <HouseHeader house={activeHouse} count={houseCoins.length} />
+                    {houseCoins.length === 0 ? <HouseEmpty house={activeHouse} /> : <HouseCoinList coins={activeCoins} house={activeHouse} />}
+                  </div>
                 </motion.div>
               </AnimatePresence>
 
-              <LiveTape />
+              {/* Social floor — same for every house */}
+              <div className="space-y-5 pt-1">
+                <CircleBuying />
+                <TopTrades />
+                <LiveTape />
+              </div>
             </>
           )}
         </div>
       )}
     </div>
     </AuroraBackground>
+  );
+}
+
+/** The Game-of-Thrones house tab bar — a scrollable pill row, X-style. */
+function HouseTabs({ tab, onSelect, counts }: { tab: Cat; onSelect: (c: Cat) => void; counts: Record<Cat, Coin[]> }) {
+  return (
+    <div className="sticky top-0 z-20 -mx-3 sm:-mx-4 px-3 sm:px-4 py-2 backdrop-blur-md bg-[#060a1a]/70 border-b border-white/[0.04]">
+    <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 snap-x">
+      {HOUSES.map((h) => {
+        const active = tab === h.key;
+        const n = counts[h.key]?.length ?? 0;
+        return (
+          <button
+            key={h.key}
+            type="button"
+            onClick={() => onSelect(h.key)}
+            aria-pressed={active}
+            className={`snap-start shrink-0 flex items-center gap-2 rounded-2xl px-3.5 py-2 transition-all ${active ? 'nl-glass -translate-y-[1px]' : 'bg-white/[0.03] hover:bg-white/[0.06]'}`}
+            style={active ? { boxShadow: `0 10px 26px -12px ${h.accent}cc, inset 0 0 0 1px ${h.accent}66` } : undefined}
+          >
+            <span className="text-[17px] leading-none">{h.sigil}</span>
+            <span className="text-left leading-tight">
+              <span className="block text-[13px] font-bold text-white whitespace-nowrap">{h.name}</span>
+              <span className="block text-[10px] font-semibold whitespace-nowrap" style={{ color: active ? h.accent : 'rgba(255,255,255,.4)' }}>
+                {h.sub}{n > 0 ? ` · ${n}` : ''}
+              </span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+    </div>
+  );
+}
+
+/** Section header for the active house — sigil, name and the plain-English sub. */
+function HouseHeader({ house, count }: { house: House; count: number }) {
+  return (
+    <div className="flex items-center gap-2 mb-2.5 px-0.5">
+      <span className="text-[16px] leading-none">{house.sigil}</span>
+      <h2 className="text-[15px] font-bold text-white">{house.name}</h2>
+      <span className="text-[11px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-md" style={{ color: house.accent, background: `${house.accent}1f` }}>{house.sub}</span>
+      {count > 0 ? <span className="ms-auto text-[12px] text-white/35 font-semibold">{count}</span> : null}
+    </div>
+  );
+}
+
+/** The themed empty state — shown only when a whole house has nothing to show. */
+function HouseEmpty({ house }: { house: House }) {
+  return (
+    <div className="nl-glass rounded-2xl p-8 text-center">
+      <div className="text-[34px] mb-2 leading-none">{house.sigil}</div>
+      <div className="text-white/55 text-[13px] max-w-sm mx-auto">{house.empty}</div>
+    </div>
+  );
+}
+
+/** The active house's coins as a clean vertical list, windowed with "show more".
+ *  Renders nothing when empty — the empty state is owned by HouseEmpty so a
+ *  one-coin house (whose only coin is the hero) doesn't show a false "empty". */
+function HouseCoinList({ coins, house }: { coins: Coin[]; house: House }) {
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => { setExpanded(false); }, [house.key]);
+
+  if (coins.length === 0) return null;
+
+  const shown = expanded ? coins : coins.slice(0, 12);
+  const remaining = coins.length - shown.length;
+  return (
+    <div className="space-y-2">
+      {shown.map((c, i) => (
+        <CoinRow key={`${c.chain}:${c.tokenKey}`} coin={c} index={i} />
+      ))}
+      {remaining > 0 ? (
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="w-full rounded-2xl py-2.5 text-[13px] font-semibold text-[#7FB2FF] nl-glass hover:text-white transition-colors"
+        >
+          Show {remaining} more
+        </button>
+      ) : null}
+    </div>
   );
 }
 

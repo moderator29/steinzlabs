@@ -338,7 +338,7 @@ function mapPoolPairs(chain: string, pairs: DexPair[]): Coin[] {
   return out;
 }
 
-export type DiscoveryTab = 'trending' | 'graduated' | 'most_held';
+export type DiscoveryTab = 'trending' | 'graduated' | 'most_held' | 'verified';
 
 /** Blue-chips + stables never belong in a memecoin discovery feed — they leak
  *  in as the base token of a big DEX pool. Excluded by symbol so WETH / USDC /
@@ -356,12 +356,45 @@ const EXCLUDED_SYMBOLS = new Set([
  *  this feed is for — dropped so discovery stays about fresh, hot coins. */
 const MAX_DISCOVERY_MCAP = 1_000_000_000;
 
+/**
+ * Quality floor for the Coins storefront. `GRAD_MIN_LIQUIDITY_USD` ($1k) only
+ * proves a token has *a* pool — that's the bar for resolving a pasted CA, not
+ * for headlining discovery. To appear in trending / graduated / most-held a
+ * coin must be a *real, tradable market*:
+ *   - deep enough to trade without getting wrecked on slippage (liquidity),
+ *   - actually being traded right now, so its chart has real data (24h volume),
+ *   - past dust-cap so we're not surfacing sub-$50k nano-caps.
+ * This is what keeps micro-cap / barely-on-DEX junk out of the feed.
+ */
+const DISCOVERY_MIN_LIQUIDITY_USD = 25_000;
+const DISCOVERY_MIN_VOLUME_24H_USD = 10_000;
+const DISCOVERY_MIN_MARKET_CAP_USD = 50_000;
+/** Fresh-graduate shelf: same liquidity + cap bar, but a lower volume floor so a
+ *  legitimately new pool that's still ramping (yet already has a real chart)
+ *  isn't excluded for not having a full day of turnover behind it. */
+const DISCOVERY_GRAD_MIN_VOLUME_24H_USD = 3_000;
+
 /** True when a coin is a blue-chip/stable/oversized asset we exclude from the
  *  memecoin discovery feed. */
 function isExcludedFromDiscovery(c: Coin): boolean {
   if (EXCLUDED_SYMBOLS.has((c.symbol || '').toUpperCase())) return true;
   if (c.marketCapUsd != null && c.marketCapUsd > MAX_DISCOVERY_MCAP) return true;
   return false;
+}
+
+/** A coin only headlines discovery once it's a real, tradable, actively-traded
+ *  market with a chart's worth of data. `minVolume` is relaxed for the fresh
+ *  graduate shelf. Missing liquidity/volume/mcap all fail closed — a token with
+ *  no reported market data is exactly the junk this gate exists to drop. */
+function passesDiscoveryQuality(c: Coin, minVolume: number): boolean {
+  const liq = c.liquidityUsd ?? 0;
+  const vol = c.volume24hUsd ?? 0;
+  const mcap = c.marketCapUsd ?? c.fdvUsd ?? 0;
+  return (
+    liq >= DISCOVERY_MIN_LIQUIDITY_USD &&
+    vol >= minVolume &&
+    mcap >= DISCOVERY_MIN_MARKET_CAP_USD
+  );
 }
 
 /**
@@ -415,6 +448,14 @@ export async function getDiscovery(tab: DiscoveryTab, chain?: string): Promise<C
   if (tab === 'most_held') {
     const registryCoins = await getMostHeldFromRegistry(chains);
     if (registryCoins.length >= 8) return registryCoins;
+  }
+
+  // "Verified" (House Stark) = the curated, admin-vetted trusted set. It is a
+  // registry-only view — there is no live-discovery fallback, because a coin is
+  // verified by an explicit human trust decision, never inferred from momentum.
+  // An empty result is honest: it means nothing has been vetted yet.
+  if (tab === 'verified') {
+    return getVerifiedFromRegistry(chains);
   }
 
   const perChain = await Promise.all(
@@ -474,8 +515,10 @@ export async function getDiscovery(tab: DiscoveryTab, chain?: string): Promise<C
   );
 
   const flat = perChain.flat();
-  // Dedupe across chains, then drop blue-chips / stables / oversized assets so
-  // the feed stays about fresh, hot low-caps (no WETH/USDC/BTC headlining).
+  // Dedupe across chains, then drop blue-chips / stables / oversized assets and
+  // anything below the quality bar, so the feed stays about fresh, hot low-caps
+  // that are real tradable markets (no WETH/USDC/BTC and no micro-cap dust).
+  const minVolume = tab === 'graduated' ? DISCOVERY_GRAD_MIN_VOLUME_24H_USD : DISCOVERY_MIN_VOLUME_24H_USD;
   const seen = new Set<string>();
   const deduped: Coin[] = [];
   for (const c of flat) {
@@ -483,6 +526,7 @@ export async function getDiscovery(tab: DiscoveryTab, chain?: string): Promise<C
     if (seen.has(k)) continue;
     seen.add(k);
     if (isExcludedFromDiscovery(c)) continue;
+    if (!passesDiscoveryQuality(c, minVolume)) continue;
     deduped.push(c);
   }
 
@@ -516,13 +560,51 @@ async function getMostHeldFromRegistry(chains: CoinChain[]): Promise<Coin[]> {
       .eq('hidden', false)
       .eq('is_graduated', true)
       .gte('refreshed_at', freshSince)
-      .gte('liquidity_usd', GRAD_MIN_LIQUIDITY_USD)
+      // Same quality bar as live discovery: real liquidity, real 24h volume and
+      // past dust-cap. Rows missing any of these fail the `.gte` (null >= x is
+      // false in Postgres) so no-data junk never reaches "Most held".
+      .gte('liquidity_usd', DISCOVERY_MIN_LIQUIDITY_USD)
+      .gte('volume_24h_usd', DISCOVERY_MIN_VOLUME_24H_USD)
+      .gte('market_cap_usd', DISCOVERY_MIN_MARKET_CAP_USD)
       .order('holders_count', { ascending: false, nullsFirst: false })
       .order('volume_24h_usd', { ascending: false, nullsFirst: false })
       .limit(50);
     // Keep "Most held" consistent with the rest of the feed: no blue-chips /
-    // stables / oversized assets.
-    return ((data as RegistryRow[]) ?? []).map(registryRowToCoin).filter((c) => !isExcludedFromDiscovery(c));
+    // stables / oversized assets, and re-assert the quality gate in JS as a
+    // belt-and-braces guard on the mapped coin.
+    return ((data as RegistryRow[]) ?? [])
+      .map(registryRowToCoin)
+      .filter((c) => !isExcludedFromDiscovery(c) && passesDiscoveryQuality(c, DISCOVERY_MIN_VOLUME_24H_USD));
+  } catch {
+    return [];
+  }
+}
+
+/** Verified coins (House Stark) — the admin-vetted trusted set. Trust is an
+ *  explicit human decision, so this only requires the coin to still be a real,
+ *  graduated, tradable market (liquidity + cap bar); the 24h-volume floor is
+ *  relaxed to a nominal $1k so a briefly-quiet blue-chip meme doesn't drop off
+ *  the trusted shelf. Ranked by live turnover, then holders. */
+async function getVerifiedFromRegistry(chains: CoinChain[]): Promise<Coin[]> {
+  try {
+    const sb = getSupabaseAdmin();
+    const freshSince = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const { data } = await sb
+      .from('coin_registry')
+      .select('*')
+      .in('chain', chains)
+      .eq('hidden', false)
+      .eq('verified', true)
+      .eq('is_graduated', true)
+      .gte('refreshed_at', freshSince)
+      .gte('liquidity_usd', DISCOVERY_MIN_LIQUIDITY_USD)
+      .gte('market_cap_usd', DISCOVERY_MIN_MARKET_CAP_USD)
+      .order('volume_24h_usd', { ascending: false, nullsFirst: false })
+      .order('holders_count', { ascending: false, nullsFirst: false })
+      .limit(50);
+    return ((data as RegistryRow[]) ?? [])
+      .map(registryRowToCoin)
+      .filter((c) => !isExcludedFromDiscovery(c) && passesDiscoveryQuality(c, 1_000));
   } catch {
     return [];
   }

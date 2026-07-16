@@ -13,6 +13,7 @@ import { motion } from 'framer-motion';
 import { Shield, ShieldCheck, ShieldAlert } from 'lucide-react';
 import type { Coin } from '@/lib/coins/types';
 import { CoinLogo, PriceDelta } from './atoms';
+import { Sparkline } from './Sparkline';
 import { coinPrice, compactUsd } from '@/lib/coins/format';
 
 type RiskLevel = 'low' | 'medium' | 'high' | 'unknown';
@@ -55,8 +56,12 @@ export function CoinRow({ coin, index = 0 }: { coin: Coin; index?: number }) {
             <div className="text-[15px] font-bold text-white truncate max-w-[9rem] tracking-tight">{coin.symbol || coin.name}</div>
             <RiskDot chain={coin.chain} address={coin.tokenAddress} />
           </div>
-          <div className="text-[12px] text-white/45 truncate">{compactUsd(coin.marketCapUsd)} MC</div>
+          <div className="text-[12px] text-white/45 truncate">
+            {compactUsd(coin.marketCapUsd)} MC{coin.volume24hUsd ? ` · Vol ${compactUsd(coin.volume24hUsd)}` : ''}
+          </div>
         </div>
+        {/* micro price trail — hidden on the narrowest phones to keep the row tidy */}
+        <span className="hidden min-[380px]:block shrink-0"><Sparkline coin={coin} /></span>
         <div className="text-right shrink-0">
           <div className="text-[15px] font-bold text-white tabular-nums">{coinPrice(coin.priceUsd)}</div>
           <PriceDelta value={coin.change24h} className="text-[12px] font-semibold" />

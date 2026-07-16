@@ -13,6 +13,7 @@ import { motion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 import { CoinLogo, PriceDelta } from '@/components/coins/atoms';
 import { CoinRow } from '@/components/coins/CoinRow';
+import { useLivePrice } from '@/components/coins/useLivePrice';
 import { coinPrice, compactUsd } from '@/lib/coins/format';
 import type { Coin } from '@/lib/coins/types';
 
@@ -20,25 +21,38 @@ function coinHref(c: Coin): string {
   return `/dashboard/coins/${c.chain}/${encodeURIComponent(c.tokenAddress)}`;
 }
 
-/** The featured coin: a large hero card that leads the Coins home. */
-export function FeaturedCoin({ coin }: { coin: Coin }) {
-  const up = (coin.change24h ?? 0) >= 0;
+/**
+ * The featured coin: a large hero card that leads the active house. The price
+ * ticks live (with a green/rose flash on each real move), the badge + accent
+ * take the house colour, and the "hot" house gets a slow flame shimmer.
+ */
+export function FeaturedCoin({ coin, accent = '#0066FF', label = 'Featured', hot = false }: { coin: Coin; accent?: string; label?: string; hot?: boolean }) {
+  const live = useLivePrice(coin.chain, coin.tokenAddress, { priceUsd: coin.priceUsd, marketCapUsd: coin.marketCapUsd, change24h: coin.change24h });
+  const price = live.price ?? coin.priceUsd;
+  const change = live.change24h ?? coin.change24h;
+  const mcap = live.marketCap ?? coin.marketCapUsd;
+  const up = (change ?? 0) >= 0;
+  const flashColor = live.flash === 'up' ? '#10B981' : live.flash === 'down' ? '#F43F5E' : null;
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <Link
         href={coinHref(coin)}
         className="group relative block rounded-3xl p-4 sm:p-5 nl-glass overflow-hidden transition-all duration-200 hover:-translate-y-[2px] hover:shadow-[0_20px_50px_-18px_rgba(0,102,255,.6)]"
+        style={flashColor ? { boxShadow: `0 0 0 1px ${flashColor}, 0 0 34px -6px ${flashColor}aa`, transition: 'box-shadow .25s ease' } : { transition: 'box-shadow .5s ease' }}
       >
-        {/* corner glow that leans to the trade direction */}
-        <span className={`pointer-events-none absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl transition-colors ${up ? 'bg-[#0066FF]/25 group-hover:bg-[#0066FF]/40' : 'bg-rose-500/20 group-hover:bg-rose-500/30'}`} />
-        <span className="absolute left-0 top-4 bottom-4 w-[3px] rounded-full bg-gradient-to-b from-[#1E90FF] to-[#0066FF] opacity-70" />
+        {/* hot house: a slow flame shimmer sweeping the card */}
+        {hot ? <span className="pointer-events-none absolute inset-0 opacity-60 coin-flame" style={{ background: `linear-gradient(115deg, transparent 35%, ${accent}26 50%, transparent 65%)`, backgroundSize: '220% 100%' }} /> : null}
+        {/* corner glow in the house accent */}
+        <span className="pointer-events-none absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl transition-colors" style={{ background: `${accent}33` }} />
+        <span className="absolute left-0 top-4 bottom-4 w-[3px] rounded-full" style={{ background: `linear-gradient(to bottom, ${accent}, ${accent}88)`, opacity: 0.8 }} />
 
         <div className="relative flex items-center gap-3">
           <CoinLogo logoUrl={coin.logoUrl} symbol={coin.symbol} chain={coin.chain} size={56} verified={coin.verified} />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="text-[19px] font-extrabold text-white truncate">{coin.symbol || coin.name}</span>
-              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#0066FF]/15 text-[#7FB2FF] border border-[#0066FF]/30 shrink-0">Featured</span>
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0" style={{ background: `${accent}26`, color: '#eaf2ff', border: `1px solid ${accent}55` }}>{label}</span>
             </div>
             {coin.name && coin.name !== coin.symbol ? <div className="text-[13px] text-white/45 truncate">{coin.name}</div> : null}
           </div>
@@ -46,17 +60,17 @@ export function FeaturedCoin({ coin }: { coin: Coin }) {
 
         <div className="relative flex items-end justify-between mt-4">
           <div>
-            <div className="text-[30px] leading-none font-extrabold tracking-tight tabular-nums text-white">{coinPrice(coin.priceUsd)}</div>
-            <div className="mt-1.5"><PriceDelta value={coin.change24h} className="text-[14px] font-bold" /><span className="text-white/35 text-[12px] ml-1">24h</span></div>
+            <div className="text-[30px] leading-none font-extrabold tracking-tight tabular-nums text-white transition-colors" style={flashColor ? { color: flashColor } : undefined}>{coinPrice(price)}</div>
+            <div className="mt-1.5"><PriceDelta value={change} className="text-[14px] font-bold" /><span className="text-white/35 text-[12px] ml-1">24h</span></div>
           </div>
           <div className="text-right">
             <div className="text-[11px] uppercase tracking-wide text-white/40">Market cap</div>
-            <div className="text-[17px] font-bold text-white tabular-nums">{compactUsd(coin.marketCapUsd)}</div>
+            <div className="text-[17px] font-bold text-white tabular-nums">{compactUsd(mcap)}</div>
             <div className="text-[11px] text-white/40 mt-0.5">Vol {compactUsd(coin.volume24hUsd)}</div>
           </div>
         </div>
 
-        <div className="relative mt-4 flex items-center justify-center gap-1.5 rounded-2xl py-2.5 text-[14px] font-bold text-white transition-transform group-hover:scale-[1.01]" style={{ background: 'linear-gradient(135deg,#1E90FF,#0066FF)', boxShadow: '0 8px 24px -8px rgba(0,102,255,.55)' }}>
+        <div className="relative mt-4 flex items-center justify-center gap-1.5 rounded-2xl py-2.5 text-[14px] font-bold text-white transition-transform group-hover:scale-[1.01]" style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)`, boxShadow: `0 8px 24px -8px ${accent}8c` }}>
           Trade {coin.symbol}
         </div>
       </Link>

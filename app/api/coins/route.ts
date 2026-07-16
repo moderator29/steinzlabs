@@ -8,7 +8,7 @@ import { isCoinChain } from '@/lib/coins/types';
 
 export const dynamic = 'force-dynamic';
 
-const VALID_TABS = new Set<DiscoveryTab>(['trending', 'graduated', 'most_held']);
+const VALID_TABS = new Set<DiscoveryTab>(['trending', 'graduated', 'most_held', 'verified']);
 
 /**
  * Coins discovery for the Coins area. Query: ?tab=trending|graduated|most_held|watchlist

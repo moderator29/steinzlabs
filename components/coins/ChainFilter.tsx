@@ -12,7 +12,7 @@ import { ChainBadge } from './atoms';
 
 export type ChainFilterValue = 'all' | 'solana' | 'ethereum' | 'bsc';
 
-export function ChainFilter({ value, onChange }: { value: ChainFilterValue; onChange: (v: ChainFilterValue) => void }) {
+export function ChainFilter({ value, onChange, counts }: { value: ChainFilterValue; onChange: (v: ChainFilterValue) => void; counts?: Partial<Record<ChainFilterValue, number>> }) {
   const opts: { id: ChainFilterValue; label: string }[] = [
     { id: 'all', label: 'All' },
     ...COIN_CHAINS.map((c) => ({ id: c as ChainFilterValue, label: CHAIN_META[c]?.short ?? c })),
@@ -36,6 +36,9 @@ export function ChainFilter({ value, onChange }: { value: ChainFilterValue; onCh
             <span className={`absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-gradient-to-b from-[#1E90FF] to-[#0066FF] transition-opacity ${active ? 'opacity-100' : 'opacity-40 group-hover:opacity-70'}`} />
             {o.id !== 'all' ? <ChainBadge chain={o.id} size={16} className="ml-0.5" /> : <span className="ml-0.5" />}
             {o.label}
+            {counts && (counts[o.id] ?? 0) > 0 ? (
+              <span className={`ml-0.5 text-[11px] font-bold tabular-nums px-1.5 py-0.5 rounded-md ${active ? 'bg-[#0066FF]/25 text-white' : 'bg-white/[0.06] text-white/50'}`}>{counts[o.id]}</span>
+            ) : null}
           </button>
         );
       })}
